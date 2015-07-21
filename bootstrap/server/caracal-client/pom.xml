@@ -4,12 +4,11 @@
     <parent>
         <groupId>se.sics.gvod.bootstrap</groupId>
         <artifactId>server</artifactId>
-        <version>0.0.3-SNAPSHOT</version>
+        <version>0.0.4-SNAPSHOT</version>
     </parent>
     <groupId>se.sics.gvod.bootstrap.server</groupId>
     <artifactId>caracal-client</artifactId>
     <name>GVoD Caracal Peer Manager</name>
-    <packaging>jar</packaging>
     
     <properties>
         <caracaldb-version>0.0.7-SNAPSHOT</caracaldb-version>

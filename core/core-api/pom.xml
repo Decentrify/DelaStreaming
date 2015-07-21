@@ -5,9 +5,9 @@
     <parent>
         <groupId>se.sics.gvod</groupId>
         <artifactId>core</artifactId>
-        <version>0.0.3-SNAPSHOT</version>
+        <version>0.0.4-SNAPSHOT</version>
     </parent>
-    <groupId>se.sics.gvod</groupId>
+    <groupId>se.sics.gvod.core</groupId>
     <artifactId>core-api</artifactId>
     <name>GVoD Core API</name>
     <url>http://maven.apache.org</url>
