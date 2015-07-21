@@ -25,6 +25,16 @@
             <groupId>se.sics.caracaldb</groupId>
             <artifactId>caracaldb-core</artifactId>
             <version>${caracaldb-version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 </project>
