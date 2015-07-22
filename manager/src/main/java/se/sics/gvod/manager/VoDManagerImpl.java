@@ -74,8 +74,8 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     private final String logPrefix;
 
     private final Map<String, VideoStreamManager> vsMngrs;
-    private final Map<String, Integer> httpVideoPaths;
-
+    private final Integer videoPort;
+    
     private Map<UUID, SettableFuture> pendingJobs;
     private Set<String> pendingUploads;
     private Map<String, FileStatus> videos;
@@ -86,7 +86,12 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
         LOG.info("{} initiating...", logPrefix);
 
         this.vsMngrs = new ConcurrentHashMap<String, VideoStreamManager>();
-        this.httpVideoPaths = new HashMap<String, Integer>();
+        
+        Integer httpPlayPort = -1;
+        do {
+            httpPlayPort = tryPort(10000 + rand.nextInt(40000));
+        } while (httpPlayPort == -1);
+        this.videoPort = httpPlayPort;
 
         this.pendingJobs = new HashMap<UUID, SettableFuture>();
         this.pendingUploads = new HashSet<String>();
@@ -245,13 +250,6 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     @Override
     public void play(VideoInfo videoInfo, SettableFuture<Result<Integer>> opFuture) {
         LOG.info("{} play video:{} request", logPrefix, videoInfo.getName());
-        //TODO Alex check this - can I use same player/same http handler for different video players?
-        Integer httpPlayPort = httpVideoPaths.get(videoInfo.getName());
-        if (httpPlayPort != null) {
-            LOG.info("{} return play for video:{}", logPrefix, videoInfo.getName());
-            opFuture.set(Result.ok(httpPlayPort));
-            return;
-        }
 
         VideoStreamManager videoPlayer = vsMngrs.get(videoInfo.getName());
         if (videoPlayer == null) {
@@ -281,16 +279,13 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             }
         }
 
-        do {
-            httpPlayPort = tryPort(10000 + rand.nextInt(40000));
-        } while (httpPlayPort == -1);
-        LOG.debug("{} video:{} httpPlayPort:{}", new Object[]{logPrefix, videoInfo.getName(), httpPlayPort});
+        
+        LOG.debug("{} video:{} httpPlayPort:{}", new Object[]{logPrefix, videoInfo.getName(), videoPort});
 
-        setupPlayerHttpConnection(videoPlayer, videoInfo.getName(), httpPlayPort);
-        httpVideoPaths.put(videoInfo.getName(), httpPlayPort);
+        setupPlayerHttpConnection(videoPlayer, videoInfo.getName());
 
         LOG.info("{} return play for video:{}", logPrefix, videoInfo.getName());
-        opFuture.set(Result.ok(httpPlayPort));
+        opFuture.set(Result.ok(videoPort));
     }
 
     @Override
@@ -308,13 +303,14 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             return;
         }
     }
+    
 
-    private void setupPlayerHttpConnection(VideoStreamManager vsMngr, String videoName, Integer httpPlayPort) {
-        LOG.info("{} starting player http connection http://127.0.0.1:{}/{}/{}", new Object[]{config.getSelf(), httpPlayPort, videoName, videoName});
+    private void setupPlayerHttpConnection(VideoStreamManager vsMngr, String videoName) {
+        LOG.info("{} starting player http connection http://127.0.0.1:{}/{}/{}", new Object[]{config.getSelf(), videoPort, videoName, videoName});
         String fileName = "/" + videoName + "/";
         BaseHandler handler = new RangeCapableMp4Handler(vsMngr);
         try {
-            InetSocketAddress httpAddr = new InetSocketAddress(httpPlayPort);
+            InetSocketAddress httpAddr = new InetSocketAddress(videoPort);
             JwHttpServer.startOrUpdate(httpAddr, fileName, handler);
         } catch (IOException ex) {
             //TODO Alex - check if this is a recovarable state
