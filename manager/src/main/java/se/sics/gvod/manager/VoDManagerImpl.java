@@ -75,7 +75,8 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
 
     private final Map<String, VideoStreamManager> vsMngrs;
     private final Integer videoPort;
-    
+    private final Set<String> videoPaths;
+
     private Map<UUID, SettableFuture> pendingJobs;
     private Set<String> pendingUploads;
     private Map<String, FileStatus> videos;
@@ -86,12 +87,13 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
         LOG.info("{} initiating...", logPrefix);
 
         this.vsMngrs = new ConcurrentHashMap<String, VideoStreamManager>();
-        
+
         Integer httpPlayPort = -1;
         do {
             httpPlayPort = tryPort(10000 + rand.nextInt(40000));
         } while (httpPlayPort == -1);
         this.videoPort = httpPlayPort;
+        this.videoPaths = new HashSet<String>();
 
         this.pendingJobs = new HashMap<UUID, SettableFuture>();
         this.pendingUploads = new HashSet<String>();
@@ -116,7 +118,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             LOG.info("{} stopping...", logPrefix);
         }
     };
-    
+
     @Override
     public boolean isReady() {
         return this.getComponentCore().state().equals(State.ACTIVE);
@@ -279,10 +281,11 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             }
         }
 
-        
-        LOG.debug("{} video:{} httpPlayPort:{}", new Object[]{logPrefix, videoInfo.getName(), videoPort});
-
-        setupPlayerHttpConnection(videoPlayer, videoInfo.getName());
+        if (!videoPaths.contains(videoInfo.getName())) {
+            LOG.info("{} setting up player for video:{}", logPrefix, videoInfo.getName());
+            setupPlayerHttpConnection(videoPlayer, videoInfo.getName());
+            videoPaths.add(videoInfo.getName());
+        }
 
         LOG.info("{} return play for video:{}", logPrefix, videoInfo.getName());
         opFuture.set(Result.ok(videoPort));
@@ -303,7 +306,6 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             return;
         }
     }
-    
 
     private void setupPlayerHttpConnection(VideoStreamManager vsMngr, String videoName) {
         LOG.info("{} starting player http connection http://127.0.0.1:{}/{}/{}", new Object[]{config.getSelf(), videoPort, videoName, videoName});
