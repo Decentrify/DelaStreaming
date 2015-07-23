@@ -138,7 +138,6 @@ public class DownloadMngrComp extends ComponentDefinition {
                 if (!fileMngr.has(req.readPos, req.readBlockSize)) {
                     log.debug("{} data missing - readPos:{} , readSize:{}", new Object[]{config.getSelf(), req.readPos, req.readBlockSize});
                     trigger(new Data.DResponse(req, ReqStatus.MISSING, null), dataPort);
-                    playPos.set(posToPieceId(req.readPos));
                     return;
                 }
             }
