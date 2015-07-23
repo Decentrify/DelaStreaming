@@ -118,21 +118,22 @@ public class ConnMngrComp extends ComponentDefinition {
             } else {
 
                 if (selfDesc.downloading && !event.downloading) {
-                    log.debug("{} completed - closing download connections", config.getSelf());
-                    for (DecoratedAddress partner : uploadersConn.keySet()) {
-                        Connection.Close msgContent = new Connection.Close(UUID.randomUUID());
-                        DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
-                        ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
-                        trigger(msg, network);
-                    }
-                    for (DecoratedAddress partner : pendingUploadersConn.keySet()) {
-                        Connection.Close msgContent = new Connection.Close(UUID.randomUUID());
-                        DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
-                        ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
-                        trigger(msg, network);
-                    }
-                    uploadersConn = new HashMap<DecoratedAddress, UploaderVodDescriptor>();
-                    pendingUploadersConn = new HashMap<DecoratedAddress, VodDescriptor>();
+                    log.info("{} completed - closing connections", config.getSelf());
+                    //TODO Alex connection issue
+//                    for (DecoratedAddress partner : uploadersConn.keySet()) {
+//                        Connection.Close msgContent = new Connection.Close(UUID.randomUUID());
+//                        DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
+//                        ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
+//                        trigger(msg, network);
+//                    }
+//                    for (DecoratedAddress partner : pendingUploadersConn.keySet()) {
+//                        Connection.Close msgContent = new Connection.Close(UUID.randomUUID());
+//                        DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
+//                        ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
+//                        trigger(msg, network);
+//                    }
+//                    uploadersConn = new HashMap<DecoratedAddress, UploaderVodDescriptor>();
+//                    pendingUploadersConn = new HashMap<DecoratedAddress, VodDescriptor>();
 
                     //TODO Alex do proper cleanups
 //                    log.debug("{} cleaning timeouts", config.getSelf());
@@ -279,10 +280,11 @@ public class ConnMngrComp extends ComponentDefinition {
 
                     if (!pendingUploadersConn.containsKey(container.getHeader().getSource())) {
                         log.info("{} closing connection to {}", config.getSelf(), container.getHeader().getSource());
-                        Connection.Close msgContent = new Connection.Close(UUID.randomUUID());
-                        DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), container.getHeader().getSource(), Transport.UDP), null, config.overlayId);
-                        ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
-                        trigger(msg, network);
+                        //TODO Alex - connection issue
+//                        Connection.Close msgContent = new Connection.Close(UUID.randomUUID());
+//                        DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), container.getHeader().getSource(), Transport.UDP), null, config.overlayId);
+//                        ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
+//                        trigger(msg, network);
                         return;
                     }
 
@@ -319,10 +321,11 @@ public class ConnMngrComp extends ComponentDefinition {
 
                 @Override
                 public void handle(Connection.Close content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Close> container) {
-                    log.debug("{} net received:{}, from:{}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-                    downloadersConn.remove(container.getHeader().getSource());
-                    pendingUploadersConn.remove(container.getHeader().getSource());
-                    uploadersConn.remove(container.getHeader().getSource());
+                    log.info("{} received close:{}, from:{}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
+                    //TODO Alex connection issue
+//                    downloadersConn.remove(container.getHeader().getSource());
+//                    pendingUploadersConn.remove(container.getHeader().getSource());
+//                    uploadersConn.remove(container.getHeader().getSource());
                 }
             };
 
