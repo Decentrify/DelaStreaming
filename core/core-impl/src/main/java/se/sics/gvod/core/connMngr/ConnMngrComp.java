@@ -444,7 +444,7 @@ public class ConnMngrComp extends ComponentDefinition {
 
         @Override
         public void handle(Download.HashRequest requestContent) {
-            log.info("{} handle local {}", config.getSelf(), requestContent);
+            log.debug("{} handle local {}", config.getSelf(), requestContent);
             Map.Entry<DecoratedAddress, UploaderVodDescriptor> uploader = getUploader(requestContent.targetPos);
             if (uploader == null) {
                 log.info("{} no candidate for position {}", new Object[]{config.getSelf(), requestContent.targetPos});
@@ -458,7 +458,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 partnerReq = new HashMap<UUID, Pair<Download.HashRequest, UUID>>();
                 pendingDownloadingHash.put(uploader.getKey(), partnerReq);
             }
-            log.info("{} sending hash req:{}", new Object[]{config.getSelf(), requestContent.hashes});
+            log.debug("{} sending hash req:{}", new Object[]{config.getSelf(), requestContent.hashes});
             partnerReq.put(requestContent.id, Pair.with(requestContent, scheduleDownloadHashTimeout(uploader.getKey(), requestContent.id)));
             DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), uploader.getKey(), Transport.UDP), null, config.overlayId);
             ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
@@ -527,16 +527,16 @@ public class ConnMngrComp extends ComponentDefinition {
 
         @Override
         public void handle(Download.HashResponse content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.HashResponse> container) {
-            log.info("{} net received:{} with status:{} from:{}", new Object[]{config.getSelf(), content, content.status, container.getHeader().getSource()});
+            log.debug("{} net received:{} with status:{} from:{}", new Object[]{config.getSelf(), content, content.status, container.getHeader().getSource()});
             Map<UUID, Pair<Download.HashRequest, UUID>> aux = pendingDownloadingHash.get(container.getHeader().getSource());
             if (aux == null) {
-                log.info("{} hash posibly late", config.getSelf());
+                log.debug("{} hash posibly late", config.getSelf());
                 //TODO Alex fix this;
                 return;
             }
             Pair<Download.HashRequest, UUID> req = aux.remove(content.id);
             if (req == null) {
-                log.info("{} data posibly late", config.getSelf());
+                log.debug("{} data posibly late", config.getSelf());
                 //TODO Alex fix this;
                 return;
             }
@@ -545,7 +545,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 up.freeSlot();
             }
 
-            log.info("{} received hashes:{} missing:{}", new Object[]{config.getSelf(), content.hashes.keySet(), content.missingHashes});
+            log.debug("{} received hashes:{} missing:{}", new Object[]{config.getSelf(), content.hashes.keySet(), content.missingHashes});
             aux.remove(content.id);
             cancelDownloadHashTimeout(req.getValue0().id, req.getValue1());
             trigger(content, myPort);
