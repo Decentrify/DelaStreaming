@@ -283,9 +283,6 @@ public class DownloadMngrComp extends ComponentDefinition {
         Set<Integer> completedBlocks = new HashSet<Integer>();
         for (Map.Entry<Integer, BlockMngr> block : queuedBlocks.entrySet()) {
             int blockNr = block.getKey();
-            if (blockNr == 387) {
-                System.out.println(fileMngr.contiguous(blockNr));
-            }
             if (!block.getValue().isComplete()) {
                 continue;
             }
@@ -351,18 +348,17 @@ public class DownloadMngrComp extends ComponentDefinition {
             log.info("{} hashComplete:{} fileComplete:{}", new Object[]{config.overlayId, hashMngr.isComplete(0), fileMngr.isComplete(0)});
             log.info("{} pending pieces:{} pendingHashes:{} pendingBlocks:{}", new Object[]{config.overlayId, pendingPieces.size(), pendingHashes.size(), queuedBlocks.keySet()});
             log.info("{} nextPieces:{} nextHashes:{}", new Object[]{config.overlayId, nextPieces.size(), nextHashes.size()});
-            int playPieceNr = playPos.get();
-            playPieceNr = (playPieceNr == -1 ? 0 : playPieceNr);
-            int playBlockNr = pieceIdToBlockNrPieceNr(playPieceNr).getValue0();
-            int playPos = fileMngr.contiguous(playBlockNr);
-            int hashPos = hashMngr.contiguous(0);
-            log.info("{} play pos:{} videoPPos:{} videoDPos:{} hash pos:{}",
-                    new Object[]{config.overlayId, playBlockNr, playPos, fileMngr.contiguous(0), hashPos});
             //TODO Alex might need to move it to its own timeout
             checkCompleteBlocks();
             if(hashMngr.isComplete(0) && fileMngr.isComplete(0)) {
                 finishDownload();
             }
+            int playPieceNr = playPos.get();
+            playPieceNr = (playPieceNr == -1 ? 0 : playPieceNr);
+            int playBlockNr = pieceIdToBlockNrPieceNr(playPieceNr).getValue0();
+            int playPos = fileMngr.contiguous(playBlockNr);
+            log.info("{} play pos:{} videoPPos:{} videoDPos:{} hashDPos:{}",
+                    new Object[]{config.overlayId, playBlockNr, playPos, fileMngr.contiguous(0), hashMngr.contiguous(0)});
             trigger(new UtilityUpdate(config.overlayId, downloading, playPos), utilityUpdate);
         }
     };
@@ -399,7 +395,7 @@ public class DownloadMngrComp extends ComponentDefinition {
     }
 
     private boolean getNewPieces(int currentBlockNr) {
-        log.info("getting new pieces from block:{}", currentBlockNr);
+        log.debug("getting new pieces from block:{}", currentBlockNr);
         int filePos = fileMngr.contiguous(currentBlockNr);
         int hashPos = hashMngr.contiguous(0);
 
@@ -451,7 +447,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             hashesToDownload.add(nextHashes.remove(0));
         }
         int targetPos = Collections.min(hashesToDownload);
-        log.info("{} downloading hashes:{} targetPos:{}", new Object[]{config.getSelf(), hashesToDownload, targetPos});
+        log.debug("{} downloading hashes:{} targetPos:{}", new Object[]{config.getSelf(), hashesToDownload, targetPos});
         trigger(new Download.HashRequest(UUID.randomUUID(), targetPos, hashesToDownload), connMngr);
         pendingHashes.addAll(hashesToDownload);
         return true;
@@ -489,12 +485,12 @@ public class DownloadMngrComp extends ComponentDefinition {
     }
 
     private void finishDownload() {
-        Integer downloadPos = fileMngr.contiguous(0);
-        Integer hashPos = hashMngr.contiguous(0);
-        log.info("{} {} video pos:{}, hash pos:{}", new Object[]{config.getSelf(), config.overlayId, downloadPos, hashPos});
-
-        //one last update
-        trigger(new UtilityUpdate(config.overlayId, downloading, downloadPos), utilityUpdate);
+//        Integer downloadPos = fileMngr.contiguous(0);
+//        Integer hashPos = hashMngr.contiguous(0);
+//        log.info("{} {} video pos:{}, hash pos:{}", new Object[]{config.getSelf(), config.overlayId, downloadPos, hashPos});
+//
+//        //one last update
+//        trigger(new UtilityUpdate(config.overlayId, downloading, downloadPos), utilityUpdate);
 
         //cancel timeouts
         cancelSpeedUp();
