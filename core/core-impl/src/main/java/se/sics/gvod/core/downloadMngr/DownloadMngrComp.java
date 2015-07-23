@@ -128,9 +128,18 @@ public class DownloadMngrComp extends ComponentDefinition {
             log.trace("{} received local data request for readPos:{} readSize:{}", new Object[]{config.getSelf(), req.readPos, req.readBlockSize});
 
             if (!fileMngr.has(req.readPos, req.readBlockSize)) {
-                log.debug("{} data missing - readPos:{} , readSize:{}", new Object[]{config.getSelf(), req.readPos, req.readBlockSize});
-                trigger(new Data.DResponse(req, ReqStatus.MISSING, null), dataPort);
-                return;
+                Set<Integer> targetedBlocks = posToBlockNr(req.readPos, req.readBlockSize);
+                for (Integer blockNr : targetedBlocks) {
+                    if (queuedBlocks.containsKey(blockNr)) {
+                        checkCompleteBlocks();
+                        break;
+                    }
+                }
+                if (!fileMngr.has(req.readPos, req.readBlockSize)) {
+                    log.debug("{} data missing - readPos:{} , readSize:{}", new Object[]{config.getSelf(), req.readPos, req.readBlockSize});
+                    trigger(new Data.DResponse(req, ReqStatus.MISSING, null), dataPort);
+                    return;
+                }
             }
             log.debug("{} sending data - readPos:{} , readSize:{}", new Object[]{config.getSelf(), req.readPos, req.readBlockSize});
             byte data[] = fileMngr.read(req.readPos, req.readBlockSize);
@@ -312,6 +321,19 @@ public class DownloadMngrComp extends ComponentDefinition {
         }
     }
 
+    private Set<Integer> posToBlockNr(long pos, int size) {
+        Set<Integer> result = new HashSet<Integer>();
+        int blockNr = (int) (pos / (config.piecesPerBlock * config.pieceSize));
+        result.add(blockNr);
+        size -= config.piecesPerBlock * config.pieceSize;
+        while (size > 0) {
+            blockNr++;
+            result.add(blockNr);
+            size -= config.piecesPerBlock * config.pieceSize;
+        }
+        return result;
+    }
+
     private Pair<Integer, Integer> pieceIdToBlockNrPieceNr(int pieceId) {
         int blockNr = pieceId / config.piecesPerBlock;
         int inBlockNr = pieceId % config.piecesPerBlock;
@@ -350,7 +372,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             log.info("{} nextPieces:{} nextHashes:{}", new Object[]{config.overlayId, nextPieces.size(), nextHashes.size()});
             //TODO Alex might need to move it to its own timeout
             checkCompleteBlocks();
-            if(hashMngr.isComplete(0) && fileMngr.isComplete(0)) {
+            if (hashMngr.isComplete(0) && fileMngr.isComplete(0)) {
                 finishDownload();
             }
             int playPieceNr = playPos.get();
