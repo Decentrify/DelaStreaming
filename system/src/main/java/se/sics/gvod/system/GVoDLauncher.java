@@ -111,8 +111,8 @@ public class GVoDLauncher extends ComponentDefinition {
 
             InetAddress ip = null;
             if(!resp.addrs.isEmpty()) {
+                ip = resp.addrs.get(0).getAddr();
                 if(resp.addrs.size() > 1) {
-                    ip = resp.addrs.get(0).getAddr();
                     LOG.warn("multiple ips detected, proceeding with:{}", ip);
                 }
             }
