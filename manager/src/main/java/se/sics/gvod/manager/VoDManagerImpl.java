@@ -45,7 +45,6 @@ import se.sics.gvod.manager.toolbox.GVoDSyncI;
 import se.sics.gvod.manager.toolbox.Result;
 import se.sics.gvod.manager.toolbox.VideoInfo;
 import se.sics.gvod.manager.util.FileStatus;
-import se.sics.kompics.Component;
 import se.sics.kompics.Component.State;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -74,8 +73,9 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     private final String logPrefix;
 
     private final Map<String, VideoStreamManager> vsMngrs;
-    private final Integer videoPort;
     private final Set<String> videoPaths;
+    private Integer httpPlayPort = null;
+    private InetSocketAddress httpPlayAddr = null;
 
     private Map<UUID, SettableFuture> pendingJobs;
     private Set<String> pendingUploads;
@@ -87,12 +87,6 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
         LOG.info("{} initiating...", logPrefix);
 
         this.vsMngrs = new ConcurrentHashMap<String, VideoStreamManager>();
-
-        Integer httpPlayPort = -1;
-        do {
-            httpPlayPort = tryPort(10000 + rand.nextInt(40000));
-        } while (httpPlayPort == -1);
-        this.videoPort = httpPlayPort;
         this.videoPaths = new HashSet<String>();
 
         this.pendingJobs = new HashMap<UUID, SettableFuture>();
@@ -288,7 +282,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
         }
 
         LOG.info("{} return play for video:{}", logPrefix, videoInfo.getName());
-        opFuture.set(Result.ok(videoPort));
+        opFuture.set(Result.ok(httpPlayPort));
     }
 
     @Override
@@ -308,12 +302,20 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     }
 
     private void setupPlayerHttpConnection(VideoStreamManager vsMngr, String videoName) {
-        LOG.info("{} starting player http connection http://127.0.0.1:{}/{}/{}", new Object[]{config.getSelf(), videoPort, videoName, videoName});
+        if (httpPlayAddr == null) {
+            Integer freePort = -1;
+            do {
+                freePort = tryPort(10000 + rand.nextInt(40000));
+            } while (freePort == -1);
+            httpPlayPort = freePort;
+            httpPlayAddr = new InetSocketAddress(httpPlayPort);
+        }
+
+        LOG.info("{} starting player http connection http://127.0.0.1:{}/{}/{}", new Object[]{config.getSelf(), httpPlayPort, videoName, videoName});
         String fileName = "/" + videoName + "/";
         BaseHandler handler = new RangeCapableMp4Handler(vsMngr);
         try {
-            InetSocketAddress httpAddr = new InetSocketAddress(videoPort);
-            JwHttpServer.startOrUpdate(httpAddr, fileName, handler);
+            JwHttpServer.startOrUpdate(httpPlayAddr, fileName, handler);
         } catch (IOException ex) {
             //TODO Alex - check if this is a recovarable state
             LOG.error("{} http server error", logPrefix);
