@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -69,7 +70,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     private final Positive<UtilityUpdatePort> utilityPort = requires(UtilityUpdatePort.class);
 
     private final VoDManagerConfig config;
-    private final Random rand = new Random();
+    private final Random rand = new SecureRandom();
     private final String logPrefix;
 
     private final Map<String, VideoStreamManager> vsMngrs;
