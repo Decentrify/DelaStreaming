@@ -230,19 +230,19 @@ public class DownloadMngrComp extends ComponentDefinition {
 
                     pendingHashes.removeAll(resp.hashes.keySet());
                     pendingHashes.removeAll(resp.missingHashes);
-                    nextHashes.addAll(0, resp.missingHashes);
+                    nextHashes.addAll(resp.missingHashes);
                     download();
                     return;
                 case TIMEOUT:
                     LOG.debug("{} TIMEOUT hashes:{}", logPrefix, resp.missingHashes);
                     pendingHashes.removeAll(resp.missingHashes);
-                    nextHashes.addAll(0, resp.missingHashes);
+                    nextHashes.addAll(resp.missingHashes);
                     download();
                     return;
                 case BUSY:
                     LOG.debug("{} BUSY hashes:{}", logPrefix, resp.missingHashes);
                     pendingHashes.removeAll(resp.missingHashes);
-                    nextHashes.addAll(0, resp.missingHashes);
+                    nextHashes.addAll(resp.missingHashes);
                     return;
                 default:
                     LOG.warn("{} illegal status:{}, ignoring", new Object[]{logPrefix, resp.status});
@@ -289,13 +289,13 @@ public class DownloadMngrComp extends ComponentDefinition {
                 case MISSING:
                     LOG.debug("{} MISSING/TIMEOUT piece:{}", new Object[]{logPrefix, resp.pieceId});
                     pendingPieces.remove(resp.pieceId);
-                    nextPieces.add(0, resp.pieceId);
+                    nextPieces.add(resp.pieceId);
                     download();
                     return;
                 case BUSY:
                     LOG.debug("{} BUSY piece:{}", new Object[]{logPrefix, resp.pieceId});
                     pendingPieces.remove(resp.pieceId);
-                    nextPieces.add(0, resp.pieceId);
+                    nextPieces.add(resp.pieceId);
                     return;
                 default:
                     LOG.warn("{} illegal status:{} ignoring", new Object[]{logPrefix, resp.status});
