@@ -149,14 +149,15 @@ public class ConnMngrComp extends ComponentDefinition {
                 if (event.downloading) {
                     startDownloadTracker();
                 }
-            }
-            if (selfDesc.downloading && !event.downloading) {
-                LOG.info("{} download complete - closing download connections", logPrefix);
-                if (!downloadTracker.isEmpty()) {
-                    LOG.warn("{} download tracker not empty at download complete", logPrefix);
+            } else {
+                if (selfDesc.downloading && !event.downloading) {
+                    LOG.info("{} download complete - closing download connections", logPrefix);
+                    if (!downloadTracker.isEmpty()) {
+                        LOG.warn("{} download tracker not empty at download complete", logPrefix);
+                    }
+                    downloadTracker.clear();
+                    connTracker.closeDownloadConnections();
                 }
-                downloadTracker.clear();
-                connTracker.closeDownloadConnections();
             }
             selfDesc = new LocalVodDescriptor(new VodDescriptor(event.downloadPos), event.downloading);
         }
@@ -782,7 +783,7 @@ public class ConnMngrComp extends ComponentDefinition {
             }
             downloadConnections.clear();
         }
-        
+
         public void closeUploadConnection(DecoratedAddress target) {
             uploadConnections.remove(target.getBase());
             sendClose(target, false);
@@ -842,7 +843,7 @@ public class ConnMngrComp extends ComponentDefinition {
                     public void handle(Connection.Request content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Request> container) {
                         DecoratedAddress target = container.getHeader().getSource();
                         updateAddress(target);
-                        
+
                         LOG.debug("{} received upload connection request from:{}", new Object[]{logPrefix, target.getBase()});
                         if (!uploadConnections.containsKey(target.getBase())) {
                             if (!uploadTracker.connect(target, content.desc)) {
@@ -867,7 +868,7 @@ public class ConnMngrComp extends ComponentDefinition {
                     public void handle(Connection.Response content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Response> container) {
                         DecoratedAddress target = container.getHeader().getSource();
                         updateAddress(target);
-                        
+
                         LOG.debug("{} received download connection response from:{}", new Object[]{logPrefix, target.getBase()});
                         if (!downloadTracker.connect(target, content.desc)) {
                             LOG.debug("{} closing download connection to:{}", logPrefix, target.getBase());
@@ -886,7 +887,7 @@ public class ConnMngrComp extends ComponentDefinition {
                     public void handle(Connection.Update content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Update> container) {
                         DecoratedAddress target = container.getHeader().getSource();
                         updateAddress(target);
-                        
+
                         LOG.debug("{} received update from:{}", new Object[]{logPrefix, content, target.getBase()});
 
                         if (downloadConnections.containsKey(target.getBase())) {
