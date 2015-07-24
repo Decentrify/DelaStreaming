@@ -28,14 +28,14 @@ import se.sics.kompics.Response;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class Data {
-     public static class DRequest extends Request {
+     public static class Req extends Request {
 
         public final UUID id;
         public final int overlayId;
         public final long readPos;
         public final int readBlockSize;
 
-        public DRequest(UUID id, int overlayId, long readPos, int readBlockSize) {
+        public Req(UUID id, int overlayId, long readPos, int readBlockSize) {
             super();
             this.id = id;
             this.overlayId = overlayId;
@@ -44,7 +44,7 @@ public class Data {
         }
     }
 
-    public static class DResponse extends Response {
+    public static class Resp extends Response {
         
         public final UUID id;
         public final ReqStatus status;
@@ -52,7 +52,7 @@ public class Data {
         public final long readPos;
         public final byte[] block;
         
-        public DResponse(DRequest req, ReqStatus status, byte[] block) {
+        public Resp(Req req, ReqStatus status, byte[] block) {
             super(req);
             this.id = req.id;
             this.status = status;

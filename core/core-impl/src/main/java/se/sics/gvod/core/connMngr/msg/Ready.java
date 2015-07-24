@@ -26,14 +26,15 @@ import se.sics.gvod.common.msg.GvodMsg;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class Ready extends GvodMsg.OneWay {
-
-    public Ready(UUID id) {
+    public final int slots;
+    
+    public Ready(UUID id, int slots) {
         super(id);
+        this.slots = slots;
     }
     
     @Override
     public Ready copy() {
-        return new Ready(id);
+        return new Ready(id, slots);
     }
-    
 }

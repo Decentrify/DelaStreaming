@@ -19,15 +19,12 @@
 package se.sics.gvod.core.connMngr;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.common.msg.ReqStatus;
 import se.sics.gvod.croupierfake.CroupierPort;
 import se.sics.gvod.croupierfake.CroupierSample;
 import se.sics.gvod.common.util.VodDescriptor;
@@ -35,16 +32,15 @@ import se.sics.gvod.common.msg.vod.Connection;
 import se.sics.gvod.common.msg.vod.Download;
 import se.sics.gvod.common.utility.UtilityUpdate;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
-import se.sics.gvod.core.connMngr.msg.DownloadDataTimeout;
-import se.sics.gvod.core.connMngr.msg.DownloadHashTimeout;
 import se.sics.gvod.core.connMngr.msg.Ready;
-import se.sics.gvod.core.connMngr.msg.ScheduleConnUpdate;
 import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Init;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
+import se.sics.kompics.Start;
+import se.sics.kompics.Stop;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.CancelTimeout;
@@ -53,6 +49,7 @@ import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.p2ptoolbox.util.network.ContentMsg;
+import se.sics.p2ptoolbox.util.network.impl.BasicAddress;
 import se.sics.p2ptoolbox.util.network.impl.BasicContentMsg;
 import se.sics.p2ptoolbox.util.network.impl.BasicHeader;
 import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
@@ -63,7 +60,8 @@ import se.sics.p2ptoolbox.util.network.impl.DecoratedHeader;
  */
 public class ConnMngrComp extends ComponentDefinition {
 
-    private static final Logger log = LoggerFactory.getLogger(ConnMngrComp.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ConnMngrComp.class);
+    private String logPrefix;
 
     private Negative<ConnMngrPort> myPort = provides(ConnMngrPort.class);
     private Positive<Network> network = requires(Network.class);
@@ -72,614 +70,874 @@ public class ConnMngrComp extends ComponentDefinition {
     private Positive<UtilityUpdatePort> utilityUpdate = requires(UtilityUpdatePort.class);
 
     private final ConnMngrConfig config;
+    private ConnectionTracker connTracker;
+    private UploadTracker uploadTracker;
+    private DownloadTracker downloadTracker;
+
+    private UUID periodicISCheckTid = null;
+    private UUID periodicConnUpdateTid = null;
 
     private LocalVodDescriptor selfDesc;
 
-    private Map<DecoratedAddress, DownloaderVodDescriptor> downloadersConn;
-    private Map<DecoratedAddress, VodDescriptor> pendingUploadersConn;
-    private Map<DecoratedAddress, UploaderVodDescriptor> uploadersConn;
-
-    private Map<DecoratedAddress, Map<UUID, Pair<Download.DataRequest, UUID>>> pendingDownloadingData; //<source, <reqId, <req, timeoutId>>>
-    private Map<DecoratedAddress, Map<UUID, Pair<Download.HashRequest, UUID>>> pendingDownloadingHash;
-    private Map<Integer, Set<DecoratedAddress>> pendingUploadingData;
-    private Map<Integer, Set<DecoratedAddress>> pendingUploadingHash;
-
-    private UUID connUpdateTId;
-
-    private boolean ready;
-
     public ConnMngrComp(ConnMngrInit init) {
         this.config = init.config;
-        log.info("{} initiating ...", config.getSelf());
+        this.logPrefix = config.getSelf().getId().toString() + "<" + config.overlayId + ">";
+        LOG.info("{} initiating...", logPrefix);
 
-        this.selfDesc = null;
-        this.downloadersConn = new HashMap<DecoratedAddress, DownloaderVodDescriptor>();
-        this.pendingUploadersConn = new HashMap<DecoratedAddress, VodDescriptor>();
-        this.uploadersConn = new HashMap<DecoratedAddress, UploaderVodDescriptor>();
-        this.pendingDownloadingData = new HashMap<DecoratedAddress, Map<UUID, Pair<Download.DataRequest, UUID>>>();
-        this.pendingDownloadingHash = new HashMap<DecoratedAddress, Map<UUID, Pair<Download.HashRequest, UUID>>>();
-        this.pendingUploadingData = new HashMap<Integer, Set<DecoratedAddress>>();
-        this.pendingUploadingHash = new HashMap<Integer, Set<DecoratedAddress>>();
-        this.ready = false;
+        this.connTracker = new ConnectionTracker();
+        this.uploadTracker = new UploadTracker();
+        this.downloadTracker = new DownloadTracker();
 
+        subscribe(handleStart, control);
+        subscribe(handleStop, control);
+        subscribe(handlePeriodicISCheck, timer);
         subscribe(handleUpdateUtility, utilityUpdate);
+    }
+
+    private Handler handleStart = new Handler<Start>() {
+        @Override
+        public void handle(Start e) {
+            LOG.info("{} starting...", logPrefix);
+            schedulePeriodicISCheck();
+        }
+    };
+
+    private Handler handleStop = new Handler<Stop>() {
+        @Override
+        public void handle(Stop e) {
+            LOG.info("{} stopping...", logPrefix);
+            cancelPeriodicISCheck();
+            cancelConnUpdate();
+        }
+    };
+
+    private void startConnectionTracker() {
+        subscribe(connTracker.handleConnectionRequest, network);
+        subscribe(connTracker.handleConnectionResponse, network);
+        subscribe(connTracker.handleConnectionUpdate, network);
+        subscribe(connTracker.handleConnectionClose, network);
+        subscribe(connTracker.handleScheduledConnectionUpdate, timer);
+        scheduleConnUpdate();
+    }
+
+    private void startDownloadTracker() {
+        subscribe(downloadTracker.handleCroupierSample, croupier);
+        subscribe(downloadTracker.handleLocalHashRequest, myPort);
+        subscribe(downloadTracker.handleLocalDataRequest, myPort);
+        subscribe(downloadTracker.handleNetHashResponse, network);
+        subscribe(downloadTracker.handleNetDataResponse, network);
+        subscribe(downloadTracker.handleDownloadHashTimeout, timer);
+        subscribe(downloadTracker.handleDownloadDataTimeout, timer);
+    }
+
+    private void startUploadTracker() {
+        subscribe(uploadTracker.handleNetHashRequest, network);
+        subscribe(uploadTracker.handleNetDataRequest, network);
+        subscribe(uploadTracker.handleLocalHashResponse, myPort);
+        subscribe(uploadTracker.handleLocalDataResponse, myPort);
     }
 
     private Handler<UtilityUpdate> handleUpdateUtility = new Handler<UtilityUpdate>() {
 
         @Override
         public void handle(UtilityUpdate event) {
-            log.info("{} updating self descriptor", config.getSelf(), selfDesc);
-            printComponentStatus();
+            LOG.debug("{} descriptor update:{}", logPrefix, selfDesc);
 
             if (selfDesc == null) {
-                selfDesc = new LocalVodDescriptor(new VodDescriptor(event.downloadPos), event.downloading);
-                start();
-            } else {
-
-                if (selfDesc.downloading && !event.downloading) {
-                    log.info("{} completed - closing connections", config.getSelf());
-                    //TODO Alex connection issue
-//                    for (DecoratedAddress partner : uploadersConn.keySet()) {
-//                        Connection.Close msgContent = new Connection.Close(UUID.randomUUID());
-//                        DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
-//                        ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
-//                        trigger(msg, network);
-//                    }
-//                    for (DecoratedAddress partner : pendingUploadersConn.keySet()) {
-//                        Connection.Close msgContent = new Connection.Close(UUID.randomUUID());
-//                        DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
-//                        ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
-//                        trigger(msg, network);
-//                    }
-//                    uploadersConn = new HashMap<DecoratedAddress, UploaderVodDescriptor>();
-//                    pendingUploadersConn = new HashMap<DecoratedAddress, VodDescriptor>();
-
-                    //TODO Alex do proper cleanups
-//                    log.debug("{} cleaning timeouts", config.getSelf());
-//                    for (Map<UUID, Pair<Download.DataRequest, TimeoutId>> partnerTIds : pendingDownloadingData.values()) {
-//                        for (Pair<Download.DataRequest, TimeoutId> downReq : partnerTIds.values()) {
-//                            CancelTimeout ct = new CancelTimeout(downReq.getValue1());
-//                            trigger(ct, timer);
-//                        }
-//                    }
-//
-//                    CancelTimeout ct = new CancelTimeout(connUpdateTId);
-//                    trigger(ct, timer);
-//
-//                    pendingDownloadingData = new HashMap<VodAddress, Map<UUID, Pair<Download.DataRequest, TimeoutId>>>();
+                startConnectionTracker();
+                startUploadTracker();
+                if (event.downloading) {
+                    startDownloadTracker();
                 }
-                selfDesc = new LocalVodDescriptor(new VodDescriptor(event.downloadPos), event.downloading);
             }
+            if (selfDesc.downloading && !event.downloading) {
+                LOG.info("{} download complete - closing download connections", logPrefix);
+                if (!downloadTracker.isEmpty()) {
+                    LOG.warn("{} download tracker not empty at download complete", logPrefix);
+                }
+                downloadTracker.clear();
+                connTracker.closeDownloadConnections();
+            }
+            selfDesc = new LocalVodDescriptor(new VodDescriptor(event.downloadPos), event.downloading);
         }
     };
 
-    private void start() {
-        log.info("{} starting...", config.getSelf());
-        if (selfDesc.downloading) {
-            connUpdateTId = scheduleConnectionUpdate();
+    Handler handlePeriodicISCheck = new Handler<PeriodicInternalStateCheck>() {
+        @Override
+        public void handle(PeriodicInternalStateCheck e) {
+            LOG.debug("{} periodic ISCheck");
+            LOG.info("{} descriptor:{}", logPrefix, selfDesc);
+            connTracker.publishInternalState();
+            uploadTracker.publishInternalState();
+            downloadTracker.publishInternalState();
+        }
+    };
+
+    //**********************Timeouts*******************************************
+    private void schedulePeriodicISCheck() {
+        if (periodicISCheckTid != null) {
+            LOG.warn("{} double schedule of periodic ISCHeck timeout", logPrefix);
         } else {
-            ready = true;
-            trigger(new Ready(UUID.randomUUID()), myPort);
+            LOG.trace("{} scheduling periodic ISCheck timeout", logPrefix);
         }
-
-        subscribe(handleScheduledConnectionUpdate, timer);
-        subscribe(handleCroupierSample, croupier);
-
-        subscribe(handleConnectionRequest, network);
-        subscribe(handleConnectionResponse, network);
-        subscribe(handleConnectionUpdate, network);
-        subscribe(handleConnectionClose, network);
-
-        subscribe(handleLocalHashRequest, myPort);
-        subscribe(handleLocalHashResponse, myPort);
-        subscribe(handleLocalDataRequest, myPort);
-        subscribe(handleLocalDataResponse, myPort);
-        subscribe(handleDownloadDataTimeout, timer);
-        subscribe(handleDownloadHashTimeout, timer);
-
-        subscribe(handleNetHashRequest, network);
-        subscribe(handleNetHashResponse, network);
-        subscribe(handleNetDataRequest, network);
-        subscribe(handleNetDataResponse, network);
-    }
-
-    private void printComponentStatus() {
-        log.info("connections - downloaders:{} uploaders:{}", downloadersConn.size(), uploadersConn.size());
-        for (Map.Entry<DecoratedAddress, Map<UUID, Pair<Download.HashRequest, UUID>>> e : pendingDownloadingHash.entrySet()) {
-            log.info("uploader:{} hash req:{}", e.getKey(), e.getValue().size());
-        }
-        for (Map.Entry<DecoratedAddress, Map<UUID, Pair<Download.DataRequest, UUID>>> e : pendingDownloadingData.entrySet()) {
-            log.info("uploader:{} data req:{}", e.getKey(), e.getValue().size());
-        }
-        for (Map.Entry<DecoratedAddress, UploaderVodDescriptor> e : uploadersConn.entrySet()) {
-            log.info("uploader:{} used slots:{}", e.getKey(), e.getValue().slots());
-        }
-        for (Map.Entry<DecoratedAddress, DownloaderVodDescriptor> e : downloadersConn.entrySet()) {
-            log.info("downloader:{} used slots:{}", e.getKey(), e.getValue().slots());
-        }
-    }
-
-    // CONNECTION MANAGEMENT
-    Handler handleCroupierSample = new Handler<CroupierSample>() {
-
-        @Override
-        public void handle(CroupierSample event) {
-            log.debug("{} handle new samples {}", config.getSelf(), event.sample);
-
-            for (Map.Entry<DecoratedAddress, VodDescriptor> e : event.sample.entrySet()) {
-                if (e.getValue().downloadPos < selfDesc.vodDesc.downloadPos) {
-                    continue;
-                }
-                if (uploadersConn.containsKey(e.getKey()) || pendingUploadersConn.containsKey(e.getKey())) {
-                    continue;
-                }
-                log.info("{} opening connection to {}", config.getSelf(), e.getKey());
-                pendingUploadersConn.put(e.getKey(), e.getValue());
-                Connection.Request requestContent = new Connection.Request(UUID.randomUUID(), selfDesc.vodDesc);
-                DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), e.getKey(), Transport.UDP), null, config.overlayId);
-                ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
-                trigger(request, network);
-            }
-        }
-    };
-
-    Handler handleScheduledConnectionUpdate = new Handler<ScheduleConnUpdate>() {
-
-        @Override
-        public void handle(ScheduleConnUpdate event) {
-            log.debug("{} handle {}", config.getSelf(), event);
-            for (DecoratedAddress partner : downloadersConn.keySet()) {
-                Connection.Update msgContent = new Connection.Update(UUID.randomUUID(), selfDesc.vodDesc);
-                DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
-                ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
-                trigger(msg, network);
-            }
-
-            for (DecoratedAddress partner : uploadersConn.keySet()) {
-                Connection.Update msgContent = new Connection.Update(UUID.randomUUID(), selfDesc.vodDesc);
-                DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
-                ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
-                trigger(msg, network);
-            }
-        }
-    };
-
-    ClassMatchedHandler handleConnectionRequest
-            = new ClassMatchedHandler<Connection.Request, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Request>>() {
-
-                @Override
-                public void handle(Connection.Request content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Request> container) {
-                    log.trace("{} net received:{} from:{}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-
-                    if (downloadersConn.containsKey(container.getHeader().getSource())) {
-//                return;
-                    }
-
-                    log.debug("{} new connection to downloader {}", config.getSelf(), container.getHeader().getSource());
-                    downloadersConn.put(container.getHeader().getSource(), new DownloaderVodDescriptor(content.desc, config.defaultMaxPipeline));
-                    Connection.Response responseContent = content.accept();
-                    DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), container.getHeader().getSource(), Transport.UDP), null, config.overlayId);
-                    ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
-                    trigger(response, network);
-                }
-            };
-
-    ClassMatchedHandler handleConnectionResponse
-            = new ClassMatchedHandler<Connection.Response, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Response>>() {
-
-                @Override
-                public void handle(Connection.Response content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Response> container) {
-                    log.trace("{} net received:{} from:{}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-
-                    if (!content.status.equals(ReqStatus.SUCCESS)) {
-                        log.debug("{} connection req status {}", config.getSelf(), content.status);
-                        pendingUploadersConn.remove(container.getHeader().getSource());
-                        return;
-                    }
-
-                    if (!pendingUploadersConn.containsKey(container.getHeader().getSource())) {
-                        log.info("{} closing connection to {}", config.getSelf(), container.getHeader().getSource());
-                        //TODO Alex - connection issue
-//                        Connection.Close msgContent = new Connection.Close(UUID.randomUUID());
-//                        DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), container.getHeader().getSource(), Transport.UDP), null, config.overlayId);
-//                        ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
-//                        trigger(msg, network);
-                        return;
-                    }
-
-                    log.debug("{} new connection to uploader {}", config.getSelf(), container.getHeader().getSource());
-                    uploadersConn.put(container.getHeader().getSource(), new UploaderVodDescriptor(pendingUploadersConn.remove(container.getHeader().getSource()), config.defaultMaxPipeline));
-
-                    if (!ready) {
-                        log.debug("{} first uploader connection, can start serving", config.getSelf());
-                        ready = true;
-                        trigger(new Ready(UUID.randomUUID()), myPort);
-                    }
-                }
-            };
-
-    ClassMatchedHandler handleConnectionUpdate
-            = new ClassMatchedHandler<Connection.Update, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Update>>() {
-
-                @Override
-                public void handle(Connection.Update content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Update> container) {
-                    log.trace("{} net received:{} from:{}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-
-                    if (downloadersConn.containsKey(container.getHeader().getSource())) {
-                        downloadersConn.get(container.getHeader().getSource()).updateDesc(content.desc);
-                    }
-
-                    if (uploadersConn.containsKey(container.getHeader().getSource())) {
-                        uploadersConn.get(container.getHeader().getSource()).updateDesc(content.desc);
-                    }
-                }
-            };
-
-    ClassMatchedHandler handleConnectionClose
-            = new ClassMatchedHandler<Connection.Close, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Close>>() {
-
-                @Override
-                public void handle(Connection.Close content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Close> container) {
-                    log.info("{} received close:{}, from:{}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-                    //TODO Alex connection issue
-//                    downloadersConn.remove(container.getHeader().getSource());
-//                    pendingUploadersConn.remove(container.getHeader().getSource());
-//                    uploadersConn.remove(container.getHeader().getSource());
-                }
-            };
-
-    //DOWNLOAD MANAGEMENT - partener load management
-    Handler handleLocalDataRequest = new Handler<Download.DataRequest>() {
-
-        @Override
-        public void handle(Download.DataRequest requestContent) {
-            log.trace("{} handle local {}", config.getSelf(), requestContent);
-
-            Map.Entry<DecoratedAddress, UploaderVodDescriptor> uploader = getUploader(requestContent.pieceId);
-            if (uploader == null) {
-                log.debug("{} no candidate for piece {}", new Object[]{config.getSelf(), requestContent.pieceId});
-                trigger(requestContent.busy(), myPort);
-                return;
-            }
-            uploader.getValue().useSlot();
-
-            Map<UUID, Pair<Download.DataRequest, UUID>> partnerReq = pendingDownloadingData.get(uploader.getKey());
-            if (partnerReq == null) {
-                partnerReq = new HashMap<UUID, Pair<Download.DataRequest, UUID>>();
-                pendingDownloadingData.put(uploader.getKey(), partnerReq);
-            }
-            partnerReq.put(requestContent.id, Pair.with(requestContent, scheduleDownloadDataTimeout(uploader.getKey(), requestContent.id)));
-            DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), uploader.getKey(), Transport.UDP), null, config.overlayId);
-            ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
-            trigger(request, network);
-        }
-
-    };
-
-    ClassMatchedHandler handleNetDataRequest
-            = new ClassMatchedHandler<Download.DataRequest, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.DataRequest>>() {
-
-                @Override
-                public void handle(Download.DataRequest content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.DataRequest> container) {
-                    log.trace("{} net received:{} from:{}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-                    log.debug("{} requested unique pieces {}", pendingUploadingData.size());
-
-                    DownloaderVodDescriptor downDesc = downloadersConn.get(container.getHeader().getSource());
-                    if (downDesc == null) {
-                        log.debug("{} no connection open, dropping req {} from {}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-                        return;
-                    }
-                    if (!downDesc.isViable()) {
-                        //TODO should not happen yet, but will need to be treated later, when downloader has no more slots available
-                        log.info("{} no more slots for peer:{}", config.getSelf(), container.getHeader().getSource());
-                        return;
-                    }
-                    downDesc.useSlot();
-
-                    Set<DecoratedAddress> requesters = pendingUploadingData.get(content.pieceId);
-                    if (requesters == null) {
-                        requesters = new HashSet<DecoratedAddress>();
-                        pendingUploadingData.put(content.pieceId, requesters);
-                        trigger(content, myPort);
-                    }
-                    requesters.add(container.getHeader().getSource());
-                }
-            };
-
-    Handler handleLocalDataResponse = new Handler<Download.DataResponse>() {
-
-        @Override
-        public void handle(Download.DataResponse responseContent) {
-            log.trace("{} handle local {}", config.getSelf(), responseContent);
-
-            Set<DecoratedAddress> requesters = pendingUploadingData.get(responseContent.pieceId);
-            if (requesters == null) {
-                log.debug("{} no requesters for piece {}", config.getSelf(), responseContent.pieceId);
-                return;
-            }
-
-            for (DecoratedAddress src : requesters) {
-                DownloaderVodDescriptor down = downloadersConn.get(src);
-                if (down != null) {
-                    log.debug("{} sending piece {} to {}", new Object[]{config.getSelf(), responseContent.pieceId, src});
-                    DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), src, Transport.UDP), null, config.overlayId);
-                    ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
-                    trigger(response, network);
-                    down.freeSlot();
-                }
-            }
-            pendingUploadingData.remove(responseContent.pieceId);
-        }
-    };
-
-    ClassMatchedHandler handleNetDataResponse
-            = new ClassMatchedHandler<Download.DataResponse, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.DataResponse>>() {
-
-                @Override
-                public void handle(Download.DataResponse content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.DataResponse> container) {
-                    log.trace("{} net received:{} from:{}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-                    UploaderVodDescriptor up = uploadersConn.get(container.getHeader().getSource());
-
-                    Map<UUID, Pair<Download.DataRequest, UUID>> aux = pendingDownloadingData.get(container.getHeader().getSource());
-                    if (aux == null) {
-                        log.debug("{} data posibly late", config.getSelf());
-                        //TODO Alex fix this;
-                        return;
-                    }
-                    Pair<Download.DataRequest, UUID> req = aux.remove(content.id);
-                    if (req == null) {
-                        log.debug("{} data posibly late", config.getSelf());
-                        //TODO Alex fix this;
-                        return;
-                    }
-                    if(up == null) {
-                        log.warn("received data from someone who i didn't connect to or clossed connection");
-                        return;
-                    }
-                    up.freeSlot();
-                    cancelDownloadDataTimeout(req.getValue0().id, req.getValue1());
-                    trigger(content, myPort);
-                }
-            };
-
-    Handler handleLocalHashRequest = new Handler<Download.HashRequest>() {
-
-        @Override
-        public void handle(Download.HashRequest requestContent) {
-            log.debug("{} handle local {}", config.getSelf(), requestContent);
-            Map.Entry<DecoratedAddress, UploaderVodDescriptor> uploader = getUploader(requestContent.targetPos);
-            if (uploader == null) {
-                log.info("{} no candidate for position {}", new Object[]{config.getSelf(), requestContent.targetPos});
-                trigger(requestContent.busy(), myPort);
-                return;
-            }
-            uploader.getValue().useSlot();
-
-            Map<UUID, Pair<Download.HashRequest, UUID>> partnerReq = pendingDownloadingHash.get(uploader.getKey());
-            if (partnerReq == null) {
-                partnerReq = new HashMap<UUID, Pair<Download.HashRequest, UUID>>();
-                pendingDownloadingHash.put(uploader.getKey(), partnerReq);
-            }
-            log.debug("{} sending hash req:{}", new Object[]{config.getSelf(), requestContent.hashes});
-            partnerReq.put(requestContent.id, Pair.with(requestContent, scheduleDownloadHashTimeout(uploader.getKey(), requestContent.id)));
-            DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), uploader.getKey(), Transport.UDP), null, config.overlayId);
-            ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
-            trigger(request, network);
-        }
-
-    };
-
-    ClassMatchedHandler handleNetHashRequest
-            = new ClassMatchedHandler<Download.HashRequest, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.HashRequest>>() {
-
-                @Override
-                public void handle(Download.HashRequest content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.HashRequest> container) {
-                    log.trace("{} net received:{} from:{}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-
-                    DownloaderVodDescriptor downDesc = downloadersConn.get(container.getHeader().getSource());
-                    if (downDesc == null) {
-                        log.debug("{} no connection open, dropping req {} from {}", new Object[]{config.getSelf(), content, container.getHeader().getSource()});
-                        return;
-                    }
-                    if (!downDesc.isViable()) {
-                        //TODO should not happen yet, but will need to be treated later, when downloader has no more slots available
-                        log.info("{} no more slots for peer:{}", config.getSelf(), container.getHeader().getSource());
-                        return;
-                    }
-                    downDesc.useSlot();
-
-                    Set<DecoratedAddress> requesters = pendingUploadingHash.get(content.targetPos);
-                    if (requesters == null) {
-                        requesters = new HashSet<DecoratedAddress>();
-                        pendingUploadingHash.put(content.targetPos, requesters);
-                        trigger(content, myPort);
-                    }
-                    requesters.add(container.getHeader().getSource());
-                }
-            };
-
-    private Handler<Download.HashResponse> handleLocalHashResponse = new Handler<Download.HashResponse>() {
-
-        @Override
-        public void handle(Download.HashResponse responseContent) {
-            log.trace("{} handle local {}", config.getSelf(), responseContent);
-
-            Set<DecoratedAddress> requesters = pendingUploadingHash.get(responseContent.targetPos);
-            if (requesters == null) {
-                log.debug("{} no requesters for piece {}", config.getSelf(), responseContent.targetPos);
-                return;
-            }
-
-            for (DecoratedAddress src : requesters) {
-                DownloaderVodDescriptor down = downloadersConn.get(src);
-                if (down != null) {
-                    log.debug("{} sending hash set {} to {}", new Object[]{config.getSelf(), responseContent.targetPos, src});
-                    DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), src, Transport.UDP), null, config.overlayId);
-                    ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
-                    trigger(response, network);
-                    down.freeSlot();
-                }
-            }
-            pendingUploadingHash.remove(responseContent.targetPos);
-        }
-    };
-
-    ClassMatchedHandler handleNetHashResponse = 
-            new ClassMatchedHandler<Download.HashResponse, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.HashResponse>>() {
-
-        @Override
-        public void handle(Download.HashResponse content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.HashResponse> container) {
-            log.debug("{} net received:{} with status:{} from:{}", new Object[]{config.getSelf(), content, content.status, container.getHeader().getSource()});
-            Map<UUID, Pair<Download.HashRequest, UUID>> aux = pendingDownloadingHash.get(container.getHeader().getSource());
-            if (aux == null) {
-                log.debug("{} hash posibly late", config.getSelf());
-                //TODO Alex fix this;
-                return;
-            }
-            Pair<Download.HashRequest, UUID> req = aux.remove(content.id);
-            if (req == null) {
-                log.debug("{} data posibly late", config.getSelf());
-                //TODO Alex fix this;
-                return;
-            }
-            UploaderVodDescriptor up = uploadersConn.get(container.getHeader().getSource());
-            if (up != null) {
-                up.freeSlot();
-            }
-
-            log.debug("{} received hashes:{} missing:{}", new Object[]{config.getSelf(), content.hashes.keySet(), content.missingHashes});
-            aux.remove(content.id);
-            cancelDownloadHashTimeout(req.getValue0().id, req.getValue1());
-            trigger(content, myPort);
-        }
-    };
-
-    Handler handleDownloadDataTimeout = new Handler<DownloadDataTimeout>() {
-
-        @Override
-        public void handle(DownloadDataTimeout timeout) {
-            log.trace("{} handle {}", config.getSelf(), timeout);
-
-            Map<UUID, Pair<Download.DataRequest, UUID>> targetDataTraffic = pendingDownloadingData.get(timeout.target);
-            if (targetDataTraffic == null) {
-                log.debug("{} timeout:{} for req:{} from:{} - possibly late", new Object[]{config.getSelf(), timeout.getTimeoutId(), timeout.reqId, timeout.target});
-                return;
-            }
-            Pair<Download.DataRequest, UUID> req = targetDataTraffic.get(timeout.reqId);
-            if (req == null) {
-                log.debug("{} timeout:{} for req:{} from:{} - possibly late", new Object[]{config.getSelf(), timeout.getTimeoutId(), timeout.reqId, timeout.target});
-                return;
-            }
-            uploadersConn.get(timeout.target).freeSlot();
-            trigger(req.getValue0().timeout(), myPort);
-
-            //cleaning
-            targetDataTraffic.remove(timeout.reqId);
-            if (targetDataTraffic.isEmpty()) {
-                pendingDownloadingData.remove(timeout.target);
-            }
-        }
-    };
-
-    Handler handleDownloadHashTimeout = new Handler<DownloadHashTimeout>() {
-
-        @Override
-        public void handle(DownloadHashTimeout timeout) {
-            log.info("{} handle {}", config.getSelf(), timeout);
-
-            Map<UUID, Pair<Download.HashRequest, UUID>> targetHashTraffic = pendingDownloadingHash.get(timeout.target);
-            if (targetHashTraffic == null) {
-                log.info("{} Hash timeout:{} for req:{} from:{} - possibly late", new Object[]{config.getSelf(), timeout.getTimeoutId(), timeout.reqId, timeout.target});
-                return;
-            }
-            Pair<Download.HashRequest, UUID> req = targetHashTraffic.get(timeout.reqId);
-            if (req == null) {
-                log.info("{} Hash timeout:{} for req:{} from:{} - possibly late", new Object[]{config.getSelf(), timeout.getTimeoutId(), timeout.reqId, timeout.target});
-                return;
-            }
-            log.info("{} timeout hashes:{}", new Object[]{config.getSelf(), req.getValue0().hashes});
-            uploadersConn.get(timeout.target).freeSlot();
-            trigger(req.getValue0().timeout(), myPort);
-
-            //cleaning
-            targetHashTraffic.remove(timeout.reqId);
-            if (targetHashTraffic.isEmpty()) {
-                pendingDownloadingHash.remove(timeout.target);
-            }
-        }
-    };
-
-    private Map.Entry<DecoratedAddress, UploaderVodDescriptor> getUploader(int pieceId) {
-        Iterator<Map.Entry<DecoratedAddress, UploaderVodDescriptor>> it = uploadersConn.entrySet().iterator();
-        Map.Entry<DecoratedAddress, UploaderVodDescriptor> candidate = null;
-        //get first viable candidate
-        while (it.hasNext()) {
-            candidate = it.next();
-            int blockPos = pieceId / config.piecesPerBlock;
-            if (candidate.getValue().isViable(blockPos)) {
-                break;
-            }
-            candidate = null;
-        }
-        //get best candidate
-        while (it.hasNext()) {
-            Map.Entry<DecoratedAddress, UploaderVodDescriptor> nextC = it.next();
-            int blockPos = pieceId / config.piecesPerBlock;
-            if (nextC.getValue().betterCandidate(candidate.getValue(), blockPos)) {
-                candidate = nextC;
-            }
-        }
-
-        return candidate;
-    }
-
-    private UUID scheduleConnectionUpdate() {
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(config.updatePeriod, config.updatePeriod);
-        Timeout t = new ScheduleConnUpdate(spt);
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(config.periodicStateCheck, config.periodicStateCheck);
+        Timeout t = new PeriodicInternalStateCheck(spt);
         spt.setTimeoutEvent(t);
         trigger(spt, timer);
-        return t.getTimeoutId();
+        periodicISCheckTid = t.getTimeoutId();
     }
 
-    private UUID scheduleDownloadHashTimeout(DecoratedAddress target, UUID reqId) {
+    private void cancelPeriodicISCheck() {
+        if (periodicISCheckTid == null) {
+            LOG.warn("{} double cancelation of periodic ISCHeck timeout", logPrefix);
+        } else {
+            LOG.trace("{} canceling periodic ISCheck timeout", logPrefix);
+        }
+        CancelTimeout ct = new CancelTimeout(periodicISCheckTid);
+        trigger(ct, timer);
+        periodicISCheckTid = null;
+    }
+
+    public static class PeriodicInternalStateCheck extends Timeout {
+
+        public PeriodicInternalStateCheck(SchedulePeriodicTimeout schedule) {
+            super(schedule);
+        }
+    }
+
+    private void scheduleConnUpdate() {
+        if (periodicConnUpdateTid != null) {
+            LOG.warn("{} double schedule of periodic ConnUpdate timeout", logPrefix);
+        } else {
+            LOG.trace("{} scheduling periodic ConnUpdate timeout", logPrefix);
+        }
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(config.periodicConnUpdate, config.periodicConnUpdate);
+        Timeout t = new PeriodicConnUpdate(spt);
+        spt.setTimeoutEvent(t);
+        trigger(spt, timer);
+        periodicConnUpdateTid = t.getTimeoutId();
+    }
+
+    private void cancelConnUpdate() {
+        if (periodicConnUpdateTid == null) {
+            LOG.warn("{} double cancelation of periodic ConnUpdate timeout", logPrefix);
+        } else {
+            LOG.trace("{} canceling periodic ConnUpdate timeout", logPrefix);
+        }
+        CancelTimeout ct = new CancelTimeout(periodicISCheckTid);
+        trigger(ct, timer);
+        periodicConnUpdateTid = null;
+    }
+
+    public static class PeriodicConnUpdate extends Timeout {
+
+        public PeriodicConnUpdate(SchedulePeriodicTimeout schedule) {
+            super(schedule);
+        }
+    }
+
+    private UUID scheduleDownloadDataTimeout(UUID reqId, BasicAddress target) {
         ScheduleTimeout st = new ScheduleTimeout(config.reqTimeoutPeriod);
-        Timeout t = new DownloadHashTimeout(st, target, reqId);
+        Timeout t = new DownloadDataTimeout(st, reqId, target);
         st.setTimeoutEvent(t);
         trigger(st, timer);
-        log.trace("{} schedule req:{} timeout:{}", new Object[]{config.getSelf(), reqId, t.getTimeoutId()});
         return t.getTimeoutId();
     }
 
-    private UUID scheduleDownloadDataTimeout(DecoratedAddress target, UUID reqId) {
+    private void cancelDownloadDataTimeout(UUID tid) {
+        CancelTimeout ct = new CancelTimeout(tid);
+        trigger(ct, timer);
+    }
+
+    public class DownloadDataTimeout extends Timeout {
+
+        public final BasicAddress target;
+        public final UUID reqId;
+
+        public DownloadDataTimeout(ScheduleTimeout schedule, UUID reqId, BasicAddress target) {
+            super(schedule);
+            this.reqId = reqId;
+            this.target = target;
+        }
+    }
+
+    private UUID scheduleDownloadHashTimeout(UUID reqId, BasicAddress target) {
         ScheduleTimeout st = new ScheduleTimeout(config.reqTimeoutPeriod);
-        Timeout t = new DownloadDataTimeout(st, target, reqId);
+        Timeout t = new DownloadHashTimeout(st, reqId, target);
         st.setTimeoutEvent(t);
         trigger(st, timer);
-        log.trace("{} schedule req:{} timeout:{}", new Object[]{config.getSelf(), reqId, t.getTimeoutId()});
         return t.getTimeoutId();
     }
 
-    private void cancelDownloadDataTimeout(UUID reqId, UUID tid) {
-        log.trace("{} canceling timeout:{} for req:{}", new Object[]{config.getSelf(), tid, reqId});
+    private void cancelDownloadHashTimeout(UUID tid) {
         CancelTimeout ct = new CancelTimeout(tid);
         trigger(ct, timer);
-
     }
 
-    private void cancelDownloadHashTimeout(UUID reqId, UUID tid) {
-        log.trace("{} canceling timeout:{} for req:{}", new Object[]{config.getSelf(), tid, reqId});
-        CancelTimeout ct = new CancelTimeout(tid);
-        trigger(ct, timer);
+    public class DownloadHashTimeout extends Timeout {
 
+        public final BasicAddress target;
+        public final UUID reqId;
+
+        public DownloadHashTimeout(ScheduleTimeout schedule, UUID reqId, BasicAddress target) {
+            super(schedule);
+            this.reqId = reqId;
+            this.target = target;
+        }
     }
 
+    //**************************************************************************
     public static class ConnMngrInit extends Init<ConnMngrComp> {
 
         public final ConnMngrConfig config;
 
         public ConnMngrInit(ConnMngrConfig config) {
             this.config = config;
+        }
+    }
+
+    public class DownloadTracker {
+
+        private Map<BasicAddress, Map<UUID, Pair<Download.HashRequest, UUID>>> pendingDownloadingHash; //<address, <requestId, <request, timeoutId>>> 
+        private Map<BasicAddress, Map<UUID, Pair<Download.DataRequest, UUID>>> pendingDownloadingData; //<address, <requestId, <request, timeoutId>>> 
+        private Map<BasicAddress, VodDescriptor> uploaders;
+
+        public DownloadTracker() {
+            this.pendingDownloadingHash = new HashMap<BasicAddress, Map<UUID, Pair<Download.HashRequest, UUID>>>();
+            this.pendingDownloadingData = new HashMap<BasicAddress, Map<UUID, Pair<Download.DataRequest, UUID>>>();
+            this.uploaders = new HashMap<BasicAddress, VodDescriptor>();
+        }
+
+        public void publishInternalState() {
+            LOG.info("{} {} available uploaders", logPrefix, uploaders.size());
+            for (Map.Entry<BasicAddress, Map<UUID, Pair<Download.HashRequest, UUID>>> e : pendingDownloadingHash.entrySet()) {
+                LOG.info("{} pending download hash from:{} size:{}", new Object[]{logPrefix, e.getKey(), e.getValue().size()});
+            }
+            for (Map.Entry<BasicAddress, Map<UUID, Pair<Download.DataRequest, UUID>>> e : pendingDownloadingData.entrySet()) {
+                LOG.info("{} pending download data from:{} size:{}", new Object[]{logPrefix, e.getKey(), e.getValue().size()});
+            }
+        }
+
+        public boolean isEmpty() {
+            return pendingDownloadingData.isEmpty() && pendingDownloadingHash.isEmpty();
+        }
+
+        public void clear() {
+            uploaders.clear();
+        }
+
+        public boolean connect(DecoratedAddress target, VodDescriptor desc) {
+            tryPublishReady();
+            uploaders.put(target.getBase(), desc);
+            return true;
+        }
+
+        public boolean keepConnect(DecoratedAddress target, VodDescriptor desc) {
+            if (uploaders.containsKey(target.getBase())) {
+                tryPublishReady();
+                uploaders.put(target.getBase(), desc);
+                return true;
+            }
+            return false;
+        }
+
+        //TODO Alex - might want to keep local load in a variable...this might be expensive
+        private void tryPublishReady() {
+            int localLoad = 0;
+            for (Map<UUID, Pair<Download.HashRequest, UUID>> hashQueue : pendingDownloadingHash.values()) {
+                localLoad += hashQueue.size();
+            }
+            for (Map<UUID, Pair<Download.DataRequest, UUID>> dataQueue : pendingDownloadingData.values()) {
+                localLoad += dataQueue.size();
+            }
+            int freeSlots = config.defaultMaxPipeline - localLoad;
+            if (freeSlots > 0) {
+                LOG.info("{} ready slots:{}", logPrefix, freeSlots);
+                trigger(new Ready(UUID.randomUUID(), freeSlots), myPort);
+            }
+        }
+
+        public void close(DecoratedAddress target) {
+            Map<UUID, Pair<Download.HashRequest, UUID>> hashQueue = pendingDownloadingHash.remove(target.getBase());
+            if (hashQueue != null) {
+                for (Map.Entry<UUID, Pair<Download.HashRequest, UUID>> e : hashQueue.entrySet()) {
+                    Download.HashRequest hashReq = e.getValue().getValue0();
+                    trigger(hashReq.timeout(), myPort);
+                    cancelDownloadHashTimeout(e.getValue().getValue1());
+                }
+            }
+
+            Map<UUID, Pair<Download.DataRequest, UUID>> dataQueue = pendingDownloadingData.remove(target.getBase());
+            if (dataQueue != null) {
+                for (Map.Entry<UUID, Pair<Download.DataRequest, UUID>> e : dataQueue.entrySet()) {
+                    Download.DataRequest dataReq = e.getValue().getValue0();
+                    trigger(dataReq.timeout(), myPort);
+                    cancelDownloadDataTimeout(e.getValue().getValue1());
+                }
+            }
+
+            uploaders.remove(target.getBase());
+        }
+
+        Handler handleCroupierSample = new Handler<CroupierSample>() {
+
+            @Override
+            public void handle(CroupierSample event) {
+                LOG.debug("{} received new croupier samples", logPrefix);
+
+                for (Map.Entry<DecoratedAddress, VodDescriptor> e : event.sample.entrySet()) {
+                    if (e.getValue().downloadPos < selfDesc.vodDesc.downloadPos) {
+                        continue;
+                    }
+                    if (uploaders.containsKey(e.getKey().getBase())) {
+                        continue;
+                    }
+                    LOG.info("{} opening connection to:{}", logPrefix, e.getKey().getBase());
+                    connTracker.openDownloadConnection(e.getKey());
+                }
+            }
+        };
+
+        Handler handleLocalHashRequest = new Handler<Download.HashRequest>() {
+
+            @Override
+            public void handle(Download.HashRequest requestContent) {
+                LOG.debug("{} handle local hash request:{}", logPrefix, requestContent.targetPos);
+                DecoratedAddress uploader = getUploader(requestContent.targetPos);
+                if (uploader == null) {
+                    LOG.info("{} no candidate for position:{}", new Object[]{logPrefix, requestContent.targetPos});
+                    trigger(requestContent.busy(), myPort);
+                    return;
+                }
+                Map<UUID, Pair<Download.HashRequest, UUID>> uploaderQueue = pendingDownloadingHash.get(uploader.getBase());
+                if (uploaderQueue == null) {
+                    uploaderQueue = new HashMap<UUID, Pair<Download.HashRequest, UUID>>();
+                    pendingDownloadingHash.put(uploader.getBase(), uploaderQueue);
+                }
+                LOG.debug("{} sending hash request:{} to:{}",
+                        new Object[]{logPrefix, requestContent.hashes, uploader.getBase()});
+                UUID tId = scheduleDownloadHashTimeout(requestContent.id, uploader.getBase());
+                uploaderQueue.put(requestContent.id, Pair.with(requestContent, tId));
+                DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), uploader, Transport.UDP), null, config.overlayId);
+                ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
+                trigger(request, network);
+            }
+        };
+
+        Handler handleLocalDataRequest = new Handler<Download.DataRequest>() {
+            @Override
+            public void handle(Download.DataRequest requestContent) {
+                LOG.debug("{} handle local data request:{}", logPrefix, requestContent.pieceId);
+
+                DecoratedAddress uploader = getUploader(requestContent.pieceId);
+                if (uploader == null) {
+                    LOG.debug("{} no candidate for piece:{}", new Object[]{logPrefix, requestContent.pieceId});
+                    trigger(requestContent.busy(), myPort);
+                    return;
+                }
+                Map<UUID, Pair<Download.DataRequest, UUID>> uploaderQueue = pendingDownloadingData.get(uploader.getBase());
+                if (uploaderQueue == null) {
+                    uploaderQueue = new HashMap<UUID, Pair<Download.DataRequest, UUID>>();
+                    pendingDownloadingData.put(uploader.getBase(), uploaderQueue);
+                }
+                LOG.debug("{} sending data request:{} to:{}",
+                        new Object[]{logPrefix, requestContent.pieceId, uploader.getBase()});
+                UUID tId = scheduleDownloadDataTimeout(requestContent.id, uploader.getBase());
+                uploaderQueue.put(requestContent.id, Pair.with(requestContent, tId));
+                DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), uploader, Transport.UDP), null, config.overlayId);
+                ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
+                trigger(request, network);
+            }
+        };
+
+        private DecoratedAddress getUploader(int pieceId) {
+            Iterator<Map.Entry<BasicAddress, VodDescriptor>> it = uploaders.entrySet().iterator();
+            Map.Entry<BasicAddress, VodDescriptor> candidate = null;
+            int blockPos = pieceId / config.piecesPerBlock;
+
+            //get first viable candidate
+            while (it.hasNext() && candidate == null) {
+                candidate = it.next();
+                if (candidate.getValue().downloadPos < blockPos) {
+                    candidate = null;
+                }
+            }
+            if (candidate == null) {
+                return null;
+            }
+            int candidateLoad = 0;
+            candidateLoad += pendingDownloadingData.containsKey(candidate.getKey()) ? pendingDownloadingData.get(candidate.getKey()).size() : 0;
+            candidateLoad += pendingDownloadingHash.containsKey(candidate.getKey()) ? pendingDownloadingHash.get(candidate.getKey()).size() : 0;
+            //get best candidate
+            while (it.hasNext()) {
+                Map.Entry<BasicAddress, VodDescriptor> nextCandidate = it.next();
+                if (nextCandidate.getValue().downloadPos < blockPos) {
+                    continue;
+                }
+                int nextCandidateLoad = 0;
+                nextCandidateLoad += pendingDownloadingData.containsKey(nextCandidate.getKey()) ? pendingDownloadingData.get(nextCandidate.getKey()).size() : 0;
+                nextCandidateLoad += pendingDownloadingHash.containsKey(nextCandidate.getKey()) ? pendingDownloadingHash.get(nextCandidate.getKey()).size() : 0;
+                if (nextCandidateLoad < candidateLoad) {
+                    candidate = nextCandidate;
+                    candidateLoad = nextCandidateLoad;
+                }
+            }
+            return connTracker.getDownloadConn(candidate.getKey());
+        }
+
+        Handler handleDownloadDataTimeout = new Handler<DownloadDataTimeout>() {
+
+            @Override
+            public void handle(DownloadDataTimeout timeout) {
+                LOG.debug("{} timeout for data from:{}", new Object[]{logPrefix, timeout.target});
+
+                Map<UUID, Pair<Download.DataRequest, UUID>> uploaderQueue = pendingDownloadingData.get(timeout.target);
+                if (uploaderQueue == null) {
+                    LOG.info("{} timeout for data from:{} - possibly late", new Object[]{logPrefix, timeout.target});
+                    return;
+                }
+                Pair<Download.DataRequest, UUID> req = uploaderQueue.remove(timeout.reqId);
+                if (req == null) {
+                    LOG.info("{} timeout for data from:{} - possibly late", new Object[]{logPrefix, timeout.target});
+                    return;
+                }
+                trigger(req.getValue0().timeout(), myPort);
+
+                if (uploaderQueue.isEmpty()) {
+                    pendingDownloadingData.remove(timeout.target);
+                }
+            }
+        };
+
+        Handler handleDownloadHashTimeout = new Handler<DownloadHashTimeout>() {
+
+            @Override
+            public void handle(DownloadHashTimeout timeout) {
+                LOG.debug("{} timeout for hash from:{}", logPrefix, timeout.target);
+
+                Map<UUID, Pair<Download.HashRequest, UUID>> uploaderQueue = pendingDownloadingHash.get(timeout.target);
+                if (uploaderQueue == null) {
+                    LOG.info("{} timeout for hash from:{} - possibly late", new Object[]{logPrefix, timeout.target});
+                    return;
+                }
+                Pair<Download.HashRequest, UUID> req = uploaderQueue.remove(timeout.reqId);
+                if (req == null) {
+                    LOG.info("{} timeout for hash from:{} - possibly late", new Object[]{logPrefix, timeout.target});
+                    return;
+                }
+                trigger(req.getValue0().timeout(), myPort);
+
+                if (uploaderQueue.isEmpty()) {
+                    pendingDownloadingHash.remove(timeout.target);
+                }
+            }
+        };
+
+        ClassMatchedHandler handleNetHashResponse
+                = new ClassMatchedHandler<Download.HashResponse, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.HashResponse>>() {
+
+                    @Override
+                    public void handle(Download.HashResponse content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.HashResponse> container) {
+                        DecoratedAddress target = container.getHeader().getSource();
+                        connTracker.updateAddress(target);
+
+                        LOG.debug("{} received net hash response from:{}", new Object[]{logPrefix, target.getBase()});
+                        Map<UUID, Pair<Download.HashRequest, UUID>> uploaderQueue = pendingDownloadingHash.get(container.getHeader().getSource());
+                        if (uploaderQueue == null) {
+                            LOG.info("{} hash from:{} - posibly late", logPrefix, target.getBase());
+                            return;
+                        }
+                        Pair<Download.HashRequest, UUID> req = uploaderQueue.remove(content.id);
+                        if (req == null) {
+                            LOG.debug("{} hash from:{} - posibly late", logPrefix, target.getBase());
+                            return;
+                        }
+
+                        cancelDownloadHashTimeout(req.getValue1());
+                        trigger(content, myPort);
+
+                        if (uploaderQueue.isEmpty()) {
+                            pendingDownloadingHash.remove(target.getBase());
+                        }
+                    }
+                };
+
+        ClassMatchedHandler handleNetDataResponse
+                = new ClassMatchedHandler<Download.DataResponse, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.DataResponse>>() {
+
+                    @Override
+                    public void handle(Download.DataResponse content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.DataResponse> container) {
+                        DecoratedAddress target = container.getHeader().getSource();
+                        connTracker.updateAddress(target);
+
+                        LOG.trace("{} receiver net data response from:{}", new Object[]{logPrefix, target.getBase()});
+                        Map<UUID, Pair<Download.DataRequest, UUID>> uploaderQueue = pendingDownloadingData.get(target.getBase());
+                        if (uploaderQueue == null) {
+                            LOG.info("{} data from:{} - posibly late", logPrefix, target.getBase());
+                            return;
+                        }
+                        Pair<Download.DataRequest, UUID> req = uploaderQueue.remove(content.id);
+                        if (req == null) {
+                            LOG.info("{} data from:{} posibly late", logPrefix, target.getBase());
+                            return;
+                        }
+
+                        cancelDownloadDataTimeout(req.getValue1());
+                        trigger(content, myPort);
+
+                        if (uploaderQueue.isEmpty()) {
+                            pendingDownloadingData.remove(target.getBase());
+                        }
+                    }
+                };
+    }
+
+    public class UploadTracker {
+
+        //TODO Alex - might want to optimise and to catch requests for same package and ask only once from the store
+        public Map<BasicAddress, VodDescriptor> downloaders;
+        private Map<UUID, BasicAddress> pendingUploadingHash; //<requestId, target> 
+        private Map<UUID, BasicAddress> pendingUploadingData; //<requestId, target> 
+
+        public UploadTracker() {
+            this.downloaders = new HashMap<BasicAddress, VodDescriptor>();
+            this.pendingUploadingHash = new HashMap<UUID, BasicAddress>();
+            this.pendingUploadingData = new HashMap<UUID, BasicAddress>();
+        }
+
+        public void publishInternalState() {
+            LOG.info("{} downloaders:{}", logPrefix, downloaders.size());
+            LOG.info("{} pending uploading hash:{}", logPrefix, pendingUploadingHash.size());
+            LOG.info("{} pending uploading data:{}", logPrefix, pendingUploadingData.size());
+        }
+
+        public boolean connect(DecoratedAddress target, VodDescriptor desc) {
+            downloaders.put(target.getBase(), desc);
+            return true;
+        }
+
+        public boolean keepConnect(DecoratedAddress target, VodDescriptor desc) {
+            if (downloaders.containsKey(target.getBase())) {
+                downloaders.put(target.getBase(), desc);
+                return true;
+            }
+            return false;
+        }
+
+        public void close(DecoratedAddress target) {
+            downloaders.clear();
+
+            Iterator<Map.Entry<UUID, BasicAddress>> it;
+            int removed;
+
+            it = pendingUploadingHash.entrySet().iterator();
+            removed = 0;
+            while (it.hasNext()) {
+                Map.Entry<UUID, BasicAddress> e = it.next();
+                if (target.getBase().equals(e.getValue())) {
+                    removed++;
+                    it.remove();
+                }
+            }
+            if (removed > 0) {
+                LOG.info("{} closing connection to:{}, with {} pending hash requests", logPrefix, removed);
+            }
+
+            it = pendingUploadingData.entrySet().iterator();
+            removed = 0;
+            while (it.hasNext()) {
+                Map.Entry<UUID, BasicAddress> e = it.next();
+                if (target.getBase().equals(e.getValue())) {
+                    removed++;
+                    it.remove();
+                }
+            }
+            if (removed > 0) {
+                LOG.info("{} closing connection to:{}, with {} pending data requests", logPrefix, removed);
+            }
+        }
+
+        ClassMatchedHandler handleNetHashRequest
+                = new ClassMatchedHandler<Download.HashRequest, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.HashRequest>>() {
+
+                    @Override
+                    public void handle(Download.HashRequest content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.HashRequest> container) {
+                        DecoratedAddress target = container.getHeader().getSource();
+                        connTracker.updateAddress(target);
+
+                        LOG.debug("{} received net hash request from:{}, for:{}", new Object[]{logPrefix, target.getBase(), content.targetPos});
+                        if (!downloaders.containsKey(target.getBase())) {
+                            LOG.warn("{} no connection open to:{}, dropping hash request:{}", new Object[]{logPrefix, target.getBase(), content.hashes});
+                            connTracker.closeUploadConnection(target);
+                            return;
+                        }
+
+                        if (!pendingUploadingHash.containsKey(content.id)) {
+                            pendingUploadingHash.put(content.id, target.getBase());
+                            trigger(content, myPort);
+                        } else {
+                            LOG.warn("{} request already registered", logPrefix);
+                        }
+                    }
+                };
+
+        ClassMatchedHandler handleNetDataRequest
+                = new ClassMatchedHandler<Download.DataRequest, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.DataRequest>>() {
+
+                    @Override
+                    public void handle(Download.DataRequest content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Download.DataRequest> container) {
+                        DecoratedAddress target = container.getHeader().getSource();
+                        connTracker.updateAddress(target);
+
+                        LOG.debug("{} received net data request from:{}, for:{}", new Object[]{logPrefix, target.getBase(), content.pieceId});
+                        if (!downloaders.containsKey(target.getBase())) {
+                            LOG.warn("{} no connection open to:{}, dropping data request:{}", new Object[]{logPrefix, target.getBase(), content.pieceId});
+                            connTracker.closeUploadConnection(target);
+                            return;
+                        }
+
+                        if (!pendingUploadingData.containsKey(content.id)) {
+                            pendingUploadingData.put(content.id, target.getBase());
+                            trigger(content, myPort);
+                        } else {
+                            LOG.warn("{} request already registered", logPrefix);
+                        }
+                    }
+                };
+
+        private Handler handleLocalHashResponse = new Handler<Download.HashResponse>() {
+
+            @Override
+            public void handle(Download.HashResponse responseContent) {
+                LOG.debug("{} received local hash response:{}", logPrefix, responseContent.targetPos);
+
+                if (!pendingUploadingHash.containsKey(responseContent.id)) {
+                    LOG.warn("{} late local hash response, inconsistency");
+                    return;
+                }
+                DecoratedAddress target = connTracker.getUploadConn(pendingUploadingHash.remove(responseContent.id));
+                if (target == null) {
+                    LOG.warn("{} late local hash response, connection inconsistency");
+                    return;
+                }
+                LOG.debug("{} sending hash:{} to:{}", new Object[]{logPrefix, responseContent.targetPos, target.getBase()});
+                DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+                ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
+                trigger(response, network);
+            }
+        };
+
+        Handler handleLocalDataResponse = new Handler<Download.DataResponse>() {
+
+            @Override
+            public void handle(Download.DataResponse responseContent) {
+                LOG.debug("{} received local data response:{}", logPrefix, responseContent.pieceId);
+
+                if (!pendingUploadingData.containsKey(responseContent.id)) {
+                    LOG.warn("{} late local data response, inconsistency", logPrefix);
+                    return;
+                }
+
+                DecoratedAddress target = connTracker.getUploadConn(pendingUploadingData.remove(responseContent.id));
+                if (target == null) {
+                    LOG.warn("{} late local data response, connection inconsistency");
+                    return;
+                }
+                LOG.debug("{} sending data:{} to:{}", new Object[]{logPrefix, responseContent.pieceId, target.getBase()});
+                DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+                ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
+                trigger(response, network);
+            }
+        };
+    }
+
+    public class ConnectionTracker {
+
+        private final Map<BasicAddress, DecoratedAddress> uploadConnections;
+        private final Map<BasicAddress, DecoratedAddress> downloadConnections;
+
+        public ConnectionTracker() {
+            this.downloadConnections = new HashMap<BasicAddress, DecoratedAddress>();
+            this.uploadConnections = new HashMap<BasicAddress, DecoratedAddress>();
+        }
+
+        public void publishInternalState() {
+            LOG.info("{} uploadConnection:{} downloadConnections:{}",
+                    new Object[]{logPrefix, uploadConnections.size(), downloadConnections.size()});
+        }
+
+        //fire and forget - if you get a response it is good. you might fire multiple requests to same node..solve duplicate requests on response side
+        public void openDownloadConnection(DecoratedAddress target) {
+            LOG.info("{} opening connection to:{}", logPrefix, target.getId());
+            Connection.Request requestContent = new Connection.Request(UUID.randomUUID(), selfDesc.vodDesc);
+            DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+            ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
+            trigger(request, network);
+        }
+
+        //fire and forget
+        public void closeDownloadConnections() {
+            for (DecoratedAddress target : downloadConnections.values()) {
+                sendClose(target, true);
+            }
+            downloadConnections.clear();
+        }
+        
+        public void closeUploadConnection(DecoratedAddress target) {
+            uploadConnections.remove(target.getBase());
+            sendClose(target, false);
+        }
+
+        public DecoratedAddress getDownloadConn(BasicAddress target) {
+            DecoratedAddress addr = downloadConnections.get(target);
+            if (addr == null) {
+                LOG.warn("{} download connection inconsistency", logPrefix);
+            }
+            return addr;
+        }
+
+        public DecoratedAddress getUploadConn(BasicAddress target) {
+            DecoratedAddress addr = uploadConnections.get(target);
+            if (addr == null) {
+                LOG.warn("{} upload connection inconsistency", logPrefix);
+            }
+            return addr;
+        }
+
+        public void updateAddress(DecoratedAddress target) {
+            if (uploadConnections.containsKey(target.getBase())) {
+                uploadConnections.put(target.getBase(), target);
+            }
+            if (downloadConnections.containsKey(target.getBase())) {
+                downloadConnections.put(target.getBase(), target);
+            }
+        }
+
+        //fire and forget
+        Handler handleScheduledConnectionUpdate = new Handler<PeriodicConnUpdate>() {
+
+            @Override
+            public void handle(PeriodicConnUpdate event) {
+                LOG.debug("{} connection update", logPrefix);
+                for (DecoratedAddress partner : downloadConnections.values()) {
+                    Connection.Update msgContent = new Connection.Update(UUID.randomUUID(), selfDesc.vodDesc);
+                    DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
+                    ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
+                    trigger(msg, network);
+                }
+
+                for (DecoratedAddress partner : uploadConnections.values()) {
+                    Connection.Update msgContent = new Connection.Update(UUID.randomUUID(), selfDesc.vodDesc);
+                    DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
+                    ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
+                    trigger(msg, network);
+                }
+            }
+        };
+
+        ClassMatchedHandler handleConnectionRequest
+                = new ClassMatchedHandler<Connection.Request, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Request>>() {
+
+                    @Override
+                    public void handle(Connection.Request content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Request> container) {
+                        DecoratedAddress target = container.getHeader().getSource();
+                        updateAddress(target);
+                        
+                        LOG.debug("{} received upload connection request from:{}", new Object[]{logPrefix, target.getBase()});
+                        if (!uploadConnections.containsKey(target.getBase())) {
+                            if (!uploadTracker.connect(target, content.desc)) {
+                                LOG.debug("{} rejecting connection request from:{}", logPrefix, target.getBase());
+                                return;
+                            }
+                            uploadConnections.put(target.getBase(), target);
+                        }
+                        LOG.debug("{} accept upload connection to:{}", logPrefix, target);
+                        Connection.Response responseContent = content.accept(selfDesc.vodDesc);
+                        DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+                        ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
+                        trigger(response, network);
+                    }
+                };
+
+        //TODO Alex - connection response status - currently a response means by default connection accepted
+        ClassMatchedHandler handleConnectionResponse
+                = new ClassMatchedHandler<Connection.Response, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Response>>() {
+
+                    @Override
+                    public void handle(Connection.Response content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Response> container) {
+                        DecoratedAddress target = container.getHeader().getSource();
+                        updateAddress(target);
+                        
+                        LOG.debug("{} received download connection response from:{}", new Object[]{logPrefix, target.getBase()});
+                        if (!downloadTracker.connect(target, content.desc)) {
+                            LOG.debug("{} closing download connection to:{}", logPrefix, target.getBase());
+                            sendClose(target, true);
+                            return;
+                        }
+                        downloadConnections.put(target.getBase(), target);
+                    }
+                };
+
+        //TODO Alex - if miss more than k updates consider connection stale and close
+        ClassMatchedHandler handleConnectionUpdate
+                = new ClassMatchedHandler<Connection.Update, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Update>>() {
+
+                    @Override
+                    public void handle(Connection.Update content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Update> container) {
+                        DecoratedAddress target = container.getHeader().getSource();
+                        updateAddress(target);
+                        
+                        LOG.debug("{} received update from:{}", new Object[]{logPrefix, content, target.getBase()});
+
+                        if (downloadConnections.containsKey(target.getBase())) {
+                            if (!downloadTracker.keepConnect(target, content.desc)) {
+                                LOG.info("{} closing download connection to:{}", logPrefix, target.getBase());
+                                sendClose(target, true);
+                                downloadConnections.remove(target.getBase());
+                            }
+                        } else {
+                            LOG.info("{} closing ghost download connection to:{}", logPrefix, target.getBase());
+                            sendClose(target, true);
+                        }
+
+                        if (uploadConnections.containsKey(target.getBase())) {
+                            if (!uploadTracker.keepConnect(target, content.desc)) {
+                                LOG.info("{} closing upload connection to:{}", logPrefix, target.getBase());
+                                sendClose(target, false);
+                                uploadConnections.remove(target.getBase());
+                            }
+                        } else {
+                            LOG.info("{} closing ghost upload connection to:{}", logPrefix, target.getBase());
+                            sendClose(target, false);
+                        }
+                    }
+                };
+
+        ClassMatchedHandler handleConnectionClose
+                = new ClassMatchedHandler<Connection.Close, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Close>>() {
+
+                    @Override
+                    public void handle(Connection.Close content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Close> container) {
+                        DecoratedAddress target = container.getHeader().getSource();
+                        String connectionType = content.downloadConnection ? "upload" : "download"; //from receiver perspective
+                        LOG.info("{} received close {} connection from:{}", new Object[]{logPrefix, connectionType, target.getBase()});
+
+                        //from receiver perspective it is opposite
+                        if (!content.downloadConnection) {
+                            downloadTracker.close(target);
+                            downloadConnections.remove(target.getBase());
+                        } else {
+                            uploadTracker.close(target);
+                            uploadConnections.remove(target.getBase());
+                        }
+                    }
+                };
+
+        private void sendClose(DecoratedAddress target, boolean downloadConnection) {
+            Connection.Close msgContent = new Connection.Close(UUID.randomUUID(), downloadConnection);
+            DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+            ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
+            trigger(msg, network);
         }
     }
 }

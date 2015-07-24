@@ -77,13 +77,15 @@ public class ConnectionSerializer {
             Connection.Response obj = (Connection.Response) o;
             Serializers.lookupSerializer(UUID.class).toBinary(obj.id, buf);
             Serializers.lookupSerializer(ReqStatus.class).toBinary(obj.status, buf);
+            Serializers.lookupSerializer(VodDescriptor.class).toBinary(obj.desc, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             UUID mId = (UUID) Serializers.lookupSerializer(UUID.class).fromBinary(buf, hint);
             ReqStatus status = (ReqStatus) Serializers.lookupSerializer(ReqStatus.class).fromBinary(buf, hint);
-            return new Connection.Response(mId, status);
+            VodDescriptor desc = (VodDescriptor) Serializers.lookupSerializer(VodDescriptor.class).fromBinary(buf, hint);
+            return new Connection.Response(mId, status, desc);
         }
     }
 
@@ -130,12 +132,14 @@ public class ConnectionSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             Connection.Close obj = (Connection.Close) o;
             Serializers.lookupSerializer(UUID.class).toBinary(obj.id, buf);
+            buf.writeBoolean(obj.downloadConnection);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
              UUID mId = (UUID) Serializers.lookupSerializer(UUID.class).fromBinary(buf, hint);
-             return new Connection.Close(mId);
+             boolean downloadConnection = buf.readBoolean();
+             return new Connection.Close(mId, downloadConnection);
         }
     }
 }
