@@ -78,17 +78,18 @@ public class Connection {
     }
 
     public static class Update extends GvodMsg.OneWay {
-
         public final VodDescriptor desc;
+        public final boolean downloadConnection;
 
-        public Update(UUID id, VodDescriptor desc) {
+        public Update(UUID id, VodDescriptor desc, boolean downloadConnection) {
             super(id);
             this.desc = desc;
+            this.downloadConnection = downloadConnection;
         }
 
         @Override
         public Update copy() {
-            return new Update(id, desc);
+            return new Update(id, desc, downloadConnection);
         }
 
         @Override

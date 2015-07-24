@@ -106,13 +106,15 @@ public class ConnectionSerializer {
             Connection.Update obj = (Connection.Update) o;
             Serializers.lookupSerializer(UUID.class).toBinary(obj.id, buf);
             Serializers.lookupSerializer(VodDescriptor.class).toBinary(obj.desc, buf);
+            buf.writeBoolean(obj.downloadConnection);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             UUID mId = (UUID) Serializers.lookupSerializer(UUID.class).fromBinary(buf, hint);
             VodDescriptor desc = (VodDescriptor) Serializers.lookupSerializer(VodDescriptor.class).fromBinary(buf, hint);
-            return new Connection.Update(mId, desc);
+            boolean connectionType = buf.readBoolean();
+            return new Connection.Update(mId, desc, connectionType);
         }
     }
 
