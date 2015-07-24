@@ -234,13 +234,13 @@ public class DownloadMngrComp extends ComponentDefinition {
                     download();
                     return;
                 case TIMEOUT:
-                    LOG.debug("{} TIMEOUT hashes:{}", logPrefix, resp.missingHashes);
+                    LOG.info("{} TIMEOUT hashes:{}", logPrefix, resp.missingHashes);
                     pendingHashes.removeAll(resp.missingHashes);
                     nextHashes.addAll(resp.missingHashes);
                     download();
                     return;
                 case BUSY:
-                    LOG.debug("{} BUSY hashes:{}", logPrefix, resp.missingHashes);
+                    LOG.info("{} BUSY hashes:{}", logPrefix, resp.missingHashes);
                     pendingHashes.removeAll(resp.missingHashes);
                     nextHashes.addAll(resp.missingHashes);
                     return;
@@ -287,13 +287,13 @@ public class DownloadMngrComp extends ComponentDefinition {
                     return;
                 case TIMEOUT:
                 case MISSING:
-                    LOG.debug("{} MISSING/TIMEOUT piece:{}", new Object[]{logPrefix, resp.pieceId});
+                    LOG.info("{} MISSING/TIMEOUT piece:{}", new Object[]{logPrefix, resp.pieceId});
                     pendingPieces.remove(resp.pieceId);
                     nextPieces.add(resp.pieceId);
                     download();
                     return;
                 case BUSY:
-                    LOG.debug("{} BUSY piece:{}", new Object[]{logPrefix, resp.pieceId});
+                    LOG.info("{} BUSY piece:{}", new Object[]{logPrefix, resp.pieceId});
                     pendingPieces.remove(resp.pieceId);
                     nextPieces.add(resp.pieceId);
                     return;
