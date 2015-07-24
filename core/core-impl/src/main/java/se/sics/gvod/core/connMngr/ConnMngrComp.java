@@ -354,6 +354,8 @@ public class ConnMngrComp extends ComponentDefinition {
                 localLoad += dataQueue.size();
             }
             int freeSlots = config.defaultMaxPipeline - localLoad;
+            //TODO Alex hardcoded slots
+            freeSlots = freeSlots > 20 ? 20 : freeSlots;
             if (freeSlots > 0) {
                 LOG.info("{} ready slots:{}", logPrefix, freeSlots);
                 trigger(new Ready(UUID.randomUUID(), freeSlots), myPort);
