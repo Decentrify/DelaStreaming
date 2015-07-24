@@ -19,8 +19,10 @@
 package se.sics.gvod.core.connMngr;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -156,7 +158,7 @@ public class ConnMngrComp extends ComponentDefinition {
                         LOG.warn("{} download tracker not empty at download complete", logPrefix);
                     }
                     downloadTracker.clear();
-                    connTracker.closeDownloadConnections();
+                    connTracker.cleanCloseDownloadConnections();
                 }
             }
             selfDesc = new LocalVodDescriptor(new VodDescriptor(event.downloadPos), event.downloading);
@@ -669,7 +671,7 @@ public class ConnMngrComp extends ComponentDefinition {
                         LOG.debug("{} received net hash request from:{}, for:{}", new Object[]{logPrefix, target.getBase(), content.targetPos});
                         if (!downloaders.containsKey(target.getBase())) {
                             LOG.warn("{} no connection open to:{}, dropping hash request:{}", new Object[]{logPrefix, target.getBase(), content.hashes});
-                            connTracker.closeUploadConnection(target);
+                            connTracker.closeGhostUploadConnection(target);
                             return;
                         }
 
@@ -693,7 +695,7 @@ public class ConnMngrComp extends ComponentDefinition {
                         LOG.debug("{} received net data request from:{}, for:{}", new Object[]{logPrefix, target.getBase(), content.pieceId});
                         if (!downloaders.containsKey(target.getBase())) {
                             LOG.warn("{} no connection open to:{}, dropping data request:{}", new Object[]{logPrefix, target.getBase(), content.pieceId});
-                            connTracker.closeUploadConnection(target);
+                            connTracker.closeGhostUploadConnection(target);
                             return;
                         }
 
@@ -756,15 +758,22 @@ public class ConnMngrComp extends ComponentDefinition {
 
         private final Map<BasicAddress, DecoratedAddress> uploadConnections;
         private final Map<BasicAddress, DecoratedAddress> downloadConnections;
+        private final Set<BasicAddress> ghostUploadConnection;
+        private final Set<BasicAddress> ghostDownloadConnection;
 
         public ConnectionTracker() {
             this.downloadConnections = new HashMap<BasicAddress, DecoratedAddress>();
             this.uploadConnections = new HashMap<BasicAddress, DecoratedAddress>();
+            this.ghostDownloadConnection = new HashSet<BasicAddress>();
+            this.ghostUploadConnection = new HashSet<BasicAddress>();
         }
 
         public void publishInternalState() {
             LOG.info("{} uploadConnection:{} downloadConnections:{}",
                     new Object[]{logPrefix, uploadConnections.size(), downloadConnections.size()});
+            //cleaning ghost connections
+            ghostDownloadConnection.clear();
+            ghostUploadConnection.clear();
         }
 
         //fire and forget - if you get a response it is good. you might fire multiple requests to same node..solve duplicate requests on response side
@@ -777,16 +786,42 @@ public class ConnMngrComp extends ComponentDefinition {
         }
 
         //fire and forget
-        public void closeDownloadConnections() {
+        public void cleanCloseDownloadConnections() {
             for (DecoratedAddress target : downloadConnections.values()) {
+                LOG.info("{} cleanup - closing download connection to:{}", new Object[]{logPrefix, target.getBase()});
                 sendClose(target, true);
             }
             downloadConnections.clear();
         }
 
-        public void closeUploadConnection(DecoratedAddress target) {
-            uploadConnections.remove(target.getBase());
-            sendClose(target, false);
+        public void closeGhostUploadConnection(DecoratedAddress target) {
+            if(uploadConnections.containsKey(target.getBase())) {
+                LOG.info("{} ignore close - not ghost upload connection to:{}", logPrefix, target.getBase());
+                return;
+            }
+            if(!ghostUploadConnection.contains(target.getBase())) {
+                LOG.info("{} marking ghost upload connection to:{}", logPrefix, target.getBase());
+                ghostUploadConnection.add(target.getBase());
+            } else {
+                LOG.info("{} cleanup - closing ghost upload connection to:{}", new Object[]{logPrefix, target.getBase()});
+                ghostUploadConnection.remove(target.getBase());
+                sendClose(target, false);
+            }
+        }
+        
+        public void closeGhostDownloadConnection(DecoratedAddress target) {
+            if(downloadConnections.containsKey(target.getBase())) {
+                LOG.info("{} ignore close - not ghost download connection to:{}", logPrefix, target.getBase());
+                return;
+            }
+            if(!ghostDownloadConnection.contains(target.getBase())) {
+                LOG.info("{} marking ghost download connection to:{}", logPrefix, target.getBase());
+                ghostDownloadConnection.add(target.getBase());
+            } else {
+                LOG.info("{} cleanup - closing ghost download connection to:{}", new Object[]{logPrefix, target.getBase()});
+                ghostDownloadConnection.remove(target.getBase());
+                sendClose(target, false);
+            }
         }
 
         public DecoratedAddress getDownloadConn(BasicAddress target) {
@@ -844,15 +879,16 @@ public class ConnMngrComp extends ComponentDefinition {
                         DecoratedAddress target = container.getHeader().getSource();
                         updateAddress(target);
 
-                        LOG.debug("{} received upload connection request from:{}", new Object[]{logPrefix, target.getBase()});
+                        LOG.info("{} received download connection request from:{}", new Object[]{logPrefix, target.getBase()});
                         if (!uploadConnections.containsKey(target.getBase())) {
                             if (!uploadTracker.connect(target, content.desc)) {
-                                LOG.debug("{} rejecting connection request from:{}", logPrefix, target.getBase());
+                                LOG.info("{} rejecting download connection request from:{}", logPrefix, target.getBase());
                                 return;
                             }
+                            ghostUploadConnection.remove(target.getBase());
                             uploadConnections.put(target.getBase(), target);
                         }
-                        LOG.debug("{} accept upload connection to:{}", logPrefix, target);
+                        LOG.info("{} accept download connection to:{}", logPrefix, target);
                         Connection.Response responseContent = content.accept(selfDesc.vodDesc);
                         DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
                         ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
@@ -869,12 +905,14 @@ public class ConnMngrComp extends ComponentDefinition {
                         DecoratedAddress target = container.getHeader().getSource();
                         updateAddress(target);
 
-                        LOG.debug("{} received download connection response from:{}", new Object[]{logPrefix, target.getBase()});
+                        LOG.info("{} received download connection response from:{}", new Object[]{logPrefix, target.getBase()});
                         if (!downloadTracker.connect(target, content.desc)) {
-                            LOG.debug("{} closing download connection to:{}", logPrefix, target.getBase());
+                            LOG.info("{} dT reject: closing download connection to:{}", logPrefix, target.getBase());
+                            ghostDownloadConnection.remove(target.getBase());
                             sendClose(target, true);
                             return;
                         }
+                        ghostDownloadConnection.remove(target.getBase());
                         downloadConnections.put(target.getBase(), target);
                     }
                 };
@@ -892,24 +930,24 @@ public class ConnMngrComp extends ComponentDefinition {
 
                         if (downloadConnections.containsKey(target.getBase())) {
                             if (!downloadTracker.keepConnect(target, content.desc)) {
-                                LOG.info("{} closing download connection to:{}", logPrefix, target.getBase());
+                                LOG.info("{} dT reject - closing download connection to:{}", logPrefix, target.getBase());
                                 sendClose(target, true);
                                 downloadConnections.remove(target.getBase());
+                                ghostDownloadConnection.remove(target.getBase());
                             }
                         } else {
-                            LOG.info("{} closing ghost download connection to:{}", logPrefix, target.getBase());
-                            sendClose(target, true);
+                            closeGhostDownloadConnection(target);
                         }
 
                         if (uploadConnections.containsKey(target.getBase())) {
                             if (!uploadTracker.keepConnect(target, content.desc)) {
-                                LOG.info("{} closing upload connection to:{}", logPrefix, target.getBase());
+                                LOG.info("{} uT reject - closing upload connection to:{}", logPrefix, target.getBase());
                                 sendClose(target, false);
+                                ghostUploadConnection.remove(target.getBase());
                                 uploadConnections.remove(target.getBase());
                             }
                         } else {
-                            LOG.info("{} closing ghost upload connection to:{}", logPrefix, target.getBase());
-                            sendClose(target, false);
+                            closeGhostUploadConnection(target);
                         }
                     }
                 };
