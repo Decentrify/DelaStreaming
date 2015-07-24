@@ -544,7 +544,7 @@ public class ConnMngrComp extends ComponentDefinition {
                         connTracker.updateAddress(target);
 
                         LOG.debug("{} received net hash response from:{}", new Object[]{logPrefix, target.getBase()});
-                        Map<UUID, Pair<Download.HashRequest, UUID>> uploaderQueue = pendingDownloadingHash.get(container.getHeader().getSource());
+                        Map<UUID, Pair<Download.HashRequest, UUID>> uploaderQueue = pendingDownloadingHash.get(target.getBase());
                         if (uploaderQueue == null) {
                             LOG.info("{} hash from:{} - posibly late", logPrefix, target.getBase());
                             return;
@@ -925,7 +925,7 @@ public class ConnMngrComp extends ComponentDefinition {
                         DecoratedAddress target = container.getHeader().getSource();
                         updateAddress(target);
 
-                        //remember local view of connection is reverse to what the sender sees it as
+                        //remember local view of connection is reverse to what the sender sees it 
                         String connectionType = !content.downloadConnection ? "download" : "upload";
                         LOG.debug("{} received {} connection update from:{}", new Object[]{logPrefix, content.downloadConnection, target.getBase()});
                         if (!content.downloadConnection) {
