@@ -386,16 +386,18 @@ public class ConnMngrComp extends ComponentDefinition {
 
             @Override
             public void handle(CroupierSample event) {
-                LOG.debug("{} received new croupier samples", logPrefix);
+                if (selfDesc.downloading) {
+                    LOG.debug("{} received new croupier samples", logPrefix);
 
-                for (Map.Entry<DecoratedAddress, VodDescriptor> e : event.sample.entrySet()) {
-                    if (e.getValue().downloadPos < selfDesc.vodDesc.downloadPos) {
-                        continue;
+                    for (Map.Entry<DecoratedAddress, VodDescriptor> e : event.sample.entrySet()) {
+                        if (e.getValue().downloadPos < selfDesc.vodDesc.downloadPos) {
+                            continue;
+                        }
+                        if (uploaders.containsKey(e.getKey().getBase())) {
+                            continue;
+                        }
+                        connTracker.openDownloadConnection(e.getKey());
                     }
-                    if (uploaders.containsKey(e.getKey().getBase())) {
-                        continue;
-                    }
-                    connTracker.openDownloadConnection(e.getKey());
                 }
             }
         };
