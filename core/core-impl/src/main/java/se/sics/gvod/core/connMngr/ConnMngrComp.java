@@ -627,7 +627,7 @@ public class ConnMngrComp extends ComponentDefinition {
         }
 
         public void close(DecoratedAddress target) {
-            downloaders.clear();
+            downloaders.remove(target.getBase());
 
             Iterator<Map.Entry<UUID, BasicAddress>> it;
             int removed;
@@ -927,7 +927,7 @@ public class ConnMngrComp extends ComponentDefinition {
 
                         //remember local view of connection is reverse to what the sender sees it 
                         String connectionType = !content.downloadConnection ? "download" : "upload";
-                        LOG.debug("{} received {} connection update from:{}", new Object[]{logPrefix, content.downloadConnection, target.getBase()});
+                        LOG.debug("{} received {} connection update from:{}", new Object[]{logPrefix, connectionType, target.getBase()});
                         if (!content.downloadConnection) {
                             if (downloadConnections.containsKey(target.getBase())) {
                                 if (!downloadTracker.keepConnect(target, content.desc)) {
@@ -960,7 +960,7 @@ public class ConnMngrComp extends ComponentDefinition {
                     @Override
                     public void handle(Connection.Close content, BasicContentMsg<DecoratedAddress, DecoratedHeader<DecoratedAddress>, Connection.Close> container) {
                         DecoratedAddress target = container.getHeader().getSource();
-                        String connectionType = content.downloadConnection ? "upload" : "download"; //from receiver perspective
+                        String connectionType = !content.downloadConnection ? "upload" : "download"; //from receiver perspective
                         LOG.info("{} received close {} connection from:{}", new Object[]{logPrefix, connectionType, target.getBase()});
 
                         //from receiver perspective it is opposite
