@@ -229,6 +229,7 @@ public class DownloadMngrComp extends ComponentDefinition {
                     }
 
                     pendingHashes.removeAll(resp.hashes.keySet());
+                    pendingHashes.removeAll(resp.missingHashes);
                     nextHashes.addAll(0, resp.missingHashes);
                     download();
                     return;
