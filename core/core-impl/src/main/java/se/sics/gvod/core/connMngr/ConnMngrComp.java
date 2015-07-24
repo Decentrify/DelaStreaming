@@ -435,7 +435,7 @@ public class ConnMngrComp extends ComponentDefinition {
             public void handle(Download.DataRequest requestContent) {
                 LOG.debug("{} handle local data request:{}", logPrefix, requestContent.pieceId);
 
-                DecoratedAddress uploader = getUploader(requestContent.pieceId);
+                DecoratedAddress uploader = getUploader(requestContent.pieceId / config.piecesPerBlock);
                 if (uploader == null) {
                     LOG.debug("{} no candidate for piece:{}", new Object[]{logPrefix, requestContent.pieceId});
                     trigger(requestContent.busy(), myPort);
@@ -456,10 +456,9 @@ public class ConnMngrComp extends ComponentDefinition {
             }
         };
 
-        private DecoratedAddress getUploader(int pieceId) {
+        private DecoratedAddress getUploader(int blockPos) {
             Iterator<Map.Entry<BasicAddress, VodDescriptor>> it = uploaders.entrySet().iterator();
             Map.Entry<BasicAddress, VodDescriptor> candidate = null;
-            int blockPos = pieceId / config.piecesPerBlock;
 
             //get first viable candidate
             while (it.hasNext() && candidate == null) {
