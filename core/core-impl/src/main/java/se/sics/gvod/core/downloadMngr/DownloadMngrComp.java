@@ -334,7 +334,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             queuedBlocks.put(blockNr, blankBlock);
             for (int i = 0; i < blankBlock.nrPieces(); i++) {
                 int pieceId = blockNr * config.piecesPerBlock + i;
-                nextPieces.add(0, pieceId);
+                nextPieces.add(pieceId);
             }
         }
     }
@@ -477,6 +477,7 @@ public class DownloadMngrComp extends ComponentDefinition {
         }
         CancelPeriodicTimeout cpt = new CancelPeriodicTimeout(periodicUpdateSelfTId);
         trigger(cpt, timer);
+        periodicUpdateSelfTId = null;
     }
 
     public class PeriodicUtilityUpdate extends Timeout {
