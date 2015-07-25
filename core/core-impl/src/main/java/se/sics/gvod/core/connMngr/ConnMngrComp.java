@@ -345,7 +345,7 @@ public class ConnMngrComp extends ComponentDefinition {
         }
 
         //TODO Alex - might want to keep local load in a variable...this might be expensive
-        private void tryPublishReady() {
+        public void tryPublishReady() {
             int localLoad = 0;
             for (Map<UUID, Pair<Download.HashRequest, UUID>> hashQueue : pendingDownloadingHash.values()) {
                 localLoad += hashQueue.size();
@@ -355,7 +355,7 @@ public class ConnMngrComp extends ComponentDefinition {
             }
             int freeSlots = config.defaultMaxPipeline - localLoad;
             //TODO Alex hardcoded slots
-            freeSlots = freeSlots > 20 ? 20 : freeSlots;
+            freeSlots = freeSlots > 15 ? 15 : freeSlots;
             if (freeSlots > 0) {
                 LOG.info("{} ready slots:{}", logPrefix, freeSlots);
                 trigger(new Ready(UUID.randomUUID(), freeSlots), myPort);

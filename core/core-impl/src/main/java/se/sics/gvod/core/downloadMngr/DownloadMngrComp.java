@@ -290,7 +290,6 @@ public class DownloadMngrComp extends ComponentDefinition {
                     LOG.info("{} MISSING/TIMEOUT piece:{}", new Object[]{logPrefix, resp.pieceId});
                     pendingPieces.remove(resp.pieceId);
                     nextPieces.add(resp.pieceId);
-                    download();
                     return;
                 case BUSY:
                     LOG.info("{} BUSY piece:{}", new Object[]{logPrefix, resp.pieceId});
