@@ -37,14 +37,13 @@ import se.sics.gvod.common.msg.vod.Download;
 import se.sics.gvod.common.util.HashUtil;
 import se.sics.gvod.common.utility.UtilityUpdate;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
-import se.sics.gvod.core.downloadMngr.msg.ScheduledSpeedUp;
-import se.sics.gvod.core.downloadMngr.msg.ScheduledUtilityUpdate;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Init;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.Stop;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
@@ -59,33 +58,33 @@ import se.sics.p2ptoolbox.util.managedStore.StorageMngrFactory;
  */
 public class DownloadMngrComp extends ComponentDefinition {
 
-    private static final Logger log = LoggerFactory.getLogger(DownloadMngrComp.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DownloadMngrComp.class);
+    private final DownloadMngrConfig config;
+    private final String logPrefix;
 
     private Negative<UtilityUpdatePort> utilityUpdate = provides(UtilityUpdatePort.class);
     private Negative<DownloadMngrPort> dataPort = provides(DownloadMngrPort.class);
     private Positive<Timer> timer = requires(Timer.class);
     private Positive<ConnMngrPort> connMngr = requires(ConnMngrPort.class);
 
-    private final DownloadMngrConfig config;
     private final AtomicInteger playPos; //set by videoStreamManager, read here
-
     private final HashMngr hashMngr;
     private final FileMngr fileMngr;
     private boolean downloading;
 
     private final Map<Integer, BlockMngr> queuedBlocks;
-
     private Set<Integer> pendingPieces;
     private List<Integer> nextPieces;
     private Set<Integer> pendingHashes;
     private List<Integer> nextHashes;
 
     private UUID speedUpTId = null;
-    private UUID updateSelfTId;
+    private UUID periodicUpdateSelfTId = null;
 
     public DownloadMngrComp(DownloadMngrInit init) {
         this.config = init.config;
-        log.info("{}:{} video component init", config.getSelf(), config.overlayId);
+        this.logPrefix = config.getSelf().getBase() + "<" + config.overlayId + ">";
+        LOG.info("{} initiating", logPrefix);
 
         this.playPos = init.playPos;
         this.hashMngr = init.hashMngr;
@@ -99,73 +98,108 @@ public class DownloadMngrComp extends ComponentDefinition {
         this.nextHashes = new ArrayList<Integer>();
 
         subscribe(handleStart, control);
+        subscribe(handleStop, control);
+        subscribe(handleUpdateSelf, timer);
+        subscribe(handleDataRequest, dataPort);
+        subscribe(handleConnReady, connMngr);
+        subscribe(handleHashRequest, connMngr);
+        subscribe(handleHashResponse, connMngr);
+        subscribe(handleDownloadDataRequest, connMngr);
+        subscribe(handleDownloadDataResponse, connMngr);
     }
 
-    private Handler<Start> handleStart = new Handler<Start>() {
+    private Handler handleStart = new Handler<Start>() {
 
         @Override
         public void handle(Start event) {
-            log.info("{} {} starting...", config.getSelf(), config.overlayId);
+            LOG.info("{} starting...", logPrefix);
+            schedulePeriodicUpdateSelf();
 
             Integer downloadPos = fileMngr.contiguous(0);
-            Integer hashPos = hashMngr.contiguous(0);
-            log.info("{} {} video pos:{}, hash pos:{}", new Object[]{config.getSelf(), config.overlayId, downloadPos, hashPos});
             trigger(new UtilityUpdate(config.overlayId, downloading, downloadPos), utilityUpdate);
-
-            subscribe(handleConnReady, connMngr);
-            subscribe(handleDataRequest, dataPort);
-            subscribe(handleHashRequest, connMngr);
-            subscribe(handleHashResponse, connMngr);
-            subscribe(handleDownloadDataRequest, connMngr);
-            subscribe(handleDownloadDataResponse, connMngr);
         }
     };
 
-    private Handler<Data.DRequest> handleDataRequest = new Handler<Data.DRequest>() {
-
+    private Handler handleStop = new Handler<Stop>() {
         @Override
-        public void handle(Data.DRequest req) {
-            log.trace("{} received local data request for readPos:{} readSize:{}", new Object[]{config.getSelf(), req.readPos, req.readBlockSize});
-
-            if (!fileMngr.has(req.readPos, req.readBlockSize)) {
-                log.debug("{} data missing - readPos:{} , readSize:{}", new Object[]{config.getSelf(), req.readPos, req.readBlockSize});
-                trigger(new Data.DResponse(req, ReqStatus.MISSING, null), dataPort);
-                return;
-            }
-            log.debug("{} sending data - readPos:{} , readSize:{}", new Object[]{config.getSelf(), req.readPos, req.readBlockSize});
-            byte data[] = fileMngr.read(req.readPos, req.readBlockSize);
-            trigger(new Data.DResponse(req, ReqStatus.SUCCESS, data), dataPort);
+        public void handle(Stop e) {
+            LOG.info("{} stopping", logPrefix);
         }
-
     };
 
-    private Handler<Ready> handleConnReady = new Handler<Ready>() {
+    private Handler handleConnReady = new Handler<Ready>() {
         @Override
-        public void handle(Ready event) {
-
+        public void handle(Ready ready) {
             if (downloading) {
-                log.info("{} {} downloading video", config.getSelf(), config.overlayId);
-                subscribe(handleDownloadSpeedUp, timer);
-                subscribe(handleUpdateSelf, timer);
-
-                for (int i = 0; i < config.startPieces; i++) {
+                LOG.info("{} ready {} download slots", logPrefix, ready.slots);
+                for (int i = 0; i < ready.slots; i++) {
                     download();
                 }
-                scheduleSpeedUp(1);
-
-                scheduleUpdateSelf();
-
             } else {
-                log.info("{} {} seeding file", config.getSelf(), config.overlayId);
+                LOG.warn("{} weird ready", logPrefix);
+            }
+        }
+    };
+    
+    private Handler<PeriodicUtilityUpdate> handleUpdateSelf = new Handler<PeriodicUtilityUpdate>() {
+
+        @Override
+        public void handle(PeriodicUtilityUpdate event) {
+            //TODO Alex might need to move it to its own timeout
+            checkCompleteBlocks();
+            if (hashMngr.isComplete(0) && fileMngr.isComplete(0)) {
+                finishDownload();
+            }
+            
+            LOG.info("{} hashComplete:{} fileComplete:{}", new Object[]{logPrefix, hashMngr.isComplete(0), fileMngr.isComplete(0)});
+            LOG.info("{} pending pieces:{} pendingHashes:{} pendingBlocks:{}", new Object[]{logPrefix, pendingPieces.size(), pendingHashes.size(), queuedBlocks.keySet()});
+            LOG.info("{} nextPieces:{} nextHashes:{}", new Object[]{logPrefix, nextPieces.size(), nextHashes.size()});
+            
+            int playPieceNr = playPos.get();
+            playPieceNr = (playPieceNr == -1 ? 0 : playPieceNr);
+            int playBlockNr = pieceIdToBlockNrPieceNr(playPieceNr).getValue0();
+            int downloadBlockNr = fileMngr.contiguous(playBlockNr);
+            LOG.info("{} playBlockPos:{} blockDPos:{} 0DPos:{} 0DPos:{}",
+                    new Object[]{logPrefix, playBlockNr, downloadBlockNr, fileMngr.contiguous(0), hashMngr.contiguous(0)});
+            trigger(new UtilityUpdate(config.overlayId, downloading, downloadBlockNr), utilityUpdate);
+            
+            if(!downloading) {
+                cancelUpdateSelf();
             }
         }
     };
 
-    private Handler<Download.HashRequest> handleHashRequest = new Handler<Download.HashRequest>() {
+    private Handler handleDataRequest = new Handler<Data.Req>() {
+
+        @Override
+        public void handle(Data.Req req) {
+            LOG.debug("{} received local data request for readPos:{} readSize:{}", new Object[]{logPrefix, req.readPos, req.readBlockSize});
+
+            if (!fileMngr.has(req.readPos, req.readBlockSize)) {
+                Set<Integer> targetedBlocks = posToBlockNr(req.readPos, req.readBlockSize);
+                for (Integer blockNr : targetedBlocks) {
+                    if (queuedBlocks.containsKey(blockNr)) {
+                        checkCompleteBlocks();
+                        break;
+                    }
+                }
+                if (!fileMngr.has(req.readPos, req.readBlockSize)) {
+                    LOG.debug("{} local data missing - readPos:{} , readSize:{}", new Object[]{logPrefix, req.readPos, req.readBlockSize});
+                    trigger(new Data.Resp(req, ReqStatus.MISSING, null), dataPort);
+                    return;
+                }
+            }
+            LOG.debug("{} sending local data - readPos:{} readSize:{}", new Object[]{logPrefix, req.readPos, req.readBlockSize});
+            byte data[] = fileMngr.read(req.readPos, req.readBlockSize);
+            trigger(new Data.Resp(req, ReqStatus.SUCCESS, data), dataPort);
+        }
+    };
+
+    private Handler handleHashRequest = new Handler<Download.HashRequest>() {
 
         @Override
         public void handle(Download.HashRequest req) {
-            log.trace("{} handle {}", config.getSelf(), req);
+            LOG.debug("{} received hash request:{}", logPrefix, req.hashes);
 
             Map<Integer, byte[]> hashes = new HashMap<Integer, byte[]>();
             Set<Integer> missingHashes = new HashSet<Integer>();
@@ -177,82 +211,75 @@ public class DownloadMngrComp extends ComponentDefinition {
                     missingHashes.add(hash);
                 }
             }
-            log.debug("{} sending hashes{} missing hashes:{}", new Object[]{config.getSelf(), hashes.keySet(), missingHashes});
+            LOG.debug("{} sending hashes:{} missing hashes:{}", new Object[]{logPrefix, hashes.keySet(), missingHashes});
             trigger(req.success(hashes, missingHashes), connMngr);
         }
-
     };
 
-    private Handler<Download.HashResponse> handleHashResponse = new Handler<Download.HashResponse>() {
+    private Handler handleHashResponse = new Handler<Download.HashResponse>() {
 
         @Override
         public void handle(Download.HashResponse resp) {
-            log.trace("{} handle {} {}", new Object[]{config.getSelf(), resp, resp.status});
-
             switch (resp.status) {
                 case SUCCESS:
-                    log.debug("{} SUCCESS hashes:{} missing hashes:{}", new Object[]{config.getSelf(), resp.hashes.keySet(), resp.missingHashes});
+                    LOG.debug("{} SUCCESS hashes:{} missing hashes:{}", new Object[]{logPrefix, resp.hashes.keySet(), resp.missingHashes});
 
                     for (Map.Entry<Integer, byte[]> hash : resp.hashes.entrySet()) {
                         hashMngr.writeHash(hash.getKey(), hash.getValue());
                     }
 
                     pendingHashes.removeAll(resp.hashes.keySet());
-                    nextHashes.addAll(0, resp.missingHashes);
-
+                    pendingHashes.removeAll(resp.missingHashes);
+                    nextHashes.addAll(resp.missingHashes);
                     download();
                     return;
                 case TIMEOUT:
-                    log.debug("{} TIMEOUT hashes:{}", config.getSelf(), resp.missingHashes);
+                    LOG.info("{} TIMEOUT hashes:{}", logPrefix, resp.missingHashes);
                     pendingHashes.removeAll(resp.missingHashes);
-                    nextHashes.addAll(0, resp.missingHashes);
+                    nextHashes.addAll(resp.missingHashes);
                     download();
                     return;
                 case BUSY:
-                    log.debug("{} BUSY hashes:{}", config.getSelf(), resp.missingHashes);
+                    LOG.info("{} BUSY hashes:{}", logPrefix, resp.missingHashes);
                     pendingHashes.removeAll(resp.missingHashes);
-                    nextHashes.addAll(0, resp.missingHashes);
-                    cancelSpeedUp();
-                    scheduleSpeedUp(10);
+                    nextHashes.addAll(resp.missingHashes);
                     return;
                 default:
-                    log.warn("{} {} illegal status {}", new Object[]{config.getSelf(), resp, resp.status});
+                    LOG.warn("{} illegal status:{}, ignoring", new Object[]{logPrefix, resp.status});
             }
         }
     };
 
-    private Handler<Download.DataRequest> handleDownloadDataRequest = new Handler<Download.DataRequest>() {
+    private Handler handleDownloadDataRequest = new Handler<Download.DataRequest>() {
 
         @Override
         public void handle(Download.DataRequest req) {
-            log.trace("{} handle {}", config.getSelf(), req);
+            LOG.debug("{} received data request:{}", logPrefix, req.pieceId);
 
             if (fileMngr.hasPiece(req.pieceId)) {
                 byte[] piece = fileMngr.readPiece(req.pieceId);
-                log.debug("{} sending piece {}", new Object[]{config.getSelf(), req.pieceId});
+                LOG.debug("{} sending data:{}", new Object[]{logPrefix, req.pieceId});
                 trigger(req.success(piece), connMngr);
             } else {
-                log.debug("{} do not have piece {}", new Object[]{config.getSelf(), req.pieceId});
+                LOG.warn("{} missing data:{}", new Object[]{logPrefix, req.pieceId});
                 trigger(req.missingPiece(), connMngr);
             }
         }
     };
 
-    private Handler<Download.DataResponse> handleDownloadDataResponse = new Handler<Download.DataResponse>() {
+    private Handler handleDownloadDataResponse = new Handler<Download.DataResponse>() {
 
         @Override
         public void handle(Download.DataResponse resp) {
-            log.trace("{} handle {} {}", new Object[]{config.getSelf(), resp, resp.status});
-
             switch (resp.status) {
                 case SUCCESS:
-                    log.debug("{} SUCCESS piece:{}", new Object[]{config.getSelf(), resp.pieceId});
+                    LOG.debug("{} SUCCESS piece:{}", new Object[]{logPrefix, resp.pieceId});
 
                     Pair<Integer, Integer> pieceIdToBlockNr = pieceIdToBlockNrPieceNr(resp.pieceId);
                     BlockMngr block = queuedBlocks.get(pieceIdToBlockNr.getValue0());
                     if (block == null) {
-                        log.error("logic exception block is null");
-                        System.exit(1);
+                        LOG.warn("{} block is null - inconsistency", logPrefix);
+                        return;
                     }
                     block.writePiece(pieceIdToBlockNr.getValue1(), resp.piece);
                     pendingPieces.remove(resp.pieceId);
@@ -260,32 +287,26 @@ public class DownloadMngrComp extends ComponentDefinition {
                     return;
                 case TIMEOUT:
                 case MISSING:
-                    log.debug("{} MISSING/TIMEOUTE piece:{} {}", new Object[]{config.getSelf(), resp.pieceId, resp.status});
+                    LOG.info("{} MISSING/TIMEOUT piece:{}", new Object[]{logPrefix, resp.pieceId});
                     pendingPieces.remove(resp.pieceId);
-                    nextPieces.add(0, resp.pieceId);
-                    download();
+                    nextPieces.add(resp.pieceId);
                     return;
                 case BUSY:
-                    log.debug("{} BUSY download slow down");
+                    LOG.info("{} BUSY piece:{}", new Object[]{logPrefix, resp.pieceId});
                     pendingPieces.remove(resp.pieceId);
-                    nextPieces.add(0, resp.pieceId);
-                    cancelSpeedUp();
-                    scheduleSpeedUp(10);
+                    nextPieces.add(resp.pieceId);
                     return;
                 default:
-                    log.warn("{} {} illegal status {}", new Object[]{config.getSelf(), resp, resp.status});
+                    LOG.warn("{} illegal status:{} ignoring", new Object[]{logPrefix, resp.status});
             }
-
         }
     };
 
     private void checkCompleteBlocks() {
         Set<Integer> completedBlocks = new HashSet<Integer>();
+        Set<Integer> resetBlocks = new HashSet<Integer>();
         for (Map.Entry<Integer, BlockMngr> block : queuedBlocks.entrySet()) {
             int blockNr = block.getKey();
-            if (blockNr == 387) {
-                System.out.println(fileMngr.contiguous(blockNr));
-            }
             if (!block.getValue().isComplete()) {
                 continue;
             }
@@ -299,20 +320,40 @@ public class DownloadMngrComp extends ComponentDefinition {
                 completedBlocks.add(blockNr);
             } else {
                 //TODO Alex - might need to re-download hash as well
-                log.info("{} piece:{} - hash problem, dropping block:{}", config.getSelf(), blockNr);
-
-                int blockSize = fileMngr.blockSize(blockNr);
-                BlockMngr blankBlock = StorageMngrFactory.getSimpleBlockMngr(blockSize, config.pieceSize);
-                queuedBlocks.put(blockNr, blankBlock);
-                for (int i = 0; i < blankBlock.nrPieces(); i++) {
-                    int pieceId = blockNr * config.piecesPerBlock + i;
-                    nextPieces.add(0, pieceId);
-                }
+                LOG.warn("{} hash problem, dropping block:{}", logPrefix, blockNr);
+                resetBlocks.add(blockNr);
             }
         }
         for (Integer blockNr : completedBlocks) {
             queuedBlocks.remove(blockNr);
         }
+        for (Integer blockNr : resetBlocks) {
+            int blockSize = fileMngr.blockSize(blockNr);
+            BlockMngr blankBlock = StorageMngrFactory.getSimpleBlockMngr(blockSize, config.pieceSize);
+            queuedBlocks.put(blockNr, blankBlock);
+            for (int i = 0; i < blankBlock.nrPieces(); i++) {
+                int pieceId = blockNr * config.piecesPerBlock + i;
+                nextPieces.add(pieceId);
+            }
+        }
+    }
+
+    private Integer posToPieceId(long pos) {
+        Integer pieceId = (int) (pos / config.pieceSize);
+        return pieceId;
+    }
+
+    private Set<Integer> posToBlockNr(long pos, int size) {
+        Set<Integer> result = new HashSet<Integer>();
+        int blockNr = (int) (pos / (config.piecesPerBlock * config.pieceSize));
+        result.add(blockNr);
+        size -= config.piecesPerBlock * config.pieceSize;
+        while (size > 0) {
+            blockNr++;
+            result.add(blockNr);
+            size -= config.piecesPerBlock * config.pieceSize;
+        }
+        return result;
     }
 
     private Pair<Integer, Integer> pieceIdToBlockNrPieceNr(int pieceId) {
@@ -320,52 +361,6 @@ public class DownloadMngrComp extends ComponentDefinition {
         int inBlockNr = pieceId % config.piecesPerBlock;
         return Pair.with(blockNr, inBlockNr);
     }
-
-    private Handler<ScheduledSpeedUp> handleDownloadSpeedUp = new Handler<ScheduledSpeedUp>() {
-
-        @Override
-        public void handle(ScheduledSpeedUp event) {
-            log.trace("{} handling speedup {}", config.getSelf(), event.getTimeoutId());
-
-            if (speedUpTId == null) {
-                log.debug("{} late timeout {}", config.getSelf(), speedUpTId);
-                return;
-            }
-            int speedup = config.startPieces / 20 + 1;
-            for (int i = 0; i < speedup; i++) {
-                if (!download()) {
-                    break;
-                }
-            }
-
-            scheduleSpeedUp(1);
-        }
-
-    };
-
-    private Handler<ScheduledUtilityUpdate> handleUpdateSelf = new Handler<ScheduledUtilityUpdate>() {
-
-        @Override
-        public void handle(ScheduledUtilityUpdate event) {
-            log.trace("{} handle {}", config.getSelf(), event);
-            log.info("{} hashComplete:{} fileComplete:{}", new Object[]{config.overlayId, hashMngr.isComplete(0), fileMngr.isComplete(0)});
-            log.info("{} pending pieces:{} pendingHashes:{} pendingBlocks:{}", new Object[]{config.overlayId, pendingPieces.size(), pendingHashes.size(), queuedBlocks.keySet()});
-            log.info("{} nextPieces:{} nextHashes:{}", new Object[]{config.overlayId, nextPieces.size(), nextHashes.size()});
-            int playPieceNr = playPos.get();
-            playPieceNr = (playPieceNr == -1 ? 0 : playPieceNr);
-            int playBlockNr = pieceIdToBlockNrPieceNr(playPieceNr).getValue0();
-            int playPos = fileMngr.contiguous(playBlockNr);
-            int hashPos = hashMngr.contiguous(0);
-            log.info("{} play pos:{} videoPPos:{} videoDPos:{} hash pos:{}",
-                    new Object[]{config.overlayId, playBlockNr, playPos, fileMngr.contiguous(0), hashPos});
-            //TODO Alex might need to move it to its own timeout
-            checkCompleteBlocks();
-            if(hashMngr.isComplete(0) && fileMngr.isComplete(0)) {
-                finishDownload();
-            }
-            trigger(new UtilityUpdate(config.overlayId, downloading, playPos), utilityUpdate);
-        }
-    };
 
     private boolean download() {
         int currentPlayPiece = playPos.get();
@@ -376,7 +371,6 @@ public class DownloadMngrComp extends ComponentDefinition {
                 playPos.set(0);
             }
             if (fileMngr.isComplete(0)) {
-                finishDownload();
                 return false;
             } else {
                 int blockNr = pieceIdToBlockNrPieceNr(currentPlayPiece).getValue0();
@@ -387,11 +381,8 @@ public class DownloadMngrComp extends ComponentDefinition {
                 }
             }
         }
-
         if (!downloadHash()) {
             if (!downloadData()) {
-                cancelSpeedUp();
-                scheduleSpeedUp(10);
                 return false;
             }
         }
@@ -399,7 +390,7 @@ public class DownloadMngrComp extends ComponentDefinition {
     }
 
     private boolean getNewPieces(int currentBlockNr) {
-        log.info("getting new pieces from block:{}", currentBlockNr);
+        LOG.debug("{} getting new pieces from block:{}", logPrefix, currentBlockNr);
         int filePos = fileMngr.contiguous(currentBlockNr);
         int hashPos = hashMngr.contiguous(0);
 
@@ -408,7 +399,8 @@ public class DownloadMngrComp extends ComponentDefinition {
             except.addAll(pendingHashes);
             except.addAll(nextHashes);
             Set<Integer> newNextHashes = hashMngr.nextHashes(config.hashesPerMsg, 0, except);
-            log.debug("hashPos:{} pendingHashes:{} nextHashes:{} newNextHashes:{}", new Object[]{hashPos, pendingHashes, nextHashes, newNextHashes});
+            LOG.debug("{} hashPos:{} pendingHashes:{} nextHashes:{} newNextHashes:{}", 
+                    new Object[]{logPrefix, hashPos, pendingHashes, nextHashes, newNextHashes});
             nextHashes.addAll(newNextHashes);
             if (!nextHashes.isEmpty()) {
                 return true;
@@ -417,7 +409,7 @@ public class DownloadMngrComp extends ComponentDefinition {
 
         Integer nextBlockNr = fileMngr.nextBlock(currentBlockNr, queuedBlocks.keySet());
         if (nextBlockNr == null) {
-            log.debug("next block is null, blockNr:{}", filePos);
+            LOG.debug("{} last blockNr:{}", logPrefix, currentBlockNr);
             return false;
         }
         //last block might have less nr of pieces than default
@@ -436,7 +428,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             return false;
         }
         int nextPieceId = nextPieces.remove(0);
-        log.debug("{} downloading piece:{}", config.getSelf(), nextPieceId);
+        LOG.debug("{} downloading piece:{}", logPrefix, nextPieceId);
         trigger(new Download.DataRequest(UUID.randomUUID(), config.overlayId, nextPieceId), connMngr);
         pendingPieces.add(nextPieceId);
         return true;
@@ -451,60 +443,49 @@ public class DownloadMngrComp extends ComponentDefinition {
             hashesToDownload.add(nextHashes.remove(0));
         }
         int targetPos = Collections.min(hashesToDownload);
-        log.info("{} downloading hashes:{} targetPos:{}", new Object[]{config.getSelf(), hashesToDownload, targetPos});
+        LOG.debug("{} downloading hashes:{} targetPos:{}", new Object[]{logPrefix, hashesToDownload, targetPos});
         trigger(new Download.HashRequest(UUID.randomUUID(), targetPos, hashesToDownload), connMngr);
         pendingHashes.addAll(hashesToDownload);
         return true;
     }
-
-    private void scheduleSpeedUp(int periodFactor) {
-//        ScheduleTimeout st = new ScheduleTimeout(periodFactor * config.speedupPeriod);
-//        Timeout t = new ScheduledSpeedUp(st);
-//        st.setTimeoutEvent(t);
-//        speedUpTId = t.getTimeoutId();
-//        log.debug("{} scheduling speedup timeout {}", config.getSelf(), speedUpTId);
-//        trigger(st, timer);
+    
+    private void finishDownload() {
+        downloading = false;
+        LOG.info("{} finished download", logPrefix);
     }
 
-    private void cancelSpeedUp() {
-//        log.debug("{} canceling speedup timeout {}", config.getSelf(), speedUpTId);
-//        CancelTimeout cancelSpeedUp = new CancelTimeout(speedUpTId);
-//        trigger(cancelSpeedUp, timer);
-    }
-
-    private void scheduleUpdateSelf() {
-        long updateSelfPeriod = config.descriptorUpdate; //get proper value later
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(updateSelfPeriod, updateSelfPeriod);
-        Timeout t = new ScheduledUtilityUpdate(spt);
-        updateSelfTId = t.getTimeoutId();
+    //**************************Timeouts****************************************
+    private void schedulePeriodicUpdateSelf() {
+        if (periodicUpdateSelfTId != null) {
+            LOG.warn("{} double schedule of periodic UpdateSelf timeout", logPrefix);
+        } else {
+            LOG.trace("{} scheduling periodic UpdateSelf timeout", logPrefix);
+        }
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(config.descriptorUpdate, config.descriptorUpdate);
+        Timeout t = new PeriodicUtilityUpdate(spt);
+        periodicUpdateSelfTId = t.getTimeoutId();
         spt.setTimeoutEvent(t);
-        log.debug("{} scheduling periodic timeout {}", config.getSelf(), t);
         trigger(spt, timer);
     }
 
     private void cancelUpdateSelf() {
-        log.debug("{} canceling periodic timeout {}", config.getSelf(), updateSelfTId);
-        CancelPeriodicTimeout cpt = new CancelPeriodicTimeout(updateSelfTId);
+        if (periodicUpdateSelfTId == null) {
+            LOG.warn("{} double cancelation of periodic UpdateSelf timeout", logPrefix);
+        } else {
+            LOG.trace("{} canceling periodic UpdateSelf timeout", logPrefix);
+        }
+        CancelPeriodicTimeout cpt = new CancelPeriodicTimeout(periodicUpdateSelfTId);
         trigger(cpt, timer);
+        periodicUpdateSelfTId = null;
     }
 
-    private void finishDownload() {
-        Integer downloadPos = fileMngr.contiguous(0);
-        Integer hashPos = hashMngr.contiguous(0);
-        log.info("{} {} video pos:{}, hash pos:{}", new Object[]{config.getSelf(), config.overlayId, downloadPos, hashPos});
+    public class PeriodicUtilityUpdate extends Timeout {
 
-        //one last update
-        trigger(new UtilityUpdate(config.overlayId, downloading, downloadPos), utilityUpdate);
-
-        //cancel timeouts
-        cancelSpeedUp();
-        cancelUpdateSelf();
-//        unsubscribe(handleUpdateSelf, timer);
-//        unsubscribe(handleDownloadSpeedUp, timer);
-
-        downloading = false;
-        log.info("{} {} finished download", config.getSelf(), config.overlayId);
+        public PeriodicUtilityUpdate(SchedulePeriodicTimeout spt) {
+            super(spt);
+        }
     }
+    //**************************************************************************
 
     public static class DownloadMngrInit extends Init<DownloadMngrComp> {
 

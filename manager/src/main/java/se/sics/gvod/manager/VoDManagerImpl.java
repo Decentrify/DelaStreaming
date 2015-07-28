@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -45,7 +46,6 @@ import se.sics.gvod.manager.toolbox.GVoDSyncI;
 import se.sics.gvod.manager.toolbox.Result;
 import se.sics.gvod.manager.toolbox.VideoInfo;
 import se.sics.gvod.manager.util.FileStatus;
-import se.sics.kompics.Component;
 import se.sics.kompics.Component.State;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -70,11 +70,13 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     private final Positive<UtilityUpdatePort> utilityPort = requires(UtilityUpdatePort.class);
 
     private final VoDManagerConfig config;
-    private final Random rand = new Random();
+    private final Random rand = new SecureRandom();
     private final String logPrefix;
 
     private final Map<String, VideoStreamManager> vsMngrs;
-    private final Map<String, Integer> httpVideoPaths;
+    private final Set<String> videoPaths;
+    private Integer httpPlayPort = null;
+    private InetSocketAddress httpPlayAddr = null;
 
     private Map<UUID, SettableFuture> pendingJobs;
     private Set<String> pendingUploads;
@@ -86,7 +88,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
         LOG.info("{} initiating...", logPrefix);
 
         this.vsMngrs = new ConcurrentHashMap<String, VideoStreamManager>();
-        this.httpVideoPaths = new HashMap<String, Integer>();
+        this.videoPaths = new HashSet<String>();
 
         this.pendingJobs = new HashMap<UUID, SettableFuture>();
         this.pendingUploads = new HashSet<String>();
@@ -111,7 +113,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             LOG.info("{} stopping...", logPrefix);
         }
     };
-    
+
     @Override
     public boolean isReady() {
         return this.getComponentCore().state().equals(State.ACTIVE);
@@ -245,13 +247,6 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     @Override
     public void play(VideoInfo videoInfo, SettableFuture<Result<Integer>> opFuture) {
         LOG.info("{} play video:{} request", logPrefix, videoInfo.getName());
-        //TODO Alex check this - can I use same player/same http handler for different video players?
-        Integer httpPlayPort = httpVideoPaths.get(videoInfo.getName());
-        if (httpPlayPort != null) {
-            LOG.info("{} return play for video:{}", logPrefix, videoInfo.getName());
-            opFuture.set(Result.ok(httpPlayPort));
-            return;
-        }
 
         VideoStreamManager videoPlayer = vsMngrs.get(videoInfo.getName());
         if (videoPlayer == null) {
@@ -281,13 +276,11 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             }
         }
 
-        do {
-            httpPlayPort = tryPort(10000 + rand.nextInt(40000));
-        } while (httpPlayPort == -1);
-        LOG.debug("{} video:{} httpPlayPort:{}", new Object[]{logPrefix, videoInfo.getName(), httpPlayPort});
-
-        setupPlayerHttpConnection(videoPlayer, videoInfo.getName(), httpPlayPort);
-        httpVideoPaths.put(videoInfo.getName(), httpPlayPort);
+        if (!videoPaths.contains(videoInfo.getName())) {
+            LOG.info("{} setting up player for video:{}", logPrefix, videoInfo.getName());
+            setupPlayerHttpConnection(videoPlayer, videoInfo.getName());
+            videoPaths.add(videoInfo.getName());
+        }
 
         LOG.info("{} return play for video:{}", logPrefix, videoInfo.getName());
         opFuture.set(Result.ok(httpPlayPort));
@@ -309,13 +302,21 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
         }
     }
 
-    private void setupPlayerHttpConnection(VideoStreamManager vsMngr, String videoName, Integer httpPlayPort) {
+    private void setupPlayerHttpConnection(VideoStreamManager vsMngr, String videoName) {
+        if (httpPlayAddr == null) {
+            Integer freePort = -1;
+            do {
+                freePort = tryPort(10000 + rand.nextInt(40000));
+            } while (freePort == -1);
+            httpPlayPort = freePort;
+            httpPlayAddr = new InetSocketAddress(httpPlayPort);
+        }
+
         LOG.info("{} starting player http connection http://127.0.0.1:{}/{}/{}", new Object[]{config.getSelf(), httpPlayPort, videoName, videoName});
         String fileName = "/" + videoName + "/";
         BaseHandler handler = new RangeCapableMp4Handler(vsMngr);
         try {
-            InetSocketAddress httpAddr = new InetSocketAddress(httpPlayPort);
-            JwHttpServer.startOrUpdate(httpAddr, fileName, handler);
+            JwHttpServer.startOrUpdate(httpPlayAddr, fileName, handler);
         } catch (IOException ex) {
             //TODO Alex - check if this is a recovarable state
             LOG.error("{} http server error", logPrefix);

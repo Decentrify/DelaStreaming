@@ -4,12 +4,11 @@
     <parent>
         <groupId>se.sics.gvod</groupId>
         <artifactId>bootstrap</artifactId>
-        <version>0.0.3-SNAPSHOT</version>
+        <version>0.0.4-SNAPSHOT</version>
     </parent>
     <groupId>se.sics.gvod.bootstrap</groupId>
     <artifactId>client</artifactId>
     <name>GVoD Bootstrap Client</name>
-    <packaging>jar</packaging>
     
     <dependencies>
         <dependency>

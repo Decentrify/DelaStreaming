@@ -2,32 +2,24 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>se.sics.gvod</groupId>
-        <artifactId>GVoD</artifactId>
-        <version>0.0.3-SNAPSHOT</version>
+        <groupId>se.sics</groupId>
+        <artifactId>gvod</artifactId>
+        <version>0.0.4-SNAPSHOT</version>
     </parent>
-    <artifactId>manager</artifactId>
     <groupId>se.sics.gvod</groupId>
+    <artifactId>manager</artifactId>
     <name>GVoD Manager</name>
-    <packaging>jar</packaging>
     
     <dependencies>
         <dependency>
-            <groupId>se.sics.gvod</groupId>
+            <groupId>se.sics.gvod.core</groupId>
             <artifactId>core-api</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>se.sics.p2ptoolbox.videostream</groupId>
+            <groupId>se.sics.ktoolbox.videostream</groupId>
             <artifactId>core</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>2.2.4</version>
-            <type>jar</type>
+            <version>${videostream.version}</version>
         </dependency>
     </dependencies>
 </project>

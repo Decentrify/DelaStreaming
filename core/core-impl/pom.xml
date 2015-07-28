@@ -5,15 +5,15 @@
     <parent>
         <groupId>se.sics.gvod</groupId>
         <artifactId>core</artifactId>
-        <version>0.0.3-SNAPSHOT</version>
+        <version>0.0.4-SNAPSHOT</version>
     </parent>
-    <groupId>se.sics.gvod</groupId>
+    <groupId>se.sics.gvod.core</groupId>
     <artifactId>core-impl</artifactId>
     <name>GVoD Core Impl</name>
     <url>http://maven.apache.org</url>
     <dependencies>
         <dependency>
-            <groupId>se.sics.gvod</groupId>
+            <groupId>se.sics.gvod.core</groupId>
             <artifactId>core-api</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -26,12 +26,6 @@
             <groupId>se.sics.gvod</groupId>
             <artifactId>croupier-fake</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.5.6</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

@@ -19,6 +19,7 @@
 package se.sics.gvod.system;
 
 import com.typesafe.config.Config;
+import java.net.InetAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.bootstrap.cclient.CaracalPSManagerConfig;
@@ -41,7 +42,11 @@ public class HostManagerConfig {
     private GVoDReferenceConfig referenceConfig;
 
     public HostManagerConfig(Config config) {
-        this.hostConfig = new GVoDHostConfig(config);
+        this(config, null);
+    }
+    
+    public HostManagerConfig(Config config, InetAddress ip) {
+        this.hostConfig = new GVoDHostConfig(config, ip);
         this.referenceConfig = new GVoDReferenceConfig(config);
     }
 

@@ -47,25 +47,27 @@ public class Connection {
             return "Connect.Request<" + id + ">";
         }
 
-        public Response fail() {
-            return new Response(id, ReqStatus.FAIL);
-        }
+//        public Response fail() {
+//            return new Response(id, ReqStatus.FAIL);
+//        }
 
-        public Response accept() {
-            return new Response(id, ReqStatus.SUCCESS);
+        public Response accept(VodDescriptor desc) {
+            return new Response(id, ReqStatus.SUCCESS, desc);
         }
 
     }
 
     public static class Response extends GvodMsg.Response {
+        public final VodDescriptor desc;
         
-        public Response(UUID id, ReqStatus status) {
+        public Response(UUID id, ReqStatus status, VodDescriptor desc) {
             super(id, status);
+            this.desc = desc;
         }
 
         @Override
         public Response copy() {
-            return new Response(id, status);
+            return new Response(id, status, desc);
         }
 
         @Override
@@ -76,17 +78,18 @@ public class Connection {
     }
 
     public static class Update extends GvodMsg.OneWay {
-
         public final VodDescriptor desc;
+        public final boolean downloadConnection;
 
-        public Update(UUID id, VodDescriptor desc) {
+        public Update(UUID id, VodDescriptor desc, boolean downloadConnection) {
             super(id);
             this.desc = desc;
+            this.downloadConnection = downloadConnection;
         }
 
         @Override
         public Update copy() {
-            return new Update(id, desc);
+            return new Update(id, desc, downloadConnection);
         }
 
         @Override
@@ -97,14 +100,16 @@ public class Connection {
     }
 
     public static class Close extends GvodMsg.OneWay {
-
-        public Close(UUID id) {
+        public boolean downloadConnection;
+        
+        public Close(UUID id, boolean downloadConnection) {
             super(id);
+            this.downloadConnection = downloadConnection;
         }
 
         @Override
         public Close copy() {
-            return new Close(id);
+            return new Close(id, downloadConnection);
         }
 
         @Override

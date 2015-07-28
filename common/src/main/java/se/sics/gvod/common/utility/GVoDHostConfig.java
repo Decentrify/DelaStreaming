@@ -41,6 +41,7 @@ public class GVoDHostConfig {
     private byte[] bSeed = new byte[]{1, 2, 3, 4};
 
     private final Config config;
+    private InetAddress ip;
 
     private long seed;
     private DecoratedAddress self;
@@ -49,6 +50,11 @@ public class GVoDHostConfig {
     private String videoLibrary;
 
     public GVoDHostConfig(Config config) {
+        this(config, null);
+    }
+
+    public GVoDHostConfig(Config config, InetAddress ip) {
+        this.ip = ip;
         this.config = config;
         try {
             loadHostConfig();
@@ -70,7 +76,21 @@ public class GVoDHostConfig {
         }
 
         try {
-            InetAddress selfIp = InetAddress.getByName(config.getString("vod.address.ip"));
+            InetAddress configIp = null;
+            try {
+                 configIp = InetAddress.getByName(config.getString("vod.address.ip"));
+            } catch (ConfigException.Missing ex) {
+                if(ip == null) {
+                    throw ex;
+                }
+            }
+            if(ip == null) {
+                ip = configIp;
+            } else if(!ip.equals(configIp)) {
+                LOG.warn("direct providedIp:{} is different than configIp:{}. Proceeding with providedIp:{}", 
+                        new Object[]{ip, configIp, ip});
+            }
+            
             Integer selfPort = config.getInt("vod.address.port");
             Integer selfId;
             if (config.hasPath("vod.address.id")) {
@@ -80,7 +100,7 @@ public class GVoDHostConfig {
                 Random rand = new Random(seed);
                 selfId = rand.nextInt();
             }
-            self = new DecoratedAddress(new BasicAddress(selfIp, selfPort, selfId));
+            self = new DecoratedAddress(new BasicAddress(ip, selfPort, selfId));
             LOG.info("{}: self address:{}", logPrefix, self);
             if (config.hasPath("caracalClient")) {
                 InetAddress ccIp = InetAddress.getByName(config.getString("caracalClient.address.ip"));
@@ -96,7 +116,7 @@ public class GVoDHostConfig {
             throw new RuntimeException("host configuration error", ex);
         }
     }
-    
+
     private void loadVoDConfig() {
         videoLibrary = config.getString("vod.libDir");
     }
@@ -106,7 +126,7 @@ public class GVoDHostConfig {
     public Config getConfig() {
         return config;
     }
-    
+
     @Deprecated
     public byte[] getBSeed() {
         return bSeed;

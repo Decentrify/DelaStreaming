@@ -2,13 +2,13 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>se.sics.gvod</groupId>
-        <artifactId>GVoD</artifactId>
-        <version>0.0.3-SNAPSHOT</version>
+        <groupId>se.sics</groupId>
+        <artifactId>gvod</artifactId>
+        <version>0.0.4-SNAPSHOT</version>
     </parent>
-    <name>GVoD System</name>
+    <groupId>se.sics.gvod</groupId>
     <artifactId>system</artifactId>
-    <packaging>jar</packaging>
+    <name>GVoD System</name>
     
     <dependencies>
         <dependency>
@@ -47,38 +47,32 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>se.sics.gvod</groupId>
+            <groupId>se.sics.gvod.core</groupId>
             <artifactId>core-api</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>se.sics.gvod</groupId>
+            <groupId>se.sics.gvod.core</groupId>
             <artifactId>core-impl</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>se.sics.ktoolbox.ipsolver</groupId>
+            <artifactId>core</artifactId>
+            <version>${ipsolver.version}</version>
         </dependency>
         
         <dependency>
             <groupId>se.sics.kompics.basic</groupId>
             <artifactId>kompics-component-netty-network</artifactId>
             <version>${kompics.version}</version>
-            <type>jar</type>
         </dependency>
+        
         <dependency>
-            <groupId>se.sics.p2ptoolbox</groupId>
+            <groupId>se.sics.ktoolbox.util</groupId>
             <artifactId>util-serializer</artifactId>
-            <version>${p2ptoolbox.util.version}</version>
-            <type>jar</type>
-        </dependency>
-         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.11</version>
-            <type>jar</type>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.5.6</version>
+            <version>${util.version}</version>
         </dependency>
     </dependencies>
         

@@ -19,7 +19,6 @@
 
 package se.sics.gvod.network;
 
-import org.junit.Assert;
 import se.sics.gvod.common.msg.ReqStatus;
 import se.sics.gvod.common.msg.peerMngr.AddOverlay;
 import se.sics.gvod.common.msg.peerMngr.BootstrapGlobal;
@@ -172,7 +171,7 @@ public class GVoDSerializerSetup {
         Serializers.register(downloadHashResponseSerializer, GVoDSerializers.DownloadHashResponse.serializerName);
         Serializers.register(GVoDSerializers.DownloadHashResponse.serializedClass, GVoDSerializers.DownloadHashResponse.serializerName);
         
-        Assert.assertEquals(serializerIds, currentId - startingId);
+        assert startingId + serializerIds == currentId;
         return currentId;
     }
 }
