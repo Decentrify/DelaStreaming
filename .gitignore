@@ -16,3 +16,5 @@
 /simulation/target/
 /manager/target/
 /network/target/
+
+core/core-impl/src/test/resources/library2/status.file

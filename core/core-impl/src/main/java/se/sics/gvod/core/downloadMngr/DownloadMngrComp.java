@@ -222,7 +222,7 @@ public class DownloadMngrComp extends ComponentDefinition {
         public void handle(Download.HashResponse resp) {
             switch (resp.status) {
                 case SUCCESS:
-                    LOG.debug("{} SUCCESS hashes:{} missing hashes:{}", new Object[]{logPrefix, resp.hashes.keySet(), resp.missingHashes});
+                    LOG.trace("{} SUCCESS hashes:{} missing hashes:{}", new Object[]{logPrefix, resp.hashes.keySet(), resp.missingHashes});
 
                     for (Map.Entry<Integer, byte[]> hash : resp.hashes.entrySet()) {
                         hashMngr.writeHash(hash.getKey(), hash.getValue());
@@ -234,13 +234,13 @@ public class DownloadMngrComp extends ComponentDefinition {
                     download();
                     return;
                 case TIMEOUT:
-                    LOG.info("{} TIMEOUT hashes:{}", logPrefix, resp.missingHashes);
+                    LOG.debug("{} TIMEOUT hashes:{}", logPrefix, resp.missingHashes);
                     pendingHashes.removeAll(resp.missingHashes);
                     nextHashes.addAll(resp.missingHashes);
                     download();
                     return;
                 case BUSY:
-                    LOG.info("{} BUSY hashes:{}", logPrefix, resp.missingHashes);
+                    LOG.debug("{} BUSY hashes:{}", logPrefix, resp.missingHashes);
                     pendingHashes.removeAll(resp.missingHashes);
                     nextHashes.addAll(resp.missingHashes);
                     return;
@@ -261,7 +261,7 @@ public class DownloadMngrComp extends ComponentDefinition {
                 LOG.debug("{} sending data:{}", new Object[]{logPrefix, req.pieceId});
                 trigger(req.success(piece), connMngr);
             } else {
-                LOG.warn("{} missing data:{}", new Object[]{logPrefix, req.pieceId});
+                LOG.debug("{} missing data:{}", new Object[]{logPrefix, req.pieceId});
                 trigger(req.missingPiece(), connMngr);
             }
         }
@@ -273,7 +273,7 @@ public class DownloadMngrComp extends ComponentDefinition {
         public void handle(Download.DataResponse resp) {
             switch (resp.status) {
                 case SUCCESS:
-                    LOG.debug("{} SUCCESS piece:{}", new Object[]{logPrefix, resp.pieceId});
+                    LOG.trace("{} SUCCESS piece:{}", new Object[]{logPrefix, resp.pieceId});
 
                     Pair<Integer, Integer> pieceIdToBlockNr = pieceIdToBlockNrPieceNr(resp.pieceId);
                     BlockMngr block = queuedBlocks.get(pieceIdToBlockNr.getValue0());
@@ -287,12 +287,12 @@ public class DownloadMngrComp extends ComponentDefinition {
                     return;
                 case TIMEOUT:
                 case MISSING:
-                    LOG.info("{} MISSING/TIMEOUT piece:{}", new Object[]{logPrefix, resp.pieceId});
+                    LOG.debug("{} MISSING/TIMEOUT piece:{}", new Object[]{logPrefix, resp.pieceId});
                     pendingPieces.remove(resp.pieceId);
                     nextPieces.add(resp.pieceId);
                     return;
                 case BUSY:
-                    LOG.info("{} BUSY piece:{}", new Object[]{logPrefix, resp.pieceId});
+                    LOG.debug("{} BUSY piece:{}", new Object[]{logPrefix, resp.pieceId});
                     pendingPieces.remove(resp.pieceId);
                     nextPieces.add(resp.pieceId);
                     return;
