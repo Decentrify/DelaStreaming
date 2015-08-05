@@ -24,12 +24,11 @@ import java.net.InetAddress;
 import java.util.EnumSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.caracaldb.global.SchemaData;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
+import se.sics.kompics.Fault;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Init;
-import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.Stop;
 import se.sics.kompics.network.Network;
@@ -41,7 +40,6 @@ import se.sics.ktoolbox.cc.bootstrap.CCBootstrapComp;
 import se.sics.ktoolbox.cc.bootstrap.CCBootstrapComp.CCBootstrapInit;
 import se.sics.ktoolbox.cc.bootstrap.CCBootstrapPort;
 import se.sics.ktoolbox.cc.bootstrap.msg.CCReady;
-import se.sics.ktoolbox.cc.common.config.CCBootstrapConfig;
 import se.sics.ktoolbox.cc.common.op.CCSimpleReady;
 import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatComp;
 import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatPort;
@@ -81,18 +79,25 @@ public class GVoDLauncher extends ComponentDefinition {
         LOG.info("initiating...");
 
         if (gvodSyncIFuture == null) {
-            LOG.error("launcher logic error - gvodSyncI not set");
-            throw new RuntimeException("launcher logic error - gvodSyncI not set");
+            LOG.error("exception: gvodSyncIFuture not set shutting down");
+            System.exit(1);
         }
         if (ipType == null) {
-            LOG.error("launcher logic error - ipType not set");
-            throw new RuntimeException("launcher logic error - ipType not set");
+            LOG.error("exception: ipType not set shutting down");
+            System.exit(1);
         }
         GVoDSystemSerializerSetup.oneTimeSetup();
         timerComp = create(JavaTimer.class, Init.NONE);
 
         subscribe(handleStart, control);
         subscribe(handleStop, control);
+    }
+
+    @Override
+    public Fault.ResolveAction handleFault(Fault fault) {
+        LOG.error("exception:{} shutting down", fault.getCause());
+        System.exit(1);
+        return Fault.ResolveAction.RESOLVED;
     }
 
     private Handler handleStart = new Handler<Start>() {
@@ -169,10 +174,10 @@ public class GVoDLauncher extends ComponentDefinition {
         @Override
         public void handle(CCReady event) {
             LOG.info("starting: received schemas");
-            vodSchemaId = event.caracalSchemaData.getId("vod.metadata");
-            if(vodSchemaId == null) {
-                LOG.error("vod schema undefined");
-                throw new RuntimeException("vod schema undefined");
+            vodSchemaId = event.caracalSchemaData.getId("gvod.metadata");
+            if (vodSchemaId == null) {
+                LOG.error("exception:vod schema undefined shutting down");
+                System.exit(1);
             }
         }
     };
