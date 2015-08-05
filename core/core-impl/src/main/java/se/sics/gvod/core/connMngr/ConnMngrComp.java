@@ -27,8 +27,6 @@ import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.croupierfake.CroupierPort;
-import se.sics.gvod.croupierfake.CroupierSample;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.common.msg.vod.Connection;
 import se.sics.gvod.common.msg.vod.Download;
@@ -50,6 +48,10 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
+import se.sics.p2ptoolbox.croupier.CroupierPort;
+import se.sics.p2ptoolbox.croupier.msg.CroupierSample;
+import se.sics.p2ptoolbox.croupier.msg.CroupierUpdate;
+import se.sics.p2ptoolbox.util.Container;
 import se.sics.p2ptoolbox.util.network.ContentMsg;
 import se.sics.p2ptoolbox.util.network.impl.BasicAddress;
 import se.sics.p2ptoolbox.util.network.impl.BasicContentMsg;
@@ -58,7 +60,7 @@ import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
 import se.sics.p2ptoolbox.util.network.impl.DecoratedHeader;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ConnMngrComp extends ComponentDefinition {
 
@@ -162,6 +164,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 }
             }
             selfDesc = new LocalVodDescriptor(new VodDescriptor(event.downloadPos), event.downloading);
+            trigger(new CroupierUpdate(selfDesc.vodDesc.deepCopy()), croupier);
         }
     };
 
@@ -384,21 +387,31 @@ public class ConnMngrComp extends ComponentDefinition {
             uploaders.remove(target.getBase());
         }
 
-        Handler handleCroupierSample = new Handler<CroupierSample>() {
+        Handler handleCroupierSample = new Handler<CroupierSample<VodDescriptor>>() {
 
             @Override
-            public void handle(CroupierSample event) {
+            public void handle(CroupierSample<VodDescriptor> event) {
                 if (selfDesc.downloading) {
                     LOG.debug("{} received new croupier samples", logPrefix);
 
-                    for (Map.Entry<DecoratedAddress, VodDescriptor> e : event.sample.entrySet()) {
-                        if (e.getValue().downloadPos < selfDesc.vodDesc.downloadPos) {
+                    for (Container<DecoratedAddress, VodDescriptor> container : event.publicSample) {
+                        if (container.getContent().downloadPos < selfDesc.vodDesc.downloadPos) {
                             continue;
                         }
-                        if (uploaders.containsKey(e.getKey().getBase())) {
+                        if (uploaders.containsKey(container.getSource().getBase())) {
                             continue;
                         }
-                        connTracker.openDownloadConnection(e.getKey());
+                        connTracker.openDownloadConnection(container.getSource());
+                    }
+                    
+                    for (Container<DecoratedAddress, VodDescriptor> container : event.privateSample) {
+                        if (container.getContent().downloadPos < selfDesc.vodDesc.downloadPos) {
+                            continue;
+                        }
+                        if (uploaders.containsKey(container.getSource().getBase())) {
+                            continue;
+                        }
+                        connTracker.openDownloadConnection(container.getSource());
                     }
                 }
             }

@@ -28,4 +28,8 @@ public class VodDescriptor {
     public VodDescriptor(int downloadPosition) {
         this.downloadPos = downloadPosition;
     }
+    
+    public VodDescriptor deepCopy() {
+        return new VodDescriptor(downloadPos);
+    }
 }

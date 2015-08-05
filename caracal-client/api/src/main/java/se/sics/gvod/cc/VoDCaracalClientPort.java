@@ -17,11 +17,20 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-package se.sics.gvod.common.msg;
+package se.sics.gvod.cc;
+
+import se.sics.gvod.cc.msg.CCAddOverlay;
+import se.sics.gvod.cc.msg.CCJoinOverlay;
+import se.sics.kompics.PortType;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public enum ReqStatus {
-    SUCCESS, ERROR, FAIL, MISSING, TIMEOUT, BUSY;
+public class VoDCaracalClientPort extends PortType {
+    {
+        request(CCAddOverlay.Request.class);
+        request(CCJoinOverlay.Request.class);
+        indication(CCAddOverlay.Response.class);
+        indication(CCJoinOverlay.Response.class);
+    }
 }

@@ -24,9 +24,7 @@ import java.net.InetAddress;
 import java.util.EnumSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.bootstrap.cclient.CaracalPSManagerComp;
-import se.sics.gvod.bootstrap.server.peermanager.PeerManagerPort;
-import se.sics.gvod.bootstrap.server.peermanager.msg.CaracalReady;
+import se.sics.caracaldb.global.SchemaData;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -39,6 +37,14 @@ import se.sics.kompics.network.netty.NettyInit;
 import se.sics.kompics.network.netty.NettyNetwork;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.timer.java.JavaTimer;
+import se.sics.ktoolbox.cc.bootstrap.CCBootstrapComp;
+import se.sics.ktoolbox.cc.bootstrap.CCBootstrapComp.CCBootstrapInit;
+import se.sics.ktoolbox.cc.bootstrap.CCBootstrapPort;
+import se.sics.ktoolbox.cc.bootstrap.msg.CCReady;
+import se.sics.ktoolbox.cc.common.config.CCBootstrapConfig;
+import se.sics.ktoolbox.cc.common.op.CCSimpleReady;
+import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatComp;
+import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatPort;
 import se.sics.ktoolbox.ipsolver.IpSolverComp;
 import se.sics.ktoolbox.ipsolver.IpSolverPort;
 import se.sics.ktoolbox.ipsolver.msg.GetIp;
@@ -48,26 +54,28 @@ import se.sics.ktoolbox.ipsolver.msg.GetIp;
  */
 public class GVoDLauncher extends ComponentDefinition {
 
-    private static final Logger LOG = LoggerFactory.getLogger("GVoDHost");
+    private static final Logger LOG = LoggerFactory.getLogger(GVoDLauncher.class);
 
     private static SettableFuture gvodSyncIFuture;
-    private static GetIp.NetworkInterfacesMask ipType;
-
-    private Component ipSolver;
-    private Component timer;
-    private Component network;
-    private Component manager;
-    private Component caracalPSManager;
-
-    private HostManagerConfig config;
 
     public static void setSyncIFuture(SettableFuture future) {
         gvodSyncIFuture = future;
     }
-    
+    private static GetIp.NetworkInterfacesMask ipType;
+
     public static void setIpType(GetIp.NetworkInterfacesMask setIpType) {
         ipType = setIpType;
     }
+
+    private Component timerComp;
+    private Component ipSolverComp;
+    private Component networkComp;
+    private Component caracalClientComp;
+    private Component heartbeatComp;
+    private Component vodHostComp;
+
+    private HostManagerConfig config;
+    private byte[] vodSchemaId;
 
     public GVoDLauncher() {
         LOG.info("initiating...");
@@ -76,78 +84,113 @@ public class GVoDLauncher extends ComponentDefinition {
             LOG.error("launcher logic error - gvodSyncI not set");
             throw new RuntimeException("launcher logic error - gvodSyncI not set");
         }
-        if(ipType == null) {
+        if (ipType == null) {
             LOG.error("launcher logic error - ipType not set");
             throw new RuntimeException("launcher logic error - ipType not set");
         }
+        GVoDSystemSerializerSetup.oneTimeSetup();
+        timerComp = create(JavaTimer.class, Init.NONE);
 
         subscribe(handleStart, control);
         subscribe(handleStop, control);
-
-        ipSolver = create(IpSolverComp.class, new IpSolverComp.IpSolverInit());
     }
 
-    public Handler handleStart = new Handler<Start>() {
+    private Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
             LOG.info("starting: solving ip...");
-            Positive<IpSolverPort> ipSolverPort = ipSolver.getPositive(IpSolverPort.class);
-            subscribe(handleGetIp, ipSolverPort);
-            trigger(new GetIp.Req(EnumSet.of(ipType)), ipSolverPort);
+            phase1();
         }
     };
 
-    public Handler handleStop = new Handler<Stop>() {
+    private Handler handleStop = new Handler<Stop>() {
         @Override
         public void handle(Stop event) {
             LOG.info("stopping...");
         }
     };
 
-    public Handler handleGetIp = new Handler<GetIp.Resp>() {
+    private void phase1() {
+        connectIpSolver();
+        subscribe(handleGetIp, ipSolverComp.getPositive(IpSolverPort.class));
+        trigger(new GetIp.Req(EnumSet.of(ipType)), ipSolverComp.getPositive(IpSolverPort.class));
+    }
+
+    private void connectIpSolver() {
+        ipSolverComp = create(IpSolverComp.class, new IpSolverComp.IpSolverInit());
+        trigger(Start.event, ipSolverComp.control());
+    }
+
+    private Handler handleGetIp = new Handler<GetIp.Resp>() {
         @Override
         public void handle(GetIp.Resp resp) {
             LOG.info("starting: setting up caracal connection");
 
             InetAddress ip = null;
-            if(!resp.addrs.isEmpty()) {
+            if (!resp.addrs.isEmpty()) {
                 ip = resp.addrs.get(0).getAddr();
-                if(resp.addrs.size() > 1) {
+                if (resp.addrs.size() > 1) {
                     LOG.warn("multiple ips detected, proceeding with:{}", ip);
                 }
             }
             config = new HostManagerConfig(ConfigFactory.load(), ip);
-            GVoDSystemSerializerSetup.oneTimeSetup();
-
-            timer = create(JavaTimer.class, Init.NONE);
-            trigger(Start.event, timer.control());
-            network = create(NettyNetwork.class, new NettyInit(config.getSelf()));
-            trigger(Start.event, network.control());
-            caracalConnectPhase();
+            phase2();
         }
     };
 
-    private void caracalConnectPhase() {
-        //TODO Alex should create and start only on open nodes
-        caracalPSManager = create(CaracalPSManagerComp.class, new CaracalPSManagerComp.CaracalPSManagerInit(config.getCaracalPSManagerConfig()));
-        connect(caracalPSManager.getNegative(Timer.class), timer.getPositive(Timer.class));
-        trigger(Start.event, caracalPSManager.control());
-        subscribe(handleCaracalReady, caracalPSManager.getPositive(PeerManagerPort.class));
+    private void phase2() {
+        connectNetwork();
+        connectCaracalClient();
+        connectHeartbeat();
+        subscribe(handleCaracalReady, caracalClientComp.getPositive(CCBootstrapPort.class));
+        subscribe(handleHeartbeatReady, heartbeatComp.getPositive(CCHeartbeatPort.class));
     }
 
-    private Handler handleCaracalReady = new Handler<CaracalReady>() {
+    private void connectNetwork() {
+        networkComp = create(NettyNetwork.class, new NettyInit(config.getSelf()));
+        trigger(Start.event, networkComp.control());
+    }
 
+    private void connectCaracalClient() {
+        caracalClientComp = create(CCBootstrapComp.class, new CCBootstrapInit(config.getSystemConfig(), config.getCaracalClientConfig(), config.getCaracalNodes()));
+        connect(caracalClientComp.getNegative(Timer.class), timerComp.getPositive(Timer.class));
+        connect(caracalClientComp.getNegative(Network.class), networkComp.getPositive(Network.class));
+        trigger(Start.event, caracalClientComp.control());
+    }
+
+    private void connectHeartbeat() {
+        heartbeatComp = create(CCHeartbeatComp.class, new CCHeartbeatComp.CCHeartbeatInit(config.getSystemConfig(), config.getCaracalClientConfig()));
+        connect(heartbeatComp.getNegative(Timer.class), timerComp.getPositive(Timer.class));
+        connect(heartbeatComp.getNegative(CCBootstrapPort.class), caracalClientComp.getPositive(CCBootstrapPort.class));
+        trigger(Start.event, heartbeatComp.control());
+    }
+
+    private Handler handleCaracalReady = new Handler<CCReady>() {
         @Override
-        public void handle(CaracalReady event) {
-            LOG.info("starting system...");
-            startGVoDPhase();
+        public void handle(CCReady event) {
+            LOG.info("starting: received schemas");
+            vodSchemaId = event.caracalSchemaData.getId("vod.metadata");
+            if(vodSchemaId == null) {
+                LOG.error("vod schema undefined");
+                throw new RuntimeException("vod schema undefined");
+            }
         }
     };
 
-    private void startGVoDPhase() {
-        manager = create(HostManagerComp.class, new HostManagerComp.HostManagerInit(config, caracalPSManager, gvodSyncIFuture));
-        connect(manager.getNegative(Network.class), network.getPositive(Network.class));
-        connect(manager.getNegative(Timer.class), timer.getPositive(Timer.class));
-        trigger(Start.event, manager.control());
+    private Handler handleHeartbeatReady = new Handler<CCSimpleReady>() {
+        @Override
+        public void handle(CCSimpleReady e) {
+            LOG.info("starting: system");
+            connectVoDHost();
+        }
+    };
+
+    private void connectVoDHost() {
+        vodHostComp = create(HostManagerComp.class, new HostManagerComp.HostManagerInit(config, gvodSyncIFuture, vodSchemaId));
+        connect(vodHostComp.getNegative(Network.class), networkComp.getPositive(Network.class));
+        connect(vodHostComp.getNegative(Timer.class), timerComp.getPositive(Timer.class));
+        connect(vodHostComp.getNegative(CCBootstrapPort.class), caracalClientComp.getPositive(CCBootstrapPort.class));
+        connect(vodHostComp.getNegative(CCHeartbeatPort.class), heartbeatComp.getPositive(CCHeartbeatPort.class));
+        trigger(Start.event, vodHostComp.control());
     }
 }

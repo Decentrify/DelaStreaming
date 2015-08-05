@@ -28,17 +28,14 @@ import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.bootstrap.client.BootstrapClientPort;
+import se.sics.gvod.cc.VoDCaracalClientPort;
+import se.sics.gvod.cc.msg.CCAddOverlay;
+import se.sics.gvod.cc.msg.CCJoinOverlay;
 import se.sics.gvod.common.msg.ReqStatus;
-import se.sics.gvod.common.msg.peerMngr.AddOverlay;
-import se.sics.gvod.common.msg.peerMngr.BootstrapGlobal;
-import se.sics.gvod.common.msg.peerMngr.JoinOverlay;
 import se.sics.gvod.common.util.FileMetadata;
 import se.sics.gvod.common.util.GVoDConfigException;
 import se.sics.gvod.common.util.HashUtil;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
-import se.sics.gvod.croupierfake.CroupierComp;
-import se.sics.gvod.croupierfake.CroupierPort;
 import se.sics.gvod.core.connMngr.ConnMngrComp;
 import se.sics.gvod.core.downloadMngr.DownloadMngrComp;
 import se.sics.gvod.core.downloadMngr.DownloadMngrConfig;
@@ -59,6 +56,11 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatPort;
+import se.sics.p2ptoolbox.croupier.CroupierComp;
+import se.sics.p2ptoolbox.croupier.CroupierConfig;
+import se.sics.p2ptoolbox.croupier.CroupierPort;
+import se.sics.p2ptoolbox.util.config.SystemConfig;
 import se.sics.p2ptoolbox.util.filters.IntegerOverlayFilter;
 import se.sics.p2ptoolbox.util.managedStore.FileMngr;
 import se.sics.p2ptoolbox.util.managedStore.HashMngr;
@@ -67,7 +69,7 @@ import se.sics.p2ptoolbox.videostream.VideoStreamManager;
 import se.sics.p2ptoolbox.videostream.VideoStreamMngrImpl;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ * @author Alex Ormenisan <aaor@kth.se>
  */
 public class VoDComp extends ComponentDefinition {
 
@@ -77,14 +79,17 @@ public class VoDComp extends ComponentDefinition {
     private static final Logger LOG = LoggerFactory.getLogger(VoDComp.class);
 
     Negative<UtilityUpdatePort> utilityUpdate = provides(UtilityUpdatePort.class);
+    Negative<VoDPort> myPort = provides(VoDPort.class);
     Positive<Timer> timer = requires(Timer.class);
     Positive<Network> network = requires(Network.class);
-    Positive<BootstrapClientPort> bootstrap = requires(BootstrapClientPort.class);
-    Negative<VoDPort> myPort = provides(VoDPort.class);
+    Positive<VoDCaracalClientPort> caracalClient = requires(VoDCaracalClientPort.class);
+    Positive<CCHeartbeatPort> heartbeat = requires(CCHeartbeatPort.class);
 
     private final String logPrefix;
 
     private final VoDConfig config;
+    private final SystemConfig systemConfig;
+    private final CroupierConfig croupierConfig;
 
     private final Map<Integer, Triplet<Component, Component, Component>> videoComps;
 
@@ -95,6 +100,8 @@ public class VoDComp extends ComponentDefinition {
 
     public VoDComp(VoDInit init) {
         this.config = init.config;
+        this.systemConfig = init.systemConfig;
+        this.croupierConfig = init.croupierConfig;
         this.logPrefix = config.getSelf().toString();
         LOG.info("{} lib folder: {}", logPrefix, config.getVideoLibrary());
         this.videoComps = new HashMap<Integer, Triplet<Component, Component, Component>>();
@@ -105,12 +112,11 @@ public class VoDComp extends ComponentDefinition {
         libMngr.loadLibrary();
 
         subscribe(handleStart, control);
-        subscribe(handleBootstrapGlobalResponse, bootstrap);
         subscribe(handleGetLibraryRequest, myPort);
         subscribe(handleUploadVideoRequest, myPort);
         subscribe(handleDownloadVideoRequest, myPort);
-        subscribe(handleAddOverlayResponse, bootstrap);
-        subscribe(handleJoinOverlayResponse, bootstrap);
+        subscribe(handleAddOverlayResponse, caracalClient);
+        subscribe(handleJoinOverlayResponse, caracalClient);
     }
 
     private Handler handleStart = new Handler<Start>() {
@@ -136,18 +142,12 @@ public class VoDComp extends ComponentDefinition {
                 }
 
                 LOG.info("{} - joining upload - fileName:{} overlay:{}", new Object[]{logPrefix, fileName, overlayId});
-                JoinOverlay.Request req = new JoinOverlay.Request(UUID.randomUUID(), overlayId, 0);
-                trigger(req, bootstrap);
+                CCJoinOverlay.Request req = new CCJoinOverlay.Request(UUID.randomUUID(), overlayId);
+                trigger(req, caracalClient);
                 rejoinUploads.put(req.id, Pair.with(fileName, overlayId));
             }
         }
     }
-
-    public Handler<BootstrapGlobal.Response> handleBootstrapGlobalResponse = new Handler<BootstrapGlobal.Response>() {
-        @Override
-        public void handle(BootstrapGlobal.Response event) {
-        }
-    };
 
     public Handler handleGetLibraryRequest = new Handler<GetLibrary.Request>() {
 
@@ -193,15 +193,15 @@ public class VoDComp extends ComponentDefinition {
                 System.exit(1);
             }
             FileMetadata fileMeta = new FileMetadata(req.videoName, (int) videoFile.length(), config.getPieceSize(), config.getHashAlg(), (int) hashFile.length());
-            trigger(new AddOverlay.Request(req.id, req.overlayId, fileMeta), bootstrap);
+            trigger(new CCAddOverlay.Request(req.id, req.overlayId, fileMeta), caracalClient);
             pendingUploads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), fileMeta));
         }
     };
 
-    public Handler<AddOverlay.Response> handleAddOverlayResponse = new Handler<AddOverlay.Response>() {
+    public Handler<CCAddOverlay.Response> handleAddOverlayResponse = new Handler<CCAddOverlay.Response>() {
 
         @Override
-        public void handle(AddOverlay.Response resp) {
+        public void handle(CCAddOverlay.Response resp) {
             LOG.trace("{} - {}", new Object[]{logPrefix, resp});
 
             Pair<Pair<String, Integer>, FileMetadata> fileInfo = pendingUploads.remove(resp.id);
@@ -226,7 +226,7 @@ public class VoDComp extends ComponentDefinition {
         @Override
         public void handle(DownloadVideo.Request req) {
             LOG.info("{} - {} - videoName:{} overlay:{}", new Object[]{logPrefix, req, req.videoName, req.overlayId});
-            trigger(new JoinOverlay.Request(req.id, req.overlayId, noDownloadResume), bootstrap);
+            trigger(new CCJoinOverlay.Request(req.id, req.overlayId), caracalClient);
             pendingDownloads.put(req.id, Pair.with(req.videoName, req.overlayId));
             if (!libMngr.pendingDownload(req.videoName)) {
                 LOG.error("{} library manager - pending download denied for file:{}", logPrefix, req.videoName);
@@ -235,10 +235,10 @@ public class VoDComp extends ComponentDefinition {
         }
     };
 
-    public Handler<JoinOverlay.Response> handleJoinOverlayResponse = new Handler<JoinOverlay.Response>() {
+    public Handler<CCJoinOverlay.Response> handleJoinOverlayResponse = new Handler<CCJoinOverlay.Response>() {
 
         @Override
-        public void handle(JoinOverlay.Response resp) {
+        public void handle(CCJoinOverlay.Response resp) {
             LOG.trace("{} - {}", new Object[]{config.getSelf(), resp});
 
             if (resp.status == ReqStatus.SUCCESS) {
@@ -314,12 +314,12 @@ public class VoDComp extends ComponentDefinition {
         Component connMngr = create(ConnMngrComp.class, new ConnMngrComp.ConnMngrInit(connMngrConfig));
         AtomicInteger playPos = new AtomicInteger(0);
         Component downloadMngr = create(DownloadMngrComp.class, new DownloadMngrComp.DownloadMngrInit(downloadMngrConfig, hashedFileMngr.getValue0(), hashedFileMngr.getValue1(), download, playPos));
-        Component croupier = create(CroupierComp.class, new CroupierComp.CroupierInit(overlayId, config.getSelf()));
+        Component croupier = create(CroupierComp.class, new CroupierComp.CroupierInit(systemConfig, croupierConfig, overlayId));
         videoComps.put(overlayId, Triplet.with(connMngr, downloadMngr, croupier));
 
         connect(croupier.getNegative(Timer.class), timer);
-        connect(croupier.getNegative(BootstrapClientPort.class), bootstrap);
-
+        connect(croupier.getNegative(Network.class), network, new IntegerOverlayFilter(overlayId));
+        
         connect(connMngr.getNegative(Network.class), network, new IntegerOverlayFilter(overlayId));
         connect(connMngr.getNegative(Timer.class), timer);
         connect(connMngr.getNegative(CroupierPort.class), croupier.getPositive(CroupierPort.class));

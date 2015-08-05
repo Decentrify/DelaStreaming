@@ -16,12 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.gvod.cc.util;
 
-package se.sics.gvod.common.msg;
+import java.nio.ByteBuffer;
+import se.sics.caracaldb.Key;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public enum ReqStatus {
-    SUCCESS, ERROR, FAIL, MISSING, TIMEOUT, BUSY;
+public class CaracalKeyFactory {
+
+    public static Key getFileMetadataKey(byte[] schemaId, int overlayId) {
+        ByteBuffer byteKey = ByteBuffer.allocate(schemaId.length + 4);
+        byteKey.put(schemaId);
+        byteKey.putInt(overlayId);
+        return new Key(byteKey);
+    }
 }

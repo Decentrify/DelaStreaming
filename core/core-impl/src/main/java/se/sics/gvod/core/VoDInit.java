@@ -20,14 +20,20 @@
 package se.sics.gvod.core;
 
 import se.sics.kompics.Init;
+import se.sics.p2ptoolbox.croupier.CroupierConfig;
+import se.sics.p2ptoolbox.util.config.SystemConfig;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class VoDInit extends Init<VoDComp>{
     public final VoDConfig config;
+    public final SystemConfig systemConfig;
+    public final CroupierConfig croupierConfig;
     
-    public VoDInit(VoDConfig config) {
+    public VoDInit(VoDConfig config, SystemConfig systemConfig, CroupierConfig croupierConfig) {
         this.config = config;
+        this.systemConfig = systemConfig;
+        this.croupierConfig = croupierConfig;
     }
 }

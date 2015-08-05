@@ -18,3 +18,5 @@
 /network/target/
 
 core/core-impl/src/test/resources/library2/status.file
+/caracal-client/api/target/
+/caracal-client/core/target/

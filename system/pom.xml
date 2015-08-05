@@ -4,7 +4,7 @@
     <parent>
         <groupId>se.sics</groupId>
         <artifactId>gvod</artifactId>
-        <version>0.0.4-SNAPSHOT</version>
+        <version>0.0.5-SNAPSHOT</version>
     </parent>
     <groupId>se.sics.gvod</groupId>
     <artifactId>system</artifactId>
@@ -12,23 +12,18 @@
     
     <dependencies>
         <dependency>
-            <groupId>se.sics.gvod.bootstrap.server</groupId>
-            <artifactId>common-server</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>se.sics.gvod.bootstrap.server</groupId>
-            <artifactId>caracal-client</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>se.sics.gvod.bootstrap</groupId>
-            <artifactId>client</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
             <groupId>se.sics.gvod</groupId>
             <artifactId>common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>se.sics.gvod.cc</groupId>
+            <artifactId>core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>se.sics.gvod.core</groupId>
+            <artifactId>core-impl</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -41,26 +36,21 @@
             <artifactId>network</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>se.sics.gvod</groupId>
-            <artifactId>croupier-fake</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>se.sics.gvod.core</groupId>
-            <artifactId>core-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>se.sics.gvod.core</groupId>
-            <artifactId>core-impl</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         
         <dependency>
             <groupId>se.sics.ktoolbox.ipsolver</groupId>
             <artifactId>core</artifactId>
             <version>${ipsolver.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>se.sics.ktoolbox.cc.bootstrap</groupId>
+            <artifactId>core</artifactId>
+            <version>${caracalclient.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>se.sics.ktoolbox.cc.heartbeat</groupId>
+            <artifactId>core</artifactId>
+            <version>${caracalclient.version}</version>
         </dependency>
         
         <dependency>

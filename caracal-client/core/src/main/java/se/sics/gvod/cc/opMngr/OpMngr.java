@@ -17,11 +17,17 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-package se.sics.gvod.common.msg;
+package se.sics.gvod.cc.opMngr;
+
+import java.util.UUID;
+import se.sics.kompics.Direct;
+import se.sics.kompics.KompicsEvent;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public enum ReqStatus {
-    SUCCESS, ERROR, FAIL, MISSING, TIMEOUT, BUSY;
+public interface OpMngr {
+    public void completed(UUID opId, KompicsEvent resp);
+    public void completed(UUID opId, Direct.Request req, Direct.Response resp);
+    public void send(KompicsEvent event);
 }

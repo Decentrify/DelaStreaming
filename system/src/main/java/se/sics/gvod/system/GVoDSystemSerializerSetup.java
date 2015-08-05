@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.system;
 
+import se.sics.caracaldb.MessageRegistrator;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.p2ptoolbox.util.serializer.BasicSerializerSetup;
 
@@ -27,8 +28,8 @@ import se.sics.p2ptoolbox.util.serializer.BasicSerializerSetup;
 public class GVoDSystemSerializerSetup {
 
     public static void oneTimeSetup() {
+        MessageRegistrator.register();
         int currentId = 128;
-        
         currentId = BasicSerializerSetup.registerBasicSerializers(currentId);
         currentId = GVoDSerializerSetup.registerSerializers(currentId);
     }

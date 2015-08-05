@@ -17,11 +17,12 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-package se.sics.gvod.common.msg;
+package se.sics.gvod.cc;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public enum ReqStatus {
-    SUCCESS, ERROR, FAIL, MISSING, TIMEOUT, BUSY;
+public class VoDCaracalClientConfig {
+    public long sanityCheckPeriod = 5000;
+    public int retries = 3;
 }

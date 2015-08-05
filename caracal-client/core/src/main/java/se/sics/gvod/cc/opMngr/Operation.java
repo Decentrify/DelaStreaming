@@ -17,11 +17,30 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-package se.sics.gvod.common.msg;
+package se.sics.gvod.cc.opMngr;
+
+import java.util.Map;
+import java.util.UUID;
+import se.sics.kompics.KompicsEvent;
+import se.sics.ktoolbox.cc.common.op.CCOpEvent;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public enum ReqStatus {
-    SUCCESS, ERROR, FAIL, MISSING, TIMEOUT, BUSY;
+public interface Operation {
+    public UUID getId();
+    public void start();
+    public HandleStatus handleEvent(CCOpEvent.Response event);
+    public Map<CCOpEvent.Request, Boolean> sendingQueue();
+    public OpStatus getStatus();
+    public KompicsEvent getResult();
+    public void timeout(UUID msgId);
+    
+    public static enum HandleStatus {
+        HANDLED, NOT_HANDLED
+    }
+    
+    public static enum OpStatus {
+        ONGOING, DONE
+    }
 }
