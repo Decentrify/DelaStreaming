@@ -221,7 +221,15 @@ public class VoDCaracalClientComp extends ComponentDefinition {
                         pendingMsgs.put(e.getKey().opReq.id, Pair.with(op.getId(), ccConfig.retries));
                     }
                 }
+            break;
             case DONE:
+                for (Map.Entry<CCOpEvent.Request, Boolean> e : op.sendingQueue().entrySet()) {
+                    LOG.trace("{}sending:{}", logPrefix, e.getKey());
+                    trigger(e.getKey(), ccPort);
+                    if (e.getValue()) {
+                        LOG.warn("{}operation done, should not send replyable message:{} at this state", logPrefix, e.getKey().opReq);
+                    }
+                }
                 cleanOp(op.getId());
                 KompicsEvent resp = op.getResult();
                 LOG.trace("{}sending:{}", logPrefix, resp);
