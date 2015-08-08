@@ -34,7 +34,6 @@ import se.sics.gvod.cc.msg.CCJoinOverlay;
 import se.sics.gvod.common.msg.ReqStatus;
 import se.sics.gvod.common.util.FileMetadata;
 import se.sics.gvod.common.util.GVoDConfigException;
-import se.sics.gvod.common.util.HashUtil;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
 import se.sics.gvod.core.connMngr.ConnMngrComp;
 import se.sics.gvod.core.downloadMngr.DownloadMngrComp;
@@ -64,6 +63,7 @@ import se.sics.p2ptoolbox.util.config.SystemConfig;
 import se.sics.p2ptoolbox.util.filters.IntegerOverlayFilter;
 import se.sics.p2ptoolbox.util.managedStore.FileMngr;
 import se.sics.p2ptoolbox.util.managedStore.HashMngr;
+import se.sics.p2ptoolbox.util.managedStore.HashUtil;
 import se.sics.p2ptoolbox.util.managedStore.StorageMngrFactory;
 import se.sics.p2ptoolbox.videostream.VideoStreamManager;
 import se.sics.p2ptoolbox.videostream.VideoStreamMngrImpl;
@@ -293,12 +293,7 @@ public class VoDComp extends ComponentDefinition {
 
     private void startVideoComp(UUID reqId, int overlayId, FileMetadata fileMeta, Pair<FileMngr, HashMngr> hashedFileMngr, boolean download) {
         int hashSize = 0;
-        try {
-            hashSize = HashUtil.getHashSize(fileMeta.hashAlg);
-        } catch (GVoDConfigException.Missing ex) {
-            LOG.error("{} unknown hash function:{}", config.getSelf(), fileMeta.hashAlg);
-            System.exit(1);
-        }
+        hashSize = HashUtil.getHashSize(fileMeta.hashAlg);
         LOG.info("{} - videoName:{} videoFileSize:{}, hashFileSize:{}, hashSize:{}", new Object[]{config.getSelf(), fileMeta.fileName, fileMeta.fileSize, fileMeta.hashFileSize, hashSize});
         DownloadMngrConfig downloadMngrConfig = null;
         ConnMngrConfig connMngrConfig = null;
@@ -319,7 +314,7 @@ public class VoDComp extends ComponentDefinition {
 
         connect(croupier.getNegative(Timer.class), timer);
         connect(croupier.getNegative(Network.class), network, new IntegerOverlayFilter(overlayId));
-        
+
         connect(connMngr.getNegative(Network.class), network, new IntegerOverlayFilter(overlayId));
         connect(connMngr.getNegative(Timer.class), timer);
         connect(connMngr.getNegative(CroupierPort.class), croupier.getPositive(CroupierPort.class));

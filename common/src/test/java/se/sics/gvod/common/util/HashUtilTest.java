@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.common.util;
 
+import se.sics.p2ptoolbox.util.managedStore.HashUtil;
 import com.google.common.base.Objects;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -33,7 +34,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import org.junit.Assert;
 import org.junit.Test;
-import se.sics.gvod.common.util.HashUtil.HashBuilderException;
+import se.sics.p2ptoolbox.util.managedStore.HashUtil.HashBuilderException;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>

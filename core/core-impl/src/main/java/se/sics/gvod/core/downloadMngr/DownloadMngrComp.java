@@ -34,7 +34,7 @@ import se.sics.gvod.common.msg.ReqStatus;
 import se.sics.gvod.core.connMngr.ConnMngrPort;
 import se.sics.gvod.core.connMngr.msg.Ready;
 import se.sics.gvod.common.msg.vod.Download;
-import se.sics.gvod.common.util.HashUtil;
+import se.sics.p2ptoolbox.util.managedStore.HashUtil;
 import se.sics.gvod.common.utility.UtilityUpdate;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
 import se.sics.kompics.ComponentDefinition;
