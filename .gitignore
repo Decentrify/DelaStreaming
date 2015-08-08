@@ -1,15 +1,6 @@
 /common/target/
-
-/bootstrap/common/target/
-/bootstrap/server/target/
-/bootstrap/server/common/target/
-/bootstrap/server/caracal-server/target/
-/bootstrap/server/caracal-client/target/
-/bootstrap/server/peer-manager/target/
-/bootstrap/server/simulation-peermanager/target/
-/bootstrap/client/target/
-
-/croupier-fake/target/
+/caracal-client/api/target/
+/caracal-client/core/target/
 /core/core-api/target/
 /core/core-impl/target/
 /system/target/
@@ -17,6 +8,4 @@
 /manager/target/
 /network/target/
 
-core/core-impl/src/test/resources/library2/status.file
-/caracal-client/api/target/
-/caracal-client/core/target/
+/core/core-impl/src/test/resources/library2/status.file
