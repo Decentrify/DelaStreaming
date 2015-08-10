@@ -392,9 +392,10 @@ public class ConnMngrComp extends ComponentDefinition {
             @Override
             public void handle(CroupierSample<VodDescriptor> event) {
                 if (selfDesc.downloading) {
-                    LOG.debug("{} received new croupier samples", logPrefix);
+                    LOG.info("{} received new croupier samples:{}", logPrefix, event.privateSample.size() + event.publicSample.size());
 
                     for (Container<DecoratedAddress, VodDescriptor> container : event.publicSample) {
+                        LOG.info("{} {} vod descriptor:{}", new Object[]{logPrefix, container.getSource().getBase(), container.getContent().downloadPos});
                         if (container.getContent().downloadPos < selfDesc.vodDesc.downloadPos) {
                             continue;
                         }

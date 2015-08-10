@@ -18,10 +18,14 @@
  */
 package se.sics.gvod.core;
 
+import com.google.common.primitives.Ints;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.javatuples.Pair;
@@ -56,15 +60,20 @@ import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatPort;
+import se.sics.ktoolbox.cc.heartbeat.msg.CCHeartbeat;
+import se.sics.ktoolbox.cc.heartbeat.msg.CCOverlaySample;
 import se.sics.p2ptoolbox.croupier.CroupierComp;
 import se.sics.p2ptoolbox.croupier.CroupierConfig;
+import se.sics.p2ptoolbox.croupier.CroupierControlPort;
 import se.sics.p2ptoolbox.croupier.CroupierPort;
+import se.sics.p2ptoolbox.croupier.msg.CroupierJoin;
 import se.sics.p2ptoolbox.util.config.SystemConfig;
 import se.sics.p2ptoolbox.util.filters.IntegerOverlayFilter;
 import se.sics.p2ptoolbox.util.managedStore.FileMngr;
 import se.sics.p2ptoolbox.util.managedStore.HashMngr;
 import se.sics.p2ptoolbox.util.managedStore.HashUtil;
 import se.sics.p2ptoolbox.util.managedStore.StorageMngrFactory;
+import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
 import se.sics.p2ptoolbox.videostream.VideoStreamManager;
 import se.sics.p2ptoolbox.videostream.VideoStreamMngrImpl;
 
@@ -94,7 +103,7 @@ public class VoDComp extends ComponentDefinition {
     private final Map<Integer, Triplet<Component, Component, Component>> videoComps;
 
     private final Map<UUID, Pair<Pair<String, Integer>, FileMetadata>> pendingUploads;
-    private final Map<UUID, Pair<String, Integer>> pendingDownloads;
+    private final Map<UUID, Pair<Pair<String, Integer>, FileMetadata>> pendingDownloads;
     private final Map<UUID, Pair<String, Integer>> rejoinUploads;
     private final LibraryMngr libMngr;
 
@@ -105,7 +114,7 @@ public class VoDComp extends ComponentDefinition {
         this.logPrefix = config.getSelf().toString();
         LOG.info("{} lib folder: {}", logPrefix, config.getVideoLibrary());
         this.videoComps = new HashMap<Integer, Triplet<Component, Component, Component>>();
-        this.pendingDownloads = new HashMap<UUID, Pair<String, Integer>>();
+        this.pendingDownloads = new HashMap<UUID, Pair<Pair<String, Integer>, FileMetadata>>();
         this.pendingUploads = new HashMap<UUID, Pair<Pair<String, Integer>, FileMetadata>>();
         this.rejoinUploads = new HashMap<UUID, Pair<String, Integer>>();
         this.libMngr = new LibraryMngr(config.getVideoLibrary());
@@ -117,6 +126,7 @@ public class VoDComp extends ComponentDefinition {
         subscribe(handleDownloadVideoRequest, myPort);
         subscribe(handleAddOverlayResponse, caracalClient);
         subscribe(handleJoinOverlayResponse, caracalClient);
+        subscribe(handleOverlaySample, heartbeat);
     }
 
     private Handler handleStart = new Handler<Start>() {
@@ -213,6 +223,7 @@ public class VoDComp extends ComponentDefinition {
                     throw new RuntimeException("library manager - upload denied for file:" + fileName);
                 }
                 startUpload(resp.id, fileInfo.getValue0().getValue0(), fileInfo.getValue0().getValue1(), fileInfo.getValue1());
+                trigger(new CCHeartbeat.Start(Ints.toByteArray(overlayId)), heartbeat);
             } else {
                 LOG.error("{} error in response message of upload video:{}", logPrefix, fileInfo.getValue0().getValue0());
 //                throw new RuntimeException("error in response message of upload video:" + fileInfo.getValue0().getValue0());
@@ -227,7 +238,7 @@ public class VoDComp extends ComponentDefinition {
         public void handle(DownloadVideo.Request req) {
             LOG.info("{} - {} - videoName:{} overlay:{}", new Object[]{logPrefix, req, req.videoName, req.overlayId});
             trigger(new CCJoinOverlay.Request(req.id, req.overlayId), caracalClient);
-            pendingDownloads.put(req.id, Pair.with(req.videoName, req.overlayId));
+            pendingDownloads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), (FileMetadata)null));
             if (!libMngr.pendingDownload(req.videoName)) {
                 LOG.error("{} library manager - pending download denied for file:{}", logPrefix, req.videoName);
                 throw new RuntimeException("library manager - pending download denied for file:" + req.videoName);
@@ -243,8 +254,9 @@ public class VoDComp extends ComponentDefinition {
 
             if (resp.status == ReqStatus.SUCCESS) {
                 if (pendingDownloads.containsKey(resp.id)) {
-                    Pair<String, Integer> fileInfo = pendingDownloads.remove(resp.id);
-                    startDownload(resp.id, fileInfo.getValue0(), fileInfo.getValue1(), resp.fileMeta);
+                    
+                    pendingDownloads.put(resp.id, Pair.with(Pair.with(resp.fileMeta.fileName, resp.overlayId), resp.fileMeta));
+                    trigger(new CCOverlaySample.Request(Ints.toByteArray(resp.overlayId)), heartbeat);
                 } else if (rejoinUploads.containsKey(resp.id)) {
                     Pair<String, Integer> fileInfo = rejoinUploads.remove(resp.id);
                     startUpload(resp.id, fileInfo.getValue0(), fileInfo.getValue1(), resp.fileMeta);
@@ -255,11 +267,30 @@ public class VoDComp extends ComponentDefinition {
             }
         }
     };
+    
+    Handler handleOverlaySample = new Handler<CCOverlaySample.Response>() {
+
+        @Override
+        public void handle(CCOverlaySample.Response resp) {
+            LOG.trace("{} - {}", new Object[]{config.getSelf(), resp});
+
+            int overlayId = Ints.fromByteArray(resp.overlayId);
+            Iterator<Map.Entry<UUID, Pair<Pair<String, Integer>, FileMetadata>>> it = pendingDownloads. entrySet().iterator();
+            while(it.hasNext()) {
+                Map.Entry<UUID, Pair<Pair<String, Integer>, FileMetadata>> pd = it.next();
+                if(pd.getValue().getValue0().getValue1().equals(overlayId)) {
+                    it.remove();
+                    startDownload(pd.getKey(), pd.getValue().getValue0().getValue0(), overlayId, pd.getValue().getValue1(), resp.overlaySample);
+                }
+            }
+        }
+        
+    };
 
     private void startUpload(UUID reqId, String fileName, Integer overlayId, FileMetadata fileMeta) {
         try {
             Pair<FileMngr, HashMngr> videoMngrs = getUploadVideoMngrs(fileName, fileMeta);
-            startVideoComp(reqId, overlayId, fileMeta, videoMngrs, false);
+            startVideoComp(reqId, overlayId, fileMeta, videoMngrs, false, new HashSet<DecoratedAddress>());
             trigger(new GetLibrary.Response(UUID.randomUUID(), ResponseStatus.SUCCESS, libMngr.getLibrary()), myPort);
         } catch (IOException ex) {
             LOG.error("{} error writting to disk for video:{}", logPrefix, fileName);
@@ -270,14 +301,14 @@ public class VoDComp extends ComponentDefinition {
         }
     }
 
-    private void startDownload(UUID reqId, String fileName, Integer overlayId, FileMetadata fileMeta) {
+    private void startDownload(UUID reqId, String fileName, Integer overlayId, FileMetadata fileMeta, Set<DecoratedAddress> bootstrap) {
         try {
             if (!libMngr.startDownload(fileName, overlayId)) {
                 LOG.error("{} library manager - download denied for file:{}", logPrefix, fileName);
                 throw new RuntimeException("library manager - download denied for file:" + fileName);
             }
             Pair<FileMngr, HashMngr> videoMngrs = getDownloadVideoMngrs(fileName, fileMeta);
-            startVideoComp(reqId, overlayId, fileMeta, videoMngrs, true);
+            startVideoComp(reqId, overlayId, fileMeta, videoMngrs, true, bootstrap);
             trigger(new GetLibrary.Response(UUID.randomUUID(), ResponseStatus.SUCCESS, libMngr.getLibrary()), myPort);
         } catch (IOException ex) {
             LOG.error("{} error writting to disk for video:{}", logPrefix, fileName);
@@ -291,7 +322,7 @@ public class VoDComp extends ComponentDefinition {
         }
     }
 
-    private void startVideoComp(UUID reqId, int overlayId, FileMetadata fileMeta, Pair<FileMngr, HashMngr> hashedFileMngr, boolean download) {
+    private void startVideoComp(UUID reqId, int overlayId, FileMetadata fileMeta, Pair<FileMngr, HashMngr> hashedFileMngr, boolean download, Set<DecoratedAddress> bootstrap) {
         int hashSize = 0;
         hashSize = HashUtil.getHashSize(fileMeta.hashAlg);
         LOG.info("{} - videoName:{} videoFileSize:{}, hashFileSize:{}, hashSize:{}", new Object[]{config.getSelf(), fileMeta.fileName, fileMeta.fileSize, fileMeta.hashFileSize, hashSize});
@@ -328,6 +359,9 @@ public class VoDComp extends ComponentDefinition {
         trigger(Start.event, croupier.control());
         trigger(Start.event, connMngr.control());
         trigger(Start.event, downloadMngr.control());
+        
+        trigger(new CroupierJoin(bootstrap), croupier.getPositive(CroupierControlPort.class));
+        trigger(new CCHeartbeat.Start(Ints.toByteArray(overlayId)), heartbeat);
 
         VideoStreamManager vsMngr = null;
         try {

@@ -28,7 +28,7 @@ import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class ConnMngrConfig {
-    public final long periodicStateCheck = 5000; //1s
+    public final long periodicStateCheck = 30000; //30s
     public final long periodicConnUpdate = 1000; //1s
             
     private final Config config;
