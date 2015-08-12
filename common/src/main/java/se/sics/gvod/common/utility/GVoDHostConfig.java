@@ -109,6 +109,8 @@ public class GVoDHostConfig {
                 caracalClient = new DecoratedAddress(new BasicAddress(ccIp, ccPort, ccId));
             } else {
                 caracalClient = self;
+                DecoratedAddress src;
+                
             }
             LOG.info("{}: caracalClient address:{}", logPrefix, caracalClient);
         } catch (UnknownHostException ex) {
