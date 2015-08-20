@@ -5,7 +5,7 @@
     <parent>
         <groupId>se.sics.gvod</groupId>
         <artifactId>caracal-client</artifactId>
-        <version>0.0.5-SNAPSHOT</version>
+        <version>0.0.6-SNAPSHOT</version>
     </parent>
     <groupId>se.sics.gvod.cc</groupId>
     <artifactId>core</artifactId>
