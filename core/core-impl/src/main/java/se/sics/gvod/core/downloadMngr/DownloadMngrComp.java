@@ -18,11 +18,8 @@
  */
 package se.sics.gvod.core.downloadMngr;
 
-import java.util.ArrayList;
+import com.google.common.base.Optional;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -34,7 +31,6 @@ import se.sics.gvod.common.msg.ReqStatus;
 import se.sics.gvod.core.connMngr.ConnMngrPort;
 import se.sics.gvod.core.connMngr.msg.Ready;
 import se.sics.gvod.common.msg.vod.Download;
-import se.sics.p2ptoolbox.util.managedStore.HashUtil;
 import se.sics.gvod.common.utility.UtilityUpdate;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
 import se.sics.kompics.ComponentDefinition;
@@ -48,10 +44,8 @@ import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
-import se.sics.p2ptoolbox.util.managedStore.BlockMngr;
 import se.sics.p2ptoolbox.util.managedStore.FileMngr;
 import se.sics.p2ptoolbox.util.managedStore.HashMngr;
-import se.sics.p2ptoolbox.util.managedStore.StorageMngrFactory;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -59,7 +53,6 @@ import se.sics.p2ptoolbox.util.managedStore.StorageMngrFactory;
 public class DownloadMngrComp extends ComponentDefinition {
 
     private static final Logger LOG = LoggerFactory.getLogger(DownloadMngrComp.class);
-    private final DownloadMngrConfig config;
     private final String logPrefix;
 
     private Negative<UtilityUpdatePort> utilityUpdate = provides(UtilityUpdatePort.class);
@@ -67,16 +60,10 @@ public class DownloadMngrComp extends ComponentDefinition {
     private Positive<Timer> timer = requires(Timer.class);
     private Positive<ConnMngrPort> connMngr = requires(ConnMngrPort.class);
 
-    private final AtomicInteger playPos; //set by videoStreamManager, read here
-    private final HashMngr hashMngr;
-    private final FileMngr fileMngr;
+    private final DownloadMngrConfig config;
+    public final DownloadMngr downloadMngr;
     private boolean downloading;
-
-    private final Map<Integer, BlockMngr> queuedBlocks;
-    private Set<Integer> pendingPieces;
-    private List<Integer> nextPieces;
-    private Set<Integer> pendingHashes;
-    private List<Integer> nextHashes;
+    private final AtomicInteger playPos; //set by videoStreamManager, read here
 
     private UUID speedUpTId = null;
     private UUID periodicUpdateSelfTId = null;
@@ -87,15 +74,8 @@ public class DownloadMngrComp extends ComponentDefinition {
         LOG.info("{} initiating", logPrefix);
 
         this.playPos = init.playPos;
-        this.hashMngr = init.hashMngr;
-        this.fileMngr = init.fileMngr;
+        this.downloadMngr = new DownloadMngr(config, init.hashMngr, init.fileMngr);
         this.downloading = init.downloader;
-
-        this.queuedBlocks = new HashMap<Integer, BlockMngr>();
-        this.pendingPieces = new HashSet<Integer>();
-        this.nextPieces = new ArrayList<Integer>();
-        this.pendingHashes = new HashSet<Integer>();
-        this.nextHashes = new ArrayList<Integer>();
 
         subscribe(handleStart, control);
         subscribe(handleStop, control);
@@ -115,7 +95,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             LOG.info("{} starting...", logPrefix);
             schedulePeriodicUpdateSelf();
 
-            Integer downloadPos = fileMngr.contiguous(0);
+            Integer downloadPos = downloadMngr.contiguousBlocks(playPos.get());
             trigger(new UtilityUpdate(config.overlayId, downloading, downloadPos), utilityUpdate);
         }
     };
@@ -140,30 +120,23 @@ public class DownloadMngrComp extends ComponentDefinition {
             }
         }
     };
-    
+
     private Handler<PeriodicUtilityUpdate> handleUpdateSelf = new Handler<PeriodicUtilityUpdate>() {
 
         @Override
         public void handle(PeriodicUtilityUpdate event) {
-            //TODO Alex might need to move it to its own timeout
             checkCompleteBlocks();
-            if (hashMngr.isComplete(0) && fileMngr.isComplete(0)) {
-                finishDownload();
-            }
-            
-            LOG.info("{} hashComplete:{} fileComplete:{}", new Object[]{logPrefix, hashMngr.isComplete(0), fileMngr.isComplete(0)});
-            LOG.info("{} pending pieces:{} pendingHashes:{} pendingBlocks:{}", new Object[]{logPrefix, pendingPieces.size(), pendingHashes.size(), queuedBlocks.keySet()});
-            LOG.info("{} nextPieces:{} nextHashes:{}", new Object[]{logPrefix, nextPieces.size(), nextHashes.size()});
-            
+
+            LOG.info("{} download mngr status\n {}", logPrefix, downloadMngr);
             int playPieceNr = playPos.get();
             playPieceNr = (playPieceNr == -1 ? 0 : playPieceNr);
-            int playBlockNr = pieceIdToBlockNrPieceNr(playPieceNr).getValue0();
-            int downloadBlockNr = fileMngr.contiguous(playBlockNr);
-            LOG.info("{} playBlockPos:{} blockDPos:{} 0DPos:{} 0DPos:{}",
-                    new Object[]{logPrefix, playBlockNr, downloadBlockNr, fileMngr.contiguous(0), hashMngr.contiguous(0)});
+            int playBlockNr = PieceBlockHelper.pieceIdToBlockNrPieceNr(playPieceNr, config.piecesPerBlock).getValue0();
+            int downloadBlockNr = downloadMngr.contiguousBlocks(playBlockNr);
+            LOG.info("{} playBlockPos:{} downloadBlockPos:{}",
+                    new Object[]{logPrefix, playBlockNr, downloadBlockNr});
             trigger(new UtilityUpdate(config.overlayId, downloading, downloadBlockNr), utilityUpdate);
-            
-            if(!downloading) {
+
+            if (!downloading) {
                 cancelUpdateSelf();
             }
         }
@@ -173,25 +146,21 @@ public class DownloadMngrComp extends ComponentDefinition {
 
         @Override
         public void handle(Data.Req req) {
-            LOG.debug("{} received local data request for readPos:{} readSize:{}", new Object[]{logPrefix, req.readPos, req.readBlockSize});
+            LOG.trace("{} received local data request for readPos:{} readSize:{}",
+                    new Object[]{logPrefix, req.readPos, req.readBlockSize});
 
-            if (!fileMngr.has(req.readPos, req.readBlockSize)) {
-                Set<Integer> targetedBlocks = posToBlockNr(req.readPos, req.readBlockSize);
-                for (Integer blockNr : targetedBlocks) {
-                    if (queuedBlocks.containsKey(blockNr)) {
-                        checkCompleteBlocks();
-                        break;
-                    }
-                }
-                if (!fileMngr.has(req.readPos, req.readBlockSize)) {
-                    LOG.debug("{} local data missing - readPos:{} , readSize:{}", new Object[]{logPrefix, req.readPos, req.readBlockSize});
-                    trigger(new Data.Resp(req, ReqStatus.MISSING, null), dataPort);
-                    return;
-                }
+            Optional<byte[]> result = downloadMngr.dataRequest(req.readPos, req.readBlockSize);
+            if(!result.isPresent() && checkCompleteBlocks()) {
+                result = downloadMngr.dataRequest(req.readPos, req.readBlockSize);
             }
-            LOG.debug("{} sending local data - readPos:{} readSize:{}", new Object[]{logPrefix, req.readPos, req.readBlockSize});
-            byte data[] = fileMngr.read(req.readPos, req.readBlockSize);
-            trigger(new Data.Resp(req, ReqStatus.SUCCESS, data), dataPort);
+            if (result.isPresent()) {
+                LOG.trace("{} sending local data - readPos:{} readSize:{}",
+                        new Object[]{logPrefix, req.readPos, req.readBlockSize});
+                trigger(new Data.Resp(req, ReqStatus.SUCCESS, result.get()), dataPort);
+            } else {
+                LOG.debug("{} local data missing - readPos:{} , readSize:{}",
+                        new Object[]{logPrefix, req.readPos, req.readBlockSize});
+            }
         }
     };
 
@@ -199,20 +168,11 @@ public class DownloadMngrComp extends ComponentDefinition {
 
         @Override
         public void handle(Download.HashRequest req) {
-            LOG.debug("{} received hash request:{}", logPrefix, req.hashes);
+            LOG.trace("{} received hash request:{}", logPrefix, req.hashes);
 
-            Map<Integer, byte[]> hashes = new HashMap<Integer, byte[]>();
-            Set<Integer> missingHashes = new HashSet<Integer>();
-
-            for (Integer hash : req.hashes) {
-                if (hashMngr.hasHash(hash)) {
-                    hashes.put(hash, hashMngr.readHash(hash));
-                } else {
-                    missingHashes.add(hash);
-                }
-            }
-            LOG.debug("{} sending hashes:{} missing hashes:{}", new Object[]{logPrefix, hashes.keySet(), missingHashes});
-            trigger(req.success(hashes, missingHashes), connMngr);
+            Pair<Map<Integer, byte[]>, Set<Integer>> result = downloadMngr.hashRequest(req.hashes);
+            LOG.trace("{} sending hashes:{} missing hashes:{}", new Object[]{logPrefix, result.getValue0().keySet(), result.getValue1()});
+            trigger(req.success(result.getValue0(), result.getValue1()), connMngr);
         }
     };
 
@@ -223,26 +183,13 @@ public class DownloadMngrComp extends ComponentDefinition {
             switch (resp.status) {
                 case SUCCESS:
                     LOG.trace("{} SUCCESS hashes:{} missing hashes:{}", new Object[]{logPrefix, resp.hashes.keySet(), resp.missingHashes});
-
-                    for (Map.Entry<Integer, byte[]> hash : resp.hashes.entrySet()) {
-                        hashMngr.writeHash(hash.getKey(), hash.getValue());
-                    }
-
-                    pendingHashes.removeAll(resp.hashes.keySet());
-                    pendingHashes.removeAll(resp.missingHashes);
-                    nextHashes.addAll(resp.missingHashes);
+                    downloadMngr.hashResponse(resp.hashes, resp.missingHashes);
                     download();
                     return;
                 case TIMEOUT:
-                    LOG.debug("{} TIMEOUT hashes:{}", logPrefix, resp.missingHashes);
-                    pendingHashes.removeAll(resp.missingHashes);
-                    nextHashes.addAll(resp.missingHashes);
-                    download();
-                    return;
                 case BUSY:
-                    LOG.debug("{} BUSY hashes:{}", logPrefix, resp.missingHashes);
-                    pendingHashes.removeAll(resp.missingHashes);
-                    nextHashes.addAll(resp.missingHashes);
+                    LOG.debug("{} BUSY/TIMEOUT hashes:{}", logPrefix, resp.missingHashes);
+                    downloadMngr.hashResponse(resp.hashes, resp.missingHashes);
                     return;
                 default:
                     LOG.warn("{} illegal status:{}, ignoring", new Object[]{logPrefix, resp.status});
@@ -254,12 +201,12 @@ public class DownloadMngrComp extends ComponentDefinition {
 
         @Override
         public void handle(Download.DataRequest req) {
-            LOG.debug("{} received data request:{}", logPrefix, req.pieceId);
+            LOG.trace("{} received data request:{}", logPrefix, req.pieceId);
 
-            if (fileMngr.hasPiece(req.pieceId)) {
-                byte[] piece = fileMngr.readPiece(req.pieceId);
-                LOG.debug("{} sending data:{}", new Object[]{logPrefix, req.pieceId});
-                trigger(req.success(piece), connMngr);
+            Optional<byte[]> piece = downloadMngr.dataRequest(req.pieceId);
+            if (piece.isPresent()) {
+                LOG.trace("{} sending data:{}", new Object[]{logPrefix, req.pieceId});
+                trigger(req.success(piece.get()), connMngr);
             } else {
                 LOG.debug("{} missing data:{}", new Object[]{logPrefix, req.pieceId});
                 trigger(req.missingPiece(), connMngr);
@@ -274,27 +221,14 @@ public class DownloadMngrComp extends ComponentDefinition {
             switch (resp.status) {
                 case SUCCESS:
                     LOG.trace("{} SUCCESS piece:{}", new Object[]{logPrefix, resp.pieceId});
-
-                    Pair<Integer, Integer> pieceIdToBlockNr = pieceIdToBlockNrPieceNr(resp.pieceId);
-                    BlockMngr block = queuedBlocks.get(pieceIdToBlockNr.getValue0());
-                    if (block == null) {
-                        LOG.warn("{} block is null - inconsistency", logPrefix);
-                        return;
-                    }
-                    block.writePiece(pieceIdToBlockNr.getValue1(), resp.piece);
-                    pendingPieces.remove(resp.pieceId);
+                    downloadMngr.dataResponse(resp.pieceId, Optional.fromNullable(resp.piece));
                     download();
                     return;
                 case TIMEOUT:
                 case MISSING:
-                    LOG.debug("{} MISSING/TIMEOUT piece:{}", new Object[]{logPrefix, resp.pieceId});
-                    pendingPieces.remove(resp.pieceId);
-                    nextPieces.add(resp.pieceId);
-                    return;
                 case BUSY:
-                    LOG.debug("{} BUSY piece:{}", new Object[]{logPrefix, resp.pieceId});
-                    pendingPieces.remove(resp.pieceId);
-                    nextPieces.add(resp.pieceId);
+                    LOG.debug("{} MISSING/TIMEOUT/BUSY piece:{}", new Object[]{logPrefix, resp.pieceId});
+                    downloadMngr.dataResponse(resp.pieceId, Optional.fromNullable(resp.piece));
                     return;
                 default:
                     LOG.warn("{} illegal status:{} ignoring", new Object[]{logPrefix, resp.status});
@@ -302,85 +236,24 @@ public class DownloadMngrComp extends ComponentDefinition {
         }
     };
 
-    private void checkCompleteBlocks() {
-        Set<Integer> completedBlocks = new HashSet<Integer>();
-        Set<Integer> resetBlocks = new HashSet<Integer>();
-        for (Map.Entry<Integer, BlockMngr> block : queuedBlocks.entrySet()) {
-            int blockNr = block.getKey();
-            if (!block.getValue().isComplete()) {
-                continue;
-            }
-            if (!hashMngr.hasHash(blockNr)) {
-                continue;
-            }
-            byte[] blockBytes = block.getValue().getBlock();
-            byte[] blockHash = hashMngr.readHash(blockNr);
-            if (HashUtil.checkHash(config.hashAlg, blockBytes, blockHash)) {
-                fileMngr.writeBlock(blockNr, blockBytes);
-                completedBlocks.add(blockNr);
-            } else {
-                //TODO Alex - might need to re-download hash as well
-                LOG.warn("{} hash problem, dropping block:{}", logPrefix, blockNr);
-                resetBlocks.add(blockNr);
-            }
-        }
-        for (Integer blockNr : completedBlocks) {
-            queuedBlocks.remove(blockNr);
-        }
-        for (Integer blockNr : resetBlocks) {
-            int blockSize = fileMngr.blockSize(blockNr);
-            BlockMngr blankBlock = StorageMngrFactory.getSimpleBlockMngr(blockSize, config.pieceSize);
-            queuedBlocks.put(blockNr, blankBlock);
-            for (int i = 0; i < blankBlock.nrPieces(); i++) {
-                int pieceId = blockNr * config.piecesPerBlock + i;
-                nextPieces.add(pieceId);
-            }
-        }
-    }
+    private boolean checkCompleteBlocks() {
+        //TODO Alex might need to move it to its own timeout
+        Pair<Set<Integer>, Map<Integer, byte[]>> blocksInfo = downloadMngr.checkCompleteBlocks();
+        LOG.info("{} completed blocks:{} reset blocks:{}", new Object[]{logPrefix, blocksInfo.getValue0(), blocksInfo.getValue1().keySet()});
 
-    private Integer posToPieceId(long pos) {
-        Integer pieceId = (int) (pos / config.pieceSize);
-        return pieceId;
-    }
-
-    private Set<Integer> posToBlockNr(long pos, int size) {
-        Set<Integer> result = new HashSet<Integer>();
-        int blockNr = (int) (pos / (config.piecesPerBlock * config.pieceSize));
-        result.add(blockNr);
-        size -= config.piecesPerBlock * config.pieceSize;
-        while (size > 0) {
-            blockNr++;
-            result.add(blockNr);
-            size -= config.piecesPerBlock * config.pieceSize;
+        if (downloadMngr.isComplete()) {
+            finishDownload();
         }
-        return result;
-    }
-
-    private Pair<Integer, Integer> pieceIdToBlockNrPieceNr(int pieceId) {
-        int blockNr = pieceId / config.piecesPerBlock;
-        int inBlockNr = pieceId % config.piecesPerBlock;
-        return Pair.with(blockNr, inBlockNr);
+        if(blocksInfo.getValue0().isEmpty()) {
+            return false;
+        }
+        return true;
     }
 
     private boolean download() {
         int currentPlayPiece = playPos.get();
-        int currentPlayBlock = pieceIdToBlockNrPieceNr(currentPlayPiece).getValue0();
-        if (nextHashes.isEmpty() && nextPieces.isEmpty()) {
-            if (fileMngr.isComplete(currentPlayBlock)) {
-                currentPlayPiece = 0;
-                playPos.set(0);
-            }
-            if (fileMngr.isComplete(0)) {
-                return false;
-            } else {
-                int blockNr = pieceIdToBlockNrPieceNr(currentPlayPiece).getValue0();
-                if (!getNewPieces(blockNr)) {
-                    if (!getNewPieces(0)) {
-                        return false;
-                    }
-                }
-            }
-        }
+        int currentPlayBlock = PieceBlockHelper.getBlockNr(currentPlayPiece, config.piecesPerBlock);
+        downloadMngr.download(currentPlayBlock);
         if (!downloadHash()) {
             if (!downloadData()) {
                 return false;
@@ -389,66 +262,27 @@ public class DownloadMngrComp extends ComponentDefinition {
         return true;
     }
 
-    private boolean getNewPieces(int currentBlockNr) {
-        LOG.debug("{} getting new pieces from block:{}", logPrefix, currentBlockNr);
-        int filePos = fileMngr.contiguous(currentBlockNr);
-        int hashPos = hashMngr.contiguous(0);
-
-        if (filePos + 5 * config.minHashAhead > hashPos + pendingHashes.size()) {
-            Set<Integer> except = new HashSet<Integer>();
-            except.addAll(pendingHashes);
-            except.addAll(nextHashes);
-            Set<Integer> newNextHashes = hashMngr.nextHashes(config.hashesPerMsg, 0, except);
-            LOG.debug("{} hashPos:{} pendingHashes:{} nextHashes:{} newNextHashes:{}", 
-                    new Object[]{logPrefix, hashPos, pendingHashes, nextHashes, newNextHashes});
-            nextHashes.addAll(newNextHashes);
-            if (!nextHashes.isEmpty()) {
-                return true;
-            }
-        }
-
-        Integer nextBlockNr = fileMngr.nextBlock(currentBlockNr, queuedBlocks.keySet());
-        if (nextBlockNr == null) {
-            LOG.debug("{} last blockNr:{}", logPrefix, currentBlockNr);
-            return false;
-        }
-        //last block might have less nr of pieces than default
-        int blockSize = fileMngr.blockSize(nextBlockNr);
-        BlockMngr blankBlock = StorageMngrFactory.getSimpleBlockMngr(blockSize, config.pieceSize);
-        queuedBlocks.put(nextBlockNr, blankBlock);
-        for (int i = 0; i < blankBlock.nrPieces(); i++) {
-            int pieceId = nextBlockNr * config.piecesPerBlock + i;
-            nextPieces.add(pieceId);
-        }
-        return !nextPieces.isEmpty();
-    }
-
     private boolean downloadData() {
-        if (nextPieces.isEmpty()) {
+        Optional<Integer> nextPieceId = downloadMngr.downloadData();
+        if (!nextPieceId.isPresent()) {
             return false;
         }
-        int nextPieceId = nextPieces.remove(0);
-        LOG.debug("{} downloading piece:{}", logPrefix, nextPieceId);
-        trigger(new Download.DataRequest(UUID.randomUUID(), config.overlayId, nextPieceId), connMngr);
-        pendingPieces.add(nextPieceId);
+        LOG.trace("{} downloading piece:{}", logPrefix, nextPieceId);
+        trigger(new Download.DataRequest(UUID.randomUUID(), config.overlayId, nextPieceId.get()), connMngr);
         return true;
     }
 
     private boolean downloadHash() {
-        if (nextHashes.isEmpty()) {
+        Optional<Set<Integer>> nextHashes = downloadMngr.downloadHash();
+        if (!nextHashes.isPresent()) {
             return false;
         }
-        Set<Integer> hashesToDownload = new HashSet<Integer>();
-        for (int i = 0; i < config.hashesPerMsg && !nextHashes.isEmpty(); i++) {
-            hashesToDownload.add(nextHashes.remove(0));
-        }
-        int targetPos = Collections.min(hashesToDownload);
-        LOG.debug("{} downloading hashes:{} targetPos:{}", new Object[]{logPrefix, hashesToDownload, targetPos});
-        trigger(new Download.HashRequest(UUID.randomUUID(), targetPos, hashesToDownload), connMngr);
-        pendingHashes.addAll(hashesToDownload);
+        int targetPos = Collections.min(nextHashes.get());
+        LOG.trace("{} downloading hashes:{} targetPos:{}", new Object[]{logPrefix, nextHashes.get(), targetPos});
+        trigger(new Download.HashRequest(UUID.randomUUID(), targetPos, nextHashes.get()), connMngr);
         return true;
     }
-    
+
     private void finishDownload() {
         downloading = false;
         LOG.info("{} finished download", logPrefix);

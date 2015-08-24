@@ -41,7 +41,7 @@ public class DownloadMngrConfig {
     public final String hashAlg = "SHA";
     public final long speedupPeriod = 2000;
 
-    private DownloadMngrConfig(Config config, DecoratedAddress selfAddress, int overlayId, int startPieces, long descriptorUpdate, int pieceSize, int piecesPerBlock) {
+    public DownloadMngrConfig(Config config, DecoratedAddress selfAddress, int overlayId, int startPieces, long descriptorUpdate, int pieceSize, int piecesPerBlock) {
         this.config = config;
         this.selfAddress = selfAddress;
         this.overlayId = overlayId;
