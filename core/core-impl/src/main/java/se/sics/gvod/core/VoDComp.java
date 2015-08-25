@@ -238,7 +238,7 @@ public class VoDComp extends ComponentDefinition {
         public void handle(DownloadVideo.Request req) {
             LOG.info("{} - {} - videoName:{} overlay:{}", new Object[]{logPrefix, req, req.videoName, req.overlayId});
             trigger(new CCJoinOverlay.Request(req.id, req.overlayId), caracalClient);
-            pendingDownloads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), (FileMetadata)null));
+            pendingDownloads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), (FileMetadata) null));
             if (!libMngr.pendingDownload(req.videoName)) {
                 LOG.error("{} library manager - pending download denied for file:{}", logPrefix, req.videoName);
                 throw new RuntimeException("library manager - pending download denied for file:" + req.videoName);
@@ -254,7 +254,7 @@ public class VoDComp extends ComponentDefinition {
 
             if (resp.status == ReqStatus.SUCCESS) {
                 if (pendingDownloads.containsKey(resp.id)) {
-                    
+
                     pendingDownloads.put(resp.id, Pair.with(Pair.with(resp.fileMeta.fileName, resp.overlayId), resp.fileMeta));
                     trigger(new CCOverlaySample.Request(Ints.toByteArray(resp.overlayId)), heartbeat);
                 } else if (rejoinUploads.containsKey(resp.id)) {
@@ -262,12 +262,18 @@ public class VoDComp extends ComponentDefinition {
                     startUpload(resp.id, fileInfo.getValue0(), fileInfo.getValue1(), resp.fileMeta);
                 }
             } else {
-                LOG.error("{} error in response message of upload video:{}", logPrefix, resp.fileMeta.fileName);
-                throw new RuntimeException("error in response message of upload video:" + resp.fileMeta.fileName);
+                //TODO Alex - keep track of fileMeta so that in case caracal does not have it, we can re-upload it.
+                if (resp.fileMeta != null) {
+                    LOG.error("{} error in response message of upload video:{}", logPrefix, resp.fileMeta.fileName);
+                    throw new RuntimeException("error in response message of upload video:" + resp.fileMeta.fileName);
+                } else {
+                    LOG.error("{} error in response message of upload video", logPrefix);
+                    throw new RuntimeException("error in response message of upload video");
+                }
             }
         }
     };
-    
+
     Handler handleOverlaySample = new Handler<CCOverlaySample.Response>() {
 
         @Override
@@ -275,16 +281,16 @@ public class VoDComp extends ComponentDefinition {
             LOG.trace("{} - {}", new Object[]{config.getSelf(), resp});
 
             int overlayId = Ints.fromByteArray(resp.overlayId);
-            Iterator<Map.Entry<UUID, Pair<Pair<String, Integer>, FileMetadata>>> it = pendingDownloads. entrySet().iterator();
-            while(it.hasNext()) {
+            Iterator<Map.Entry<UUID, Pair<Pair<String, Integer>, FileMetadata>>> it = pendingDownloads.entrySet().iterator();
+            while (it.hasNext()) {
                 Map.Entry<UUID, Pair<Pair<String, Integer>, FileMetadata>> pd = it.next();
-                if(pd.getValue().getValue0().getValue1().equals(overlayId)) {
+                if (pd.getValue().getValue0().getValue1().equals(overlayId)) {
                     it.remove();
                     startDownload(pd.getKey(), pd.getValue().getValue0().getValue0(), overlayId, pd.getValue().getValue1(), resp.overlaySample);
                 }
             }
         }
-        
+
     };
 
     private void startUpload(UUID reqId, String fileName, Integer overlayId, FileMetadata fileMeta) {
@@ -359,7 +365,7 @@ public class VoDComp extends ComponentDefinition {
         trigger(Start.event, croupier.control());
         trigger(Start.event, connMngr.control());
         trigger(Start.event, downloadMngr.control());
-        
+
         trigger(new CroupierJoin(bootstrap), croupier.getPositive(CroupierControlPort.class));
         trigger(new CCHeartbeat.Start(Ints.toByteArray(overlayId)), heartbeat);
 
