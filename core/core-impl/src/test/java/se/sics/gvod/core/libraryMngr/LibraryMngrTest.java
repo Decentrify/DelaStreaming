@@ -98,9 +98,9 @@ public class LibraryMngrTest {
         File clean;
         clean = new File(testResourcePath + "video1.mp4");
         clean.delete();
-        clean = new File(testResourcePath + "video2.mp4");
+        clean = new File(testResourcePath + "video2.bla.mp4");
         clean.delete();
-        clean = new File(testResourcePath + "video2.hash");
+        clean = new File(testResourcePath + "video2.bla.hash");
         clean.delete();
         clean = new File(testResourcePath + "status.file");
         clean.delete();
