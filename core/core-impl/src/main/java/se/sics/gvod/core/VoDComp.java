@@ -45,6 +45,7 @@ import se.sics.gvod.core.downloadMngr.DownloadMngrConfig;
 import se.sics.gvod.core.connMngr.ConnMngrConfig;
 import se.sics.gvod.core.connMngr.ConnMngrPort;
 import se.sics.gvod.core.libraryMngr.LibraryMngr;
+import se.sics.gvod.core.libraryMngr.LibraryUtil;
 import se.sics.gvod.core.msg.DownloadVideo;
 import se.sics.gvod.core.msg.GetLibrary;
 import se.sics.gvod.core.msg.PlayReady;
@@ -175,7 +176,7 @@ public class VoDComp extends ComponentDefinition {
         @Override
         public void handle(UploadVideo.Request req) {
             LOG.info("{} - uploa videoName:{} overlay:{}", new Object[]{logPrefix, req.videoName, req.overlayId});
-            String videoNameNoExt = req.videoName.substring(0, req.videoName.indexOf("."));
+            String videoNameNoExt = LibraryUtil.removeExtension(req.videoName);
             String videoFilePath = config.getVideoLibrary() + File.separator + req.videoName;
             String hashFilePath = config.getVideoLibrary() + File.separator + videoNameNoExt + ".hash";
 
@@ -381,10 +382,9 @@ public class VoDComp extends ComponentDefinition {
 
     private Pair<FileMngr, HashMngr> getUploadVideoMngrs(String video, FileMetadata fileMeta) throws IOException, GVoDConfigException.Missing {
 
-        String videoName = video.substring(0, video.indexOf("."));
-        String videoExt = video.substring(video.indexOf("."));
+        String videoNoExt = LibraryUtil.removeExtension(video);
         String videoFilePath = config.getVideoLibrary() + File.separator + video;
-        String hashFilePath = config.getVideoLibrary() + File.separator + videoName + ".hash";
+        String hashFilePath = config.getVideoLibrary() + File.separator + videoNoExt + ".hash";
 
 //        int nrHashPieces = fileMeta.hashFileSize / HashUtil.getHashSize(fileMeta.hashAlg);
 //        PieceTracker hashPieceTracker = new CompletePieceTracker(nrHashPieces);
@@ -404,10 +404,9 @@ public class VoDComp extends ComponentDefinition {
 
     private Pair<FileMngr, HashMngr> getDownloadVideoMngrs(String video, FileMetadata fileMeta) throws IOException, HashUtil.HashBuilderException, GVoDConfigException.Missing {
         LOG.info("{} lib directory {}", config.getSelf(), config.getVideoLibrary());
-        String videoName = video.substring(0, video.indexOf("."));
-        String videoExt = video.substring(video.indexOf("."));
+        String videoNoExt = LibraryUtil.removeExtension(video);
         String videoFilePath = config.getVideoLibrary() + File.separator + video;
-        String hashFilePath = config.getVideoLibrary() + File.separator + videoName + ".hash";
+        String hashFilePath = config.getVideoLibrary() + File.separator + videoNoExt + ".hash";
 
         File hashFile = new File(hashFilePath);
         if (hashFile.exists()) {

@@ -19,24 +19,19 @@
 package se.sics.gvod.core.downloadMngr;
 
 import com.google.common.base.Optional;
-import com.google.common.io.BaseEncoding;
 import com.google.common.io.Files;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import org.javatuples.Pair;
-import org.javatuples.Triplet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.p2ptoolbox.util.managedStore.BlockMngr;
 import se.sics.p2ptoolbox.util.managedStore.FileMngr;
 import se.sics.p2ptoolbox.util.managedStore.HashMngr;
 import se.sics.p2ptoolbox.util.managedStore.HashUtil;
@@ -60,7 +55,7 @@ public class DownloadMngrTest {
     int generateSize = 100;
     int pieceSize = 1024;
     int piecesPerBlock = 1024;
-    int randomRuns = 1;
+    int randomRuns = 10;
     int nrBlocks;
     double lossRate = 0.1;
     double jumpRate = 0.3;
@@ -121,9 +116,9 @@ public class DownloadMngrTest {
             rand = new Random(seed);
             setup(rand);
             run(rand, new RandomJumpDownloader(rand, nrBlocks, jumpRate, piecesPerBlock * pieceSize, corruptionRate, lossRate));
-            cleanup();
             Assert.assertTrue(Files.equal(new File(uploadFilePath), new File(download1FilePath)));
             Assert.assertTrue(Files.equal(new File(uploadFilePath), new File(download2FilePath)));
+            cleanup();
         }
     }
 
@@ -152,10 +147,10 @@ public class DownloadMngrTest {
         while (!(downloader1.getValue0().isComplete() && downloader2.getValue0().isComplete())) {
             Pair<Set<Integer>, Map<Integer, byte[]>> blockInfo1 = downloader1.getValue0().checkCompleteBlocks();
             if (blockInfo1.getValue1().size() > 0) {
-                LOG.info("downloader1 reset:{}", blockInfo1.getValue1().keySet());
+//                LOG.info("downloader1 reset:{}", blockInfo1.getValue1().keySet());
             }
             if (blockInfo1.getValue0().size() > 0) {
-                LOG.info("downloader1 completed:{}", blockInfo1.getValue0());
+//                LOG.info("downloader1 completed:{}", blockInfo1.getValue0());
             }
 //            LOG.info("downloader1 status:{}", downloader1.getValue0());
             if (!downloader1.getValue0().isComplete()) {
@@ -165,10 +160,10 @@ public class DownloadMngrTest {
             }
             Pair<Set<Integer>, Map<Integer, byte[]>> blockInfo2 = downloader2.getValue0().checkCompleteBlocks();
             if (blockInfo2.getValue1().size() > 0) {
-                LOG.info("downloader2 reset:{}", blockInfo2.getValue1().keySet());
+//                LOG.info("downloader2 reset:{}", blockInfo2.getValue1().keySet());
             }
             if (blockInfo2.getValue0().size() > 0) {
-                LOG.info("downloader2 completed:{}", blockInfo2.getValue0());
+//                LOG.info("downloader2 completed:{}", blockInfo2.getValue0());
             }
 //            LOG.info("downloader2 status:{}", downloader2.getValue0());
             if (!download2FileMngr.isComplete(0)) {
