@@ -35,6 +35,7 @@ import se.sics.ktoolbox.cc.common.config.CCBootstrapConfig;
 import se.sics.ktoolbox.cc.common.config.CaracalClientConfig;
 import se.sics.p2ptoolbox.croupier.CroupierConfig;
 import se.sics.p2ptoolbox.util.config.SystemConfig;
+import se.sics.p2ptoolbox.util.helper.SystemConfigBuilder;
 import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
 
 /**
@@ -81,7 +82,7 @@ public class HostManagerConfig {
     }
 
     public SystemConfig getSystemConfig() {
-        return new SystemConfig(hostConfig.getConfig());
+        return new SystemConfigBuilder(hostConfig.getConfig()).build();
     }
 
     public CaracalClientConfig getCaracalClientConfig() {
