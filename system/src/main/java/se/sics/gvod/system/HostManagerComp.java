@@ -38,6 +38,7 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.cc.bootstrap.CCBootstrapPort;
 import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatPort;
+import se.sics.p2ptoolbox.util.update.SelfAddressUpdatePort;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -50,6 +51,7 @@ public class HostManagerComp extends ComponentDefinition {
     private Positive<Timer> timer = requires(Timer.class);
     private Positive<CCBootstrapPort> caracalClient = requires(CCBootstrapPort.class);
     private Positive<CCHeartbeatPort> heartbeat = requires(CCHeartbeatPort.class);
+    private Positive<SelfAddressUpdatePort> addressUpdate = requires(SelfAddressUpdatePort.class);
 
     private Component vodMngrComp;
     private Component vodComp;
@@ -78,6 +80,7 @@ public class HostManagerComp extends ComponentDefinition {
         connect(vodComp.getNegative(Timer.class), timer);
         connect(vodComp.getNegative(CCHeartbeatPort.class), heartbeat);
         connect(vodComp.getNegative(VoDCaracalClientPort.class), vodCaracalClientComp.getPositive(VoDCaracalClientPort.class));
+        connect(vodComp.getNegative(SelfAddressUpdatePort.class), addressUpdate);
     }
     
     private void connectVoDMngr(SettableFuture gvodSyncIFuture) {

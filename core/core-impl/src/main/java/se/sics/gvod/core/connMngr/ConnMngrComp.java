@@ -58,6 +58,8 @@ import se.sics.p2ptoolbox.util.network.impl.BasicContentMsg;
 import se.sics.p2ptoolbox.util.network.impl.BasicHeader;
 import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
 import se.sics.p2ptoolbox.util.network.impl.DecoratedHeader;
+import se.sics.p2ptoolbox.util.update.SelfAddressUpdate;
+import se.sics.p2ptoolbox.util.update.SelfAddressUpdatePort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -72,11 +74,13 @@ public class ConnMngrComp extends ComponentDefinition {
     private Positive<Timer> timer = requires(Timer.class);
     private Positive<CroupierPort> croupier = requires(CroupierPort.class);
     private Positive<UtilityUpdatePort> utilityUpdate = requires(UtilityUpdatePort.class);
+    private Positive<SelfAddressUpdatePort> addressUpdate = requires(SelfAddressUpdatePort.class);
 
     private final ConnMngrConfig config;
     private ConnectionTracker connTracker;
     private UploadTracker uploadTracker;
     private DownloadTracker downloadTracker;
+    private DecoratedAddress self;
 
     private UUID periodicISCheckTid = null;
     private UUID periodicConnUpdateTid = null;
@@ -85,7 +89,8 @@ public class ConnMngrComp extends ComponentDefinition {
 
     public ConnMngrComp(ConnMngrInit init) {
         this.config = init.config;
-        this.logPrefix = config.getSelf().getId().toString() + "<" + config.overlayId + ">";
+        this.self = config.getSelf();
+        this.logPrefix = self.getId() + "<" + config.overlayId + ">";
         LOG.info("{} initiating...", logPrefix);
 
         this.connTracker = new ConnectionTracker();
@@ -94,6 +99,7 @@ public class ConnMngrComp extends ComponentDefinition {
 
         subscribe(handleStart, control);
         subscribe(handleStop, control);
+        subscribe(handleSelfAddressUpdate, addressUpdate);
         subscribe(handlePeriodicISCheck, timer);
         subscribe(handleUpdateUtility, utilityUpdate);
     }
@@ -112,6 +118,14 @@ public class ConnMngrComp extends ComponentDefinition {
             LOG.info("{} stopping...", logPrefix);
             cancelPeriodicISCheck();
             cancelConnUpdate();
+        }
+    };
+
+    private Handler handleSelfAddressUpdate = new Handler<SelfAddressUpdate>() {
+        @Override
+        public void handle(SelfAddressUpdate update) {
+            LOG.info("{}updating self address:{}", logPrefix, update.self);
+            self = update.self;
         }
     };
 
@@ -404,7 +418,7 @@ public class ConnMngrComp extends ComponentDefinition {
                         }
                         connTracker.openDownloadConnection(container.getSource());
                     }
-                    
+
                     for (Container<DecoratedAddress, VodDescriptor> container : event.privateSample) {
                         if (container.getContent().downloadPos < selfDesc.vodDesc.downloadPos) {
                             continue;
@@ -438,7 +452,8 @@ public class ConnMngrComp extends ComponentDefinition {
                         new Object[]{logPrefix, requestContent.hashes, uploader.getBase()});
                 UUID tId = scheduleDownloadHashTimeout(requestContent.id, uploader.getBase());
                 uploaderQueue.put(requestContent.id, Pair.with(requestContent, tId));
-                DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), uploader, Transport.UDP), null, config.overlayId);
+                DecoratedHeader<DecoratedAddress> requestHeader
+                        = new DecoratedHeader(new BasicHeader(self, uploader, Transport.UDP), null, config.overlayId);
                 ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
                 trigger(request, network);
             }
@@ -464,7 +479,8 @@ public class ConnMngrComp extends ComponentDefinition {
                         new Object[]{logPrefix, requestContent.pieceId, uploader.getBase()});
                 UUID tId = scheduleDownloadDataTimeout(requestContent.id, uploader.getBase());
                 uploaderQueue.put(requestContent.id, Pair.with(requestContent, tId));
-                DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), uploader, Transport.UDP), null, config.overlayId);
+                DecoratedHeader<DecoratedAddress> requestHeader
+                        = new DecoratedHeader(new BasicHeader(self, uploader, Transport.UDP), null, config.overlayId);
                 ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
                 trigger(request, network);
             }
@@ -740,7 +756,8 @@ public class ConnMngrComp extends ComponentDefinition {
                     return;
                 }
                 LOG.debug("{} sending hash:{} to:{}", new Object[]{logPrefix, responseContent.targetPos, target.getBase()});
-                DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+                DecoratedHeader<DecoratedAddress> responseHeader
+                        = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), null, config.overlayId);
                 ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
                 trigger(response, network);
             }
@@ -763,7 +780,8 @@ public class ConnMngrComp extends ComponentDefinition {
                     return;
                 }
                 LOG.debug("{} sending data:{} to:{}", new Object[]{logPrefix, responseContent.pieceId, target.getBase()});
-                DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+                DecoratedHeader<DecoratedAddress> responseHeader 
+                        = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), null, config.overlayId);
                 ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
                 trigger(response, network);
             }
@@ -796,7 +814,8 @@ public class ConnMngrComp extends ComponentDefinition {
         public void openDownloadConnection(DecoratedAddress target) {
             LOG.info("{} opening connection to:{}", logPrefix, target.getBase());
             Connection.Request requestContent = new Connection.Request(UUID.randomUUID(), selfDesc.vodDesc);
-            DecoratedHeader<DecoratedAddress> requestHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+            DecoratedHeader<DecoratedAddress> requestHeader 
+                    = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), null, config.overlayId);
             ContentMsg request = new BasicContentMsg(requestHeader, requestContent);
             trigger(request, network);
         }
@@ -873,14 +892,16 @@ public class ConnMngrComp extends ComponentDefinition {
                 LOG.debug("{} connection update", logPrefix);
                 for (DecoratedAddress partner : downloadConnections.values()) {
                     Connection.Update msgContent = new Connection.Update(UUID.randomUUID(), selfDesc.vodDesc, true);
-                    DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
+                    DecoratedHeader<DecoratedAddress> msgHeader 
+                            = new DecoratedHeader(new BasicHeader(self, partner, Transport.UDP), null, config.overlayId);
                     ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
                     trigger(msg, network);
                 }
 
                 for (DecoratedAddress partner : uploadConnections.values()) {
                     Connection.Update msgContent = new Connection.Update(UUID.randomUUID(), selfDesc.vodDesc, false);
-                    DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), partner, Transport.UDP), null, config.overlayId);
+                    DecoratedHeader<DecoratedAddress> msgHeader
+                            = new DecoratedHeader(new BasicHeader(self, partner, Transport.UDP), null, config.overlayId);
                     ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
                     trigger(msg, network);
                 }
@@ -906,7 +927,8 @@ public class ConnMngrComp extends ComponentDefinition {
                         }
                         LOG.info("{} accept download connection to:{}", logPrefix, target);
                         Connection.Response responseContent = content.accept(selfDesc.vodDesc);
-                        DecoratedHeader<DecoratedAddress> responseHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+                        DecoratedHeader<DecoratedAddress> responseHeader 
+                                = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), null, config.overlayId);
                         ContentMsg response = new BasicContentMsg(responseHeader, responseContent);
                         trigger(response, network);
                     }
@@ -993,7 +1015,8 @@ public class ConnMngrComp extends ComponentDefinition {
 
         private void sendClose(DecoratedAddress target, boolean downloadConnection) {
             Connection.Close msgContent = new Connection.Close(UUID.randomUUID(), downloadConnection);
-            DecoratedHeader<DecoratedAddress> msgHeader = new DecoratedHeader(new BasicHeader(config.getSelf(), target, Transport.UDP), null, config.overlayId);
+            DecoratedHeader<DecoratedAddress> msgHeader 
+                    = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), null, config.overlayId);
             ContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
             trigger(msg, network);
         }

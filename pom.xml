@@ -4,7 +4,7 @@
     <groupId>se.sics</groupId>
     <artifactId>gvod</artifactId>
     <name>GVoD</name>
-    <version>0.0.6-SNAPSHOT</version>
+    <version>0.0.7-SNAPSHOT</version>
     <packaging>pom</packaging>
     
     <modules>
@@ -15,7 +15,7 @@
         <module>network</module>
         <module>system</module>
         <!--        <module>simulation</module>-->
-  </modules>
+    </modules>
     
     <properties>
         <java.version>1.7</java.version>
@@ -24,10 +24,10 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kompics.version>0.8.2-SNAPSHOT</kompics.version>
         
-        <util.version>1.8-SNAPSHOT</util.version>
+        <util.version>1.9-SNAPSHOT</util.version>
         <ipsolver.version>1.1-SNAPSHOT</ipsolver.version>
-        <caracalclient.version>1.1-SNAPSHOT</caracalclient.version>
-        <croupier.version>1.8-SNAPSHOT</croupier.version>
+        <caracalclient.version>1.2-SNAPSHOT</caracalclient.version>
+        <croupier.version>1.9-SNAPSHOT</croupier.version>
         <videostream.version>1.2-SNAPSHOT</videostream.version>
         
         

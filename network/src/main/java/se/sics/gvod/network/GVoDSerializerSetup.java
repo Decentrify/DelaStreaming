@@ -30,6 +30,7 @@ import se.sics.gvod.network.serializers.util.VodDescriptorSerializer;
 import se.sics.gvod.network.serializers.vod.ConnectionSerializer;
 import se.sics.gvod.network.serializers.vod.DownloadSerializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.p2ptoolbox.croupier.CroupierSerializerSetup;
 import se.sics.p2ptoolbox.util.serializer.BasicSerializerSetup;
 
 /**
@@ -67,6 +68,7 @@ public class GVoDSerializerSetup {
             }
         }
         BasicSerializerSetup.checkSetup();
+        CroupierSerializerSetup.checkSetup();
     }
     
     public static int registerSerializers(int startingId) {

@@ -31,7 +31,6 @@ import se.sics.gvod.common.utility.GVoDHostConfig;
 import se.sics.gvod.common.utility.GVoDReferenceConfig;
 import se.sics.gvod.core.VoDConfig;
 import se.sics.gvod.manager.VoDManagerConfig;
-import se.sics.ktoolbox.cc.common.config.CCBootstrapConfig;
 import se.sics.ktoolbox.cc.common.config.CaracalClientConfig;
 import se.sics.p2ptoolbox.croupier.CroupierConfig;
 import se.sics.p2ptoolbox.util.config.SystemConfig;

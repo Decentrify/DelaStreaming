@@ -21,11 +21,11 @@ package se.sics.gvod.core;
 import com.google.common.primitives.Ints;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.javatuples.Pair;
@@ -75,6 +75,8 @@ import se.sics.p2ptoolbox.util.managedStore.HashMngr;
 import se.sics.p2ptoolbox.util.managedStore.HashUtil;
 import se.sics.p2ptoolbox.util.managedStore.StorageMngrFactory;
 import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
+import se.sics.p2ptoolbox.util.update.SelfAddressUpdate;
+import se.sics.p2ptoolbox.util.update.SelfAddressUpdatePort;
 import se.sics.p2ptoolbox.videostream.VideoStreamManager;
 import se.sics.p2ptoolbox.videostream.VideoStreamMngrImpl;
 
@@ -94,12 +96,14 @@ public class VoDComp extends ComponentDefinition {
     Positive<Network> network = requires(Network.class);
     Positive<VoDCaracalClientPort> caracalClient = requires(VoDCaracalClientPort.class);
     Positive<CCHeartbeatPort> heartbeat = requires(CCHeartbeatPort.class);
+    Positive<SelfAddressUpdatePort> addressUpdate = requires(SelfAddressUpdatePort.class);
 
     private final String logPrefix;
 
     private final VoDConfig config;
     private final SystemConfig systemConfig;
     private final CroupierConfig croupierConfig;
+    private DecoratedAddress self;
 
     private final Map<Integer, Triplet<Component, Component, Component>> videoComps;
 
@@ -111,8 +115,9 @@ public class VoDComp extends ComponentDefinition {
     public VoDComp(VoDInit init) {
         this.config = init.config;
         this.systemConfig = init.systemConfig;
+        this.self = systemConfig.self;
         this.croupierConfig = init.croupierConfig;
-        this.logPrefix = config.getSelf().toString();
+        this.logPrefix = self.getBase() + " ";
         LOG.info("{} lib folder: {}", logPrefix, config.getVideoLibrary());
         this.videoComps = new HashMap<Integer, Triplet<Component, Component, Component>>();
         this.pendingDownloads = new HashMap<UUID, Pair<Pair<String, Integer>, FileMetadata>>();
@@ -128,6 +133,7 @@ public class VoDComp extends ComponentDefinition {
         subscribe(handleAddOverlayResponse, caracalClient);
         subscribe(handleJoinOverlayResponse, caracalClient);
         subscribe(handleOverlaySample, heartbeat);
+        subscribe(handleSelfAddressUpdate, addressUpdate);
     }
 
     private Handler handleStart = new Handler<Start>() {
@@ -136,6 +142,14 @@ public class VoDComp extends ComponentDefinition {
         public void handle(Start event) {
             LOG.info("{} starting", logPrefix);
             startUploading();
+        }
+    };
+
+    Handler handleSelfAddressUpdate = new Handler<SelfAddressUpdate>() {
+        @Override
+        public void handle(SelfAddressUpdate update) {
+            LOG.info("{}updating self address:{}", logPrefix, update.self);
+            self = update.self;
         }
     };
 
@@ -287,7 +301,8 @@ public class VoDComp extends ComponentDefinition {
                 Map.Entry<UUID, Pair<Pair<String, Integer>, FileMetadata>> pd = it.next();
                 if (pd.getValue().getValue0().getValue1().equals(overlayId)) {
                     it.remove();
-                    startDownload(pd.getKey(), pd.getValue().getValue0().getValue0(), overlayId, pd.getValue().getValue1(), resp.overlaySample);
+                    startDownload(pd.getKey(), pd.getValue().getValue0().getValue0(), overlayId,
+                            pd.getValue().getValue1(), new ArrayList<DecoratedAddress>(resp.overlaySample));
                 }
             }
         }
@@ -297,7 +312,7 @@ public class VoDComp extends ComponentDefinition {
     private void startUpload(UUID reqId, String fileName, Integer overlayId, FileMetadata fileMeta) {
         try {
             Pair<FileMngr, HashMngr> videoMngrs = getUploadVideoMngrs(fileName, fileMeta);
-            startVideoComp(reqId, overlayId, fileMeta, videoMngrs, false, new HashSet<DecoratedAddress>());
+            startVideoComp(reqId, overlayId, fileMeta, videoMngrs, false, new ArrayList<DecoratedAddress>());
             trigger(new GetLibrary.Response(UUID.randomUUID(), ResponseStatus.SUCCESS, libMngr.getLibrary()), myPort);
         } catch (IOException ex) {
             LOG.error("{} error writting to disk for video:{}", logPrefix, fileName);
@@ -308,7 +323,7 @@ public class VoDComp extends ComponentDefinition {
         }
     }
 
-    private void startDownload(UUID reqId, String fileName, Integer overlayId, FileMetadata fileMeta, Set<DecoratedAddress> bootstrap) {
+    private void startDownload(UUID reqId, String fileName, Integer overlayId, FileMetadata fileMeta, List<DecoratedAddress> bootstrap) {
         try {
             if (!libMngr.startDownload(fileName, overlayId)) {
                 LOG.error("{} library manager - download denied for file:{}", logPrefix, fileName);
@@ -329,7 +344,8 @@ public class VoDComp extends ComponentDefinition {
         }
     }
 
-    private void startVideoComp(UUID reqId, int overlayId, FileMetadata fileMeta, Pair<FileMngr, HashMngr> hashedFileMngr, boolean download, Set<DecoratedAddress> bootstrap) {
+    private void startVideoComp(UUID reqId, int overlayId, FileMetadata fileMeta, Pair<FileMngr, HashMngr> hashedFileMngr,
+            boolean download, List<DecoratedAddress> croupierBootstrap) {
         int hashSize = 0;
         hashSize = HashUtil.getHashSize(fileMeta.hashAlg);
         LOG.info("{} - videoName:{} videoFileSize:{}, hashFileSize:{}, hashSize:{}", new Object[]{config.getSelf(), fileMeta.fileName, fileMeta.fileSize, fileMeta.hashFileSize, hashSize});
@@ -344,31 +360,11 @@ public class VoDComp extends ComponentDefinition {
             System.exit(1);
         }
 
-        Component connMngr = create(ConnMngrComp.class, new ConnMngrComp.ConnMngrInit(connMngrConfig));
         AtomicInteger playPos = new AtomicInteger(0);
-        Component downloadMngr = create(DownloadMngrComp.class, new DownloadMngrComp.DownloadMngrInit(downloadMngrConfig, hashedFileMngr.getValue0(), hashedFileMngr.getValue1(), download, playPos));
-        Component croupier = create(CroupierComp.class, new CroupierComp.CroupierInit(systemConfig, croupierConfig, overlayId));
+        Component croupier = connectVideoOverlayCroupier(overlayId, croupierBootstrap);
+        Component downloadMngr = connectDownloadMngr(downloadMngrConfig, croupier, hashedFileMngr, download, playPos);
+        Component connMngr = connectConnMngr(overlayId, connMngrConfig, croupier, downloadMngr);
         videoComps.put(overlayId, Triplet.with(connMngr, downloadMngr, croupier));
-
-        connect(croupier.getNegative(Timer.class), timer);
-        connect(croupier.getNegative(Network.class), network, new IntegerOverlayFilter(overlayId));
-
-        connect(connMngr.getNegative(Network.class), network, new IntegerOverlayFilter(overlayId));
-        connect(connMngr.getNegative(Timer.class), timer);
-        connect(connMngr.getNegative(CroupierPort.class), croupier.getPositive(CroupierPort.class));
-
-        connect(downloadMngr.getNegative(Timer.class), timer);
-        connect(downloadMngr.getNegative(ConnMngrPort.class), connMngr.getPositive(ConnMngrPort.class));
-
-        connect(connMngr.getNegative(UtilityUpdatePort.class), downloadMngr.getPositive(UtilityUpdatePort.class));
-        connect(utilityUpdate, downloadMngr.getPositive(UtilityUpdatePort.class));
-
-        trigger(Start.event, croupier.control());
-        trigger(Start.event, connMngr.control());
-        trigger(Start.event, downloadMngr.control());
-
-        trigger(new CroupierJoin(bootstrap), croupier.getPositive(CroupierControlPort.class));
-        trigger(new CCHeartbeat.Start(Ints.toByteArray(overlayId)), heartbeat);
 
         VideoStreamManager vsMngr = null;
         try {
@@ -377,7 +373,43 @@ public class VoDComp extends ComponentDefinition {
             LOG.error("{} IOException trying to read video:{}", logPrefix, fileMeta.fileName);
             throw new RuntimeException("IOException trying to read video:{}" + fileMeta.fileName, ex);
         }
+        trigger(new CCHeartbeat.Start(Ints.toByteArray(overlayId)), heartbeat);
         trigger(new PlayReady(reqId, fileMeta.fileName, overlayId, vsMngr), myPort);
+    }
+
+    private Component connectVideoOverlayCroupier(int overlayId, List<DecoratedAddress> croupierBootstrap) {
+        Component croupier = create(CroupierComp.class, new CroupierComp.CroupierInit(systemConfig, croupierConfig, overlayId));;
+        connect(croupier.getNegative(Timer.class), timer);
+        connect(croupier.getNegative(Network.class), network, new IntegerOverlayFilter(overlayId));
+        connect(croupier.getNegative(SelfAddressUpdatePort.class), addressUpdate);
+
+        trigger(Start.event, croupier.control());
+        trigger(new CroupierJoin(croupierBootstrap), croupier.getPositive(CroupierControlPort.class));
+        return croupier;
+    }
+
+    private Component connectDownloadMngr(DownloadMngrConfig downloadMngrConfig, Component croupierVideoOverlay,  
+            Pair<FileMngr, HashMngr> hashedFileMngr, boolean download, AtomicInteger playPos) {
+        Component downloadMngr = create(DownloadMngrComp.class, new DownloadMngrComp.DownloadMngrInit(
+                downloadMngrConfig, hashedFileMngr.getValue0(), hashedFileMngr.getValue1(), download, playPos));
+        connect(downloadMngr.getNegative(Timer.class), timer);
+        connect(downloadMngr.getPositive(UtilityUpdatePort.class), utilityUpdate);
+        //TODO Alex connect croupier to downloadUpdate;
+         trigger(Start.event, downloadMngr.control());
+        return downloadMngr;
+    }
+
+    private Component connectConnMngr(int overlayId, ConnMngrConfig connMngrConfig, Component croupierVideoOverlay,
+            Component downloadMngr) {
+        Component connMngr = create(ConnMngrComp.class, new ConnMngrComp.ConnMngrInit(connMngrConfig));
+        connect(connMngr.getNegative(Network.class), network, new IntegerOverlayFilter(overlayId));
+        connect(connMngr.getNegative(Timer.class), timer);
+        connect(connMngr.getNegative(CroupierPort.class), croupierVideoOverlay.getPositive(CroupierPort.class));
+        connect(connMngr.getNegative(SelfAddressUpdatePort.class), addressUpdate);
+        connect(connMngr.getPositive(ConnMngrPort.class), downloadMngr.getNegative(ConnMngrPort.class));
+        
+        trigger(Start.event, connMngr.control());
+        return connMngr;
     }
 
     private Pair<FileMngr, HashMngr> getUploadVideoMngrs(String video, FileMetadata fileMeta) throws IOException, GVoDConfigException.Missing {
