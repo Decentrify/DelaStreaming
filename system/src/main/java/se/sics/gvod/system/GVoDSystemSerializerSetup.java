@@ -21,11 +21,8 @@ package se.sics.gvod.system;
 import com.google.common.collect.ImmutableMap;
 import se.sics.caracaldb.MessageRegistrator;
 import se.sics.gvod.network.GVoDSerializerSetup;
-import se.sics.p2ptoolbox.croupier.CroupierSerializerSetup;
-import se.sics.p2ptoolbox.util.nat.NatedTrait;
-import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
-import se.sics.p2ptoolbox.util.serializer.BasicSerializerSetup;
-import se.sics.p2ptoolbox.util.traits.AcceptedTraits;
+import se.sics.ktoolbox.croupier.CroupierSerializerSetup;
+import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -38,8 +35,5 @@ public class GVoDSystemSerializerSetup {
         currentId = BasicSerializerSetup.registerBasicSerializers(currentId);
         currentId = CroupierSerializerSetup.registerSerializers(currentId);
         currentId = GVoDSerializerSetup.registerSerializers(currentId);
-        
-        ImmutableMap acceptedTraits = ImmutableMap.of(NatedTrait.class, 0);
-        DecoratedAddress.setAcceptedTraits(new AcceptedTraits(acceptedTraits));
     }
 }

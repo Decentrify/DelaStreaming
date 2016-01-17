@@ -35,6 +35,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.VoDComp;
 import se.sics.gvod.core.util.FileStatus;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -79,14 +81,13 @@ public class LibraryMngr {
     };
 
     private final String libPath;
-    private final Map<String, Pair<FileStatus, Integer>> fileMap;
+    private final Map<String, Pair<FileStatus, Identifier>> fileMap = new HashMap<>();
 
     public LibraryMngr(String libPath) {
         this.libPath = libPath;
-        this.fileMap = new HashMap<String, Pair<FileStatus, Integer>>();
     }
 
-    public Map<String, Pair<FileStatus, Integer>> getLibrary() {
+    public Map<String, Pair<FileStatus, Identifier>> getLibrary() {
         return fileMap;
     }
 
@@ -103,20 +104,20 @@ public class LibraryMngr {
     }
 
     public boolean pendingUpload(String file) {
-        Pair<FileStatus, Integer> fileStatus = fileMap.get(file);
+        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
         if (fileStatus == null) {
             return false;
         }
         if (!fileStatus.getValue0().equals(FileStatus.NONE)) {
             return false;
         }
-        fileMap.put(file, Pair.with(FileStatus.PENDING_UPLOAD, (Integer) null));
+        fileMap.put(file, Pair.with(FileStatus.PENDING_UPLOAD, (Identifier) null));
         writeStatusFile();
         return true;
     }
 
-    public boolean upload(String file, int overlayId) {
-        Pair<FileStatus, Integer> fileStatus = fileMap.get(file);
+    public boolean upload(String file, Identifier overlayId) {
+        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
         if (fileStatus == null) {
             return false;
         }
@@ -129,19 +130,19 @@ public class LibraryMngr {
     }
 
     public boolean pendingDownload(String file) {
-        Pair<FileStatus, Integer> fileStatus = fileMap.get(file);
+        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
         if (fileStatus != null) {
             return false;
         }
 
-        fileMap.put(file, Pair.with(FileStatus.PENDING_DOWNLOAD, (Integer) null));
+        fileMap.put(file, Pair.with(FileStatus.PENDING_DOWNLOAD, (Identifier) null));
         writeStatusFile();
         return true;
 
     }
 
-    public boolean startDownload(String file, Integer overlayId) {
-        Pair<FileStatus, Integer> fileStatus = fileMap.get(file);
+    public boolean startDownload(String file, Identifier overlayId) {
+        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
         if (fileStatus == null || !fileStatus.getValue0().equals(FileStatus.PENDING_DOWNLOAD)) {
             return false;
         }
@@ -178,7 +179,7 @@ public class LibraryMngr {
         for (File file : libDir.listFiles(videoFilter)) {
             LOG.info("library - loading video: {}", file.getName());
             if (!fileMap.containsKey(file.getName())) {
-                fileMap.put(file.getName(), Pair.with(FileStatus.NONE, (Integer) null));
+                fileMap.put(file.getName(), Pair.with(FileStatus.NONE, (Identifier) null));
             }
         }
     }
@@ -213,9 +214,9 @@ public class LibraryMngr {
                 StringTokenizer st = new StringTokenizer(line, ":");
                 String fileName = st.nextToken();
                 FileStatus fileStatus = FileStatus.valueOf(st.nextToken());
-                Integer overlayId = null;
+                Identifier overlayId = null;
                 if (st.hasMoreElements()) {
-                    overlayId = Integer.parseInt(st.nextToken());
+                    overlayId = new IntIdentifier(Integer.parseInt(st.nextToken()));
                 }
                 checkStatus(fileName, fileStatus, overlayId);
             }
@@ -245,7 +246,7 @@ public class LibraryMngr {
         }
     }
 
-    private void checkStatus(String fileName, FileStatus fileStatus, Integer overlayId) {
+    private void checkStatus(String fileName, FileStatus fileStatus, Identifier overlayId) {
         File dataFile, hashFile;
         String fileNoExt;
         try {
@@ -290,7 +291,7 @@ public class LibraryMngr {
         try {
             fw = new FileWriter(libPath + File.separator + STATUS_FILE);
             bw = new BufferedWriter(fw);
-            for (Map.Entry<String, Pair<FileStatus, Integer>> fileStatus : fileMap.entrySet()) {
+            for (Map.Entry<String, Pair<FileStatus, Identifier>> fileStatus : fileMap.entrySet()) {
                 switch (fileStatus.getValue().getValue0()) {
                     case NONE:
                     case PENDING_DOWNLOAD:

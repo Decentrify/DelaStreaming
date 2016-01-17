@@ -29,7 +29,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import org.javatuples.Pair;
@@ -37,10 +36,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
 import se.sics.gvod.core.VoDPort;
-import se.sics.gvod.core.msg.DownloadVideo;
-import se.sics.gvod.core.msg.GetLibrary;
-import se.sics.gvod.core.msg.PlayReady;
-import se.sics.gvod.core.msg.UploadVideo;
+import se.sics.gvod.core.event.DownloadVideo;
+import se.sics.gvod.core.event.GetLibrary;
+import se.sics.gvod.core.event.PlayReady;
+import se.sics.gvod.core.event.UploadVideo;
 import se.sics.gvod.core.util.ResponseStatus;
 import se.sics.gvod.manager.toolbox.GVoDSyncI;
 import se.sics.gvod.manager.toolbox.Result;
@@ -53,13 +52,13 @@ import se.sics.kompics.Init;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.Stop;
-import se.sics.p2ptoolbox.videostream.VideoStreamManager;
-import se.sics.p2ptoolbox.videostream.http.BaseHandler;
-import se.sics.p2ptoolbox.videostream.http.JwHttpServer;
-import se.sics.p2ptoolbox.videostream.http.RangeCapableMp4Handler;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.videostream.VideoStreamManager;
+import se.sics.ktoolbox.videostream.http.BaseHandler;
+import se.sics.ktoolbox.videostream.http.JwHttpServer;
+import se.sics.ktoolbox.videostream.http.RangeCapableMp4Handler;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
@@ -69,7 +68,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     private final Positive<VoDPort> vodPort = requires(VoDPort.class);
     private final Positive<UtilityUpdatePort> utilityPort = requires(UtilityUpdatePort.class);
 
-    private final VoDManagerConfig config;
+    private final VoDManagerKCWrapper config;
     private final Random rand = new SecureRandom();
     private final String logPrefix;
 
@@ -78,19 +77,19 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     private Integer httpPlayPort = null;
     private InetSocketAddress httpPlayAddr = null;
 
-    private Map<UUID, SettableFuture> pendingJobs;
+    //<reqId, future>
+    private Map<Identifier, SettableFuture> pendingJobs = new HashMap<>();
     private Set<String> pendingUploads;
     private Map<String, FileStatus> videos;
 
     public VoDManagerImpl(VoDManagerInit init) {
         this.config = init.config;
-        this.logPrefix = config.getSelf().toString();
+        this.logPrefix = config.self.getId().toString();
         LOG.info("{} initiating...", logPrefix);
 
         this.vsMngrs = new ConcurrentHashMap<String, VideoStreamManager>();
         this.videoPaths = new HashSet<String>();
 
-        this.pendingJobs = new HashMap<UUID, SettableFuture>();
         this.pendingUploads = new HashSet<String>();
         this.videos = new HashMap<String, FileStatus>();
 
@@ -122,15 +121,15 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     @Override
     public void getFiles(SettableFuture<Result<Map<String, FileStatus>>> opFuture) {
         LOG.info("{} get files request", logPrefix);
-        GetLibrary.Request req = new GetLibrary.Request(UUID.randomUUID());
-        pendingJobs.put(req.reqId, opFuture);
+        GetLibrary.Request req = new GetLibrary.Request();
+        pendingJobs.put(req.getId(), opFuture);
         trigger(req, vodPort);
     }
 
-    private Handler handleGetLibraryResponse = new Handler<GetLibrary.Response>() {
+    private Handler handleGetLibraryResponse = new Handler<GetLibrary.Indication>() {
         @Override
-        public void handle(GetLibrary.Response resp) {
-            SettableFuture opFuture = pendingJobs.remove(resp.reqId);
+        public void handle(GetLibrary.Indication resp) {
+            SettableFuture opFuture = pendingJobs.remove(resp.getId());
             if (opFuture == null) {
                 return;
             }
@@ -150,9 +149,9 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
         }
     };
 
-    private Map<String, FileStatus> convert(Map<String, Pair<se.sics.gvod.core.util.FileStatus, Integer>> fileStatusMap) {
+    private Map<String, FileStatus> convert(Map<String, Pair<se.sics.gvod.core.util.FileStatus, Identifier>> fileStatusMap) {
         Map<String, FileStatus> convertedFileStatusMap = new HashMap<String, FileStatus>();
-        for (Map.Entry<String, Pair<se.sics.gvod.core.util.FileStatus, Integer>> e : fileStatusMap.entrySet()) {
+        for (Map.Entry<String, Pair<se.sics.gvod.core.util.FileStatus, Identifier>> e : fileStatusMap.entrySet()) {
             FileStatus fileStatus = null;
             switch (e.getValue().getValue0()) {
                 case PAUSED:
@@ -186,7 +185,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
         LOG.info("{} pending upload:{} request", logPrefix, videoInfo.getName());
         FileStatus videoStatus = videos.get(videoInfo.getName());
         if (videoStatus == null) {
-            LOG.warn("{} video:{} not found in library:{}", new Object[]{logPrefix, videoInfo.getName(), config.getVideoLibrary()});
+            LOG.warn("{} video:{} not found in library:{}", new Object[]{logPrefix, videoInfo.getName(), config.videoLibrary});
             opFuture.set(Result.internalError("video not found"));
             return;
         }
@@ -205,7 +204,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
     public void upload(VideoInfo videoInfo, SettableFuture<Result<Boolean>> opFuture) {
         LOG.info("{} upload:{} request", logPrefix, videoInfo.getName());
         if (pendingUploads.remove(videoInfo.getName() == null)) {
-            LOG.warn("{} video not pending upload - cannot initiate upload", new Object[]{config.getSelf(), videoInfo.getName(), config.getVideoLibrary()});
+            LOG.warn("{} video not pending upload - cannot initiate upload", new Object[]{config.self.getId(), videoInfo.getName(), config.videoLibrary});
             opFuture.set(Result.internalError("video - bad state"));
             return;
         }
@@ -312,7 +311,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             httpPlayAddr = new InetSocketAddress(httpPlayPort);
         }
 
-        LOG.info("{} starting player http connection http://127.0.0.1:{}/{}/{}", new Object[]{config.getSelf(), httpPlayPort, videoName, videoName});
+        LOG.info("{} starting player http connection http://127.0.0.1:{}/{}/{}", new Object[]{config.self.getId(), httpPlayPort, videoName, videoName});
         String fileName = "/" + videoName + "/";
         BaseHandler handler = new RangeCapableMp4Handler(vsMngr);
         try {
@@ -354,9 +353,9 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
 
     public static class VoDManagerInit extends Init<VoDManagerImpl> {
 
-        public final VoDManagerConfig config;
+        public final VoDManagerKCWrapper config;
 
-        public VoDManagerInit(VoDManagerConfig config) {
+        public VoDManagerInit(VoDManagerKCWrapper config) {
             this.config = config;
         }
     }

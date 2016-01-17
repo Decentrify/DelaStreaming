@@ -18,19 +18,19 @@
  */
 package se.sics.gvod.core.downloadMngr;
 
-import com.typesafe.config.Config;
-import se.sics.gvod.common.util.GVoDConfigException;
-import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
+import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.util.config.KConfigHelper;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
- *
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class DownloadMngrConfig {
+public class DownloadMngrKCWrapper {
 
     private final Config config;
-    private final DecoratedAddress selfAddress;
-    public final int overlayId;
+    public final KAddress selfAddress;
+    public final Identifier overlayId;
     public final int startPieces;
     public final long descriptorUpdate;
     
@@ -41,7 +41,18 @@ public class DownloadMngrConfig {
     public final String hashAlg = "SHA";
     public final long speedupPeriod = 2000;
 
-    public DownloadMngrConfig(Config config, DecoratedAddress selfAddress, int overlayId, int startPieces, long descriptorUpdate, int pieceSize, int piecesPerBlock) {
+    public DownloadMngrKCWrapper(Config config, KAddress selfAddress, Identifier overlayId) {
+        this.config = config;
+        this.selfAddress = selfAddress;
+        this.overlayId = overlayId;
+        this.startPieces = KConfigHelper.read(config, DownloadMngrKConfig.startPieces);
+        this.descriptorUpdate = KConfigHelper.read(config, DownloadMngrKConfig.descriptorUpdate);
+        this.pieceSize = KConfigHelper.read(config, DownloadMngrKConfig.pieceSize);
+        this.piecesPerBlock = KConfigHelper.read(config, DownloadMngrKConfig.piecesPerBlock);
+    }
+    
+    public DownloadMngrKCWrapper(Config config, KAddress selfAddress, Identifier overlayId, int startPieces, 
+            long descriptorUpdate, int pieceSize, int piecesPerBlock) {
         this.config = config;
         this.selfAddress = selfAddress;
         this.overlayId = overlayId;
@@ -49,30 +60,5 @@ public class DownloadMngrConfig {
         this.descriptorUpdate = descriptorUpdate;
         this.pieceSize = pieceSize;
         this.piecesPerBlock = piecesPerBlock;
-    }
-
-    public DecoratedAddress getSelf() {
-        return selfAddress;
-    }
-
-    public static class Builder {
-
-        private final Config config;
-        private final DecoratedAddress selfAddress;
-        private final int overlayId;
-
-        public Builder(Config config, DecoratedAddress selfAddress, int overlayId) {
-            this.config = config;
-            this.selfAddress = selfAddress;
-            this.overlayId = overlayId;
-        }
-
-        public DownloadMngrConfig finalise() throws GVoDConfigException.Missing {
-            int startPieces = config.getInt("vod.video.startPieces");
-            long descriptorUpdate = config.getLong("vod.video.descriptorUpdate");
-            int pieceSize = config.getInt("vod.video.pieceSize");
-            int piecesPerBlock = config.getInt("vod.video.piecesPerBlock");
-            return new DownloadMngrConfig(config, selfAddress, overlayId, startPieces, descriptorUpdate, pieceSize, piecesPerBlock);
-        }
     }
 }

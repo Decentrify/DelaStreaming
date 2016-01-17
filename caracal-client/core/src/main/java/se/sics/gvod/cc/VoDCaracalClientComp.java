@@ -25,8 +25,8 @@ import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.cc.msg.CCAddOverlay;
-import se.sics.gvod.cc.msg.CCJoinOverlay;
+import se.sics.gvod.cc.event.CCAddOverlay;
+import se.sics.gvod.cc.event.CCJoinOverlay;
 import se.sics.gvod.cc.op.CCAddOverlayOp;
 import se.sics.gvod.cc.op.CCJoinOverlayOp;
 import se.sics.gvod.cc.opMngr.Operation;
@@ -42,8 +42,11 @@ import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.cc.bootstrap.CCBootstrapPort;
-import se.sics.ktoolbox.cc.common.op.CCOpEvent;
+import se.sics.ktoolbox.cc.bootstrap.CCOperationPort;
+import se.sics.ktoolbox.cc.operation.event.CCOpRequest;
+import se.sics.ktoolbox.cc.operation.event.CCOpResponse;
+import se.sics.ktoolbox.cc.operation.event.CCOpTimeout;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -54,7 +57,7 @@ public class VoDCaracalClientComp extends ComponentDefinition {
     private String logPrefix = "";
 
     private Negative<VoDCaracalClientPort> vodCCPort = provides(VoDCaracalClientPort.class);
-    private Positive<CCBootstrapPort> ccPort = requires(CCBootstrapPort.class);
+    private Positive<CCOperationPort> ccPort = requires(CCOperationPort.class);
     private Positive<Timer> timer = requires(Timer.class);
 
     private final VoDCaracalClientConfig ccConfig;
@@ -62,8 +65,9 @@ public class VoDCaracalClientComp extends ComponentDefinition {
 
     private UUID sanityCheckTId;
 
-    private final Map<UUID, Operation> activeOps;
-    private final Map<UUID, Pair<UUID, Integer>> pendingMsgs; //<msgId, opId>
+    private final Map<Identifier, Operation> activeOps = new HashMap<>();
+    //<opReq, opId>
+    private final Map<Identifier, Pair<Identifier, Integer>> pendingMsgs = new HashMap<>(); 
 
     public VoDCaracalClientComp(VoDCaracalClientInit init) {
         LOG.info("{}initiating...", logPrefix);
@@ -72,9 +76,6 @@ public class VoDCaracalClientComp extends ComponentDefinition {
         this.schemaId = init.schemaId;
 
         this.sanityCheckTId = null;
-
-        this.activeOps = new HashMap<UUID, Operation>();
-        this.pendingMsgs = new HashMap<UUID, Pair<UUID, Integer>>();
 
         subscribe(handleStart, control);
         subscribe(handleStop, control);
@@ -162,11 +163,11 @@ public class VoDCaracalClientComp extends ComponentDefinition {
         }
     };
 
-    Handler handleCCResponse = new Handler<CCOpEvent.Response>() {
+    Handler handleCCResponse = new Handler<CCOpResponse>() {
         @Override
-        public void handle(CCOpEvent.Response e) {
+        public void handle(CCOpResponse e) {
             LOG.trace("{}received:{}", logPrefix, e.opResp);
-            Pair<UUID, Integer> msgI = pendingMsgs.remove(e.opResp.id);
+            Pair<Identifier, Integer> msgI = pendingMsgs.remove(e.opResp.id);
             if (msgI == null) {
                 LOG.warn("{}weird late response:{}", logPrefix, e.opResp.id);
                 return;
@@ -180,28 +181,29 @@ public class VoDCaracalClientComp extends ComponentDefinition {
         }
     };
 
-    Handler handleCCTimeout = new Handler<CCOpEvent.Timeout>() {
+    Handler handleCCTimeout = new Handler<CCOpTimeout>() {
         @Override
-        public void handle(CCOpEvent.Timeout e) {
+        public void handle(CCOpTimeout e) {
             LOG.trace("{}timeout:{}", logPrefix, e.opReq);
-            Pair<UUID, Integer> msgI = pendingMsgs.remove(e.opReq.id);
+            Pair<Identifier, Integer> msgI = pendingMsgs.remove(e.getId());
             if (msgI == null) {
                 LOG.warn("{}weird timeout:{}", logPrefix, msgI.getValue0());
                 return;
             }
             if(msgI.getValue1() == 0) {
-                LOG.info("{}op:{} timed out", logPrefix, e.opReq.id);
+                LOG.info("{}op:{} timed out", logPrefix, e.getId());
                 Operation op = activeOps.get(msgI.getValue0());
                 if(op == null) {
                     LOG.warn("{}weird timeout:{}", logPrefix, msgI.getValue0());
                     return;
                 }
-                op.timeout(e.opReq.id);
+                op.timeout(e.getId());
                 processOp(op);
+                return;
             }
-            pendingMsgs.put(e.opReq.id, Pair.with(msgI.getValue0(), msgI.getValue1()-1));
+            pendingMsgs.put(e.getId(), Pair.with(msgI.getValue0(), msgI.getValue1()-1));
             LOG.trace("{}sending:{}", logPrefix, e.opReq);
-            trigger(new CCOpEvent.Request(e.opReq, e.forwardTo), ccPort);
+            trigger(e.opReq, ccPort);
         }
     };
 
@@ -214,16 +216,16 @@ public class VoDCaracalClientComp extends ComponentDefinition {
     private void processOp(Operation op) {
         switch (op.getStatus()) {
             case ONGOING:
-                for (Map.Entry<CCOpEvent.Request, Boolean> e : op.sendingQueue().entrySet()) {
+                for (Map.Entry<CCOpRequest, Boolean> e : op.sendingQueue().entrySet()) {
                     LOG.trace("{}sending:{}", logPrefix, e.getKey());
                     trigger(e.getKey(), ccPort);
                     if (e.getValue()) {
-                        pendingMsgs.put(e.getKey().opReq.id, Pair.with(op.getId(), ccConfig.retries));
+                        pendingMsgs.put(e.getKey().getId(), Pair.with(op.getId(), ccConfig.retries));
                     }
                 }
             break;
             case DONE:
-                for (Map.Entry<CCOpEvent.Request, Boolean> e : op.sendingQueue().entrySet()) {
+                for (Map.Entry<CCOpRequest, Boolean> e : op.sendingQueue().entrySet()) {
                     LOG.trace("{}sending:{}", logPrefix, e.getKey());
                     trigger(e.getKey(), ccPort);
                     if (e.getValue()) {
@@ -237,11 +239,11 @@ public class VoDCaracalClientComp extends ComponentDefinition {
         }
     }
 
-    private void cleanOp(UUID opId) {
+    private void cleanOp(Identifier opId) {
         activeOps.remove(opId);
-        Iterator<Map.Entry<UUID, Pair<UUID, Integer>>> msgIt = pendingMsgs.entrySet().iterator();
+        Iterator<Map.Entry<Identifier, Pair<Identifier, Integer>>> msgIt = pendingMsgs.entrySet().iterator();
         while (msgIt.hasNext()) {
-            Map.Entry<UUID, Pair<UUID, Integer>> pendingMsg = msgIt.next();
+            Map.Entry<Identifier, Pair<Identifier, Integer>> pendingMsg = msgIt.next();
             if (pendingMsg.getValue().getValue0().equals(opId)) {
                 msgIt.remove();
             }

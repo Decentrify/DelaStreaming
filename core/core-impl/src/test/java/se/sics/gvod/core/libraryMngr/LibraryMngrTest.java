@@ -23,12 +23,13 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Map;
-import org.apache.commons.io.filefilter.FileFileFilter;
 import org.javatuples.Pair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import se.sics.gvod.core.util.FileStatus;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -60,7 +61,7 @@ public class LibraryMngrTest {
         //**********************************************************************
 
         LibraryMngr libMngr;
-        Map<String, Pair<FileStatus, Integer>> libFiles;
+        Map<String, Pair<FileStatus, Identifier>> libFiles;
         
         libMngr = new LibraryMngr(testResourcePath);
         libMngr.loadLibrary();
@@ -73,9 +74,9 @@ public class LibraryMngrTest {
         File videoHash2 = new File(testResourcePath + "video2.bla.hash");
         videoHash2.createNewFile();
         Assert.assertTrue(libMngr.pendingDownload("video3.mp4"));
-        Assert.assertTrue(libMngr.startDownload("video3.mp4", 10));
+        Assert.assertTrue(libMngr.startDownload("video3.mp4", new IntIdentifier(10)));
         Assert.assertTrue(libMngr.pendingUpload("video2.bla.mp4"));
-        Assert.assertTrue(libMngr.upload("video2.bla.mp4", 11));
+        Assert.assertTrue(libMngr.upload("video2.bla.mp4", new IntIdentifier(11)));
         
         Assert.assertEquals(3, libFiles.size());
         Assert.assertEquals(FileStatus.NONE, libFiles.get("video1.mp4").getValue0());
@@ -89,7 +90,7 @@ public class LibraryMngrTest {
         Assert.assertEquals(2, libFiles.size());
         Assert.assertEquals(FileStatus.NONE, libFiles.get("video1.mp4").getValue0());
         Assert.assertEquals(FileStatus.UPLOADING, libFiles.get("video2.bla.mp4").getValue0());
-        Assert.assertEquals(new Integer(11), libFiles.get("video2.bla.mp4").getValue1());
+        Assert.assertEquals(new IntIdentifier(11), libFiles.get("video2.bla.mp4").getValue1());
         
         clean1();
     }
@@ -131,13 +132,13 @@ public class LibraryMngrTest {
 
         LibraryMngr libMngr = new LibraryMngr(testResourcePath);
         libMngr.loadLibrary();
-        Map<String, Pair<FileStatus, Integer>> libFiles;
+        Map<String, Pair<FileStatus, Identifier>> libFiles;
 
         libFiles = libMngr.getLibrary();
         Assert.assertEquals(2, libFiles.size());
         Assert.assertEquals(FileStatus.NONE, libFiles.get("video1.mp4").getValue0());
         Assert.assertEquals(FileStatus.UPLOADING, libFiles.get("video3.mp4").getValue0());
-        Assert.assertEquals(new Integer(12), libFiles.get("video3.mp4").getValue1());
+        Assert.assertEquals(new IntIdentifier(12), libFiles.get("video3.mp4").getValue1());
         clean2();
     }
     

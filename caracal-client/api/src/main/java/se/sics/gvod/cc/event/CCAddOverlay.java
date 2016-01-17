@@ -16,31 +16,62 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-
-package se.sics.gvod.core.downloadMngr;
+package se.sics.gvod.cc.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
-import se.sics.kompics.Direct;
+import se.sics.gvod.common.util.FileMetadata;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class Data {
-     public static class Request extends Direct.Request<Response> implements GVoDEvent  {
+public class CCAddOverlay {
 
+    public static class Request implements GVoDEvent {
         public final Identifier id;
         public final Identifier overlayId;
-        public final long readPos;
-        public final int readBlockSize;
-
-        public Request(Identifier overlayId, long readPos, int readBlockSize) {
-            this.id = UUIDIdentifier.randomId();
+        public final FileMetadata fileMeta;
+        
+        public Request(Identifier id, Identifier overlayId, FileMetadata fileMeta) {
+            this.id = id;
             this.overlayId = overlayId;
-            this.readPos = readPos;
-            this.readBlockSize = readBlockSize;
+            this.fileMeta = fileMeta;
+        }
+        
+        @Override
+        public Identifier getId() {
+            return id;
+        }
+        
+        public Response fail() {
+            return new Response(id, ReqStatus.FAIL, overlayId);
+        }
+        
+        public Response success() {
+            return new Response(id, ReqStatus.SUCCESS, overlayId);
+        }
+        
+        public Response timeout() {
+            return new Response(id, ReqStatus.TIMEOUT, overlayId);
+        }
+        
+        
+        @Override
+        public String toString() {
+            return "AddOverlayRequest " + id.toString();
+        }
+    }
+    
+    public static class Response implements GVoDEvent {
+        public final Identifier id;
+        public final ReqStatus status;
+        public final Identifier overlayId;
+        
+        public Response(Identifier id, ReqStatus status, Identifier overlayId) {
+            this.id = id;
+            this.status = status;
+            this.overlayId = overlayId;
         }
 
         @Override
@@ -48,30 +79,9 @@ public class Data {
             return id;
         }
         
-        public Response fail(ReqStatus status) {
-            return new Response(this, status, null);
-        }
-        
-        public Response success(byte[] block) {
-            return new Response(this, ReqStatus.SUCCESS, block);
-        }
-    }
-
-    public static class Response implements Direct.Response, GVoDEvent {
-        
-        public final Request req;
-        public final ReqStatus status;
-        public final byte[] block;
-        
-        private Response(Request req, ReqStatus status, byte[] block) {
-            this.req = req;
-            this.status = status;
-            this.block = block;
-        }
-
         @Override
-        public Identifier getId() {
-            return req.getId();
+        public String toString() {
+            return "AddOverlayResponse<" + status.toString() + "> "+ id.toString();
         }
     }
 }

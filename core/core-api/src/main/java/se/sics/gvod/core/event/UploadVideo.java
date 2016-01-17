@@ -16,17 +16,38 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.gvod.core.event;
 
-package se.sics.gvod.common.util;
+import se.sics.gvod.common.event.GVoDEvent;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+
 
 /**
- *
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class BuilderException {
-    public static class Missing extends Exception {
-        public Missing() {
-            super();
+public class UploadVideo {
+
+    public static class Request implements GVoDEvent {
+
+        public final Identifier id;
+        public final String videoName;
+        public final Identifier overlayId;
+
+        public Request(String videoName, Identifier overlayId) {
+            this.id = UUIDIdentifier.randomId();
+            this.videoName = videoName;
+            this.overlayId = overlayId;
+        }
+
+        @Override
+        public String toString() {
+            return "UploadVideo.Request " + id.toString();
+        }
+
+        @Override
+        public Identifier getId() {
+            return id;
         }
     }
 }

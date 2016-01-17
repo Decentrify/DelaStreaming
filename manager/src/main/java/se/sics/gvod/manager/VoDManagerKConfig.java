@@ -16,21 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.common.util;
+package se.sics.gvod.manager;
+
+import se.sics.ktoolbox.util.config.KConfigOption;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ *
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public class GVoDConfigException {
-
-    public static class Missing extends Exception {
-
-        public Missing(String msg) {
-            super(msg);
-        }
-
-        public Missing(Throwable cause) {
-            super(cause);
-        }
-    }
+public class VoDManagerKConfig {
+    public final static KConfigOption.Basic<String> videoLibrary = new KConfigOption.Basic("vod.video.library", String.class);
 }

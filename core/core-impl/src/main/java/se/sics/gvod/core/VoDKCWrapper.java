@@ -16,22 +16,35 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.cc.util;
+package se.sics.gvod.core;
 
-import java.nio.ByteBuffer;
-import se.sics.caracaldb.Key;
+import se.sics.gvod.core.downloadMngr.DownloadMngrKCWrapper;
+import se.sics.gvod.core.connMngr.ConnMngrKCWrapper;
+import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.util.config.KConfigHelper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class CaracalKeyFactory {
+public class VoDKCWrapper {
 
-    public static Key getFileMetadataKey(byte[] schemaId, Identifier overlayId) {
-        ByteBuffer byteKey = ByteBuffer.allocate(schemaId.length + 4);
-        byteKey.put(schemaId);
-        byteKey.putInt(((IntIdentifier)overlayId).id);
-        return new Key(byteKey);
+    public final Config config;
+    public final KAddress self;
+    public final String videoLibrary;
+    
+    public VoDKCWrapper(Config config, KAddress self) {
+        this.config = config;
+        this.self = self;
+        this.videoLibrary = KConfigHelper.read(config, VoDKConfig.videoLibrary);
+    }
+
+    public DownloadMngrKCWrapper getDownloadMngrConfig(Identifier overlayId) {
+        return new DownloadMngrKCWrapper(config, self, overlayId);
+    }
+
+    public ConnMngrKCWrapper getConnMngrConfig(Identifier overlayId) {
+        return new ConnMngrKCWrapper(config, self, overlayId);
     }
 }

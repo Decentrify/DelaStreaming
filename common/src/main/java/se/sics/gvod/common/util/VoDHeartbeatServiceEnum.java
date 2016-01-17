@@ -18,16 +18,20 @@
  */
 package se.sics.gvod.common.util;
 
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public enum VoDHeartbeatServiceEnum {
 
-    CROUPIER((byte) -1);
-    private byte serviceId;
+    CROUPIER(new IntIdentifier(-1));
+    
+    private Identifier serviceId;
 
-    VoDHeartbeatServiceEnum(byte serviceId) {
+    VoDHeartbeatServiceEnum(Identifier serviceId) {
         this.serviceId = serviceId;
     }
 
@@ -37,17 +41,11 @@ public enum VoDHeartbeatServiceEnum {
      *
      * @param serviceId
      */
-    public void setServiceId(byte serviceId) {
+    public void setServiceId(Identifier serviceId) {
         this.serviceId = serviceId;
     }
 
-    /**
-     * Needs to be initiated to a unique value before it is used Typically
-     * should be initiated in Launcher
-     *
-     * @param serviceId
-     */
-    public byte getServiceId() {
+    public Identifier getServiceId() {
         return serviceId;
     }
 }

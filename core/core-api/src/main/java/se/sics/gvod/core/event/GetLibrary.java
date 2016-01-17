@@ -16,31 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.gvod.core.event;
 
-package se.sics.gvod.core.downloadMngr;
-
+import java.util.Map;
+import java.util.UUID;
+import org.javatuples.Pair;
 import se.sics.gvod.common.event.GVoDEvent;
-import se.sics.gvod.common.event.ReqStatus;
-import se.sics.kompics.Direct;
+import se.sics.gvod.core.util.FileStatus;
+import se.sics.gvod.core.util.ResponseStatus;
+import se.sics.kompics.KompicsEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class Data {
-     public static class Request extends Direct.Request<Response> implements GVoDEvent  {
-
+public class GetLibrary {
+    public static class Request implements GVoDEvent {
         public final Identifier id;
-        public final Identifier overlayId;
-        public final long readPos;
-        public final int readBlockSize;
-
-        public Request(Identifier overlayId, long readPos, int readBlockSize) {
+        
+        public Request() {
             this.id = UUIDIdentifier.randomId();
-            this.overlayId = overlayId;
-            this.readPos = readPos;
-            this.readBlockSize = readBlockSize;
         }
 
         @Override
@@ -48,30 +44,29 @@ public class Data {
             return id;
         }
         
-        public Response fail(ReqStatus status) {
-            return new Response(this, status, null);
-        }
-        
-        public Response success(byte[] block) {
-            return new Response(this, ReqStatus.SUCCESS, block);
+        public Indication answer(ResponseStatus respStatus, Map<String, Pair<FileStatus, Identifier>> fileStatusMap) {
+            return new Indication(id, respStatus, fileStatusMap);
         }
     }
-
-    public static class Response implements Direct.Response, GVoDEvent {
+    
+    public static class Indication implements GVoDEvent {
+        public final Identifier id;
+        public final ResponseStatus respStatus;
+        public final Map<String, Pair<FileStatus, Identifier>> fileStatusMap;
         
-        public final Request req;
-        public final ReqStatus status;
-        public final byte[] block;
+        public Indication(Identifier id, ResponseStatus respStatus, Map<String, Pair<FileStatus, Identifier>> fileStatusMap) {
+            this.id = id;
+            this.respStatus = respStatus;
+            this.fileStatusMap = fileStatusMap;
+        }
         
-        private Response(Request req, ReqStatus status, byte[] block) {
-            this.req = req;
-            this.status = status;
-            this.block = block;
+        public Indication(ResponseStatus respStatus, Map<String, Pair<FileStatus, Identifier>> fileStatusMap) {
+            this(UUIDIdentifier.randomId(), respStatus, fileStatusMap);
         }
 
         @Override
         public Identifier getId() {
-            return req.getId();
+            return id;
         }
     }
 }

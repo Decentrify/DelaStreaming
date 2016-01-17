@@ -18,14 +18,15 @@
  */
 package se.sics.gvod.manager.toolbox;
 
+import se.sics.ktoolbox.util.identifiable.Identifier;
+
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class VideoInfo {
 
     private String name;
-    private int overlayId;
-
+    private Identifier overlayId;
 
     public String getName() {
         return name;
@@ -35,11 +36,11 @@ public class VideoInfo {
         this.name = name;
     }
 
-    public int getOverlayId() {
+    public Identifier getOverlayId() {
         return overlayId;
     }
 
-    public void setOverlayId(int overlayId) {
+    public void setOverlayId(Identifier overlayId) {
         this.overlayId = overlayId;
     }
 }

@@ -4,7 +4,7 @@
     <parent>
         <groupId>se.sics</groupId>
         <artifactId>gvod</artifactId>
-        <version>0.0.7-SNAPSHOT</version>
+        <version>0.0.8-SNAPSHOT</version>
     </parent>
     <groupId>se.sics.gvod</groupId>
     <artifactId>system</artifactId>
@@ -40,17 +40,17 @@
         <dependency>
             <groupId>se.sics.ktoolbox.ipsolver</groupId>
             <artifactId>core</artifactId>
-            <version>${ipsolver.version}</version>
+            <version>${ktoolbox.version}</version>
         </dependency>
         <dependency>
             <groupId>se.sics.ktoolbox.cc.bootstrap</groupId>
             <artifactId>core</artifactId>
-            <version>${caracalclient.version}</version>
+            <version>${ktoolbox.version}</version>
         </dependency>
         <dependency>
             <groupId>se.sics.ktoolbox.cc.heartbeat</groupId>
             <artifactId>core</artifactId>
-            <version>${caracalclient.version}</version>
+            <version>${ktoolbox.version}</version>
         </dependency>
         
         <dependency>
@@ -61,13 +61,13 @@
         
         <dependency>
             <groupId>se.sics.ktoolbox.util</groupId>
-            <artifactId>util-serializer</artifactId>
-            <version>${util.version}</version>
+            <artifactId>network</artifactId>
+            <version>${ktoolbox.version}</version>
         </dependency>
         <dependency>
             <groupId>se.sics.ktoolbox.croupier</groupId>
-            <artifactId>croupier-network</artifactId>
-            <version>${croupier.version}</version>
+            <artifactId>network</artifactId>
+            <version>${ktoolbox.version}</version>
         </dependency>
         
         <dependency>

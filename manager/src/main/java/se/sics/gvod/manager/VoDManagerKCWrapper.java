@@ -16,36 +16,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.core.msg;
 
-import java.util.UUID;
-import se.sics.gvod.common.msg.GvodMsg;
-import se.sics.gvod.common.msg.ReqStatus;
+package se.sics.gvod.manager;
+
+import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.util.config.KConfigHelper;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class UploadVideo {
-
-    public static class Request extends GvodMsg.Request {
-
-        public final String videoName;
-        public final int overlayId;
-
-        public Request(String videoName, int overlayId) {
-            super(UUID.randomUUID());
-            this.videoName = videoName;
-            this.overlayId = overlayId;
-        }
-
-        @Override
-        public Request copy() {
-            return new Request(videoName, overlayId);
-        }
-
-        @Override
-        public String toString() {
-            return "UploadVideo.Request " + id.toString();
-        }
+public class VoDManagerKCWrapper {
+    public final Config config;
+    public final KAddress self;
+    public final String videoLibrary;
+    
+    public VoDManagerKCWrapper(Config config, KAddress self) {
+        this.config = config;
+        this.self = self;
+        this.videoLibrary = KConfigHelper.read(config, VoDManagerKConfig.videoLibrary);
     }
 }

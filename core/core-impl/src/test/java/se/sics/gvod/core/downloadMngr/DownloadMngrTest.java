@@ -32,10 +32,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.p2ptoolbox.util.managedStore.FileMngr;
-import se.sics.p2ptoolbox.util.managedStore.HashMngr;
-import se.sics.p2ptoolbox.util.managedStore.HashUtil;
-import se.sics.p2ptoolbox.util.managedStore.StorageMngrFactory;
+import se.sics.ktoolbox.util.managedStore.FileMngr;
+import se.sics.ktoolbox.util.managedStore.HashMngr;
+import se.sics.ktoolbox.util.managedStore.HashUtil;
+import se.sics.ktoolbox.util.managedStore.StorageMngrFactory;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -128,7 +128,7 @@ public class DownloadMngrTest {
         File hashFile = new File(hashFilePath);
         long hashFileSize = hashFile.length();
 
-        DownloadMngrConfig config = new DownloadMngrConfig(null, null, -1, -1, -1, pieceSize, piecesPerBlock);
+        DownloadMngrKCWrapper config = new DownloadMngrKCWrapper(null, null, null,  -1, -1, pieceSize, piecesPerBlock);
         int blockSize = piecesPerBlock * pieceSize;
         HashMngr uploadHashMngr = StorageMngrFactory.getCompleteHashMngr(hashFilePath, hashAlg, hashFileSize, HashUtil.getHashSize(hashAlg));
         FileMngr uploadFileMngr = StorageMngrFactory.getCompleteFileMngr(uploadFilePath, fileSize, blockSize, pieceSize);

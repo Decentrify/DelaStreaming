@@ -16,31 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.gvod.common.event;
 
-package se.sics.gvod.core.msg;
-
-import java.util.UUID;
-import se.sics.gvod.common.msg.GvodMsg;
-import se.sics.p2ptoolbox.videostream.VideoStreamManager;
+import se.sics.kompics.KompicsEvent;
+import se.sics.ktoolbox.util.identifiable.Identifiable;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public class PlayReady extends GvodMsg.OneWay {
-    public final String videoName;
-    public final int overlayId;
-    public final VideoStreamManager vsMngr;
-    
-    public PlayReady(UUID id, String videoName, int overlayId, VideoStreamManager vsMngr) {
-        super(id);
-        this.videoName = videoName;
-        this.overlayId = overlayId;
-        this.vsMngr = vsMngr;
-    }
-    
-    @Override
-    public PlayReady copy() {
-        return new PlayReady(id, videoName, overlayId, vsMngr);
-    }
-    
+public interface GVoDEvent extends KompicsEvent, Identifiable {
 }

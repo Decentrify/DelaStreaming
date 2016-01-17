@@ -19,11 +19,11 @@
 package se.sics.gvod.system;
 
 import com.google.common.util.concurrent.SettableFuture;
-import com.typesafe.config.ConfigFactory;
 import java.net.InetAddress;
 import java.util.EnumSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Fault;
@@ -38,14 +38,15 @@ import se.sics.kompics.timer.Timer;
 import se.sics.kompics.timer.java.JavaTimer;
 import se.sics.ktoolbox.cc.bootstrap.CCBootstrapComp;
 import se.sics.ktoolbox.cc.bootstrap.CCBootstrapComp.CCBootstrapInit;
-import se.sics.ktoolbox.cc.bootstrap.CCBootstrapPort;
-import se.sics.ktoolbox.cc.bootstrap.msg.CCReady;
-import se.sics.ktoolbox.cc.common.op.CCSimpleReady;
+import se.sics.ktoolbox.cc.bootstrap.CCOperationPort;
+import se.sics.ktoolbox.cc.bootstrap.event.status.CCBootstrapReady;
 import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatComp;
 import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatPort;
+import se.sics.ktoolbox.cc.heartbeat.event.status.CCHeartbeatReady;
 import se.sics.ktoolbox.ipsolver.IpSolverComp;
 import se.sics.ktoolbox.ipsolver.IpSolverPort;
 import se.sics.ktoolbox.ipsolver.msg.GetIp;
+import se.sics.ktoolbox.util.status.Status;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -72,7 +73,7 @@ public class GVoDLauncher extends ComponentDefinition {
     private Component heartbeatComp;
     private Component vodHostComp;
 
-    private HostManagerConfig config;
+    private HostManagerKCWrapper config;
     private byte[] vodSchemaId;
 
     public GVoDLauncher() {
@@ -138,7 +139,7 @@ public class GVoDLauncher extends ComponentDefinition {
                     LOG.warn("multiple ips detected, proceeding with:{}", ip);
                 }
             }
-            config = new HostManagerConfig(ConfigFactory.load(), ip);
+            config = new HostManagerKCWrapper(config(), ip);
             phase2();
         }
     };
@@ -147,34 +148,34 @@ public class GVoDLauncher extends ComponentDefinition {
         connectNetwork();
         connectCaracalClient();
         connectHeartbeat();
-        subscribe(handleCaracalReady, caracalClientComp.getPositive(CCBootstrapPort.class));
+        subscribe(handleCaracalReady, caracalClientComp.getPositive(CCOperationPort.class));
         subscribe(handleHeartbeatReady, heartbeatComp.getPositive(CCHeartbeatPort.class));
     }
 
     private void connectNetwork() {
-        networkComp = create(NettyNetwork.class, new NettyInit(config.getSelf()));
+        networkComp = create(NettyNetwork.class, new NettyInit(config.self));
         trigger(Start.event, networkComp.control());
     }
 
     private void connectCaracalClient() {
-        caracalClientComp = create(CCBootstrapComp.class, new CCBootstrapInit(config.getSystemConfig(), config.getCaracalClientConfig(), config.getCaracalNodes()));
-        connect(caracalClientComp.getNegative(Timer.class), timerComp.getPositive(Timer.class));
-        connect(caracalClientComp.getNegative(Network.class), networkComp.getPositive(Network.class));
+        caracalClientComp = create(CCBootstrapComp.class, new CCBootstrapInit(config.self));
+        connect(caracalClientComp.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
+        connect(caracalClientComp.getNegative(Network.class), networkComp.getPositive(Network.class), Channel.TWO_WAY);
         trigger(Start.event, caracalClientComp.control());
     }
 
     private void connectHeartbeat() {
-        heartbeatComp = create(CCHeartbeatComp.class, new CCHeartbeatComp.CCHeartbeatInit(config.getSystemConfig(), config.getCaracalClientConfig()));
-        connect(heartbeatComp.getNegative(Timer.class), timerComp.getPositive(Timer.class));
-        connect(heartbeatComp.getNegative(CCBootstrapPort.class), caracalClientComp.getPositive(CCBootstrapPort.class));
+        heartbeatComp = create(CCHeartbeatComp.class, new CCHeartbeatComp.CCHeartbeatInit(config.self));
+        connect(heartbeatComp.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
+        connect(heartbeatComp.getNegative(CCOperationPort.class), caracalClientComp.getPositive(CCOperationPort.class), Channel.TWO_WAY);
         trigger(Start.event, heartbeatComp.control());
     }
 
-    private Handler handleCaracalReady = new Handler<CCReady>() {
+    private Handler handleCaracalReady = new Handler<Status.Internal<CCBootstrapReady>>() {
         @Override
-        public void handle(CCReady event) {
+        public void handle(Status.Internal<CCBootstrapReady> event) {
             LOG.info("starting: received schemas");
-            vodSchemaId = event.caracalSchemaData.getId("gvod.metadata");
+            vodSchemaId = event.status.caracalSchemaData.getId("gvod.metadata");
             if (vodSchemaId == null) {
                 LOG.error("exception:vod schema undefined shutting down");
                 System.exit(1);
@@ -182,9 +183,9 @@ public class GVoDLauncher extends ComponentDefinition {
         }
     };
 
-    private Handler handleHeartbeatReady = new Handler<CCSimpleReady>() {
+    private Handler handleHeartbeatReady = new Handler<Status.Internal<CCHeartbeatReady>>() {
         @Override
-        public void handle(CCSimpleReady e) {
+        public void handle(Status.Internal<CCHeartbeatReady> event) {
             LOG.info("starting: system");
             connectVoDHost();
         }
@@ -192,10 +193,10 @@ public class GVoDLauncher extends ComponentDefinition {
 
     private void connectVoDHost() {
         vodHostComp = create(HostManagerComp.class, new HostManagerComp.HostManagerInit(config, gvodSyncIFuture, vodSchemaId));
-        connect(vodHostComp.getNegative(Network.class), networkComp.getPositive(Network.class));
-        connect(vodHostComp.getNegative(Timer.class), timerComp.getPositive(Timer.class));
-        connect(vodHostComp.getNegative(CCBootstrapPort.class), caracalClientComp.getPositive(CCBootstrapPort.class));
-        connect(vodHostComp.getNegative(CCHeartbeatPort.class), heartbeatComp.getPositive(CCHeartbeatPort.class));
+        connect(vodHostComp.getNegative(Network.class), networkComp.getPositive(Network.class), Channel.TWO_WAY);
+        connect(vodHostComp.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
+        connect(vodHostComp.getNegative(CCOperationPort.class), caracalClientComp.getPositive(CCOperationPort.class), Channel.TWO_WAY);
+        connect(vodHostComp.getNegative(CCHeartbeatPort.class), heartbeatComp.getPositive(CCHeartbeatPort.class), Channel.TWO_WAY);
         trigger(Start.event, vodHostComp.control());
     }
 }

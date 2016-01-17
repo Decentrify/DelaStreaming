@@ -16,30 +16,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.common.msg.vod;
+package se.sics.gvod.common.event.vod;
 
-import java.util.UUID;
-import se.sics.gvod.common.msg.GvodMsg;
-import se.sics.gvod.common.msg.ReqStatus;
+import se.sics.gvod.common.event.GVoDEvent;
+import se.sics.gvod.common.event.ReqStatus;
 import se.sics.gvod.common.util.VodDescriptor;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class Connection {
 
-    public static class Request extends GvodMsg.Request {
+    public static class Request implements GVoDEvent {
 
+        public final Identifier id;
         public final VodDescriptor desc;
 
-        public Request(UUID id, VodDescriptor desc) {
-            super(id);
+        public Request(Identifier id, VodDescriptor desc) {
+            this.id = id;
             this.desc = desc;
-        }
-
-        @Override
-        public Request copy() {
-            return new Request(id, desc);
         }
 
         @Override
@@ -55,19 +51,21 @@ public class Connection {
             return new Response(id, ReqStatus.SUCCESS, desc);
         }
 
+        @Override
+        public Identifier getId() {
+            return id;
+        }
     }
 
-    public static class Response extends GvodMsg.Response {
+    public static class Response implements GVoDEvent {
+        public final Identifier id;
+        public final ReqStatus status;
         public final VodDescriptor desc;
         
-        public Response(UUID id, ReqStatus status, VodDescriptor desc) {
-            super(id, status);
+        public Response(Identifier id, ReqStatus status, VodDescriptor desc) {
+            this.id = id;
+            this.status = status;
             this.desc = desc;
-        }
-
-        @Override
-        public Response copy() {
-            return new Response(id, status, desc);
         }
 
         @Override
@@ -75,46 +73,51 @@ public class Connection {
             return "Connect.Response<" + id + "> " + status;
         }
 
+        @Override
+        public Identifier getId() {
+            return id;
+        }
     }
 
-    public static class Update extends GvodMsg.OneWay {
+    public static class Update implements GVoDEvent {
+        public final Identifier id;
         public final VodDescriptor desc;
         public final boolean downloadConnection;
 
-        public Update(UUID id, VodDescriptor desc, boolean downloadConnection) {
-            super(id);
+        public Update(Identifier id, VodDescriptor desc, boolean downloadConnection) {
+            this.id = id;
             this.desc = desc;
             this.downloadConnection = downloadConnection;
-        }
-
-        @Override
-        public Update copy() {
-            return new Update(id, desc, downloadConnection);
         }
 
         @Override
         public String toString() {
             return "Connect.Update<" + id + ">";
         }
-        
-    }
-
-    public static class Close extends GvodMsg.OneWay {
-        public boolean downloadConnection;
-        
-        public Close(UUID id, boolean downloadConnection) {
-            super(id);
-            this.downloadConnection = downloadConnection;
-        }
 
         @Override
-        public Close copy() {
-            return new Close(id, downloadConnection);
+        public Identifier getId() {
+            return id;
+        }
+    }
+
+    public static class Close implements GVoDEvent {
+        public final Identifier id;
+        public final boolean downloadConnection;
+        
+        public Close(Identifier id, boolean downloadConnection) {
+            this.id = id;
+            this.downloadConnection = downloadConnection;
         }
 
         @Override
         public String toString() {
             return "Connect.Close<" + id + ">";
+        }
+
+        @Override
+        public Identifier getId() {
+            return id;
         }
     }
 }

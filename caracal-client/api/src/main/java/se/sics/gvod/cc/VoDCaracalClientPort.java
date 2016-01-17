@@ -19,8 +19,8 @@
 
 package se.sics.gvod.cc;
 
-import se.sics.gvod.cc.msg.CCAddOverlay;
-import se.sics.gvod.cc.msg.CCJoinOverlay;
+import se.sics.gvod.cc.event.CCAddOverlay;
+import se.sics.gvod.cc.event.CCJoinOverlay;
 import se.sics.kompics.PortType;
 
 /**

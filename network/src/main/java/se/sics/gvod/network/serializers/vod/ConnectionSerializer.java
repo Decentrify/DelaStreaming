@@ -21,11 +21,12 @@ package se.sics.gvod.network.serializers.vod;
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import java.util.UUID;
-import se.sics.gvod.common.msg.ReqStatus;
-import se.sics.gvod.common.msg.vod.Connection;
+import se.sics.gvod.common.event.ReqStatus;
+import se.sics.gvod.common.event.vod.Connection;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -48,13 +49,13 @@ public class ConnectionSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Connection.Request obj = (Connection.Request) o;
-            Serializers.lookupSerializer(UUID.class).toBinary(obj.id, buf);
+            Serializers.toBinary(obj.id, buf);
             Serializers.lookupSerializer(VodDescriptor.class).toBinary(obj.desc, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            UUID mId = (UUID) Serializers.lookupSerializer(UUID.class).fromBinary(buf, hint);
+            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
             VodDescriptor desc = (VodDescriptor) Serializers.lookupSerializer(VodDescriptor.class).fromBinary(buf, hint);
             return new Connection.Request(mId, desc);
         }
@@ -75,14 +76,14 @@ public class ConnectionSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Connection.Response obj = (Connection.Response) o;
-            Serializers.lookupSerializer(UUID.class).toBinary(obj.id, buf);
+            Serializers.toBinary(obj.id, buf);
             Serializers.lookupSerializer(ReqStatus.class).toBinary(obj.status, buf);
             Serializers.lookupSerializer(VodDescriptor.class).toBinary(obj.desc, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            UUID mId = (UUID) Serializers.lookupSerializer(UUID.class).fromBinary(buf, hint);
+            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
             ReqStatus status = (ReqStatus) Serializers.lookupSerializer(ReqStatus.class).fromBinary(buf, hint);
             VodDescriptor desc = (VodDescriptor) Serializers.lookupSerializer(VodDescriptor.class).fromBinary(buf, hint);
             return new Connection.Response(mId, status, desc);
@@ -111,7 +112,7 @@ public class ConnectionSerializer {
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            UUID mId = (UUID) Serializers.lookupSerializer(UUID.class).fromBinary(buf, hint);
+            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
             VodDescriptor desc = (VodDescriptor) Serializers.lookupSerializer(VodDescriptor.class).fromBinary(buf, hint);
             boolean connectionType = buf.readBoolean();
             return new Connection.Update(mId, desc, connectionType);
@@ -133,13 +134,13 @@ public class ConnectionSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Connection.Close obj = (Connection.Close) o;
-            Serializers.lookupSerializer(UUID.class).toBinary(obj.id, buf);
+            Serializers.toBinary(obj.id, buf);
             buf.writeBoolean(obj.downloadConnection);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-             UUID mId = (UUID) Serializers.lookupSerializer(UUID.class).fromBinary(buf, hint);
+             Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
              boolean downloadConnection = buf.readBoolean();
              return new Connection.Close(mId, downloadConnection);
         }

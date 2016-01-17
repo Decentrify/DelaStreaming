@@ -27,10 +27,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.common.msg.ReqStatus;
+import se.sics.gvod.common.event.vod.Download;
 import se.sics.gvod.core.connMngr.ConnMngrPort;
-import se.sics.gvod.core.connMngr.msg.Ready;
-import se.sics.gvod.common.msg.vod.Download;
+import se.sics.gvod.core.connMngr.event.Ready;
 import se.sics.gvod.common.utility.UtilityUpdate;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
 import se.sics.kompics.ComponentDefinition;
@@ -44,9 +43,8 @@ import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
-import se.sics.p2ptoolbox.util.managedStore.FileMngr;
-import se.sics.p2ptoolbox.util.managedStore.HashMngr;
-import se.sics.p2ptoolbox.util.update.SelfViewUpdatePort;
+import se.sics.ktoolbox.util.managedStore.FileMngr;
+import se.sics.ktoolbox.util.managedStore.HashMngr;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -61,7 +59,7 @@ public class DownloadMngrComp extends ComponentDefinition {
     private Positive<Timer> timer = requires(Timer.class);
     private Positive<ConnMngrPort> connMngr = requires(ConnMngrPort.class);
 
-    private final DownloadMngrConfig config;
+    private final DownloadMngrKCWrapper config;
     public final DownloadMngr downloadMngr;
     private boolean downloading;
     private final AtomicInteger playPos; //set by videoStreamManager, read here
@@ -71,7 +69,7 @@ public class DownloadMngrComp extends ComponentDefinition {
 
     public DownloadMngrComp(DownloadMngrInit init) {
         this.config = init.config;
-        this.logPrefix = config.getSelf().getBase() + "<" + config.overlayId + ">";
+        this.logPrefix = config.selfAddress.getId() + "<" + config.overlayId + ">";
         LOG.info("{} initiating", logPrefix);
 
         this.playPos = init.playPos;
@@ -143,10 +141,10 @@ public class DownloadMngrComp extends ComponentDefinition {
         }
     };
 
-    private Handler handleDataRequest = new Handler<Data.Req>() {
+    private Handler handleDataRequest = new Handler<Data.Request>() {
 
         @Override
-        public void handle(Data.Req req) {
+        public void handle(Data.Request req) {
             LOG.trace("{} received local data request for readPos:{} readSize:{}",
                     new Object[]{logPrefix, req.readPos, req.readBlockSize});
 
@@ -157,7 +155,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             if (result.isPresent()) {
                 LOG.trace("{} sending local data - readPos:{} readSize:{}",
                         new Object[]{logPrefix, req.readPos, req.readBlockSize});
-                trigger(new Data.Resp(req, ReqStatus.SUCCESS, result.get()), dataPort);
+                answer(req, req.success(result.get()));
             } else {
                 LOG.debug("{} local data missing - readPos:{} , readSize:{}",
                         new Object[]{logPrefix, req.readPos, req.readBlockSize});
@@ -269,7 +267,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             return false;
         }
         LOG.trace("{} downloading piece:{}", logPrefix, nextPieceId);
-        trigger(new Download.DataRequest(UUID.randomUUID(), config.overlayId, nextPieceId.get()), connMngr);
+        trigger(new Download.DataRequest(config.overlayId, nextPieceId.get()), connMngr);
         return true;
     }
 
@@ -280,7 +278,7 @@ public class DownloadMngrComp extends ComponentDefinition {
         }
         int targetPos = Collections.min(nextHashes.get());
         LOG.trace("{} downloading hashes:{} targetPos:{}", new Object[]{logPrefix, nextHashes.get(), targetPos});
-        trigger(new Download.HashRequest(UUID.randomUUID(), targetPos, nextHashes.get()), connMngr);
+        trigger(new Download.HashRequest(targetPos, nextHashes.get()), connMngr);
         return true;
     }
 
@@ -324,13 +322,13 @@ public class DownloadMngrComp extends ComponentDefinition {
 
     public static class DownloadMngrInit extends Init<DownloadMngrComp> {
 
-        public final DownloadMngrConfig config;
+        public final DownloadMngrKCWrapper config;
         public final HashMngr hashMngr;
         public final FileMngr fileMngr;
         public final boolean downloader;
         public final AtomicInteger playPos;
 
-        public DownloadMngrInit(DownloadMngrConfig config, FileMngr fileMngr, HashMngr hashMngr, boolean downloader, AtomicInteger playPos) {
+        public DownloadMngrInit(DownloadMngrKCWrapper config, FileMngr fileMngr, HashMngr hashMngr, boolean downloader, AtomicInteger playPos) {
             this.config = config;
             this.hashMngr = hashMngr;
             this.fileMngr = fileMngr;

@@ -30,13 +30,16 @@ import se.sics.caracaldb.operations.GetResponse;
 import se.sics.caracaldb.operations.PutRequest;
 import se.sics.caracaldb.operations.PutResponse;
 import se.sics.caracaldb.operations.ResponseCode;
-import se.sics.gvod.cc.msg.CCAddOverlay;
+import se.sics.gvod.cc.event.CCAddOverlay;
 import se.sics.gvod.cc.opMngr.Operation;
 import se.sics.gvod.cc.util.CaracalKeyFactory;
 import se.sics.gvod.common.util.FileMetadata;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.ktoolbox.cc.common.op.CCOpEvent;
+import se.sics.ktoolbox.cc.operation.event.CCOpRequest;
+import se.sics.ktoolbox.cc.operation.event.CCOpResponse;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -47,17 +50,17 @@ public class CCAddOverlayOp implements Operation {
 
         GET, ADD
     }
-    private final UUID opId;
+    private final Identifier opId;
     private final CCAddOverlay.Request req;
     private final byte[] schemaId;
 
     private Phase phase;
     private CCAddOverlay.Response result;
-    private CCOpEvent.Request pendingMsg;
+    private CCOpRequest pendingMsg;
     private UUID pendingMsgId;
 
     public CCAddOverlayOp(byte[] schemaId, CCAddOverlay.Request req) {
-        this.opId = UUID.randomUUID();
+        this.opId = UUIDIdentifier.randomId();
         this.schemaId = schemaId;
         this.req = req;
         this.result = null;
@@ -68,11 +71,11 @@ public class CCAddOverlayOp implements Operation {
         phase = Phase.GET;
         Key target = CaracalKeyFactory.getFileMetadataKey(schemaId, req.overlayId);
         pendingMsgId = UUID.randomUUID();
-        pendingMsg = new CCOpEvent.Request(new GetRequest(pendingMsgId, target), target);
+        pendingMsg = new CCOpRequest(new GetRequest(pendingMsgId, target), target);
     }
 
     @Override
-    public HandleStatus handleEvent(CCOpEvent.Response event) {
+    public HandleStatus handleEvent(CCOpResponse event) {
         if (phase.equals(Phase.GET) && event.opResp instanceof GetResponse) {
             GetResponse resp = (GetResponse) event.opResp;
             if (!resp.id.equals(pendingMsgId)) {
@@ -92,7 +95,7 @@ public class CCAddOverlayOp implements Operation {
                     ByteBuf buf = Unpooled.buffer();
                     Serializers.lookupSerializer(FileMetadata.class).toBinary(req.fileMeta, buf);
                     //TODO Alex optimization - do I need to cut short the backing array?
-                    pendingMsg = new CCOpEvent.Request(new PutRequest(pendingMsgId, resp.key, buf.array()), resp.key);
+                    pendingMsg = new CCOpRequest(new PutRequest(pendingMsgId, resp.key, buf.array()), resp.key);
                 }
             } else {
                 result = req.timeout();
@@ -114,13 +117,13 @@ public class CCAddOverlayOp implements Operation {
     }
     
     @Override
-    public void timeout(UUID msgId) {
+    public void timeout(Identifier reqId) {
         result = req.timeout();
     }
 
     @Override
-    public Map<CCOpEvent.Request, Boolean> sendingQueue() {
-        Map<CCOpEvent.Request, Boolean> toSend = new HashMap<CCOpEvent.Request, Boolean>();
+    public Map<CCOpRequest, Boolean> sendingQueue() {
+        Map<CCOpRequest, Boolean> toSend = new HashMap<CCOpRequest, Boolean>();
         if (pendingMsg != null) {
             toSend.put(pendingMsg, true);
             pendingMsg = null;
@@ -129,7 +132,7 @@ public class CCAddOverlayOp implements Operation {
     }
 
     @Override
-    public UUID getId() {
+    public Identifier getId() {
         return opId;
     }
 

@@ -20,21 +20,22 @@
 package se.sics.gvod.cc.opMngr;
 
 import java.util.Map;
-import java.util.UUID;
 import se.sics.kompics.KompicsEvent;
-import se.sics.ktoolbox.cc.common.op.CCOpEvent;
+import se.sics.ktoolbox.cc.operation.event.CCOpRequest;
+import se.sics.ktoolbox.cc.operation.event.CCOpResponse;
+import se.sics.ktoolbox.util.identifiable.Identifiable;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface Operation {
-    public UUID getId();
+public interface Operation extends Identifiable {
     public void start();
-    public HandleStatus handleEvent(CCOpEvent.Response event);
-    public Map<CCOpEvent.Request, Boolean> sendingQueue();
+    public HandleStatus handleEvent(CCOpResponse event);
+    public Map<CCOpRequest, Boolean> sendingQueue();
     public OpStatus getStatus();
     public KompicsEvent getResult();
-    public void timeout(UUID msgId);
+    public void timeout(Identifier msgId);
     
     public static enum HandleStatus {
         HANDLED, NOT_HANDLED

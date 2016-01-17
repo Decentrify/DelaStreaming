@@ -30,15 +30,17 @@ import se.sics.gvod.common.utility.UtilityUpdatePort;
 import se.sics.gvod.core.VoDComp;
 import se.sics.gvod.core.VoDInit;
 import se.sics.gvod.core.VoDPort;
+import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Init;
 import se.sics.kompics.Positive;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.cc.bootstrap.CCBootstrapPort;
+import se.sics.ktoolbox.cc.bootstrap.CCOperationPort;
 import se.sics.ktoolbox.cc.heartbeat.CCHeartbeatPort;
-import se.sics.p2ptoolbox.util.update.SelfAddressUpdatePort;
+import se.sics.ktoolbox.util.address.AddressUpdatePort;
+import se.sics.ktoolbox.util.status.StatusPort;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -49,19 +51,19 @@ public class HostManagerComp extends ComponentDefinition {
 
     private Positive<Network> network = requires(Network.class);
     private Positive<Timer> timer = requires(Timer.class);
-    private Positive<CCBootstrapPort> caracalClient = requires(CCBootstrapPort.class);
+    private Positive<StatusPort> externalStatus = requires(StatusPort.class);
     private Positive<CCHeartbeatPort> heartbeat = requires(CCHeartbeatPort.class);
-    private Positive<SelfAddressUpdatePort> addressUpdate = requires(SelfAddressUpdatePort.class);
+    private Positive<AddressUpdatePort> addressUpdate = requires(AddressUpdatePort.class);
 
     private Component vodMngrComp;
     private Component vodComp;
     private Component vodCaracalClientComp;
 
-    private final HostManagerConfig config;
+    private final HostManagerKCWrapper config;
 
     public HostManagerComp(HostManagerInit init) {
         log.debug("starting... - self {}, bootstrap server {}",
-                new Object[]{init.config.getSelf(), init.config.getCaracalClient()});
+                new Object[]{init.config.self.getId(), init.config.caracalClient});
         this.config = init.config;
         connectVoDCaracalClient(init.schemaId);
         connectVoD();
@@ -70,33 +72,33 @@ public class HostManagerComp extends ComponentDefinition {
 
     private void connectVoDCaracalClient(byte[] schemaId) {
         vodCaracalClientComp = create(VoDCaracalClientComp.class, new VoDCaracalClientInit(new VoDCaracalClientConfig(), schemaId));
-        connect(vodCaracalClientComp.getNegative(Timer.class), timer);
-        connect(vodCaracalClientComp.getNegative(CCBootstrapPort.class), caracalClient);
+        connect(vodCaracalClientComp.getNegative(Timer.class), timer, Channel.TWO_WAY);
+        connect(vodCaracalClientComp.getNegative(StatusPort.class), externalStatus, Channel.TWO_WAY);
     }
 
     private void connectVoD() {
-        vodComp = create(VoDComp.class, new VoDInit(config.getVoDConfig(), config.getSystemConfig(), config.getCroupierConfig()));
-        connect(vodComp.getNegative(Network.class), network);
-        connect(vodComp.getNegative(Timer.class), timer);
-        connect(vodComp.getNegative(CCHeartbeatPort.class), heartbeat);
-        connect(vodComp.getNegative(VoDCaracalClientPort.class), vodCaracalClientComp.getPositive(VoDCaracalClientPort.class));
-        connect(vodComp.getNegative(SelfAddressUpdatePort.class), addressUpdate);
+        vodComp = create(VoDComp.class, new VoDInit(config.getVoDConfig()));
+        connect(vodComp.getNegative(Network.class), network, Channel.TWO_WAY);
+        connect(vodComp.getNegative(Timer.class), timer, Channel.TWO_WAY);
+        connect(vodComp.getNegative(CCHeartbeatPort.class), heartbeat, Channel.TWO_WAY);
+        connect(vodComp.getNegative(VoDCaracalClientPort.class), vodCaracalClientComp.getPositive(VoDCaracalClientPort.class), Channel.TWO_WAY);
+        connect(vodComp.getNegative(AddressUpdatePort.class), addressUpdate, Channel.TWO_WAY);
     }
     
     private void connectVoDMngr(SettableFuture gvodSyncIFuture) {
         this.vodMngrComp = create(VoDManagerImpl.class, new VoDManagerImpl.VoDManagerInit(config.getVoDManagerConfig()));
         gvodSyncIFuture.set(vodMngrComp.getComponent());
-        connect(vodMngrComp.getNegative(VoDPort.class), vodComp.getPositive(VoDPort.class));
-        connect(vodMngrComp.getNegative(UtilityUpdatePort.class), vodComp.getPositive(UtilityUpdatePort.class));
+        connect(vodMngrComp.getNegative(VoDPort.class), vodComp.getPositive(VoDPort.class), Channel.TWO_WAY);
+        connect(vodMngrComp.getNegative(UtilityUpdatePort.class), vodComp.getPositive(UtilityUpdatePort.class), Channel.TWO_WAY);
     }
 
     public static class HostManagerInit extends Init<HostManagerComp> {
 
-        public final HostManagerConfig config;
+        public final HostManagerKCWrapper config;
         public final SettableFuture gvodSyncIFuture;
         public final byte[] schemaId;
 
-        public HostManagerInit(HostManagerConfig config, SettableFuture gvodSyncIFuture, byte[] schemaId) {
+        public HostManagerInit(HostManagerKCWrapper config, SettableFuture gvodSyncIFuture, byte[] schemaId) {
             this.config = config;
             this.gvodSyncIFuture = gvodSyncIFuture;
             this.schemaId = schemaId;

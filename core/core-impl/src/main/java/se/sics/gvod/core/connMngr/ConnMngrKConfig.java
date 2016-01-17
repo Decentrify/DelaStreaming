@@ -16,30 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.gvod.core.connMngr;
 
-package se.sics.gvod.manager;
-
-import se.sics.gvod.common.utility.GVoDHostConfig;
-import se.sics.gvod.common.utility.GVoDReferenceConfig;
-import se.sics.p2ptoolbox.util.network.impl.DecoratedAddress;
+import se.sics.ktoolbox.util.config.KConfigOption;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ *
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public class VoDManagerConfig {
-    private GVoDHostConfig hostConfig;
-    private GVoDReferenceConfig referenceConfig;
-    
-    public VoDManagerConfig(GVoDHostConfig hostConfig, GVoDReferenceConfig referenceConfig) {
-        this.hostConfig = hostConfig;
-        this.referenceConfig = referenceConfig;
-    }
-    
-    public String getVideoLibrary() {
-        return hostConfig.getVideoLibrary();
-    }
-    
-    public DecoratedAddress getSelf() {
-        return hostConfig.getSelf();
-    }
+public class ConnMngrKConfig {
+
+    public final static KConfigOption.Basic<Integer> defaultMaxPipeline = new KConfigOption.Basic("vod.connection.maxPipeline", Integer.class);
+    public final static KConfigOption.Basic<Integer> piecesPerBlock = new KConfigOption.Basic("vod.video.piecesPerBlock", Integer.class);
+    public final static KConfigOption.Basic<Long> updatePeriod = new KConfigOption.Basic("vod.connection.updatePeriod", Long.class);
+    public final static KConfigOption.Basic<Long> reqTimeoutPeriod = new KConfigOption.Basic("vod.connection.reqTimeoutPeriod", Long.class);
+
 }

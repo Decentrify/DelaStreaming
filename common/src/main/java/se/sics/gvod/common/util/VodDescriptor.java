@@ -19,10 +19,12 @@
 
 package se.sics.gvod.common.util;
 
+import se.sics.ktoolbox.util.update.view.View;
+
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class VodDescriptor {
+public class VodDescriptor implements View {
     public final int downloadPos;
     
     public VodDescriptor(int downloadPosition) {

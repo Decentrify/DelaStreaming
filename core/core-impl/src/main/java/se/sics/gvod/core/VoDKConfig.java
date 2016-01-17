@@ -16,12 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.gvod.core;
 
-package se.sics.gvod.common.msg;
+import se.sics.ktoolbox.util.config.KConfigOption;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public enum ReqStatus {
-    SUCCESS, ERROR, FAIL, MISSING, TIMEOUT, BUSY;
+public class VoDKConfig {
+    public final static KConfigOption.Basic<String> videoLibrary = new KConfigOption.Basic("vod.video.library", String.class);
 }

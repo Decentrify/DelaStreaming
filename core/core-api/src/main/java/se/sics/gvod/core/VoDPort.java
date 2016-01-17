@@ -19,10 +19,10 @@
 
 package se.sics.gvod.core;
 
-import se.sics.gvod.core.msg.DownloadVideo;
-import se.sics.gvod.core.msg.GetLibrary;
-import se.sics.gvod.core.msg.PlayReady;
-import se.sics.gvod.core.msg.UploadVideo;
+import se.sics.gvod.core.event.DownloadVideo;
+import se.sics.gvod.core.event.GetLibrary;
+import se.sics.gvod.core.event.PlayReady;
+import se.sics.gvod.core.event.UploadVideo;
 import se.sics.kompics.PortType;
 
 /**
@@ -32,7 +32,7 @@ import se.sics.kompics.PortType;
 public class VoDPort extends PortType {
     {
         request(GetLibrary.Request.class);
-        indication(GetLibrary.Response.class);
+        indication(GetLibrary.Indication.class);
         request(UploadVideo.Request.class);
         request(DownloadVideo.Request.class);
         indication(PlayReady.class);

@@ -16,11 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.gvod.core.downloadMngr;
 
-package se.sics.gvod.common.msg;
+import se.sics.ktoolbox.util.config.KConfigOption;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ *
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface Content {
+public class DownloadMngrKConfig {
+    public final static KConfigOption.Basic<Integer> startPieces = new KConfigOption.Basic("vod.video.startPieces", Integer.class);
+    public final static KConfigOption.Basic<Integer> pieceSize = new KConfigOption.Basic("vod.video.pieceSize", Integer.class);
+    public final static KConfigOption.Basic<Integer> piecesPerBlock = new KConfigOption.Basic("vod.video.piecesPerBlock", Integer.class);
+    public final static KConfigOption.Basic<Long> descriptorUpdate = new KConfigOption.Basic("vod.video.descriptorUpdate", Long.class);
 }

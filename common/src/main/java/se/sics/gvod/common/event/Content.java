@@ -16,35 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.core.msg;
 
-import java.util.UUID;
-import se.sics.gvod.common.msg.GvodMsg;
+package se.sics.gvod.common.event;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class DownloadVideo {
-
-    public static class Request extends GvodMsg.Request {
-
-        public final String videoName;
-        public final int overlayId;
-
-        public Request(String videoName, int overlayId) {
-            super(UUID.randomUUID());
-            this.videoName = videoName;
-            this.overlayId = overlayId;
-        }
-        
-        @Override
-        public Request copy() {
-            return new Request(videoName, overlayId);
-        }
-
-        @Override
-        public String toString() {
-            return "DownloadVideo.Request " + id.toString();
-        }
-    }
+public interface Content {
 }

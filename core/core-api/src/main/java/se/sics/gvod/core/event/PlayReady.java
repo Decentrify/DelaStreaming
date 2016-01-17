@@ -17,16 +17,31 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-package se.sics.gvod.core.downloadMngr;
+package se.sics.gvod.core.event;
 
-import se.sics.kompics.PortType;
+import se.sics.gvod.common.event.GVoDEvent;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.videostream.VideoStreamManager;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class DownloadMngrPort extends PortType {
-    {
-        request(Data.Request.class);
-        indication(Data.Response.class);
+public class PlayReady implements GVoDEvent {
+    public final Identifier id;
+    public final String videoName;
+    public final Identifier overlayId;
+    public final VideoStreamManager vsMngr;
+    
+    public PlayReady(Identifier id, String videoName, Identifier overlayId, VideoStreamManager vsMngr) {
+        this.id = id;
+        this.videoName = videoName;
+        this.overlayId = overlayId;
+        this.vsMngr = vsMngr;
+    }
+    
+    @Override
+    public Identifier getId() {
+        return id;
     }
 }

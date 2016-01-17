@@ -17,16 +17,11 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-package se.sics.gvod.core.downloadMngr;
-
-import se.sics.kompics.PortType;
+package se.sics.gvod.common.event;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class DownloadMngrPort extends PortType {
-    {
-        request(Data.Request.class);
-        indication(Data.Response.class);
-    }
+public enum ReqStatus {
+    SUCCESS, ERROR, FAIL, MISSING, TIMEOUT, BUSY;
 }

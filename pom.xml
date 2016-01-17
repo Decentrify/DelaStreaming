@@ -4,7 +4,7 @@
     <groupId>se.sics</groupId>
     <artifactId>gvod</artifactId>
     <name>GVoD</name>
-    <version>0.0.7-SNAPSHOT</version>
+    <version>0.0.8-SNAPSHOT</version>
     <packaging>pom</packaging>
     
     <modules>
@@ -22,14 +22,8 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kompics.version>0.8.3-SNAPSHOT</kompics.version>
-        
-        <util.version>1.9-SNAPSHOT</util.version>
-        <ipsolver.version>1.1-SNAPSHOT</ipsolver.version>
-        <caracalclient.version>1.2-SNAPSHOT</caracalclient.version>
-        <croupier.version>1.9-SNAPSHOT</croupier.version>
-        <videostream.version>1.2-SNAPSHOT</videostream.version>
-        
+        <kompics.version>0.9.1-SNAPSHOT</kompics.version>
+        <ktoolbox.version>2.0.1-SNAPSHOT</ktoolbox.version>
         
         <logger.version>1.7.5</logger.version>
         <config.version>1.2.1</config.version>
@@ -53,13 +47,13 @@
         
         <dependency>
             <groupId>se.sics.ktoolbox.util</groupId>
-            <artifactId>basic</artifactId>
-            <version>${util.version}</version>
+            <artifactId>core</artifactId>
+            <version>${ktoolbox.version}</version>
         </dependency>
         <dependency>
             <groupId>se.sics.ktoolbox.util</groupId>
-            <artifactId>kompics-basic</artifactId>
-            <version>${util.version}</version>
+            <artifactId>kcore</artifactId>
+            <version>${ktoolbox.version}</version>
         </dependency>
         
         <dependency>
@@ -136,8 +130,8 @@
                 <version>3.1</version>
                 <configuration>
                     <encoding>${project.build.sourceEncoding}</encoding>
-                    <source>${java.compiler.version}</source>
-                    <target>${java.compiler.version}</target>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
                     <debug>true</debug>
                     <optimize>true</optimize>
                     <showDeprecations>true</showDeprecations>

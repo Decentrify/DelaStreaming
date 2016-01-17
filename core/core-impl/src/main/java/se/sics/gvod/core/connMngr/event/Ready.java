@@ -17,24 +17,26 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-package se.sics.gvod.core.connMngr.msg;
+package se.sics.gvod.core.connMngr.event;
 
-import java.util.UUID;
-import se.sics.gvod.common.msg.GvodMsg;
+import se.sics.gvod.common.event.GVoDEvent;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class Ready extends GvodMsg.OneWay {
+public class Ready implements GVoDEvent {
+    public final Identifier id;
     public final int slots;
     
-    public Ready(UUID id, int slots) {
-        super(id);
+    public Ready(int slots) {
+        this.id = UUIDIdentifier.randomId();
         this.slots = slots;
     }
-    
+
     @Override
-    public Ready copy() {
-        return new Ready(id, slots);
+    public Identifier getId() {
+        return id;
     }
 }

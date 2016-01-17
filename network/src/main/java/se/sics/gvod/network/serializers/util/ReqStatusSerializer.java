@@ -20,7 +20,7 @@ package se.sics.gvod.network.serializers.util;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
-import se.sics.gvod.common.msg.ReqStatus;
+import se.sics.gvod.common.event.ReqStatus;
 import se.sics.kompics.network.netty.serialization.Serializer;
 
 /**

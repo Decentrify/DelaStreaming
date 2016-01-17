@@ -19,9 +19,9 @@
 
 package se.sics.gvod.network;
 
-import se.sics.gvod.common.msg.ReqStatus;
-import se.sics.gvod.common.msg.vod.Connection;
-import se.sics.gvod.common.msg.vod.Download;
+import se.sics.gvod.common.event.ReqStatus;
+import se.sics.gvod.common.event.vod.Connection;
+import se.sics.gvod.common.event.vod.Download;
 import se.sics.gvod.common.util.FileMetadata;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.network.serializers.util.FileMetadataSerializer;
@@ -30,8 +30,8 @@ import se.sics.gvod.network.serializers.util.VodDescriptorSerializer;
 import se.sics.gvod.network.serializers.vod.ConnectionSerializer;
 import se.sics.gvod.network.serializers.vod.DownloadSerializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.p2ptoolbox.croupier.CroupierSerializerSetup;
-import se.sics.p2ptoolbox.util.serializer.BasicSerializerSetup;
+import se.sics.ktoolbox.croupier.CroupierSerializerSetup;
+import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>

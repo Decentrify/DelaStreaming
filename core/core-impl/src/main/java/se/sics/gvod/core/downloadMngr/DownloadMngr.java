@@ -22,42 +22,35 @@ import com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.javatuples.Pair;
-import se.sics.p2ptoolbox.util.managedStore.BlockMngr;
-import se.sics.p2ptoolbox.util.managedStore.FileMngr;
-import se.sics.p2ptoolbox.util.managedStore.HashMngr;
-import se.sics.p2ptoolbox.util.managedStore.HashUtil;
-import se.sics.p2ptoolbox.util.managedStore.StorageMngrFactory;
+import se.sics.ktoolbox.util.managedStore.BlockMngr;
+import se.sics.ktoolbox.util.managedStore.FileMngr;
+import se.sics.ktoolbox.util.managedStore.HashMngr;
+import se.sics.ktoolbox.util.managedStore.HashUtil;
+import se.sics.ktoolbox.util.managedStore.StorageMngrFactory;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadMngr {
 
-    private final DownloadMngrConfig config;
+    private final DownloadMngrKCWrapper config;
 
     private final HashMngr hashMngr;
     private final FileMngr fileMngr;
 
-    private final Map<Integer, BlockMngr> queuedBlocks;
-    private final Set<Integer> pendingPieces;
-    private final ArrayList<Integer> nextPieces;
-    private final Set<Integer> pendingHashes;
-    private final ArrayList<Integer> nextHashes;
+    private final Map<Integer, BlockMngr> queuedBlocks = new HashMap<>();
+    private final Set<Integer> pendingPieces = new HashSet<>();
+    private final ArrayList<Integer> nextPieces = new ArrayList<>();
+    private final Set<Integer> pendingHashes = new HashSet<>();
+    private final ArrayList<Integer> nextHashes = new ArrayList<>();
 
-    public DownloadMngr(DownloadMngrConfig config, HashMngr hashMngr, FileMngr fileMngr) {
+    public DownloadMngr(DownloadMngrKCWrapper config, HashMngr hashMngr, FileMngr fileMngr) {
         this.config = config;
         this.hashMngr = hashMngr;
         this.fileMngr = fileMngr;
-
-        this.queuedBlocks = new HashMap<Integer, BlockMngr>();
-        this.pendingPieces = new HashSet<Integer>();
-        this.nextPieces = new ArrayList<Integer>();
-        this.pendingHashes = new HashSet<Integer>();
-        this.nextHashes = new ArrayList<Integer>();
     }
 
     //TODO Alex - fix to return max known block and not just first block
@@ -101,8 +94,8 @@ public class DownloadMngr {
     }
 
     public Pair<Map<Integer, byte[]>, Set<Integer>> hashRequest(Set<Integer> requestedHashes) {
-        Map<Integer, byte[]> hashes = new HashMap<Integer, byte[]>();
-        Set<Integer> missingHashes = new HashSet<Integer>();
+        Map<Integer, byte[]> hashes = new HashMap<>();
+        Set<Integer> missingHashes = new HashSet<>();
         for (Integer hash : requestedHashes) {
             if (hashMngr.hasHash(hash)) {
                 hashes.put(hash, hashMngr.readHash(hash));
@@ -124,7 +117,7 @@ public class DownloadMngr {
     }
 
     private Set<Integer> posToBlockNr(long pos, int size) {
-        Set<Integer> result = new HashSet<Integer>();
+        Set<Integer> result = new HashSet<>();
         int blockNr = (int) (pos / (config.piecesPerBlock * config.pieceSize));
         result.add(blockNr);
         size -= config.piecesPerBlock * config.pieceSize;
@@ -137,8 +130,8 @@ public class DownloadMngr {
     }
 
     public Pair<Set<Integer>, Map<Integer, byte[]>> checkCompleteBlocks() {
-        Set<Integer> completedBlocks = new HashSet<Integer>();
-        Map<Integer, byte[]> resetBlocks = new HashMap<Integer, byte[]>();
+        Set<Integer> completedBlocks = new HashSet<>();
+        Map<Integer, byte[]> resetBlocks = new HashMap<>();
         for (Map.Entry<Integer, BlockMngr> block : queuedBlocks.entrySet()) {
             int blockNr = block.getKey();
             if (!block.getValue().isComplete()) {
@@ -194,7 +187,7 @@ public class DownloadMngr {
         int hashPos = hashMngr.contiguous(0);
 
         if (filePos + 5 * config.minHashAhead > hashPos + pendingHashes.size()) {
-            Set<Integer> except = new HashSet<Integer>();
+            Set<Integer> except = new HashSet<>();
             except.addAll(pendingHashes);
             except.addAll(nextHashes);
             Set<Integer> newNextHashes = hashMngr.nextHashes(config.hashesPerMsg, 0, except);
@@ -232,7 +225,7 @@ public class DownloadMngr {
         if (nextHashes.isEmpty()) {
             return Optional.absent();
         }
-        Set<Integer> downloadHashes = new HashSet<Integer>();
+        Set<Integer> downloadHashes = new HashSet<>();
         for (int i = 0; i < config.hashesPerMsg && !nextHashes.isEmpty(); i++) {
             downloadHashes.add(nextHashes.remove(0));
         }
