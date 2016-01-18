@@ -139,7 +139,6 @@ public class GVoDLauncher extends ComponentDefinition {
                     LOG.warn("multiple ips detected, proceeding with:{}", ip);
                 }
             }
-            config = new HostManagerKCWrapper(config(), ip);
             phase2();
         }
     };

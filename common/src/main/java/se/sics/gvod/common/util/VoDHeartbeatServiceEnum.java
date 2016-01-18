@@ -18,8 +18,6 @@
  */
 package se.sics.gvod.common.util;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 
 /**
  *
@@ -27,11 +25,11 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
  */
 public enum VoDHeartbeatServiceEnum {
 
-    CROUPIER(new IntIdentifier(-1));
+    CROUPIER((byte)255);
     
-    private Identifier serviceId;
+    private byte serviceId;
 
-    VoDHeartbeatServiceEnum(Identifier serviceId) {
+    VoDHeartbeatServiceEnum(byte serviceId) {
         this.serviceId = serviceId;
     }
 
@@ -41,11 +39,11 @@ public enum VoDHeartbeatServiceEnum {
      *
      * @param serviceId
      */
-    public void setServiceId(Identifier serviceId) {
+    public void setServiceId(byte serviceId) {
         this.serviceId = serviceId;
     }
 
-    public Identifier getServiceId() {
+    public byte getServiceId() {
         return serviceId;
     }
 }

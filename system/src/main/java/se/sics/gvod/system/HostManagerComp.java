@@ -53,6 +53,7 @@ public class HostManagerComp extends ComponentDefinition {
     private Positive<Timer> timer = requires(Timer.class);
     private Positive<StatusPort> externalStatus = requires(StatusPort.class);
     private Positive<CCHeartbeatPort> heartbeat = requires(CCHeartbeatPort.class);
+    private Positive<CCOperationPort> ccOp = requires(CCOperationPort.class);
     private Positive<AddressUpdatePort> addressUpdate = requires(AddressUpdatePort.class);
 
     private Component vodMngrComp;
@@ -73,7 +74,8 @@ public class HostManagerComp extends ComponentDefinition {
     private void connectVoDCaracalClient(byte[] schemaId) {
         vodCaracalClientComp = create(VoDCaracalClientComp.class, new VoDCaracalClientInit(new VoDCaracalClientConfig(), schemaId));
         connect(vodCaracalClientComp.getNegative(Timer.class), timer, Channel.TWO_WAY);
-        connect(vodCaracalClientComp.getNegative(StatusPort.class), externalStatus, Channel.TWO_WAY);
+        connect(vodCaracalClientComp.getNegative(CCOperationPort.class), ccOp, Channel.TWO_WAY);
+//        connect(vodCaracalClientComp.getNegative(StatusPort.class), externalStatus, Channel.TWO_WAY);
     }
 
     private void connectVoD() {

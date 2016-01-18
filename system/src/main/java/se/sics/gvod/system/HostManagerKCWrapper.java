@@ -42,10 +42,10 @@ public class HostManagerKCWrapper {
     public final KAddress self;
     public final KAddress caracalClient;
     
-    public HostManagerKCWrapper(Config config, InetAddress selfIp) {
+    public HostManagerKCWrapper(Config config, KAddress self) {
         this.config = config;
         this.systemConfig = new SystemKCWrapper(config);
-        this.self = NatAwareAddressImpl.open(new BasicAddress(selfIp, 30000, systemConfig.id));
+        this.self = self;
         this.caracalClient = self;
     }
 
