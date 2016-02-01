@@ -26,7 +26,7 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 public class VideoInfo {
 
     private String name;
-    private Identifier overlayId;
+    private int overlayId;
 
     public String getName() {
         return name;
@@ -36,11 +36,11 @@ public class VideoInfo {
         this.name = name;
     }
 
-    public Identifier getOverlayId() {
+    public int getOverlayId() {
         return overlayId;
     }
 
-    public void setOverlayId(Identifier overlayId) {
+    public void setOverlayId(int overlayId) {
         this.overlayId = overlayId;
     }
 }

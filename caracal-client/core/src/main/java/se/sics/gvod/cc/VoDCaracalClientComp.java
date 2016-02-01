@@ -66,7 +66,7 @@ public class VoDCaracalClientComp extends ComponentDefinition {
     private UUID sanityCheckTId;
 
     private final Map<Identifier, Operation> activeOps = new HashMap<>();
-    //<opReq, opId>
+    //<opReq, <opId, retries>>
     private final Map<Identifier, Pair<Identifier, Integer>> pendingMsgs = new HashMap<>(); 
 
     public VoDCaracalClientComp(VoDCaracalClientInit init) {
@@ -167,14 +167,14 @@ public class VoDCaracalClientComp extends ComponentDefinition {
         @Override
         public void handle(CCOpResponse e) {
             LOG.trace("{}received:{}", logPrefix, e.opResp);
-            Pair<Identifier, Integer> msgI = pendingMsgs.remove(e.opResp.id);
+            Pair<Identifier, Integer> msgI = pendingMsgs.remove(e.getId());
             if (msgI == null) {
-                LOG.warn("{}weird late response:{}", logPrefix, e.opResp.id);
+                LOG.warn("{}weird late response:{}", logPrefix, e.getId());
                 return;
             }
             Operation op = activeOps.get(msgI.getValue0());
             if (op.handleEvent(e).equals(Operation.HandleStatus.NOT_HANDLED)) {
-                LOG.warn("{}weird unhandled:{} for op:{}", new Object[]{logPrefix, e.opResp.id, msgI.getValue0()});
+                LOG.warn("{}weird unhandled:{} for op:{}", new Object[]{logPrefix, e.getId(), msgI.getValue0()});
                 return;
             }
             processOp(op);

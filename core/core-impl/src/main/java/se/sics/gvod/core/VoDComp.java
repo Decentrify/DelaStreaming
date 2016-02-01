@@ -184,7 +184,7 @@ public class VoDComp extends ComponentDefinition {
 
         @Override
         public void handle(UploadVideo.Request req) {
-            LOG.info("{} - uploa videoName:{} overlay:{}", new Object[]{logPrefix, req.videoName, req.overlayId});
+            LOG.info("{} - upload videoName:{} overlay:{}", new Object[]{logPrefix, req.videoName, req.overlayId});
             String videoNameNoExt = LibraryUtil.removeExtension(req.videoName);
             String videoFilePath = config.videoLibrary + File.separator + req.videoName;
             String hashFilePath = config.videoLibrary + File.separator + videoNameNoExt + ".hash";
