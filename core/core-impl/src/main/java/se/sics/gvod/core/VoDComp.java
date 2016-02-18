@@ -391,10 +391,13 @@ public class VoDComp extends ComponentDefinition {
         Component connMngr = create(ConnMngrComp.class, new ConnMngrComp.ConnMngrInit(connMngrConfig));
         connect(connMngr.getNegative(Network.class), network, new OverlaySelector(overlayId, true), Channel.TWO_WAY);
         connect(connMngr.getNegative(Timer.class), timer, Channel.TWO_WAY);
+        connect(connMngr.getNegative(AddressUpdatePort.class), addressUpdate, Channel.TWO_WAY);
+        
         connect(connMngr.getNegative(CroupierPort.class), croupierVideoOverlay.getPositive(CroupierPort.class), Channel.TWO_WAY);
         connect(connMngr.getPositive(ViewUpdatePort.class), croupierVideoOverlay.getNegative(ViewUpdatePort.class), Channel.TWO_WAY);
-        connect(connMngr.getNegative(AddressUpdatePort.class), addressUpdate, Channel.TWO_WAY);
+        
         connect(connMngr.getPositive(ConnMngrPort.class), downloadMngr.getNegative(ConnMngrPort.class), Channel.TWO_WAY);
+        connect(connMngr.getNegative(UtilityUpdatePort.class), downloadMngr.getPositive(UtilityUpdatePort.class), Channel.TWO_WAY);
 
         trigger(Start.event, connMngr.control());
         return connMngr;

@@ -34,4 +34,9 @@ public class VodDescriptor implements View {
     public VodDescriptor deepCopy() {
         return new VodDescriptor(downloadPos);
     }
+    
+    @Override
+    public String toString() {
+        return "VodDescriptor:<pos:" + downloadPos + ">";
+    }
 }
