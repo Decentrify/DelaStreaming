@@ -101,26 +101,32 @@ public class VoDComp extends ComponentDefinition {
 
     private final VoDKCWrapper config;
     private KAddress self;
+    private final ManagedState selfState;
 
-    //<overlayId, components>
-    private final Map<Identifier, Triplet<Component, Component, Component>> videoComps = new HashMap<>();
-
-    //<reqId, <<fileName, overlayId>, fileMeta>
-    private final Map<Identifier, Pair<Pair<String, Identifier>, FileMetadata>> pendingUploads = new HashMap<>();
-    //<reqId, <<fileName, overlayId>, fileMeta>
-    private final Map<Identifier, Pair<Pair<String, Identifier>, FileMetadata>> pendingDownloads = new HashMap<>();
-    //<reqId, <fileName, overlayId>>
-    private final Map<Identifier, Pair<String, Identifier>> rejoinUploads = new HashMap<>();
-    private final LibraryMngr libMngr;
+    private class ManagedState {
+        //<overlayId, components>
+        final Map<Identifier, Triplet<Component, Component, Component>> videoComps = new HashMap<>();
+        //<reqId, <<fileName, overlayId>, fileMeta>
+        final Map<Identifier, Pair<Pair<String, Identifier>, FileMetadata>> pendingUploads = new HashMap<>();
+        //<reqId, <<fileName, overlayId>, fileMeta>
+        final Map<Identifier, Pair<Pair<String, Identifier>, FileMetadata>> pendingDownloads = new HashMap<>();
+        //<reqId, <fileName, overlayId>>
+        final Map<Identifier, Pair<String, Identifier>> rejoinUploads = new HashMap<>();
+        private final LibraryMngr libMngr;
+        
+        ManagedState(String libFolder) {
+            libMngr = new LibraryMngr(libFolder);
+            libMngr.loadLibrary();
+        }
+    }
 
     public VoDComp(VoDInit init) {
-        this.config = init.config;
-        this.self = init.config.self;
-        this.logPrefix = self.getId() + " ";
+        config = init.config;
+        self = init.config.self;
+        logPrefix = self.getId() + " ";
         LOG.info("{} lib folder: {}", logPrefix, config.videoLibrary);
-        this.libMngr = new LibraryMngr(config.videoLibrary);
-        libMngr.loadLibrary();
-
+        selfState = new ManagedState(config.videoLibrary);
+        
         subscribe(handleStart, control);
         subscribe(handleGetLibraryRequest, myPort);
         subscribe(handleUploadVideoRequest, myPort);
@@ -149,7 +155,7 @@ public class VoDComp extends ComponentDefinition {
     };
 
     private void startUploading() {
-        Map<String, Pair<FileStatus, Identifier>> fileStatusMap = libMngr.getLibrary();
+        Map<String, Pair<FileStatus, Identifier>> fileStatusMap = selfState.libMngr.getLibrary();
 
         for (Map.Entry<String, Pair<FileStatus, Identifier>> e : fileStatusMap.entrySet()) {
             if (e.getValue().getValue0().equals(FileStatus.UPLOADING)) {
@@ -164,7 +170,7 @@ public class VoDComp extends ComponentDefinition {
                 LOG.info("{} - joining upload - fileName:{} overlay:{}", new Object[]{logPrefix, fileName, overlayId});
                 CCJoinOverlay.Request req = new CCJoinOverlay.Request(overlayId);
                 trigger(req, caracalClient);
-                rejoinUploads.put(req.getId(), Pair.with(fileName, overlayId));
+                selfState.rejoinUploads.put(req.getId(), Pair.with(fileName, overlayId));
             }
         }
     }
@@ -174,8 +180,8 @@ public class VoDComp extends ComponentDefinition {
         @Override
         public void handle(GetLibrary.Request req) {
             LOG.trace("{} received get library request", logPrefix);
-            libMngr.reloadLibrary();
-            trigger(req.answer(ResponseStatus.SUCCESS, libMngr.getLibrary()), myPort);
+            selfState.libMngr.reloadLibrary();
+            trigger(req.answer(ResponseStatus.SUCCESS, selfState.libMngr.getLibrary()), myPort);
         }
 
     };
@@ -199,7 +205,7 @@ public class VoDComp extends ComponentDefinition {
                 hashFile.createNewFile();
                 int blockSize = downloadConfig.piecesPerBlock * downloadConfig.pieceSize;
                 HashUtil.makeHashes(videoFilePath, hashFilePath, downloadConfig.hashAlg, blockSize);
-                if (!libMngr.pendingUpload(req.videoName)) {
+                if (!selfState.libMngr.pendingUpload(req.videoName)) {
                     LOG.error("library manager - pending upload denied for file:{}", req.videoName);
 //                    throw new RuntimeException("library manager - pending upload denied for file:" + req.videoName);
                     System.exit(1);
@@ -216,7 +222,7 @@ public class VoDComp extends ComponentDefinition {
             FileMetadata fileMeta = new FileMetadata(req.videoName, (int) videoFile.length(), downloadConfig.pieceSize,
                     downloadConfig.hashAlg, (int) hashFile.length());
             trigger(new CCAddOverlay.Request(req.id, req.overlayId, fileMeta), caracalClient);
-            pendingUploads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), fileMeta));
+            selfState.pendingUploads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), fileMeta));
         }
     };
 
@@ -226,11 +232,11 @@ public class VoDComp extends ComponentDefinition {
         public void handle(CCAddOverlay.Response resp) {
             LOG.trace("{} - {}", new Object[]{logPrefix, resp});
 
-            Pair<Pair<String, Identifier>, FileMetadata> fileInfo = pendingUploads.remove(resp.id);
+            Pair<Pair<String, Identifier>, FileMetadata> fileInfo = selfState.pendingUploads.remove(resp.id);
             String fileName = fileInfo.getValue0().getValue0();
             Identifier overlayId = fileInfo.getValue0().getValue1();
             if (resp.status == ReqStatus.SUCCESS) {
-                if (!libMngr.upload(fileName, overlayId)) {
+                if (!selfState.libMngr.upload(fileName, overlayId)) {
                     LOG.error("{} library manager - upload denied for file:{}", logPrefix, fileName);
                     throw new RuntimeException("library manager - upload denied for file:" + fileName);
                 }
@@ -250,8 +256,8 @@ public class VoDComp extends ComponentDefinition {
         public void handle(DownloadVideo.Request req) {
             LOG.info("{} - {} - videoName:{} overlay:{}", new Object[]{logPrefix, req, req.videoName, req.overlayId});
             trigger(new CCJoinOverlay.Request(req.id, req.overlayId), caracalClient);
-            pendingDownloads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), (FileMetadata) null));
-            if (!libMngr.pendingDownload(req.videoName)) {
+            selfState.pendingDownloads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), (FileMetadata) null));
+            if (!selfState.libMngr.pendingDownload(req.videoName)) {
                 LOG.error("{} library manager - pending download denied for file:{}", logPrefix, req.videoName);
                 throw new RuntimeException("library manager - pending download denied for file:" + req.videoName);
             }
@@ -265,12 +271,12 @@ public class VoDComp extends ComponentDefinition {
             LOG.trace("{} - {}", new Object[]{config.self, resp});
 
             if (resp.status == ReqStatus.SUCCESS) {
-                if (pendingDownloads.containsKey(resp.id)) {
+                if (selfState.pendingDownloads.containsKey(resp.id)) {
 
-                    pendingDownloads.put(resp.id, Pair.with(Pair.with(resp.fileMeta.fileName, resp.overlayId), resp.fileMeta));
+                    selfState.pendingDownloads.put(resp.id, Pair.with(Pair.with(resp.fileMeta.fileName, resp.overlayId), resp.fileMeta));
                     trigger(new CCOverlaySample.Request(resp.overlayId), heartbeat);
-                } else if (rejoinUploads.containsKey(resp.id)) {
-                    Pair<String, Identifier> fileInfo = rejoinUploads.remove(resp.id);
+                } else if (selfState.rejoinUploads.containsKey(resp.id)) {
+                    Pair<String, Identifier> fileInfo = selfState.rejoinUploads.remove(resp.id);
                     startUpload(resp.id, fileInfo.getValue0(), fileInfo.getValue1(), resp.fileMeta);
                 }
             } else {
@@ -293,7 +299,7 @@ public class VoDComp extends ComponentDefinition {
             LOG.trace("{} - {}", new Object[]{config.self, resp});
 
             Identifier overlayId = resp.req.overlayId;
-            Iterator<Map.Entry<Identifier, Pair<Pair<String, Identifier>, FileMetadata>>> it = pendingDownloads.entrySet().iterator();
+            Iterator<Map.Entry<Identifier, Pair<Pair<String, Identifier>, FileMetadata>>> it = selfState.pendingDownloads.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<Identifier, Pair<Pair<String, Identifier>, FileMetadata>> pd = it.next();
                 if (pd.getValue().getValue0().getValue1().equals(overlayId)) {
@@ -310,7 +316,7 @@ public class VoDComp extends ComponentDefinition {
         try {
             Pair<FileMngr, HashMngr> videoMngrs = getUploadVideoMngrs(fileName, fileMeta);
             startVideoComp(reqId, overlayId, fileMeta, videoMngrs, false, new ArrayList<KAddress>());
-            trigger(new GetLibrary.Indication(ResponseStatus.SUCCESS, libMngr.getLibrary()), myPort);
+            trigger(new GetLibrary.Indication(ResponseStatus.SUCCESS, selfState.libMngr.getLibrary()), myPort);
         } catch (IOException ex) {
             LOG.error("{} error writting to disk for video:{}", logPrefix, fileName);
             throw new RuntimeException("error writting to disk for video:" + fileName, ex);
@@ -319,13 +325,13 @@ public class VoDComp extends ComponentDefinition {
 
     private void startDownload(Identifier reqId, String fileName, Identifier overlayId, FileMetadata fileMeta, List<KAddress> bootstrap) {
         try {
-            if (!libMngr.startDownload(fileName, overlayId)) {
+            if (!selfState.libMngr.startDownload(fileName, overlayId)) {
                 LOG.error("{} library manager - download denied for file:{}", logPrefix, fileName);
                 throw new RuntimeException("library manager - download denied for file:" + fileName);
             }
             Pair<FileMngr, HashMngr> videoMngrs = getDownloadVideoMngrs(fileName, fileMeta);
             startVideoComp(reqId, overlayId, fileMeta, videoMngrs, true, bootstrap);
-            trigger(new GetLibrary.Indication(ResponseStatus.SUCCESS, libMngr.getLibrary()), myPort);
+            trigger(new GetLibrary.Indication(ResponseStatus.SUCCESS, selfState.libMngr.getLibrary()), myPort);
         } catch (IOException ex) {
             LOG.error("{} error writting to disk for video:{}", logPrefix, fileName);
             throw new RuntimeException("error writting to disk for video:" + fileName, ex);
@@ -351,7 +357,7 @@ public class VoDComp extends ComponentDefinition {
         Component croupier = connectVideoOverlayCroupier(overlayId, croupierBootstrap);
         Component downloadMngr = connectDownloadMngr(downloadMngrConfig, croupier, hashedFileMngr, download, playPos);
         Component connMngr = connectConnMngr(overlayId, connMngrConfig, croupier, downloadMngr);
-        videoComps.put(overlayId, Triplet.with(connMngr, downloadMngr, croupier));
+        selfState.videoComps.put(overlayId, Triplet.with(connMngr, downloadMngr, croupier));
 
         VideoStreamManager vsMngr = null;
         try {
@@ -365,7 +371,7 @@ public class VoDComp extends ComponentDefinition {
     }
 
     private Component connectVideoOverlayCroupier(Identifier overlayId, List<KAddress> croupierBootstrap) {
-        Component croupier = create(CroupierComp.class, new CroupierComp.CroupierInit(overlayId, (NatAwareAddress)config.self));
+        Component croupier = create(CroupierComp.class, new CroupierComp.CroupierInit(overlayId, (NatAwareAddress) config.self));
         connect(croupier.getNegative(Timer.class), timer, Channel.TWO_WAY);
         connect(croupier.getNegative(Network.class), network, new OverlaySelector(overlayId, true), Channel.TWO_WAY);
         connect(croupier.getNegative(AddressUpdatePort.class), addressUpdate, Channel.TWO_WAY);
@@ -381,7 +387,7 @@ public class VoDComp extends ComponentDefinition {
                 downloadMngrConfig, hashedFileMngr.getValue0(), hashedFileMngr.getValue1(), download, playPos));
         connect(downloadMngr.getNegative(Timer.class), timer, Channel.TWO_WAY);
         connect(downloadMngr.getPositive(UtilityUpdatePort.class), utilityUpdate, Channel.TWO_WAY);
-        //TODO Alex connect croupier to downloadUpdate;
+        //TODO Alex connect croupierPort to downloadUpdate;
         trigger(Start.event, downloadMngr.control());
         return downloadMngr;
     }
@@ -392,10 +398,10 @@ public class VoDComp extends ComponentDefinition {
         connect(connMngr.getNegative(Network.class), network, new OverlaySelector(overlayId, true), Channel.TWO_WAY);
         connect(connMngr.getNegative(Timer.class), timer, Channel.TWO_WAY);
         connect(connMngr.getNegative(AddressUpdatePort.class), addressUpdate, Channel.TWO_WAY);
-        
+
         connect(connMngr.getNegative(CroupierPort.class), croupierVideoOverlay.getPositive(CroupierPort.class), Channel.TWO_WAY);
         connect(connMngr.getPositive(ViewUpdatePort.class), croupierVideoOverlay.getNegative(ViewUpdatePort.class), Channel.TWO_WAY);
-        
+
         connect(connMngr.getPositive(ConnMngrPort.class), downloadMngr.getNegative(ConnMngrPort.class), Channel.TWO_WAY);
         connect(connMngr.getNegative(UtilityUpdatePort.class), downloadMngr.getPositive(UtilityUpdatePort.class), Channel.TWO_WAY);
 
@@ -413,7 +419,7 @@ public class VoDComp extends ComponentDefinition {
 //        PieceTracker hashPieceTracker = new CompletePieceTracker(nrHashPieces);
 //        Storage hashStorage = StorageFactory.getExistingFile(hashFilePath);
 //        HashMngr hashMngr = new CompleteFileMngr(hashStorage, hashPieceTracker);
-        HashMngr hashMngr = StorageMngrFactory.getCompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize, 
+        HashMngr hashMngr = StorageMngrFactory.getCompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize,
                 HashUtil.getHashSize(fileMeta.hashAlg));
 
 //        int filePieces = fileMeta.fileSize / fileMeta.pieceSize + (fileMeta.fileSize % fileMeta.pieceSize == 0 ? 0 : 1);
@@ -422,7 +428,7 @@ public class VoDComp extends ComponentDefinition {
 //        FileMngr fileMngr = new SimpleFileMngr(videoStorage, videoPieceTracker);
         DownloadMngrKCWrapper downloadConfig = config.getDownloadMngrConfig(null);
         int blockSize = downloadConfig.piecesPerBlock * downloadConfig.pieceSize;
-        FileMngr fileMngr = StorageMngrFactory.getCompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize, 
+        FileMngr fileMngr = StorageMngrFactory.getCompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize,
                 downloadConfig.pieceSize);
 
         return Pair.with(fileMngr, hashMngr);
@@ -443,7 +449,7 @@ public class VoDComp extends ComponentDefinition {
 //        PieceTracker hashPieceTracker = new SimplePieceTracker(hashPieces);
 //        Storage hashStorage = StorageFactory.getEmptyFile(hashFilePath, fileMeta.hashFileSize, HashUtil.getHashSize(fileMeta.hashAlg));
 //        FileMngr hashMngr = new SimpleFileMngr(hashStorage, hashPieceTracker);
-        HashMngr hashMngr = StorageMngrFactory.getIncompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize, 
+        HashMngr hashMngr = StorageMngrFactory.getIncompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize,
                 HashUtil.getHashSize(fileMeta.hashAlg));
 
 //        Storage videoStorage = StorageFactory.getEmptyFile(videoFilePath, fileMeta.fileSize, fileMeta.pieceSize);
@@ -452,7 +458,7 @@ public class VoDComp extends ComponentDefinition {
 //        FileMngr fileMngr = new SimpleFileMngr(videoStorage, videoPieceTracker);
         DownloadMngrKCWrapper downloadConfig = config.getDownloadMngrConfig(null);
         int blockSize = downloadConfig.piecesPerBlock * downloadConfig.pieceSize;
-        FileMngr fileMngr = StorageMngrFactory.getIncompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize, 
+        FileMngr fileMngr = StorageMngrFactory.getIncompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize,
                 downloadConfig.pieceSize);
 
         return Pair.with(fileMngr, hashMngr);

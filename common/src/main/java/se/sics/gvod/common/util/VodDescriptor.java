@@ -39,4 +39,28 @@ public class VodDescriptor implements View {
     public String toString() {
         return "VodDescriptor:<pos:" + downloadPos + ">";
     }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 59 * hash + this.downloadPos;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final VodDescriptor other = (VodDescriptor) obj;
+        if (this.downloadPos != other.downloadPos) {
+            return false;
+        }
+        return true;
+    }
+    
+    
 }

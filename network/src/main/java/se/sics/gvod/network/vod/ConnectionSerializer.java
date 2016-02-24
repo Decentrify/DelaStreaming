@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.network.serializers.vod;
+package se.sics.gvod.network.vod;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
@@ -105,7 +105,7 @@ public class ConnectionSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Connection.Update obj = (Connection.Update) o;
-            Serializers.lookupSerializer(UUID.class).toBinary(obj.id, buf);
+            Serializers.toBinary(obj.id, buf);
             Serializers.lookupSerializer(VodDescriptor.class).toBinary(obj.desc, buf);
             buf.writeBoolean(obj.downloadConnection);
         }

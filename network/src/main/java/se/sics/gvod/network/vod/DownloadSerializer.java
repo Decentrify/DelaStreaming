@@ -16,15 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.network.serializers.vod;
+package se.sics.gvod.network.vod;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import se.sics.gvod.common.event.ReqStatus;
 import se.sics.gvod.common.event.vod.Download;
 import se.sics.kompics.network.netty.serialization.Serializer;
@@ -87,8 +87,8 @@ public class DownloadSerializer {
             Serializers.toBinary(obj.overlayId, buf);
             buf.writeInt(obj.pieceId);
             if (obj.status.equals(ReqStatus.SUCCESS)) {
-                buf.writeInt(obj.piece.length);
-                buf.writeBytes(obj.piece);
+                buf.writeInt(obj.piece.array().length);
+                buf.writeBytes(obj.piece.array());
             } else {
                 //nothing
             }
@@ -104,7 +104,7 @@ public class DownloadSerializer {
                 int size = buf.readInt();
                 byte[] piece = new byte[size];
                 buf.readBytes(piece);
-                return new Download.DataResponse(mId, overlayId, status, pieceId, piece);
+                return new Download.DataResponse(mId, overlayId, status, pieceId, ByteBuffer.wrap(piece));
             } else {
                 //nothing
                 return new Download.DataResponse(mId, overlayId, status, pieceId, null);
@@ -129,6 +129,7 @@ public class DownloadSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             Download.HashRequest obj = (Download.HashRequest) o;
             Serializers.toBinary(obj.id, buf);
+            Serializers.toBinary(obj.overlayId, buf);
 
             buf.writeInt(obj.targetPos);
             buf.writeInt(obj.hashes.size());
@@ -140,6 +141,7 @@ public class DownloadSerializer {
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier oId = (Identifier) Serializers.fromBinary(buf, hint);
 
             int targetPos = buf.readInt();
             int nrHashes = buf.readInt();
@@ -147,7 +149,7 @@ public class DownloadSerializer {
             for (int i = 0; i < nrHashes; i++) {
                 hashes.add(buf.readInt());
             }
-            return new Download.HashRequest(mId, targetPos, hashes);
+            return new Download.HashRequest(mId, oId, targetPos, hashes);
         }
 
     }
@@ -169,17 +171,18 @@ public class DownloadSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             Download.HashResponse obj = (Download.HashResponse) o;
             Serializers.toBinary(obj.id, buf);
+            Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(ReqStatus.class).toBinary(obj.status, buf);
 
             buf.writeInt(obj.targetPos);
             buf.writeInt(obj.hashes.size());
             if (obj.hashes.size() > 0) {
-                int hashSize = obj.hashes.values().iterator().next().length;
+                int hashSize = obj.hashes.values().iterator().next().array().length;
                 buf.writeInt(hashSize);
 
-                for (Map.Entry<Integer, byte[]> e : obj.hashes.entrySet()) {
+                for (Map.Entry<Integer, ByteBuffer> e : obj.hashes.entrySet()) {
                     buf.writeInt(e.getKey());
-                    buf.writeBytes(e.getValue());
+                    buf.writeBytes(e.getValue().array());
                 }
             }
 
@@ -192,11 +195,12 @@ public class DownloadSerializer {
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier oId = (Identifier) Serializers.fromBinary(buf, hint);
             ReqStatus status = (ReqStatus) Serializers.lookupSerializer(ReqStatus.class).fromBinary(buf, hint);
 
             int targetPos = buf.readInt();
             int nrHashes = buf.readInt();
-            Map<Integer, byte[]> hashes = new HashMap<Integer, byte[]>();
+            Map<Integer, ByteBuffer> hashes = new HashMap<>();
             if (nrHashes > 0) {
                 int hashSize = buf.readInt();
                 byte[] hash;
@@ -204,7 +208,7 @@ public class DownloadSerializer {
                     int hashId = buf.readInt();
                     hash = new byte[hashSize];
                     buf.readBytes(hash);
-                    hashes.put(hashId, hash);
+                    hashes.put(hashId, ByteBuffer.wrap(hash));
                 }
             }
 
@@ -214,7 +218,7 @@ public class DownloadSerializer {
                 missingHashes.add(buf.readInt());
             }
 
-            return new Download.HashResponse(mId, status, targetPos, hashes, missingHashes);
+            return new Download.HashResponse(mId, oId, status, targetPos, hashes, missingHashes);
         }
     }
 }

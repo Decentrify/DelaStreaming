@@ -18,8 +18,11 @@
  */
 package se.sics.gvod.common.event.vod;
 
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
@@ -57,7 +60,7 @@ public class Download {
             return "Download.DataRequest<" + id + ">";
         }
 
-        public DataResponse success(byte[] piece) {
+        public DataResponse success(ByteBuffer piece) {
             return new DataResponse(this, ReqStatus.SUCCESS, piece);
         }
 
@@ -72,6 +75,36 @@ public class Download {
         public DataResponse busy() {
             return new DataResponse(this, ReqStatus.BUSY, null);
         }
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            hash = 37 * hash + Objects.hashCode(this.id);
+            hash = 37 * hash + Objects.hashCode(this.overlayId);
+            hash = 37 * hash + this.pieceId;
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final DataRequest other = (DataRequest) obj;
+            if (!Objects.equals(this.id, other.id)) {
+                return false;
+            }
+            if (!Objects.equals(this.overlayId, other.overlayId)) {
+                return false;
+            }
+            if (this.pieceId != other.pieceId) {
+                return false;
+            }
+            return true;
+        }
     }
 
     public static class DataResponse implements GVoDEvent {
@@ -80,9 +113,9 @@ public class Download {
         public final Identifier overlayId;
         public final ReqStatus status;
         public final int pieceId;
-        public final byte[] piece;
+        public final ByteBuffer piece;
 
-        public DataResponse(Identifier id, Identifier overlayId, ReqStatus status, int pieceId, byte[] piece) {
+        public DataResponse(Identifier id, Identifier overlayId, ReqStatus status, int pieceId, ByteBuffer piece) {
             this.id = id;
             this.overlayId = overlayId;
             this.status = status;
@@ -90,7 +123,7 @@ public class Download {
             this.piece = piece;
         }
         
-        public DataResponse(DataRequest req, ReqStatus status, byte[] piece) {
+        public DataResponse(DataRequest req, ReqStatus status, ByteBuffer piece) {
             this(req.id, req.overlayId, status, req.pieceId, piece);
         }
         
@@ -103,21 +136,61 @@ public class Download {
         public String toString() {
             return "Download.DataResponse<" + id + ">";
         }
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            hash = 53 * hash + Objects.hashCode(this.id);
+            hash = 53 * hash + Objects.hashCode(this.overlayId);
+            hash = 53 * hash + Objects.hashCode(this.status);
+            hash = 53 * hash + this.pieceId;
+            hash = 53 * hash + Objects.hashCode(this.piece);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final DataResponse other = (DataResponse) obj;
+            if (!Objects.equals(this.id, other.id)) {
+                return false;
+            }
+            if (!Objects.equals(this.overlayId, other.overlayId)) {
+                return false;
+            }
+            if (this.status != other.status) {
+                return false;
+            }
+            if (this.pieceId != other.pieceId) {
+                return false;
+            }
+            if (!Objects.equals(this.piece, other.piece)) {
+                return false;
+            }
+            return true;
+        }
     }
 
     public static class HashRequest implements GVoDEvent {
 
         public final Identifier id;
+        public final Identifier overlayId;
         public final int targetPos;
         public final Set<Integer> hashes;
 
-        public HashRequest(Identifier id, int targetPos, Set<Integer> hashes) {
+        public HashRequest(Identifier id, Identifier overlayId, int targetPos, Set<Integer> hashes) {
             this.id = id;
             this.targetPos = targetPos;
             this.hashes = hashes;
+            this.overlayId = overlayId;
         }
-        public HashRequest(int targetPos, Set<Integer> hashes) {
-            this(UUIDIdentifier.randomId(), targetPos, hashes);
+        public HashRequest(Identifier overlayId, int targetPos, Set<Integer> hashes) {
+            this(UUIDIdentifier.randomId(), overlayId, targetPos, hashes);
             
         }
         
@@ -131,36 +204,72 @@ public class Download {
             return "Download.HashRequest<" + id + ">";
         }
 
-        public HashResponse success(Map<Integer, byte[]> pieces, Set<Integer> missingPieces) {
-            return new HashResponse(this, ReqStatus.SUCCESS, pieces, missingPieces);
+        public HashResponse success(Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+            return new HashResponse(this, ReqStatus.SUCCESS, hashes, missingHashes);
         }
 
         public HashResponse timeout() {
-            return new HashResponse(this, ReqStatus.TIMEOUT, new HashMap<Integer, byte[]>(), hashes);
+            return new HashResponse(this, ReqStatus.TIMEOUT, new HashMap<Integer, ByteBuffer>(), hashes);
         }
 
         public HashResponse busy() {
-            return new HashResponse(this, ReqStatus.BUSY, new HashMap<Integer, byte[]>(), hashes);
+            return new HashResponse(this, ReqStatus.BUSY, new HashMap<Integer, ByteBuffer>(), hashes);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 3;
+            hash = 53 * hash + Objects.hashCode(this.id);
+            hash = 53 * hash + Objects.hashCode(this.overlayId);
+            hash = 53 * hash + this.targetPos;
+            hash = 53 * hash + Objects.hashCode(this.hashes);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final HashRequest other = (HashRequest) obj;
+            if (!Objects.equals(this.id, other.id)) {
+                return false;
+            }
+            if (!Objects.equals(this.overlayId, other.overlayId)) {
+                return false;
+            }
+            if (this.targetPos != other.targetPos) {
+                return false;
+            }
+            if (!Objects.equals(this.hashes, other.hashes)) {
+                return false;
+            }
+            return true;
         }
     }
 
     public static class HashResponse implements GVoDEvent {
         
         public final Identifier id;
+        public final Identifier overlayId;
         public final ReqStatus status;
         public final int targetPos;
-        public final Map<Integer, byte[]> hashes;
+        public final Map<Integer, ByteBuffer> hashes;
         public final Set<Integer> missingHashes;
 
-        public HashResponse(Identifier id, ReqStatus status, int targetPos, Map<Integer, byte[]> hashes, Set<Integer> missingHashes) {
+        public HashResponse(Identifier id, Identifier overlayId, ReqStatus status, int targetPos, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
             this.id = id;
+            this.overlayId = overlayId;
             this.targetPos = targetPos;
             this.status = status;
             this.hashes = hashes;
             this.missingHashes = missingHashes;
         }
-        public HashResponse(HashRequest req, ReqStatus status, Map<Integer, byte[]> hashes, Set<Integer> missingHashes) {
-           this(req.id, status, req.targetPos, hashes, missingHashes);
+        public HashResponse(HashRequest req, ReqStatus status, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+           this(req.id, req.overlayId, status, req.targetPos, hashes, missingHashes);
         }
 
         @Override
@@ -171,6 +280,48 @@ public class Download {
         @Override
         public String toString() {
             return "Download.HashResponse<" + id + ">";
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 97 * hash + Objects.hashCode(this.id);
+            hash = 97 * hash + Objects.hashCode(this.overlayId);
+            hash = 97 * hash + Objects.hashCode(this.status);
+            hash = 97 * hash + this.targetPos;
+            hash = 97 * hash + Objects.hashCode(this.hashes);
+            hash = 97 * hash + Objects.hashCode(this.missingHashes);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final HashResponse other = (HashResponse) obj;
+            if (!Objects.equals(this.id, other.id)) {
+                return false;
+            }
+            if (!Objects.equals(this.overlayId, other.overlayId)) {
+                return false;
+            }
+            if (this.status != other.status) {
+                return false;
+            }
+            if (this.targetPos != other.targetPos) {
+                return false;
+            }
+            if (!Objects.equals(this.hashes, other.hashes)) {
+                return false;
+            }
+            if (!Objects.equals(this.missingHashes, other.missingHashes)) {
+                return false;
+            }
+            return true;
         }
     }
 }

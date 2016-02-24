@@ -19,12 +19,15 @@
 package se.sics.gvod.core.downloadMngr;
 
 import com.google.common.base.Optional;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.javatuples.Pair;
+import org.javatuples.Quartet;
+import org.javatuples.Quintet;
 import se.sics.ktoolbox.util.managedStore.BlockMngr;
 import se.sics.ktoolbox.util.managedStore.FileMngr;
 import se.sics.ktoolbox.util.managedStore.HashMngr;
@@ -54,7 +57,7 @@ public class DownloadMngr {
     }
 
     //TODO Alex - fix to return max known block and not just first block
-    public Optional<byte[]> dataRequest(long readPos, int size) {
+    public Optional<ByteBuffer> dataRequest(long readPos, int size) {
         if (!fileMngr.has(readPos, size)) {
             Set<Integer> targetedBlocks = posToBlockNr(readPos, size);
             for (Integer blockNr : targetedBlocks) {
@@ -68,17 +71,17 @@ public class DownloadMngr {
             }
         }
         byte data[] = fileMngr.read(readPos, size);
-        return Optional.of(data);
+        return Optional.of(ByteBuffer.wrap(data));
     }
     
-    public Optional<byte[]> dataRequest(int pieceId) {
+    public Optional<ByteBuffer> dataRequest(int pieceId) {
         if (fileMngr.hasPiece(pieceId)) {
-            return Optional.of(fileMngr.readPiece(pieceId));
+            return Optional.of(ByteBuffer.wrap(fileMngr.readPiece(pieceId)));
         }
         return Optional.absent();
     }
 
-    public void dataResponse(int pieceId, Optional<byte[]> piece) {
+    public void dataResponse(int pieceId, Optional<ByteBuffer> piece) {
         pendingPieces.remove(pieceId);
         if(!piece.isPresent()) {
             nextPieces.add(pieceId);
@@ -90,15 +93,15 @@ public class DownloadMngr {
             //TODO Alex - logic inconsistency - how to deal with
             throw new RuntimeException("block logic error");
         }
-        block.writePiece(blockPiece.getValue1(), piece.get());
+        block.writePiece(blockPiece.getValue1(), piece.get().array());
     }
 
-    public Pair<Map<Integer, byte[]>, Set<Integer>> hashRequest(Set<Integer> requestedHashes) {
-        Map<Integer, byte[]> hashes = new HashMap<>();
+    public Pair<Map<Integer, ByteBuffer>, Set<Integer>> hashRequest(Set<Integer> requestedHashes) {
+        Map<Integer, ByteBuffer> hashes = new HashMap<>();
         Set<Integer> missingHashes = new HashSet<>();
         for (Integer hash : requestedHashes) {
             if (hashMngr.hasHash(hash)) {
-                hashes.put(hash, hashMngr.readHash(hash));
+                hashes.put(hash, ByteBuffer.wrap(hashMngr.readHash(hash)));
             } else {
                 missingHashes.add(hash);
             }
@@ -106,9 +109,9 @@ public class DownloadMngr {
         return Pair.with(hashes, missingHashes);
     }
 
-    public void hashResponse(Map<Integer, byte[]> hashes, Set<Integer> missingHashes) {
-        for (Map.Entry<Integer, byte[]> hash : hashes.entrySet()) {
-            hashMngr.writeHash(hash.getKey(), hash.getValue());
+    public void hashResponse(Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+        for (Map.Entry<Integer, ByteBuffer> hash : hashes.entrySet()) {
+            hashMngr.writeHash(hash.getKey(), hash.getValue().array());
         }
 
         pendingHashes.removeAll(hashes.keySet());
@@ -129,9 +132,9 @@ public class DownloadMngr {
         return result;
     }
 
-    public Pair<Set<Integer>, Map<Integer, byte[]>> checkCompleteBlocks() {
+    public Pair<Set<Integer>, Map<Integer, ByteBuffer>> checkCompleteBlocks() {
         Set<Integer> completedBlocks = new HashSet<>();
-        Map<Integer, byte[]> resetBlocks = new HashMap<>();
+        Map<Integer, ByteBuffer> resetBlocks = new HashMap<>();
         for (Map.Entry<Integer, BlockMngr> block : queuedBlocks.entrySet()) {
             int blockNr = block.getKey();
             if (!block.getValue().isComplete()) {
@@ -147,7 +150,7 @@ public class DownloadMngr {
                 completedBlocks.add(blockNr);
             } else {
                 //TODO Alex - might need to re-download hash as well
-                resetBlocks.put(blockNr, blockBytes);
+                resetBlocks.put(blockNr, ByteBuffer.wrap(blockBytes));
             }
         }
         for (Integer blockNr : completedBlocks) {
@@ -249,5 +252,12 @@ public class DownloadMngr {
         status += "next hashes:" + nextHashes.size() + " next pieces:" + nextPieces.size() + "\n";
         status += "queued blocks:" + queuedBlocks.keySet();
         return status;
+    }
+    
+    /**
+     * @return <blocks, pendingHashes, nextHashes, pendingPieces, nextPieces>
+     */
+    public Quintet publishState() {
+        return Quintet.with(queuedBlocks.size(), pendingHashes.size(), nextHashes.size(), pendingPieces.size(), nextPieces.size());
     }
 }

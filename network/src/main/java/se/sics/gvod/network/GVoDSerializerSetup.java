@@ -24,11 +24,11 @@ import se.sics.gvod.common.event.vod.Connection;
 import se.sics.gvod.common.event.vod.Download;
 import se.sics.gvod.common.util.FileMetadata;
 import se.sics.gvod.common.util.VodDescriptor;
-import se.sics.gvod.network.serializers.util.FileMetadataSerializer;
-import se.sics.gvod.network.serializers.util.ReqStatusSerializer;
-import se.sics.gvod.network.serializers.util.VodDescriptorSerializer;
-import se.sics.gvod.network.serializers.vod.ConnectionSerializer;
-import se.sics.gvod.network.serializers.vod.DownloadSerializer;
+import se.sics.gvod.network.util.FileMetadataSerializer;
+import se.sics.gvod.network.util.ReqStatusSerializer;
+import se.sics.gvod.network.util.VodDescriptorSerializer;
+import se.sics.gvod.network.vod.ConnectionSerializer;
+import se.sics.gvod.network.vod.DownloadSerializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.croupier.CroupierSerializerSetup;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
@@ -61,14 +61,19 @@ public class GVoDSerializerSetup {
         }
     }
     
-    public static void checkSetup() {
+    public static boolean checkSetup() {
         for (GVoDSerializers gs : GVoDSerializers.values()) {
             if (Serializers.lookupSerializer(gs.serializedClass) == null) {
-                throw new RuntimeException("No serializer for " + gs.serializedClass);
+                return false;
             }
         }
-        BasicSerializerSetup.checkSetup();
-        CroupierSerializerSetup.checkSetup();
+        if(!BasicSerializerSetup.checkSetup()) {
+            return false;
+        }
+        if(!CroupierSerializerSetup.checkSetup()) {
+            return false;
+        }
+        return true;
     }
     
     public static int registerSerializers(int startingId) {

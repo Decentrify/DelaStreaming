@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.core.connMngr;
 
+import se.sics.ktoolbox.util.aggregation.AggregationLevelOption;
 import se.sics.ktoolbox.util.config.KConfigOption;
 
 /**
@@ -30,5 +31,6 @@ public class ConnMngrKConfig {
     public final static KConfigOption.Basic<Integer> piecesPerBlock = new KConfigOption.Basic("vod.video.piecesPerBlock", Integer.class);
     public final static KConfigOption.Basic<Long> updatePeriod = new KConfigOption.Basic("vod.connection.updatePeriod", Long.class);
     public final static KConfigOption.Basic<Long> reqTimeoutPeriod = new KConfigOption.Basic("vod.connection.reqTimeoutPeriod", Long.class);
-
+    public final static AggregationLevelOption aggLevel = new AggregationLevelOption("vod.connection.aggLevel");
+    public final static KConfigOption.Basic<Long> aggPeriod = new KConfigOption.Basic("vod.connection.aggPeriod", Long.class);
 }

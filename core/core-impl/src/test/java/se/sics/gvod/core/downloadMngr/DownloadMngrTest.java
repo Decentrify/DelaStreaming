@@ -23,6 +23,7 @@ import com.google.common.io.Files;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Map;
 import java.util.Random;
@@ -32,6 +33,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.ktoolbox.util.aggregation.AggregationLevel;
 import se.sics.ktoolbox.util.managedStore.FileMngr;
 import se.sics.ktoolbox.util.managedStore.HashMngr;
 import se.sics.ktoolbox.util.managedStore.HashUtil;
@@ -128,7 +130,7 @@ public class DownloadMngrTest {
         File hashFile = new File(hashFilePath);
         long hashFileSize = hashFile.length();
 
-        DownloadMngrKCWrapper config = new DownloadMngrKCWrapper(null, null, null,  -1, -1, pieceSize, piecesPerBlock);
+        DownloadMngrKCWrapper config = new DownloadMngrKCWrapper(null, null, null,  -1, -1, pieceSize, piecesPerBlock, AggregationLevel.NONE, 30000);
         int blockSize = piecesPerBlock * pieceSize;
         HashMngr uploadHashMngr = StorageMngrFactory.getCompleteHashMngr(hashFilePath, hashAlg, hashFileSize, HashUtil.getHashSize(hashAlg));
         FileMngr uploadFileMngr = StorageMngrFactory.getCompleteFileMngr(uploadFilePath, fileSize, blockSize, pieceSize);
@@ -145,7 +147,7 @@ public class DownloadMngrTest {
 //      LOG.info("status file1:{} file2:{} pPieces1:{} pPieces2:{}",
 //                new Object[]{download1FileMngr.contiguous(0), download2FileMngr.contiguous(0), download1.getValue2().size(), download2.getValue2().size()});
         while (!(downloader1.getValue0().isComplete() && downloader2.getValue0().isComplete())) {
-            Pair<Set<Integer>, Map<Integer, byte[]>> blockInfo1 = downloader1.getValue0().checkCompleteBlocks();
+            Pair<Set<Integer>, Map<Integer, ByteBuffer>> blockInfo1 = downloader1.getValue0().checkCompleteBlocks();
             if (blockInfo1.getValue1().size() > 0) {
 //                LOG.info("downloader1 reset:{}", blockInfo1.getValue1().keySet());
             }
@@ -158,7 +160,7 @@ public class DownloadMngrTest {
                 DownloadMngr currentUploader = rand.nextInt(2) == 0 ? uploader : downloader2.getValue0();
                 downloader.download(currentUploader, downloader1);
             }
-            Pair<Set<Integer>, Map<Integer, byte[]>> blockInfo2 = downloader2.getValue0().checkCompleteBlocks();
+            Pair<Set<Integer>, Map<Integer, ByteBuffer>> blockInfo2 = downloader2.getValue0().checkCompleteBlocks();
             if (blockInfo2.getValue1().size() > 0) {
 //                LOG.info("downloader2 reset:{}", blockInfo2.getValue1().keySet());
             }
@@ -211,7 +213,7 @@ public class DownloadMngrTest {
                 windowSize--;
                 Optional<Set<Integer>> reqHash = downloader.getValue0().downloadHash();
                 if (reqHash.isPresent()) {
-                    Pair<Map<Integer, byte[]>, Set<Integer>> respHash = uploader.hashRequest(reqHash.get());
+                    Pair<Map<Integer, ByteBuffer>, Set<Integer>> respHash = uploader.hashRequest(reqHash.get());
                     downloader.getValue0().hashResponse(respHash.getValue0(), respHash.getValue1());
                     if (respHash.getValue0().isEmpty()) {
                         break;
@@ -219,15 +221,15 @@ public class DownloadMngrTest {
                 }
                 Optional<Integer> pieceId = downloader.getValue0().downloadData();
                 if (pieceId.isPresent()) {
-                    Optional<byte[]> piece = uploader.dataRequest(pieceId.get());
+                    Optional<ByteBuffer> piece = uploader.dataRequest(pieceId.get());
                     if (piece.isPresent()) {
                         if (rand.nextDouble() < lossRate) {
                             piece = Optional.absent();
                         } else {
                             if (rand.nextDouble() < corruptionRate) {
-                                byte[] pieceB = piece.get();
+                                byte[] pieceB = piece.get().array();
                                 pieceB[0] = pieceB[0] == 0 ? (byte) 1 : (byte) 0;
-                                piece = Optional.of(pieceB);
+                                piece = Optional.of(ByteBuffer.wrap(pieceB));
                             }
                         }
                     }

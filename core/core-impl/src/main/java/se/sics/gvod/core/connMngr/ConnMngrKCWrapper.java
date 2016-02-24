@@ -20,6 +20,7 @@
 package se.sics.gvod.core.connMngr;
 
 import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.util.aggregation.AggregationLevel;
 import se.sics.ktoolbox.util.config.KConfigHelper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -32,7 +33,7 @@ public class ConnMngrKCWrapper {
     public final long periodicStateCheck = 30000; //30s
     public final long periodicConnUpdate = 1000; //1s
             
-    private final Config config;
+    private final Config configCore;
     public final int defaultMaxPipeline;
     public final KAddress selfAddress;
     public final long updatePeriod;
@@ -40,13 +41,18 @@ public class ConnMngrKCWrapper {
     public final Identifier overlayId;
     public final int piecesPerBlock;
     
+    public final AggregationLevel connMngrAggLevel;
+    public final long connMngrAggPeriod;
+    
     public ConnMngrKCWrapper(Config config, KAddress selfAddress, Identifier overlayId) {
-        this.config = config;
+        this.configCore = config;
         this.selfAddress = selfAddress;
         this.overlayId =  overlayId;
-        this.defaultMaxPipeline = KConfigHelper.read(config, ConnMngrKConfig.defaultMaxPipeline);
-        this.updatePeriod = KConfigHelper.read(config, ConnMngrKConfig.updatePeriod);
-        this.reqTimeoutPeriod = KConfigHelper.read(config, ConnMngrKConfig.reqTimeoutPeriod);
-        this.piecesPerBlock = KConfigHelper.read(config, ConnMngrKConfig.piecesPerBlock);
+        defaultMaxPipeline = KConfigHelper.read(config, ConnMngrKConfig.defaultMaxPipeline);
+        updatePeriod = KConfigHelper.read(config, ConnMngrKConfig.updatePeriod);
+        reqTimeoutPeriod = KConfigHelper.read(config, ConnMngrKConfig.reqTimeoutPeriod);
+        piecesPerBlock = KConfigHelper.read(config, ConnMngrKConfig.piecesPerBlock);
+        connMngrAggLevel = KConfigHelper.read(configCore, ConnMngrKConfig.aggLevel);
+        connMngrAggPeriod = KConfigHelper.read(configCore, ConnMngrKConfig.aggPeriod);
     }
 }

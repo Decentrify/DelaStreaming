@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.common.event.vod;
 
+import java.util.Objects;
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
 import se.sics.gvod.common.util.VodDescriptor;
@@ -55,6 +56,32 @@ public class Connection {
         public Identifier getId() {
             return id;
         }
+
+        @Override
+        public int hashCode() {
+            int hash = 3;
+            hash = 97 * hash + Objects.hashCode(this.id);
+            hash = 97 * hash + Objects.hashCode(this.desc);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final Request other = (Request) obj;
+            if (!Objects.equals(this.id, other.id)) {
+                return false;
+            }
+            if (!Objects.equals(this.desc, other.desc)) {
+                return false;
+            }
+            return true;
+        }
     }
 
     public static class Response implements GVoDEvent {
@@ -76,6 +103,36 @@ public class Connection {
         @Override
         public Identifier getId() {
             return id;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 89 * hash + Objects.hashCode(this.id);
+            hash = 89 * hash + Objects.hashCode(this.status);
+            hash = 89 * hash + Objects.hashCode(this.desc);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final Response other = (Response) obj;
+            if (!Objects.equals(this.id, other.id)) {
+                return false;
+            }
+            if (this.status != other.status) {
+                return false;
+            }
+            if (!Objects.equals(this.desc, other.desc)) {
+                return false;
+            }
+            return true;
         }
     }
 
@@ -99,6 +156,36 @@ public class Connection {
         public Identifier getId() {
             return id;
         }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 79 * hash + Objects.hashCode(this.id);
+            hash = 79 * hash + Objects.hashCode(this.desc);
+            hash = 79 * hash + (this.downloadConnection ? 1 : 0);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final Update other = (Update) obj;
+            if (!Objects.equals(this.id, other.id)) {
+                return false;
+            }
+            if (!Objects.equals(this.desc, other.desc)) {
+                return false;
+            }
+            if (this.downloadConnection != other.downloadConnection) {
+                return false;
+            }
+            return true;
+        }
     }
 
     public static class Close implements GVoDEvent {
@@ -118,6 +205,32 @@ public class Connection {
         @Override
         public Identifier getId() {
             return id;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 5;
+            hash = 59 * hash + Objects.hashCode(this.id);
+            hash = 59 * hash + (this.downloadConnection ? 1 : 0);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final Close other = (Close) obj;
+            if (!Objects.equals(this.id, other.id)) {
+                return false;
+            }
+            if (this.downloadConnection != other.downloadConnection) {
+                return false;
+            }
+            return true;
         }
     }
 }

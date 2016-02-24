@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.core.downloadMngr;
 
+import se.sics.ktoolbox.util.aggregation.AggregationLevelOption;
 import se.sics.ktoolbox.util.config.KConfigOption;
 
 /**
@@ -29,4 +30,6 @@ public class DownloadMngrKConfig {
     public final static KConfigOption.Basic<Integer> pieceSize = new KConfigOption.Basic("vod.video.pieceSize", Integer.class);
     public final static KConfigOption.Basic<Integer> piecesPerBlock = new KConfigOption.Basic("vod.video.piecesPerBlock", Integer.class);
     public final static KConfigOption.Basic<Long> descriptorUpdate = new KConfigOption.Basic("vod.video.descriptorUpdate", Long.class);
+    public final static AggregationLevelOption aggLevel = new AggregationLevelOption("vod.video.aggLevel");
+    public final static KConfigOption.Basic<Long> aggPeriod = new KConfigOption.Basic("vod.video.aggPeriod", Long.class);
 }
