@@ -64,7 +64,7 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.network.basic.DecoratedHeader;
-import se.sics.ktoolbox.util.other.AgingContainer;
+import se.sics.ktoolbox.util.other.AgingAdrContainer;
 import se.sics.ktoolbox.util.update.view.OverlayViewUpdate;
 import se.sics.ktoolbox.util.update.view.ViewUpdatePort;
 
@@ -462,7 +462,7 @@ public class ConnMngrComp extends ComponentDefinition {
             public void handle(CroupierSample<VodDescriptor> event) {
                 if (selfDesc.downloading) {
                     LOG.info("{} received new croupier samples:{}", logPrefix, event.privateSample.size() + event.publicSample.size());
-                    for (AgingContainer<KAddress, VodDescriptor> container : event.publicSample.values()) {
+                    for (AgingAdrContainer<KAddress, VodDescriptor> container : event.publicSample.values()) {
                         LOG.info("{} {} vod descriptor:{}", new Object[]{logPrefix, container.getSource().getId(), container.getContent().downloadPos});
                         if (container.getContent().downloadPos < selfDesc.vodDesc.downloadPos) {
                             continue;
@@ -473,7 +473,7 @@ public class ConnMngrComp extends ComponentDefinition {
                         connTracker.openDownloadConnection(container.getSource());
                     }
 
-                    for (AgingContainer<KAddress, VodDescriptor> container : event.privateSample.values()) {
+                    for (AgingAdrContainer<KAddress, VodDescriptor> container : event.privateSample.values()) {
                         if (container.getContent().downloadPos < selfDesc.vodDesc.downloadPos) {
                             continue;
                         }
