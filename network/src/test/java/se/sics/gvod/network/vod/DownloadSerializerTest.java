@@ -19,6 +19,8 @@
 package se.sics.gvod.network.vod;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.nio.ByteBuffer;
@@ -40,13 +42,14 @@ import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadSerializerTest {
+
     @BeforeClass
     public static void setup() {
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
         serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
     }
-    
+
     @Test
     public void testDataRequest() {
         Serializer serializer = Serializers.lookupSerializer(Download.DataRequest.class);
@@ -57,26 +60,30 @@ public class DownloadSerializerTest {
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Download.DataRequest) serializer.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.pieceId, copy.pieceId);
         Assert.assertEquals(0, copyBuf.readableBytes());
-        
+
         //generic
         buf = Unpooled.buffer();
         Serializers.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
-        copy = (Download.DataRequest)Serializers.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+        copy = (Download.DataRequest) Serializers.fromBinary(copyBuf, Optional.absent());
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.pieceId, copy.pieceId);
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
-    
+
     @Test
     public void testResponse() {
         Serializer serializer = Serializers.lookupSerializer(Download.DataResponse.class);
@@ -84,30 +91,38 @@ public class DownloadSerializerTest {
         ByteBuf buf, copyBuf;
 
         Download.DataRequest aux = new Download.DataRequest(new IntIdentifier(10), 10);
-        original = aux.success(ByteBuffer.wrap(new byte[]{1,2,3,4,5}));
+        original = aux.success(ByteBuffer.wrap(new byte[]{1, 2, 3, 4, 5}));
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Download.DataResponse) serializer.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.status, copy.status);
+        Assert.assertEquals(original.pieceId, copy.pieceId);
+        Assert.assertEquals(original.piece, copy.piece);
         Assert.assertEquals(0, copyBuf.readableBytes());
-        
+
         //generic
         buf = Unpooled.buffer();
         Serializers.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
-        copy = (Download.DataResponse)Serializers.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+        copy = (Download.DataResponse) Serializers.fromBinary(copyBuf, Optional.absent());
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.status, copy.status);
+        Assert.assertEquals(original.pieceId, copy.pieceId);
+        Assert.assertEquals(original.piece, copy.piece);
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
-    
+
     @Test
     public void testHashRequest() {
         Serializer serializer = Serializers.lookupSerializer(Download.HashRequest.class);
@@ -121,26 +136,32 @@ public class DownloadSerializerTest {
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Download.HashRequest) serializer.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.targetPos, copy.targetPos);
+        Assert.assertTrue(Sets.symmetricDifference(original.hashes, copy.hashes).isEmpty());
         Assert.assertEquals(0, copyBuf.readableBytes());
-        
+
         //generic
         buf = Unpooled.buffer();
         Serializers.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
-        copy = (Download.HashRequest)Serializers.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+        copy = (Download.HashRequest) Serializers.fromBinary(copyBuf, Optional.absent());
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.targetPos, copy.targetPos);
+        Assert.assertTrue(Sets.symmetricDifference(original.hashes, copy.hashes).isEmpty());
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
-    
+
     @Test
     public void testHashResponse() {
         Serializer serializer = Serializers.lookupSerializer(Download.HashResponse.class);
@@ -154,34 +175,44 @@ public class DownloadSerializerTest {
         reqHashes.add(13);
         Download.HashRequest aux = new Download.HashRequest(new IntIdentifier(10), 10, reqHashes);
         //serializer
-        
+
         Set<Integer> missingHashes = new HashSet<>();
         missingHashes.add(10);
         missingHashes.add(12);
         Map<Integer, ByteBuffer> hashes = new HashMap<>();
-        hashes.put(11, ByteBuffer.wrap(new byte[]{1,2,3,4}));
-        hashes.put(13, ByteBuffer.wrap(new byte[]{1,1,1,1}));
+        hashes.put(11, ByteBuffer.wrap(new byte[]{1, 2, 3, 4}));
+        hashes.put(13, ByteBuffer.wrap(new byte[]{1, 1, 1, 1}));
         original = aux.success(hashes, missingHashes);
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Download.HashResponse) serializer.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.targetPos, copy.targetPos);
+        Assert.assertEquals(original.status, copy.status);
+        Assert.assertTrue(Sets.symmetricDifference(original.hashes.entrySet(), copy.hashes.entrySet()).isEmpty());
+        Assert.assertTrue(Sets.symmetricDifference(original.missingHashes, copy.missingHashes).isEmpty());
         Assert.assertEquals(0, copyBuf.readableBytes());
-        
+
         //generic
         buf = Unpooled.buffer();
         Serializers.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
-        copy = (Download.HashResponse)Serializers.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+        copy = (Download.HashResponse) Serializers.fromBinary(copyBuf, Optional.absent());
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.targetPos, copy.targetPos);
+        Assert.assertEquals(original.status, copy.status);
+        Assert.assertTrue(Sets.symmetricDifference(original.hashes.entrySet(), copy.hashes.entrySet()).isEmpty());
+        Assert.assertTrue(Sets.symmetricDifference(original.missingHashes, copy.missingHashes).isEmpty());
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
 }

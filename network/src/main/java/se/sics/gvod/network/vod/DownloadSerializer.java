@@ -52,17 +52,17 @@ public class DownloadSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Download.DataRequest obj = (Download.DataRequest) o;
-            Serializers.toBinary(obj.id, buf);
+            Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
             buf.writeInt(obj.pieceId);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
             Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
             int pieceId = buf.readInt();
-            return new Download.DataRequest(mId, overlayId, pieceId);
+            return new Download.DataRequest(eventId, overlayId, pieceId);
         }
     }
 
@@ -82,9 +82,9 @@ public class DownloadSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Download.DataResponse obj = (Download.DataResponse) o;
-            Serializers.toBinary(obj.id, buf);
-            Serializers.lookupSerializer(ReqStatus.class).toBinary(obj.status, buf);
+            Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
+            Serializers.lookupSerializer(ReqStatus.class).toBinary(obj.status, buf);
             buf.writeInt(obj.pieceId);
             if (obj.status.equals(ReqStatus.SUCCESS)) {
                 buf.writeInt(obj.piece.array().length);
@@ -96,18 +96,18 @@ public class DownloadSerializer {
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
-            ReqStatus status = (ReqStatus) Serializers.lookupSerializer(ReqStatus.class).fromBinary(buf, hint);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
             Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
+            ReqStatus status = (ReqStatus) Serializers.lookupSerializer(ReqStatus.class).fromBinary(buf, hint);
             int pieceId = buf.readInt();
             if (status.equals(ReqStatus.SUCCESS)) {
                 int size = buf.readInt();
                 byte[] piece = new byte[size];
                 buf.readBytes(piece);
-                return new Download.DataResponse(mId, overlayId, status, pieceId, ByteBuffer.wrap(piece));
+                return new Download.DataResponse(eventId, overlayId, status, pieceId, ByteBuffer.wrap(piece));
             } else {
                 //nothing
-                return new Download.DataResponse(mId, overlayId, status, pieceId, null);
+                return new Download.DataResponse(eventId, overlayId, status, pieceId, null);
             }
         }
     }
@@ -128,7 +128,7 @@ public class DownloadSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Download.HashRequest obj = (Download.HashRequest) o;
-            Serializers.toBinary(obj.id, buf);
+            Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
 
             buf.writeInt(obj.targetPos);
@@ -140,8 +140,8 @@ public class DownloadSerializer {
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
-            Identifier oId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
 
             int targetPos = buf.readInt();
             int nrHashes = buf.readInt();
@@ -149,7 +149,7 @@ public class DownloadSerializer {
             for (int i = 0; i < nrHashes; i++) {
                 hashes.add(buf.readInt());
             }
-            return new Download.HashRequest(mId, oId, targetPos, hashes);
+            return new Download.HashRequest(eventId, overlayId, targetPos, hashes);
         }
 
     }
@@ -170,7 +170,7 @@ public class DownloadSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Download.HashResponse obj = (Download.HashResponse) o;
-            Serializers.toBinary(obj.id, buf);
+            Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(ReqStatus.class).toBinary(obj.status, buf);
 
@@ -194,8 +194,8 @@ public class DownloadSerializer {
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
-            Identifier oId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
             ReqStatus status = (ReqStatus) Serializers.lookupSerializer(ReqStatus.class).fromBinary(buf, hint);
 
             int targetPos = buf.readInt();
@@ -218,7 +218,7 @@ public class DownloadSerializer {
                 missingHashes.add(buf.readInt());
             }
 
-            return new Download.HashResponse(mId, oId, status, targetPos, hashes, missingHashes);
+            return new Download.HashResponse(eventId, overlayId, status, targetPos, hashes, missingHashes);
         }
     }
 }

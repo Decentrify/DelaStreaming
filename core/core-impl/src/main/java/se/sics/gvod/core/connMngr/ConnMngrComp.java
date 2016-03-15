@@ -539,8 +539,8 @@ public class ConnMngrComp extends ComponentDefinition {
                 }
                 LOG.debug("{} sending hash request:{} to:{}",
                         new Object[]{logPrefix, requestContent.hashes, uploader.getId()});
-                UUID tId = scheduleDownloadHashTimeout(requestContent.id, uploader.getId());
-                uploaderQueue.put(requestContent.id, Pair.with(requestContent, tId));
+                UUID tId = scheduleDownloadHashTimeout(requestContent.eventId, uploader.getId());
+                uploaderQueue.put(requestContent.eventId, Pair.with(requestContent, tId));
                 KHeader<KAddress> requestHeader
                         = new DecoratedHeader(new BasicHeader(selfAdr, uploader, Transport.UDP), overlayId);
                 KContentMsg request = new BasicContentMsg(requestHeader, requestContent);
@@ -566,8 +566,8 @@ public class ConnMngrComp extends ComponentDefinition {
                 }
                 LOG.debug("{} sending data request:{} to:{}",
                         new Object[]{logPrefix, requestContent.pieceId, uploader.getId()});
-                UUID tId = scheduleDownloadDataTimeout(requestContent.id, uploader.getId());
-                uploaderQueue.put(requestContent.id, Pair.with(requestContent, tId));
+                UUID tId = scheduleDownloadDataTimeout(requestContent.eventId, uploader.getId());
+                uploaderQueue.put(requestContent.eventId, Pair.with(requestContent, tId));
                 KHeader<KAddress> requestHeader
                         = new DecoratedHeader(new BasicHeader(selfAdr, uploader, Transport.UDP), overlayId);
                 KContentMsg request = new BasicContentMsg(requestHeader, requestContent);
@@ -671,7 +671,7 @@ public class ConnMngrComp extends ComponentDefinition {
                             LOG.info("{} hash from:{} - posibly late", logPrefix, target.getId());
                             return;
                         }
-                        Pair<Download.HashRequest, UUID> req = uploaderQueue.remove(content.id);
+                        Pair<Download.HashRequest, UUID> req = uploaderQueue.remove(content.eventId);
                         if (req == null) {
                             LOG.debug("{} hash from:{} - posibly late", logPrefix, target.getId());
                             return;
@@ -700,7 +700,7 @@ public class ConnMngrComp extends ComponentDefinition {
                             LOG.info("{} data from:{} - posibly late", logPrefix, target.getId());
                             return;
                         }
-                        Pair<Download.DataRequest, UUID> req = uploaderQueue.remove(content.id);
+                        Pair<Download.DataRequest, UUID> req = uploaderQueue.remove(content.eventId);
                         if (req == null) {
                             LOG.info("{} data from:{} posibly late", logPrefix, target.getId());
                             return;
@@ -796,8 +796,8 @@ public class ConnMngrComp extends ComponentDefinition {
                             return;
                         }
 
-                        if (!pendingUploadingHash.containsKey(content.id)) {
-                            pendingUploadingHash.put(content.id, target.getId());
+                        if (!pendingUploadingHash.containsKey(content.eventId)) {
+                            pendingUploadingHash.put(content.eventId, target.getId());
                             trigger(content, myPort);
                         } else {
                             LOG.warn("{} request already registered", logPrefix);
@@ -820,8 +820,8 @@ public class ConnMngrComp extends ComponentDefinition {
                             return;
                         }
 
-                        if (!pendingUploadingData.containsKey(content.id)) {
-                            pendingUploadingData.put(content.id, target.getId());
+                        if (!pendingUploadingData.containsKey(content.eventId)) {
+                            pendingUploadingData.put(content.eventId, target.getId());
                             trigger(content, myPort);
                         } else {
                             LOG.warn("{} request already registered", logPrefix);
@@ -835,11 +835,11 @@ public class ConnMngrComp extends ComponentDefinition {
             public void handle(Download.HashResponse responseContent) {
                 LOG.debug("{} received local hash response:{}", logPrefix, responseContent.targetPos);
 
-                if (!pendingUploadingHash.containsKey(responseContent.id)) {
+                if (!pendingUploadingHash.containsKey(responseContent.eventId)) {
                     LOG.warn("{} late local hash response, inconsistency");
                     return;
                 }
-                KAddress target = connTracker.getUploadConn(pendingUploadingHash.remove(responseContent.id));
+                KAddress target = connTracker.getUploadConn(pendingUploadingHash.remove(responseContent.eventId));
                 if (target == null) {
                     LOG.warn("{} late local hash response, connection inconsistency");
                     return;
@@ -858,12 +858,12 @@ public class ConnMngrComp extends ComponentDefinition {
             public void handle(Download.DataResponse responseContent) {
                 LOG.debug("{} received local data response:{}", logPrefix, responseContent.pieceId);
 
-                if (!pendingUploadingData.containsKey(responseContent.id)) {
+                if (!pendingUploadingData.containsKey(responseContent.eventId)) {
                     LOG.warn("{} late local data response, inconsistency", logPrefix);
                     return;
                 }
 
-                KAddress target = connTracker.getUploadConn(pendingUploadingData.remove(responseContent.id));
+                KAddress target = connTracker.getUploadConn(pendingUploadingData.remove(responseContent.eventId));
                 if (target == null) {
                     LOG.warn("{} late local data response, connection inconsistency");
                     return;
@@ -901,7 +901,7 @@ public class ConnMngrComp extends ComponentDefinition {
         //fire and forget - if you get a response it is good. you might fire multiple requests to same node..solve duplicate requests on response side
         public void openDownloadConnection(KAddress target) {
             LOG.info("{} opening connection to:{}", logPrefix, target.getId());
-            Connection.Request requestContent = new Connection.Request(UUIDIdentifier.randomId(), selfDesc.vodDesc);
+            Connection.Request requestContent = new Connection.Request(overlayId, selfDesc.vodDesc);
             KHeader<KAddress> requestHeader
                     = new DecoratedHeader(new BasicHeader(selfAdr, target, Transport.UDP), overlayId);
             KContentMsg request = new BasicContentMsg(requestHeader, requestContent);
@@ -979,7 +979,7 @@ public class ConnMngrComp extends ComponentDefinition {
             public void handle(PeriodicConnUpdate event) {
                 LOG.debug("{} connection update", logPrefix);
                 for (KAddress partner : downloadConnections.values()) {
-                    Connection.Update msgContent = new Connection.Update(UUIDIdentifier.randomId(), selfDesc.vodDesc, true);
+                    Connection.Update msgContent = new Connection.Update(overlayId, selfDesc.vodDesc, true);
                     KHeader<KAddress> msgHeader
                             = new DecoratedHeader(new BasicHeader(selfAdr, partner, Transport.UDP), overlayId);
                     KContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
@@ -987,7 +987,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 }
 
                 for (KAddress partner : uploadConnections.values()) {
-                    Connection.Update msgContent = new Connection.Update(UUIDIdentifier.randomId(), selfDesc.vodDesc, false);
+                    Connection.Update msgContent = new Connection.Update(overlayId, selfDesc.vodDesc, false);
                     KHeader<KAddress> msgHeader
                             = new DecoratedHeader(new BasicHeader(selfAdr, partner, Transport.UDP), overlayId);
                     KContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
@@ -1102,7 +1102,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 };
 
         private void sendClose(KAddress target, boolean downloadConnection) {
-            Connection.Close msgContent = new Connection.Close(UUIDIdentifier.randomId(), downloadConnection);
+            Connection.Close msgContent = new Connection.Close(overlayId, downloadConnection);
             KHeader<KAddress> msgHeader
                     = new DecoratedHeader(new BasicHeader(selfAdr, target, Transport.UDP), overlayId);
             KContentMsg msg = new BasicContentMsg(msgHeader, msgContent);

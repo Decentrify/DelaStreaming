@@ -18,219 +18,147 @@
  */
 package se.sics.gvod.common.event.vod;
 
-import java.util.Objects;
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.overlays.OverlayEvent;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class Connection {
 
-    public static class Request implements GVoDEvent {
+    public static class Request implements GVoDEvent, OverlayEvent {
 
-        public final Identifier id;
+        public final Identifier eventId;
+        public final Identifier overlayId;
         public final VodDescriptor desc;
 
-        public Request(Identifier id, VodDescriptor desc) {
-            this.id = id;
+        public Request(Identifier eventId, Identifier overlayId, VodDescriptor desc) {
+            this.eventId = eventId;
+            this.overlayId = overlayId;
             this.desc = desc;
+        }
+        
+        public Request(Identifier overlayId, VodDescriptor desc) {
+            this(UUIDIdentifier.randomId(), overlayId, desc);
         }
 
         @Override
         public String toString() {
-            return "Connect.Request<" + id + ">";
+            return "Connect.Request<" + overlayId + ", " + eventId + ">";
         }
 
-//        public Response fail() {
-//            return new Response(id, ReqStatus.FAIL);
-//        }
-
         public Response accept(VodDescriptor desc) {
-            return new Response(id, ReqStatus.SUCCESS, desc);
+            return new Response(eventId, overlayId, ReqStatus.SUCCESS, desc);
         }
 
         @Override
         public Identifier getId() {
-            return id;
+            return eventId;
         }
 
         @Override
-        public int hashCode() {
-            int hash = 3;
-            hash = 97 * hash + Objects.hashCode(this.id);
-            hash = 97 * hash + Objects.hashCode(this.desc);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final Request other = (Request) obj;
-            if (!Objects.equals(this.id, other.id)) {
-                return false;
-            }
-            if (!Objects.equals(this.desc, other.desc)) {
-                return false;
-            }
-            return true;
+        public Identifier overlayId() {
+            return overlayId;
         }
     }
 
-    public static class Response implements GVoDEvent {
-        public final Identifier id;
+    public static class Response implements GVoDEvent, OverlayEvent {
+
+        public final Identifier eventId;
+        public final Identifier overlayId;
         public final ReqStatus status;
         public final VodDescriptor desc;
-        
-        public Response(Identifier id, ReqStatus status, VodDescriptor desc) {
-            this.id = id;
+
+        public Response(Identifier eventId, Identifier overlayId, ReqStatus status, VodDescriptor desc) {
+            this.eventId = eventId;
+            this.overlayId = overlayId;
             this.status = status;
             this.desc = desc;
         }
 
         @Override
         public String toString() {
-            return "Connect.Response<" + id + "> " + status;
+            return "Connect.Response<" + overlayId + ", " + eventId + "> " + status;
         }
 
         @Override
         public Identifier getId() {
-            return id;
+            return eventId;
         }
 
         @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 89 * hash + Objects.hashCode(this.id);
-            hash = 89 * hash + Objects.hashCode(this.status);
-            hash = 89 * hash + Objects.hashCode(this.desc);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final Response other = (Response) obj;
-            if (!Objects.equals(this.id, other.id)) {
-                return false;
-            }
-            if (this.status != other.status) {
-                return false;
-            }
-            if (!Objects.equals(this.desc, other.desc)) {
-                return false;
-            }
-            return true;
+        public Identifier overlayId() {
+            return overlayId;
         }
     }
 
-    public static class Update implements GVoDEvent {
-        public final Identifier id;
+    public static class Update implements GVoDEvent, OverlayEvent {
+
+        public final Identifier eventId;
+        public final Identifier overlayId;
         public final VodDescriptor desc;
         public final boolean downloadConnection;
 
-        public Update(Identifier id, VodDescriptor desc, boolean downloadConnection) {
-            this.id = id;
+        public Update(Identifier eventId, Identifier overlayId, VodDescriptor desc, boolean downloadConnection) {
+            this.eventId = eventId;
+            this.overlayId = overlayId;
             this.desc = desc;
             this.downloadConnection = downloadConnection;
         }
+        
+        public Update(Identifier overlayId, VodDescriptor desc, boolean downloadConnection) {
+            this(UUIDIdentifier.randomId(), overlayId, desc, downloadConnection);
+        }
 
         @Override
         public String toString() {
-            return "Connect.Update<" + id + ">";
+            return "Connect.Update<" + overlayId + ", " + eventId + ">";
         }
 
         @Override
         public Identifier getId() {
-            return id;
+            return eventId;
         }
 
         @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 79 * hash + Objects.hashCode(this.id);
-            hash = 79 * hash + Objects.hashCode(this.desc);
-            hash = 79 * hash + (this.downloadConnection ? 1 : 0);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final Update other = (Update) obj;
-            if (!Objects.equals(this.id, other.id)) {
-                return false;
-            }
-            if (!Objects.equals(this.desc, other.desc)) {
-                return false;
-            }
-            if (this.downloadConnection != other.downloadConnection) {
-                return false;
-            }
-            return true;
+        public Identifier overlayId() {
+            return overlayId;
         }
     }
 
-    public static class Close implements GVoDEvent {
-        public final Identifier id;
+    public static class Close implements GVoDEvent, OverlayEvent {
+
+        public final Identifier eventId;
+        public final Identifier overlayId;
         public final boolean downloadConnection;
-        
-        public Close(Identifier id, boolean downloadConnection) {
-            this.id = id;
+
+        public Close(Identifier eventId, Identifier overlayId, boolean downloadConnection) {
+            this.eventId = eventId;
+            this.overlayId = overlayId;
             this.downloadConnection = downloadConnection;
+        }
+        
+        public Close(Identifier overlayId, boolean downloadConnection) {
+            this(UUIDIdentifier.randomId(), overlayId, downloadConnection);
         }
 
         @Override
         public String toString() {
-            return "Connect.Close<" + id + ">";
+            return "Connect.Close<" + overlayId + ", " + eventId + ">";
         }
 
         @Override
         public Identifier getId() {
-            return id;
+            return eventId;
         }
 
         @Override
-        public int hashCode() {
-            int hash = 5;
-            hash = 59 * hash + Objects.hashCode(this.id);
-            hash = 59 * hash + (this.downloadConnection ? 1 : 0);
-            return hash;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj == null) {
-                return false;
-            }
-            if (getClass() != obj.getClass()) {
-                return false;
-            }
-            final Close other = (Close) obj;
-            if (!Objects.equals(this.id, other.id)) {
-                return false;
-            }
-            if (this.downloadConnection != other.downloadConnection) {
-                return false;
-            }
-            return true;
+        public Identifier overlayId() {
+            return overlayId;
         }
     }
 }

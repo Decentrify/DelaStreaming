@@ -30,22 +30,21 @@ import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
-import se.sics.ktoolbox.util.network.basic.BasicAddress;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ConnectionSerializerTest {
+
     @BeforeClass
     public static void setup() {
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
         serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
     }
-    
+
     @Test
     public void testRequest() {
         Serializer serializer = Serializers.lookupSerializer(Connection.Request.class);
@@ -56,56 +55,67 @@ public class ConnectionSerializerTest {
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Connection.Request) serializer.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+
+       Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.desc, copy.desc);
         Assert.assertEquals(0, copyBuf.readableBytes());
-        
+
         //generic
         buf = Unpooled.buffer();
         Serializers.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
-        copy = (Connection.Request)Serializers.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+        copy = (Connection.Request) Serializers.fromBinary(copyBuf, Optional.absent());
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.desc, copy.desc);
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
-    
+
     @Test
     public void testResponse() {
         Serializer serializer = Serializers.lookupSerializer(Connection.Response.class);
         Connection.Response original, copy;
         ByteBuf buf, copyBuf;
 
-        original = new Connection.Response(UUIDIdentifier.randomId(), ReqStatus.SUCCESS, new VodDescriptor(100));
+        original = new Connection.Response(UUIDIdentifier.randomId(), UUIDIdentifier.randomId(),
+                ReqStatus.SUCCESS, new VodDescriptor(100));
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Connection.Response) serializer.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.status, copy.status);
+        Assert.assertEquals(original.desc, copy.desc);
         Assert.assertEquals(0, copyBuf.readableBytes());
-        
+
         //generic
         buf = Unpooled.buffer();
         Serializers.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
-        copy = (Connection.Response)Serializers.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+        copy = (Connection.Response) Serializers.fromBinary(copyBuf, Optional.absent());
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.status, copy.status);
+        Assert.assertEquals(original.desc, copy.desc);
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
-    
+
     @Test
     public void testUpdate() {
         Serializer serializer = Serializers.lookupSerializer(Connection.Update.class);
@@ -116,53 +126,63 @@ public class ConnectionSerializerTest {
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Connection.Update) serializer.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.desc, copy.desc);
+        Assert.assertEquals(original.downloadConnection, copy.downloadConnection);
         Assert.assertEquals(0, copyBuf.readableBytes());
-        
+
         //generic
         buf = Unpooled.buffer();
         Serializers.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
-        copy = (Connection.Update)Serializers.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+        copy = (Connection.Update) Serializers.fromBinary(copyBuf, Optional.absent());
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.desc, copy.desc);
+        Assert.assertEquals(original.downloadConnection, copy.downloadConnection);
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
-    
+
     @Test
     public void testClose() {
         Serializer serializer = Serializers.lookupSerializer(Connection.Close.class);
         Connection.Close original, copy;
         ByteBuf buf, copyBuf;
 
-        original = new Connection.Close(UUIDIdentifier.randomId(),true);
+        original = new Connection.Close(UUIDIdentifier.randomId(), true);
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Connection.Close) serializer.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.downloadConnection, copy.downloadConnection);
         Assert.assertEquals(0, copyBuf.readableBytes());
-        
+
         //generic
         buf = Unpooled.buffer();
         Serializers.toBinary(original, buf);
-        
+
         copyBuf = Unpooled.buffer();
         buf.getBytes(0, copyBuf, buf.readableBytes());
-        copy = (Connection.Close)Serializers.fromBinary(copyBuf, Optional.absent());
-        
-        Assert.assertEquals(original, copy);
+        copy = (Connection.Close) Serializers.fromBinary(copyBuf, Optional.absent());
+
+        Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.overlayId, copy.overlayId);
+        Assert.assertEquals(original.downloadConnection, copy.downloadConnection);
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
 }

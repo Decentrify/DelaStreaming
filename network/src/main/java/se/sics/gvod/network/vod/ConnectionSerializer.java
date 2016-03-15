@@ -49,19 +49,22 @@ public class ConnectionSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Connection.Request obj = (Connection.Request) o;
-            Serializers.toBinary(obj.id, buf);
+            Serializers.toBinary(obj.eventId, buf);
+            Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(VodDescriptor.class).toBinary(obj.desc, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
             VodDescriptor desc = (VodDescriptor) Serializers.lookupSerializer(VodDescriptor.class).fromBinary(buf, hint);
-            return new Connection.Request(mId, desc);
+            return new Connection.Request(eventId, overlayId, desc);
         }
     }
 
     public static final class Response implements Serializer {
+
         private final int id;
 
         public Response(int id) {
@@ -76,23 +79,26 @@ public class ConnectionSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Connection.Response obj = (Connection.Response) o;
-            Serializers.toBinary(obj.id, buf);
+            Serializers.toBinary(obj.eventId, buf);
+             Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(ReqStatus.class).toBinary(obj.status, buf);
             Serializers.lookupSerializer(VodDescriptor.class).toBinary(obj.desc, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
             ReqStatus status = (ReqStatus) Serializers.lookupSerializer(ReqStatus.class).fromBinary(buf, hint);
             VodDescriptor desc = (VodDescriptor) Serializers.lookupSerializer(VodDescriptor.class).fromBinary(buf, hint);
-            return new Connection.Response(mId, status, desc);
+            return new Connection.Response(eventId, overlayId, status, desc);
         }
     }
 
     public static final class Update implements Serializer {
+
         private final int id;
-        
+
         public Update(int id) {
             this.id = id;
         }
@@ -105,27 +111,30 @@ public class ConnectionSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Connection.Update obj = (Connection.Update) o;
-            Serializers.toBinary(obj.id, buf);
+            Serializers.toBinary(obj.eventId, buf);
+            Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(VodDescriptor.class).toBinary(obj.desc, buf);
             buf.writeBoolean(obj.downloadConnection);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
             VodDescriptor desc = (VodDescriptor) Serializers.lookupSerializer(VodDescriptor.class).fromBinary(buf, hint);
             boolean connectionType = buf.readBoolean();
-            return new Connection.Update(mId, desc, connectionType);
+            return new Connection.Update(eventId, overlayId, desc, connectionType);
         }
     }
 
     public static final class Close implements Serializer {
+
         private final int id;
-        
+
         public Close(int id) {
             this.id = id;
         }
-        
+
         @Override
         public int identifier() {
             return id;
@@ -134,15 +143,17 @@ public class ConnectionSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Connection.Close obj = (Connection.Close) o;
-            Serializers.toBinary(obj.id, buf);
+            Serializers.toBinary(obj.eventId, buf);
+            Serializers.toBinary(obj.overlayId, buf);
             buf.writeBoolean(obj.downloadConnection);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-             Identifier mId = (Identifier) Serializers.fromBinary(buf, hint);
-             boolean downloadConnection = buf.readBoolean();
-             return new Connection.Close(mId, downloadConnection);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
+            boolean downloadConnection = buf.readBoolean();
+            return new Connection.Close(eventId, overlayId, downloadConnection);
         }
     }
 }
