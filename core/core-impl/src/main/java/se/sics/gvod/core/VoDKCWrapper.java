@@ -18,12 +18,8 @@
  */
 package se.sics.gvod.core;
 
-import se.sics.gvod.core.downloadMngr.DownloadMngrKCWrapper;
-import se.sics.gvod.core.connMngr.ConnMngrKCWrapper;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.config.KConfigHelper;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -31,20 +27,10 @@ import se.sics.ktoolbox.util.network.KAddress;
 public class VoDKCWrapper {
 
     public final Config config;
-    public final KAddress self;
     public final String videoLibrary;
     
-    public VoDKCWrapper(Config config, KAddress self) {
+    public VoDKCWrapper(Config config) {
         this.config = config;
-        this.self = self;
         this.videoLibrary = KConfigHelper.read(config, VoDKConfig.videoLibrary);
-    }
-
-    public DownloadMngrKCWrapper getDownloadMngrConfig(Identifier overlayId) {
-        return new DownloadMngrKCWrapper(config, self, overlayId);
-    }
-
-    public ConnMngrKCWrapper getConnMngrConfig(Identifier overlayId) {
-        return new ConnMngrKCWrapper(config, self, overlayId);
     }
 }

@@ -21,8 +21,6 @@ package se.sics.gvod.core.downloadMngr;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.aggregation.AggregationLevel;
 import se.sics.ktoolbox.util.config.KConfigHelper;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -30,8 +28,6 @@ import se.sics.ktoolbox.util.network.KAddress;
 public class DownloadMngrKCWrapper {
 
     private final Config configCore;
-    public final KAddress selfAddress;
-    public final Identifier overlayId;
     public final int startPieces;
     public final long descriptorUpdate;
     
@@ -46,10 +42,8 @@ public class DownloadMngrKCWrapper {
     public final AggregationLevel downloadMngrAggLevel;
     public final long downloadMngrAggPeriod;
 
-    public DownloadMngrKCWrapper(Config configCore, KAddress selfAddress, Identifier overlayId) {
+    public DownloadMngrKCWrapper(Config configCore) {
         this.configCore = configCore;
-        this.selfAddress = selfAddress;
-        this.overlayId = overlayId;
         startPieces = KConfigHelper.read(configCore, DownloadMngrKConfig.startPieces);
         descriptorUpdate = KConfigHelper.read(configCore, DownloadMngrKConfig.descriptorUpdate);
         pieceSize = KConfigHelper.read(configCore, DownloadMngrKConfig.pieceSize);
@@ -58,17 +52,14 @@ public class DownloadMngrKCWrapper {
         downloadMngrAggPeriod = KConfigHelper.read(configCore, DownloadMngrKConfig.aggPeriod);
     }
     
-    public DownloadMngrKCWrapper(Config configCore, KAddress selfAddress, Identifier overlayId, int startPieces, 
-            long descriptorUpdate, int pieceSize, int piecesPerBlock, 
-            AggregationLevel downloadMngrAggLevel, long downloadMngrAggPeriod) {
+    public DownloadMngrKCWrapper(Config configCore, int startPieces, long descriptorUpdate, int pieceSize, 
+            int piecesPerBlock, AggregationLevel aggLvl, long aggPeriod) {
         this.configCore = configCore;
-        this.selfAddress = selfAddress;
-        this.overlayId = overlayId;
         this.startPieces = startPieces;
         this.descriptorUpdate = descriptorUpdate;
         this.pieceSize = pieceSize;
         this.piecesPerBlock = piecesPerBlock;
-        this.downloadMngrAggLevel = downloadMngrAggLevel;
-        this.downloadMngrAggPeriod = downloadMngrAggPeriod;
+        this.downloadMngrAggLevel = aggLvl;
+        this.downloadMngrAggPeriod = aggPeriod;
     }
 }

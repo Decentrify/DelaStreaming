@@ -39,7 +39,6 @@ import se.sics.gvod.core.connMngr.event.Ready;
 import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
-import se.sics.kompics.Init;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
@@ -56,6 +55,7 @@ import se.sics.ktoolbox.util.address.AddressUpdate;
 import se.sics.ktoolbox.util.address.AddressUpdatePort;
 import se.sics.ktoolbox.util.aggregation.CompTracker;
 import se.sics.ktoolbox.util.aggregation.CompTrackerImpl;
+import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -65,8 +65,8 @@ import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.network.basic.DecoratedHeader;
 import se.sics.ktoolbox.util.other.AgingAdrContainer;
-import se.sics.ktoolbox.util.update.view.OverlayViewUpdate;
-import se.sics.ktoolbox.util.update.view.ViewUpdatePort;
+import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdate;
+import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -76,33 +76,35 @@ public class ConnMngrComp extends ComponentDefinition {
     private static final Logger LOG = LoggerFactory.getLogger(ConnMngrComp.class);
     private String logPrefix;
 
+    //***************************CONNECTIONS************************************
     final Negative<ConnMngrPort> myPort = provides(ConnMngrPort.class);
     final Positive<Network> network = requires(Network.class);
     final Positive<Timer> timer = requires(Timer.class);
-    final Negative<ViewUpdatePort> croupierViewUpdatePort = provides(ViewUpdatePort.class);
+    final Negative<OverlayViewUpdatePort> croupierViewUpdatePort = provides(OverlayViewUpdatePort.class);
     final Positive<CroupierPort> croupierPort = requires(CroupierPort.class);
     final Positive<UtilityUpdatePort> utilityUpdate = requires(UtilityUpdatePort.class);
     final Positive<AddressUpdatePort> addressUpdate = requires(AddressUpdatePort.class);
-
+    //***************************CONFIGURATION**********************************
     private final ConnMngrKCWrapper connMngrConfig;
-    private KAddress self;
-
-    //managed state*************************************************************
+    private final Identifier overlayId;
+    //***************************EXTERNAL STATE*********************************
+    private KAddress selfAdr = null;
+    //***************************INTERNAL STATE*********************************
     private ConnectionTracker connTracker;
     private UploadTracker uploadTracker;
     private DownloadTracker downloadTracker;
-    //**************************************************************************
-    private CompTracker compTracker;
-
+    private LocalVodDescriptor selfDesc;
+    //******************************AUX STATE***********************************
     private UUID periodicISCheckTid = null;
     private UUID periodicConnUpdateTid = null;
+    //******************************TRACKING************************************
+    private CompTracker compTracker;
 
-    private LocalVodDescriptor selfDesc;
-
-    public ConnMngrComp(ConnMngrInit init) {
-        connMngrConfig = init.config;
-        self = connMngrConfig.selfAddress;
-        logPrefix = self.getId() + "<" + connMngrConfig.overlayId + ">";
+    public ConnMngrComp(Init init) {
+        connMngrConfig = new ConnMngrKCWrapper(config());
+        SystemKCWrapper systemConfig = new SystemKCWrapper(config());
+        overlayId = init.overlayId;
+        logPrefix = "<nid:" + systemConfig.id + ", oid:" + overlayId + "> ";
         LOG.info("{} initiating...", logPrefix);
 
         connTracker = new ConnectionTracker();
@@ -111,14 +113,23 @@ public class ConnMngrComp extends ComponentDefinition {
 
         //control
         subscribe(handleStart, control);
-        
+
         //external state update
         subscribe(handleSelfAddressUpdate, addressUpdate);
         subscribe(handleUpdateUtility, utilityUpdate);
-        
+
         //state tracking
         subscribe(handlePeriodicISCheck, timer);
         setCompTracker();
+    }
+
+    public boolean ready() {
+        if (selfAdr == null) {
+            LOG.warn("{}self adr is not defined", logPrefix);
+            return false;
+        }
+
+        return true;
     }
 
     //*****************************CONTROL**************************************
@@ -126,6 +137,7 @@ public class ConnMngrComp extends ComponentDefinition {
         @Override
         public void handle(Start e) {
             LOG.info("{} starting...", logPrefix);
+            trigger(new AddressUpdate.Request(), addressUpdate);
             compTracker.start();
             schedulePeriodicISCheck();
         }
@@ -175,16 +187,62 @@ public class ConnMngrComp extends ComponentDefinition {
             //todo self update
         }
     };
-    
+
     //**************************************************************************
-     private Handler handleSelfAddressUpdate = new Handler<AddressUpdate.Indication>() {
+    private Handler handleSelfAddressUpdate = new Handler<AddressUpdate.Indication>() {
         @Override
         public void handle(AddressUpdate.Indication update) {
-            LOG.info("{}updating self address:{}", logPrefix, update.localAddress);
-            self = update.localAddress;
+            LOG.info("{}updating self address from:{} to:{}",
+                    new Object[]{logPrefix, selfAdr, update.localAddress});
+
+            if (!ready()) {
+                selfAdr = update.localAddress;
+                if (ready()) {
+                    start();
+                }
+            } else {
+                selfAdr = update.localAddress;
+            }
         }
     };
-     
+
+    private Handler<UtilityUpdate> handleUpdateUtility = new Handler<UtilityUpdate>() {
+
+        @Override
+        public void handle(UtilityUpdate update) {
+            LocalVodDescriptor newSelfDesc = new LocalVodDescriptor(new VodDescriptor(update.downloadPos), update.downloading);
+
+            LOG.info("{}update self descriptor from:{} to:{}",
+                    new Object[]{logPrefix, selfDesc, newSelfDesc});
+
+            if (!ready()) {
+                selfDesc = newSelfDesc;
+                if (ready()) {
+                    start();
+                }
+            } else {
+                selfDesc = newSelfDesc;
+            }
+            if (selfDesc.downloading && !update.downloading) {
+                LOG.info("{}download complete - closing download connections", logPrefix);
+                if (!downloadTracker.isEmpty()) {
+                    LOG.warn("{}download tracker not empty at download complete", logPrefix);
+                }
+                downloadTracker.clear();
+                connTracker.cleanCloseDownloadConnections();
+            }
+            trigger(new OverlayViewUpdate.Indication(overlayId, false, selfDesc.vodDesc.deepCopy()), croupierViewUpdatePort);
+        }
+    };
+
+    private void start() {
+        startConnectionTracker();
+        startUploadTracker();
+        if (selfDesc.downloading) {
+            startDownloadTracker();
+        }
+    }
+
     private void startConnectionTracker() {
         subscribe(connTracker.handleConnectionRequest, network);
         subscribe(connTracker.handleConnectionResponse, network);
@@ -211,33 +269,6 @@ public class ConnMngrComp extends ComponentDefinition {
         subscribe(uploadTracker.handleLocalDataResponse, myPort);
     }
 
-    private Handler<UtilityUpdate> handleUpdateUtility = new Handler<UtilityUpdate>() {
-
-        @Override
-        public void handle(UtilityUpdate event) {
-            LOG.debug("{} descriptor update:{}", logPrefix, selfDesc);
-
-            if (selfDesc == null) {
-                startConnectionTracker();
-                startUploadTracker();
-                if (event.downloading) {
-                    startDownloadTracker();
-                }
-            } else {
-                if (selfDesc.downloading && !event.downloading) {
-                    LOG.info("{} download complete - closing download connections", logPrefix);
-                    if (!downloadTracker.isEmpty()) {
-                        LOG.warn("{} download tracker not empty at download complete", logPrefix);
-                    }
-                    downloadTracker.clear();
-                    connTracker.cleanCloseDownloadConnections();
-                }
-            }
-            selfDesc = new LocalVodDescriptor(new VodDescriptor(event.downloadPos), event.downloading);
-            trigger(new OverlayViewUpdate.Indication(UUIDIdentifier.randomId(), false, selfDesc.vodDesc.deepCopy()), croupierViewUpdatePort);
-        }
-    };
-
     //**********************Timeouts*******************************************
     private void schedulePeriodicISCheck() {
         if (periodicISCheckTid != null) {
@@ -261,6 +292,7 @@ public class ConnMngrComp extends ComponentDefinition {
         CancelTimeout ct = new CancelTimeout(periodicISCheckTid);
         trigger(ct, timer);
         periodicISCheckTid = null;
+
     }
 
     public static class PeriodicInternalStateCheck extends Timeout {
@@ -292,6 +324,7 @@ public class ConnMngrComp extends ComponentDefinition {
         CancelTimeout ct = new CancelTimeout(periodicISCheckTid);
         trigger(ct, timer);
         periodicConnUpdateTid = null;
+
     }
 
     public static class PeriodicConnUpdate extends Timeout {
@@ -312,6 +345,7 @@ public class ConnMngrComp extends ComponentDefinition {
     private void cancelDownloadDataTimeout(UUID tid) {
         CancelTimeout ct = new CancelTimeout(tid);
         trigger(ct, timer);
+
     }
 
     public class DownloadDataTimeout extends Timeout {
@@ -337,6 +371,7 @@ public class ConnMngrComp extends ComponentDefinition {
     private void cancelDownloadHashTimeout(UUID tid) {
         CancelTimeout ct = new CancelTimeout(tid);
         trigger(ct, timer);
+
     }
 
     public class DownloadHashTimeout extends Timeout {
@@ -351,13 +386,13 @@ public class ConnMngrComp extends ComponentDefinition {
         }
     }
 
-    //**************************************************************************
-    public static class ConnMngrInit extends Init<ConnMngrComp> {
+//**************************************************************************
+    public static class Init extends se.sics.kompics.Init<ConnMngrComp> {
 
-        public final ConnMngrKCWrapper config;
+        public final Identifier overlayId;
 
-        public ConnMngrInit(ConnMngrKCWrapper config) {
-            this.config = config;
+        public Init(Identifier overlayId) {
+            this.overlayId = overlayId;
         }
     }
 
@@ -507,7 +542,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 UUID tId = scheduleDownloadHashTimeout(requestContent.id, uploader.getId());
                 uploaderQueue.put(requestContent.id, Pair.with(requestContent, tId));
                 KHeader<KAddress> requestHeader
-                        = new DecoratedHeader(new BasicHeader(self, uploader, Transport.UDP), connMngrConfig.overlayId);
+                        = new DecoratedHeader(new BasicHeader(selfAdr, uploader, Transport.UDP), overlayId);
                 KContentMsg request = new BasicContentMsg(requestHeader, requestContent);
                 trigger(request, network);
             }
@@ -534,7 +569,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 UUID tId = scheduleDownloadDataTimeout(requestContent.id, uploader.getId());
                 uploaderQueue.put(requestContent.id, Pair.with(requestContent, tId));
                 KHeader<KAddress> requestHeader
-                        = new DecoratedHeader(new BasicHeader(self, uploader, Transport.UDP), connMngrConfig.overlayId);
+                        = new DecoratedHeader(new BasicHeader(selfAdr, uploader, Transport.UDP), overlayId);
                 KContentMsg request = new BasicContentMsg(requestHeader, requestContent);
                 trigger(request, network);
             }
@@ -811,7 +846,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 }
                 LOG.debug("{} sending hash:{} to:{}", new Object[]{logPrefix, responseContent.targetPos, target.getId()});
                 KHeader<KAddress> responseHeader
-                        = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), connMngrConfig.overlayId);
+                        = new DecoratedHeader(new BasicHeader(selfAdr, target, Transport.UDP), overlayId);
                 KContentMsg response = new BasicContentMsg(responseHeader, responseContent);
                 trigger(response, network);
             }
@@ -835,7 +870,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 }
                 LOG.debug("{} sending data:{} to:{}", new Object[]{logPrefix, responseContent.pieceId, target.getId()});
                 KHeader<KAddress> responseHeader
-                        = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), connMngrConfig.overlayId);
+                        = new DecoratedHeader(new BasicHeader(selfAdr, target, Transport.UDP), overlayId);
                 KContentMsg response = new BasicContentMsg(responseHeader, responseContent);
                 trigger(response, network);
             }
@@ -868,7 +903,7 @@ public class ConnMngrComp extends ComponentDefinition {
             LOG.info("{} opening connection to:{}", logPrefix, target.getId());
             Connection.Request requestContent = new Connection.Request(UUIDIdentifier.randomId(), selfDesc.vodDesc);
             KHeader<KAddress> requestHeader
-                    = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), connMngrConfig.overlayId);
+                    = new DecoratedHeader(new BasicHeader(selfAdr, target, Transport.UDP), overlayId);
             KContentMsg request = new BasicContentMsg(requestHeader, requestContent);
             trigger(request, network);
         }
@@ -946,7 +981,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 for (KAddress partner : downloadConnections.values()) {
                     Connection.Update msgContent = new Connection.Update(UUIDIdentifier.randomId(), selfDesc.vodDesc, true);
                     KHeader<KAddress> msgHeader
-                            = new DecoratedHeader(new BasicHeader(self, partner, Transport.UDP), connMngrConfig.overlayId);
+                            = new DecoratedHeader(new BasicHeader(selfAdr, partner, Transport.UDP), overlayId);
                     KContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
                     trigger(msg, network);
                 }
@@ -954,7 +989,7 @@ public class ConnMngrComp extends ComponentDefinition {
                 for (KAddress partner : uploadConnections.values()) {
                     Connection.Update msgContent = new Connection.Update(UUIDIdentifier.randomId(), selfDesc.vodDesc, false);
                     KHeader<KAddress> msgHeader
-                            = new DecoratedHeader(new BasicHeader(self, partner, Transport.UDP), connMngrConfig.overlayId);
+                            = new DecoratedHeader(new BasicHeader(selfAdr, partner, Transport.UDP), overlayId);
                     KContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
                     trigger(msg, network);
                 }
@@ -981,7 +1016,7 @@ public class ConnMngrComp extends ComponentDefinition {
                         LOG.info("{} accept download connection to:{}", logPrefix, target);
                         Connection.Response responseContent = content.accept(selfDesc.vodDesc);
                         KHeader<KAddress> responseHeader
-                        = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), connMngrConfig.overlayId);
+                        = new DecoratedHeader(new BasicHeader(selfAdr, target, Transport.UDP), overlayId);
                         KContentMsg response = new BasicContentMsg(responseHeader, responseContent);
                         trigger(response, network);
                     }
@@ -1069,7 +1104,7 @@ public class ConnMngrComp extends ComponentDefinition {
         private void sendClose(KAddress target, boolean downloadConnection) {
             Connection.Close msgContent = new Connection.Close(UUIDIdentifier.randomId(), downloadConnection);
             KHeader<KAddress> msgHeader
-                    = new DecoratedHeader(new BasicHeader(self, target, Transport.UDP), connMngrConfig.overlayId);
+                    = new DecoratedHeader(new BasicHeader(selfAdr, target, Transport.UDP), overlayId);
             KContentMsg msg = new BasicContentMsg(msgHeader, msgContent);
             trigger(msg, network);
         }

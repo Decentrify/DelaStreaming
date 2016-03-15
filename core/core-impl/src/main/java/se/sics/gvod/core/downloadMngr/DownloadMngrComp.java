@@ -38,7 +38,6 @@ import se.sics.gvod.core.aggregation.DownloadMngrStatePacket;
 import se.sics.gvod.core.connMngr.ConnMngrComp;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
-import se.sics.kompics.Init;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
@@ -49,6 +48,8 @@ import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.aggregation.CompTracker;
 import se.sics.ktoolbox.util.aggregation.CompTrackerImpl;
+import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.managedStore.FileMngr;
 import se.sics.ktoolbox.util.managedStore.HashMngr;
 
@@ -66,6 +67,7 @@ public class DownloadMngrComp extends ComponentDefinition {
     private Positive<ConnMngrPort> connMngr = requires(ConnMngrPort.class);
 
     private final DownloadMngrKCWrapper downloadMngrConfig;
+    private final Identifier overlayId;
     private boolean downloading;
     private final AtomicInteger playPos; //set by videoStreamManager, read here
 
@@ -76,9 +78,11 @@ public class DownloadMngrComp extends ComponentDefinition {
     private UUID periodicUpdateSelfTId = null;
     private UUID periodicISCheckTId = null;
 
-    public DownloadMngrComp(DownloadMngrInit init) {
-        this.downloadMngrConfig = init.config;
-        this.logPrefix = downloadMngrConfig.selfAddress.getId() + "<" + downloadMngrConfig.overlayId + ">";
+    public DownloadMngrComp(Init init) {
+        downloadMngrConfig = new DownloadMngrKCWrapper(config());
+        SystemKCWrapper systemConfig = new SystemKCWrapper(config());
+        overlayId = init.overlayId;
+        this.logPrefix = "<nid:" + systemConfig.id + ", oid:" + overlayId + ">";
         LOG.info("{} initiating", logPrefix);
 
         this.playPos = init.playPos;
@@ -111,7 +115,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             schedulePeriodicUpdateSelf();
 
             Integer downloadPos = downloadMngr.contiguousBlocks(playPos.get());
-            trigger(new UtilityUpdate(downloadMngrConfig.overlayId, downloading, downloadPos), utilityUpdate);
+            trigger(new UtilityUpdate(overlayId, downloading, downloadPos), utilityUpdate);
             
             compTracker.start();
             schedulePeriodicISCheck();
@@ -184,7 +188,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             int downloadBlockNr = downloadMngr.contiguousBlocks(playBlockNr);
             LOG.info("{} playBlockPos:{} downloadBlockPos:{}",
                     new Object[]{logPrefix, playBlockNr, downloadBlockNr});
-            trigger(new UtilityUpdate(downloadMngrConfig.overlayId, downloading, downloadBlockNr), utilityUpdate);
+            trigger(new UtilityUpdate(overlayId, downloading, downloadBlockNr), utilityUpdate);
 
             if (!downloading) {
                 cancelUpdateSelf();
@@ -318,7 +322,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             return false;
         }
         LOG.trace("{} downloading piece:{}", logPrefix, nextPieceId);
-        trigger(new Download.DataRequest(downloadMngrConfig.overlayId, nextPieceId.get()), connMngr);
+        trigger(new Download.DataRequest(overlayId, nextPieceId.get()), connMngr);
         return true;
     }
 
@@ -329,7 +333,7 @@ public class DownloadMngrComp extends ComponentDefinition {
         }
         int targetPos = Collections.min(nextHashes.get());
         LOG.trace("{} downloading hashes:{} targetPos:{}", new Object[]{logPrefix, nextHashes.get(), targetPos});
-        trigger(new Download.HashRequest(downloadMngrConfig.overlayId, targetPos, nextHashes.get()), connMngr);
+        trigger(new Download.HashRequest(overlayId, targetPos, nextHashes.get()), connMngr);
         return true;
     }
 
@@ -402,16 +406,15 @@ public class DownloadMngrComp extends ComponentDefinition {
     }
     //**************************************************************************
 
-    public static class DownloadMngrInit extends Init<DownloadMngrComp> {
-
-        public final DownloadMngrKCWrapper config;
+    public static class Init extends se.sics.kompics.Init<DownloadMngrComp> {
+        public final Identifier overlayId;
         public final HashMngr hashMngr;
         public final FileMngr fileMngr;
         public final boolean downloader;
         public final AtomicInteger playPos;
 
-        public DownloadMngrInit(DownloadMngrKCWrapper config, FileMngr fileMngr, HashMngr hashMngr, boolean downloader, AtomicInteger playPos) {
-            this.config = config;
+        public Init(Identifier overlayId, FileMngr fileMngr, HashMngr hashMngr, boolean downloader, AtomicInteger playPos) {
+            this.overlayId = overlayId;
             this.hashMngr = hashMngr;
             this.fileMngr = fileMngr;
             this.downloader = downloader;

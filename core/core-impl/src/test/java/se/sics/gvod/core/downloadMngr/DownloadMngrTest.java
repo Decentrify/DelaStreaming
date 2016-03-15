@@ -130,7 +130,7 @@ public class DownloadMngrTest {
         File hashFile = new File(hashFilePath);
         long hashFileSize = hashFile.length();
 
-        DownloadMngrKCWrapper config = new DownloadMngrKCWrapper(null, null, null,  -1, -1, pieceSize, piecesPerBlock, AggregationLevel.NONE, 30000);
+        DownloadMngrKCWrapper config = new DownloadMngrKCWrapper(null, 10, 1000, pieceSize, piecesPerBlock, AggregationLevel.NONE, 30000);
         int blockSize = piecesPerBlock * pieceSize;
         HashMngr uploadHashMngr = StorageMngrFactory.getCompleteHashMngr(hashFilePath, hashAlg, hashFileSize, HashUtil.getHashSize(hashAlg));
         FileMngr uploadFileMngr = StorageMngrFactory.getCompleteFileMngr(uploadFilePath, fileSize, blockSize, pieceSize);

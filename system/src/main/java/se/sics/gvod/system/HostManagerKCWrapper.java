@@ -18,7 +18,6 @@
  */
 package se.sics.gvod.system;
 
-import java.net.InetAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.VoDKCWrapper;
@@ -26,9 +25,6 @@ import se.sics.gvod.manager.VoDManagerKCWrapper;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.network.basic.BasicAddress;
-import se.sics.ktoolbox.util.network.nat.NatAwareAddress;
-import se.sics.ktoolbox.util.network.nat.NatAwareAddressImpl;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -49,31 +45,7 @@ public class HostManagerKCWrapper {
         this.caracalClient = self;
     }
 
-
-//    public DecoratedAddress getCaracalClient() {
-//        return hostConfig.getCaracalClient();
-//    }
-
     public VoDManagerKCWrapper getVoDManagerConfig() {
         return new VoDManagerKCWrapper(config, self);
     }
-
-    public VoDKCWrapper getVoDConfig() {
-        return new VoDKCWrapper(config, self);
-    }
-
-//    public List<Address> getCaracalNodes() {
-//        try {
-//            Config config = hostConfig.getConfig();
-//            ArrayList<Address> cBootstrap = new ArrayList<Address>();
-//            InetAddress ip = InetAddress.getByName(config.getString("caracal.address.ip"));
-//            int port = config.getInt("caracal.address.port");
-//            cBootstrap.add(new Address(ip, port, null));
-//            return cBootstrap;
-//        } catch (ConfigException.Missing ex) {
-//            throw new RuntimeException("Caracal Bootstrap configuration problem - missing config", ex);
-//        } catch (UnknownHostException ex) {
-//            throw new RuntimeException("Caracal Bootstrap configuration problem - bad ip", ex);
-//        }
-//    }
 }

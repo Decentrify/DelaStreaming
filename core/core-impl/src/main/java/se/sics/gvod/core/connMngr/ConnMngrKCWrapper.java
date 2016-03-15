@@ -35,19 +35,15 @@ public class ConnMngrKCWrapper {
             
     private final Config configCore;
     public final int defaultMaxPipeline;
-    public final KAddress selfAddress;
     public final long updatePeriod;
     public final long reqTimeoutPeriod;
-    public final Identifier overlayId;
     public final int piecesPerBlock;
     
     public final AggregationLevel connMngrAggLevel;
     public final long connMngrAggPeriod;
     
-    public ConnMngrKCWrapper(Config config, KAddress selfAddress, Identifier overlayId) {
+    public ConnMngrKCWrapper(Config config) {
         this.configCore = config;
-        this.selfAddress = selfAddress;
-        this.overlayId =  overlayId;
         defaultMaxPipeline = KConfigHelper.read(config, ConnMngrKConfig.defaultMaxPipeline);
         updatePeriod = KConfigHelper.read(config, ConnMngrKConfig.updatePeriod);
         reqTimeoutPeriod = KConfigHelper.read(config, ConnMngrKConfig.reqTimeoutPeriod);
