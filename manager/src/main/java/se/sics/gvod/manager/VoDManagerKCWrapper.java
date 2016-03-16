@@ -21,19 +21,25 @@ package se.sics.gvod.manager;
 
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.config.KConfigHelper;
-import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.overlays.id.OverlayIdRegistry;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class VoDManagerKCWrapper {
-    public final Config config;
-    public final KAddress self;
+    public final Config configCore;
+    public final byte vodOverlayPrefix;
     public final String videoLibrary;
     
-    public VoDManagerKCWrapper(Config config, KAddress self) {
-        this.config = config;
-        this.self = self;
-        this.videoLibrary = KConfigHelper.read(config, VoDManagerKConfig.videoLibrary);
+    public VoDManagerKCWrapper(Config configCore) {
+        this.configCore = configCore;
+        int intPrefix = KConfigHelper.read(configCore, VoDManagerKConfig.vodOverlayPrefix);
+        if(intPrefix > 15) {
+            throw new RuntimeException("Only allow 16 owners 0 - 4bits currently");
+        }
+        byte ownerPrefix = (byte)intPrefix;
+        vodOverlayPrefix = (byte)(ownerPrefix << 4);
+        OverlayIdRegistry.registerPrefix("Vod", vodOverlayPrefix);
+        this.videoLibrary = KConfigHelper.read(configCore, VoDManagerKConfig.videoLibrary);
     }
 }

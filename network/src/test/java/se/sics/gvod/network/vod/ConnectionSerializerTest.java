@@ -60,7 +60,7 @@ public class ConnectionSerializerTest {
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Connection.Request) serializer.fromBinary(copyBuf, Optional.absent());
 
-       Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.eventId, copy.eventId);
         Assert.assertEquals(original.overlayId, copy.overlayId);
         Assert.assertEquals(original.desc, copy.desc);
         Assert.assertEquals(0, copyBuf.readableBytes());

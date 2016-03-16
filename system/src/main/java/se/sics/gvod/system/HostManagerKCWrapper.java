@@ -20,11 +20,7 @@ package se.sics.gvod.system;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.core.VoDKCWrapper;
-import se.sics.gvod.manager.VoDManagerKCWrapper;
 import se.sics.kompics.config.Config;
-import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
-import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -34,18 +30,8 @@ public class HostManagerKCWrapper {
     private static final Logger LOG = LoggerFactory.getLogger("GVoDConfig");
 
     public final Config config;
-    public final SystemKCWrapper systemConfig;
-    public final KAddress self;
-    public final KAddress caracalClient;
     
-    public HostManagerKCWrapper(Config config, KAddress self) {
+    public HostManagerKCWrapper(Config config) {
         this.config = config;
-        this.systemConfig = new SystemKCWrapper(config);
-        this.self = self;
-        this.caracalClient = self;
-    }
-
-    public VoDManagerKCWrapper getVoDManagerConfig() {
-        return new VoDManagerKCWrapper(config, self);
     }
 }

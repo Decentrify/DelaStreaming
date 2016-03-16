@@ -65,7 +65,7 @@ public class DownloadSerializerTest {
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Download.DataRequest) serializer.fromBinary(copyBuf, Optional.absent());
 
-        Assert.assertEquals(original.eventId, copy.eventId);
+         Assert.assertEquals(original.eventId, copy.eventId);
         Assert.assertEquals(original.overlayId, copy.overlayId);
         Assert.assertEquals(original.pieceId, copy.pieceId);
         Assert.assertEquals(0, copyBuf.readableBytes());

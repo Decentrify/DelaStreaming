@@ -42,6 +42,7 @@ import se.sics.ktoolbox.cc.bootstrap.CCOperationPort;
 import se.sics.ktoolbox.croupier.CroupierPort;
 import se.sics.ktoolbox.overlaymngr.OverlayMngrPort;
 import se.sics.ktoolbox.util.address.AddressUpdatePort;
+import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 
 /**
@@ -50,6 +51,7 @@ import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 public class HostManagerComp extends ComponentDefinition {
 
     private static final Logger log = LoggerFactory.getLogger(HostManagerComp.class);
+    private String logPrefix = " ";
 
     private final ExtPort extPorts;
     
@@ -60,8 +62,9 @@ public class HostManagerComp extends ComponentDefinition {
     private final HostManagerKCWrapper config;
 
     public HostManagerComp(HostManagerInit init) {
-        log.debug("starting... - self {}, bootstrap server {}",
-                new Object[]{init.config.self.getId(), init.config.caracalClient});
+        SystemKCWrapper systemConfig = new SystemKCWrapper(config());
+        logPrefix = "<nid:" + systemConfig.id + "> ";
+        log.debug("{}starting...", logPrefix);
         extPorts = init.extPorts;
         config = init.config;
         connectVoDCaracalClient(init.schemaId);
@@ -87,7 +90,7 @@ public class HostManagerComp extends ComponentDefinition {
     }
 
     private void connectVoDMngr(SettableFuture gvodSyncIFuture) {
-        this.vodMngrComp = create(VoDManagerImpl.class, new VoDManagerImpl.VoDManagerInit(config.getVoDManagerConfig()));
+        this.vodMngrComp = create(VoDManagerImpl.class, new VoDManagerImpl.Init());
         gvodSyncIFuture.set(vodMngrComp.getComponent());
         connect(vodMngrComp.getNegative(VoDPort.class), vod.getValue0().getPositive(VoDPort.class), Channel.TWO_WAY);
         connect(vodMngrComp.getNegative(UtilityUpdatePort.class), vod.getValue0().getPositive(UtilityUpdatePort.class), Channel.TWO_WAY);

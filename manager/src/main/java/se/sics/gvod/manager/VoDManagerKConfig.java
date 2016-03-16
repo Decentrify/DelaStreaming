@@ -25,5 +25,6 @@ import se.sics.ktoolbox.util.config.KConfigOption;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class VoDManagerKConfig {
+    public final static KConfigOption.Basic<Integer> vodOverlayPrefix = new KConfigOption.Basic("overlayOwners.vod", Integer.class);
     public final static KConfigOption.Basic<String> videoLibrary = new KConfigOption.Basic("vod.video.library", String.class);
 }
