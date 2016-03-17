@@ -54,7 +54,7 @@ import se.sics.kompics.Stop;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
-import se.sics.ktoolbox.util.overlays.id.OverlayIdHelper;
+import se.sics.ktoolbox.util.identifiable.basic.OverlayIdFactory;
 import se.sics.ktoolbox.videostream.VideoStreamManager;
 import se.sics.ktoolbox.videostream.http.BaseHandler;
 import se.sics.ktoolbox.videostream.http.JwHttpServer;
@@ -201,7 +201,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
         pendingUploads.add(videoInfo.getName());
         byte[] bVidId = new byte[3];
         rand.nextBytes(bVidId);
-        Identifier videoId = OverlayIdHelper.getIntIdentifier(vodMngrConfig.vodOverlayPrefix, OverlayIdHelper.Type.CROUPIER, bVidId);
+        Identifier videoId = OverlayIdFactory.getId(vodMngrConfig.vodOverlayPrefix, OverlayIdFactory.Type.CROUPIER, bVidId);
         LOG.info("{} pending upload:{} with videoId:{}", new Object[]{logPrefix, videoInfo.getName(), videoId});
         opFuture.set(new Result(videoId));
     }
