@@ -67,6 +67,7 @@ import se.sics.ktoolbox.util.managedStore.HashMngr;
 import se.sics.ktoolbox.util.managedStore.HashUtil;
 import se.sics.ktoolbox.util.managedStore.StorageMngrFactory;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
+import se.sics.ktoolbox.util.overlays.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.overlays.EventOverlayIdExtractor;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 import se.sics.ktoolbox.videostream.VideoStreamManager;
@@ -113,7 +114,7 @@ public class VoDComp extends ComponentDefinition {
 
         selfState = new ManagedState(vodConfig.videoLibrary);
         extPorts = init.extPorts;
-        networkEnd = One2NChannel.getChannel(extPorts.networkPort, new EventOverlayIdExtractor());
+        networkEnd = One2NChannel.getChannel(extPorts.networkPort, new MsgOverlayIdExtractor());
         croupierEnd = One2NChannel.getChannel(extPorts.croupierPort, new EventOverlayIdExtractor());
         viewUpdateEnd = One2NChannel.getChannel(extPorts.viewUpdatePort, new EventOverlayIdExtractor());
 
