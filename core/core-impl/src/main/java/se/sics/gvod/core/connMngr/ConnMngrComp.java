@@ -128,6 +128,10 @@ public class ConnMngrComp extends ComponentDefinition {
             LOG.warn("{}self adr is not defined", logPrefix);
             return false;
         }
+        if(selfDesc == null) {
+            LOG.warn("{}self desc is not defined", logPrefix);
+            return false;
+        }
 
         return true;
     }

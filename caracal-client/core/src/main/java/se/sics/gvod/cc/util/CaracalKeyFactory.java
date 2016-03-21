@@ -21,7 +21,7 @@ package se.sics.gvod.cc.util;
 import java.nio.ByteBuffer;
 import se.sics.caracaldb.Key;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.OverlayIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -31,7 +31,11 @@ public class CaracalKeyFactory {
     public static Key getFileMetadataKey(byte[] schemaId, Identifier overlayId) {
         ByteBuffer byteKey = ByteBuffer.allocate(schemaId.length + 4);
         byteKey.put(schemaId);
-        byteKey.putInt(((IntIdentifier)overlayId).id);
+        if(overlayId instanceof OverlayIdentifier) {
+            byteKey.putInt(((OverlayIdentifier)overlayId).getInt());
+        } else {
+            throw new RuntimeException("unexpected Identifier type:" + overlayId.getClass().getName());
+        }
         return new Key(byteKey);
     }
 }

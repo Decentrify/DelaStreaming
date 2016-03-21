@@ -37,6 +37,7 @@ import se.sics.gvod.core.VoDComp;
 import se.sics.gvod.core.util.FileStatus;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.OverlayIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -306,7 +307,7 @@ public class LibraryMngr {
                             throw new RuntimeException("write status file - library logic error - missing overlay");
                         }
                         bw.write(":");
-                        bw.write(fileStatus.getValue().getValue1().toString());
+                        bw.write(((OverlayIdentifier)fileStatus.getValue().getValue1()).getInt());
                         bw.write("\n");
                 }
             }

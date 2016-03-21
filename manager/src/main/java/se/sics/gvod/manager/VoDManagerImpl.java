@@ -53,7 +53,6 @@ import se.sics.kompics.Start;
 import se.sics.kompics.Stop;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.identifiable.basic.OverlayIdFactory;
 import se.sics.ktoolbox.videostream.VideoStreamManager;
 import se.sics.ktoolbox.videostream.http.BaseHandler;
@@ -215,7 +214,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             return;
         }
         videos.put(videoInfo.getName(), FileStatus.PENDING);
-        UploadVideo.Request req = new UploadVideo.Request(videoInfo.getName(), new IntIdentifier(videoInfo.getOverlayId()));
+        UploadVideo.Request req = new UploadVideo.Request(videoInfo.getName(), OverlayIdFactory.fromInt(videoInfo.getOverlayId()));
         trigger(req, vodPort);
         pendingJobs.put(req.id, opFuture);
     }
@@ -229,7 +228,7 @@ public class VoDManagerImpl extends ComponentDefinition implements GVoDSyncI {
             return;
         }
         videos.put(videoInfo.getName(), FileStatus.PENDING);
-        DownloadVideo.Request req = new DownloadVideo.Request(videoInfo.getName(), new IntIdentifier(videoInfo.getOverlayId()));
+        DownloadVideo.Request req = new DownloadVideo.Request(videoInfo.getName(), OverlayIdFactory.fromInt(videoInfo.getOverlayId()));
         trigger(req, vodPort);
         pendingJobs.put(req.id, opFuture);
     }

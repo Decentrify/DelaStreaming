@@ -351,7 +351,7 @@ public class VoDComp extends ComponentDefinition {
 
         Component dMngrComp = create(DownloadMngrComp.class, new DownloadMngrComp.Init(overlayId, 
                 hashedFileMngr.getValue0(), hashedFileMngr.getValue1(), download, playPos));
-        Channel[] dMngrChannels = new Channel[2];
+        Channel[] dMngrChannels = new Channel[4];
         dMngrChannels[0] = connect(dMngrComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
         dMngrChannels[1] = connect(dMngrComp.getNegative(ConnMngrPort.class), connMngrComp.getPositive(ConnMngrPort.class), Channel.TWO_WAY);
         dMngrChannels[2] = connect(dMngrComp.getPositive(UtilityUpdatePort.class), connMngrComp.getNegative(UtilityUpdatePort.class), Channel.TWO_WAY);
