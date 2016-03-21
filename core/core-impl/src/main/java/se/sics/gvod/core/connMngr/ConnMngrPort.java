@@ -18,8 +18,8 @@
  */
 package se.sics.gvod.core.connMngr;
 
-import se.sics.gvod.core.connMngr.msg.Ready;
-import se.sics.gvod.common.msg.vod.Download;
+import se.sics.gvod.common.event.vod.Download;
+import se.sics.gvod.core.connMngr.event.Ready;
 import se.sics.kompics.PortType;
 
 /**

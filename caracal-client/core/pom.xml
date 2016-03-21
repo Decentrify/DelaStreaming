@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>se.sics.gvod</groupId>
+        <artifactId>caracal-client</artifactId>
+        <version>0.0.8-SNAPSHOT</version>
+    </parent>
+    <groupId>se.sics.gvod.cc</groupId>
+    <artifactId>core</artifactId>
+    <name>GVoD CC Core</name>
+    <url>http://maven.apache.org</url>
+  
+    <dependencies>
+        <dependency>
+            <groupId>se.sics.gvod.cc</groupId>
+            <artifactId>api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>se.sics.ktoolbox.cc.bootstrap</groupId>
+            <artifactId>api</artifactId>
+            <version>${ktoolbox.version}</version>
+        </dependency>
+      
+        <dependency>
+            <groupId>se.sics.caracaldb</groupId>
+            <artifactId>caracaldb-core</artifactId>
+            <version>${caracaldb-version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.google.guava</groupId>
+                    <artifactId>guava</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+</project>

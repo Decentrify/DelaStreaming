@@ -19,32 +19,18 @@
 //
 //package se.sics.gvod.system;
 //
+//import com.google.common.util.concurrent.SettableFuture;
 //import se.sics.kompics.Kompics;
+//import se.sics.ktoolbox.ipsolver.msg.GetIp;
 //
 ///**
 // * @author Alex Ormenisan <aaor@sics.se>
 // */
 //
 //public class Main {
-//    public static void runMain() {
-//        (new Thread(new RunMain())).start();
-//    }
-//    
-//    public static class RunMain implements Runnable {
-//
-//        @Override
-//        public void run() {
-//            main(new String[0]);
-//        }
-//    }
-//    
 //    public static void main(String[] args) {
-//        if(args.length == 3) {
-//            boolean download = (args[0].equals("download") ? true : false);
-//            String fileName = args[1];
-//            int overlayId = Integer.parseInt(args[2]);
-//            Launcher.firstCmd = new Launcher.CMD(download, fileName, overlayId);
-//        }
+//        GVoDLauncher.setSyncIFuture(SettableFuture.create());
+//        GVoDLauncher.setIpType(GetIp.NetworkInterfacesMask.PUBLIC);
 //        start();
 //        try {
 //            Kompics.waitForTermination();

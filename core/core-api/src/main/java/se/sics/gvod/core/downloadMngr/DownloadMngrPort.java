@@ -26,7 +26,7 @@ import se.sics.kompics.PortType;
  */
 public class DownloadMngrPort extends PortType {
     {
-        request(Data.Req.class);
-        indication(Data.Resp.class);
+        request(Data.Request.class);
+        indication(Data.Response.class);
     }
 }

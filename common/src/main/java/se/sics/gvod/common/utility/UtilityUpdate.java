@@ -20,16 +20,17 @@
 package se.sics.gvod.common.utility;
 
 import se.sics.kompics.KompicsEvent;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class UtilityUpdate implements KompicsEvent {
-    public final int overlayId;
+    public final Identifier overlayId;
     public final boolean downloading;
     public final int downloadPos;
     
-    public UtilityUpdate(int overlayId, boolean downloading, int downloadPos) {
+    public UtilityUpdate(Identifier overlayId, boolean downloading, int downloadPos) {
         this.overlayId = overlayId;
         this.downloading = downloading;
         this.downloadPos = downloadPos;

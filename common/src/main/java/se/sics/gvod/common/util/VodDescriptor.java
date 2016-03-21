@@ -19,13 +19,48 @@
 
 package se.sics.gvod.common.util;
 
+import se.sics.ktoolbox.util.update.View;
+
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
-public class VodDescriptor {
+public class VodDescriptor implements View {
     public final int downloadPos;
     
     public VodDescriptor(int downloadPosition) {
         this.downloadPos = downloadPosition;
     }
+    
+    public VodDescriptor deepCopy() {
+        return new VodDescriptor(downloadPos);
+    }
+    
+    @Override
+    public String toString() {
+        return "VodDescriptor:<pos:" + downloadPos + ">";
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 59 * hash + this.downloadPos;
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        final VodDescriptor other = (VodDescriptor) obj;
+        if (this.downloadPos != other.downloadPos) {
+            return false;
+        }
+        return true;
+    }
+    
+    
 }

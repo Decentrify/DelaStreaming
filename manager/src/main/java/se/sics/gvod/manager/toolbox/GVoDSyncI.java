@@ -22,6 +22,7 @@ package se.sics.gvod.manager.toolbox;
 import com.google.common.util.concurrent.SettableFuture;
 import java.util.Map;
 import se.sics.gvod.manager.util.FileStatus;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -29,7 +30,7 @@ import se.sics.gvod.manager.util.FileStatus;
 public interface GVoDSyncI {
     public boolean isReady();
     public void getFiles(SettableFuture<Result<Map<String, FileStatus>>> opFuture);
-    public void pendingUpload(VideoInfo videoInfo, SettableFuture<Result<Boolean>> opFuture);
+    public void pendingUpload(VideoInfo videoInfo, SettableFuture<Result<Identifier>> opFuture);
     public void upload(VideoInfo videoInfo, SettableFuture<Result<Boolean>> opFuture);
     public void download(VideoInfo videoInfo, SettableFuture<Result<Boolean>> opFuture);
     public void play(VideoInfo videoInfo, SettableFuture<Result<Integer>> opFuture);

@@ -5,7 +5,7 @@
     <parent>
         <groupId>se.sics.gvod</groupId>
         <artifactId>core</artifactId>
-        <version>0.0.4-SNAPSHOT</version>
+        <version>0.0.8-SNAPSHOT</version>
     </parent>
     <groupId>se.sics.gvod.core</groupId>
     <artifactId>core-impl</artifactId>
@@ -18,15 +18,28 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
-            <groupId>se.sics.gvod.bootstrap</groupId>
-            <artifactId>client</artifactId>
+            <groupId>se.sics.gvod.cc</groupId>
+            <artifactId>api</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>se.sics.ktoolbox.overlaymngr</groupId>
+            <artifactId>api</artifactId>
+            <version>${ktoolbox.version}</version>
         </dependency>
         <dependency>
-            <groupId>se.sics.gvod</groupId>
-            <artifactId>croupier-fake</artifactId>
-            <version>${project.version}</version>
+            <groupId>se.sics.ktoolbox.croupier</groupId>
+            <artifactId>api</artifactId>
+            <version>${ktoolbox.version}</version>
         </dependency>
+        <dependency>
+            <groupId>se.sics.ktoolbox.cc.heartbeat</groupId>
+            <artifactId>api</artifactId>
+            <version>${ktoolbox.version}</version>
+        </dependency>
+        
+        
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>

@@ -22,35 +22,32 @@ import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.javatuples.Pair;
+import org.javatuples.Quartet;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.bootstrap.client.BootstrapClientPort;
-import se.sics.gvod.common.msg.ReqStatus;
-import se.sics.gvod.common.msg.peerMngr.AddOverlay;
-import se.sics.gvod.common.msg.peerMngr.BootstrapGlobal;
-import se.sics.gvod.common.msg.peerMngr.JoinOverlay;
+import se.sics.gvod.cc.VoDCaracalClientPort;
+import se.sics.gvod.cc.event.CCAddOverlay;
+import se.sics.gvod.cc.event.CCJoinOverlay;
+import se.sics.gvod.common.event.ReqStatus;
 import se.sics.gvod.common.util.FileMetadata;
-import se.sics.gvod.common.util.GVoDConfigException;
-import se.sics.gvod.common.util.HashUtil;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
-import se.sics.gvod.croupierfake.CroupierComp;
-import se.sics.gvod.croupierfake.CroupierPort;
 import se.sics.gvod.core.connMngr.ConnMngrComp;
 import se.sics.gvod.core.downloadMngr.DownloadMngrComp;
-import se.sics.gvod.core.downloadMngr.DownloadMngrConfig;
-import se.sics.gvod.core.connMngr.ConnMngrConfig;
+import se.sics.gvod.core.downloadMngr.DownloadMngrKCWrapper;
+import se.sics.gvod.core.connMngr.ConnMngrKCWrapper;
 import se.sics.gvod.core.connMngr.ConnMngrPort;
+import se.sics.gvod.core.event.DownloadVideo;
+import se.sics.gvod.core.event.GetLibrary;
+import se.sics.gvod.core.event.PlayReady;
+import se.sics.gvod.core.event.UploadVideo;
 import se.sics.gvod.core.libraryMngr.LibraryMngr;
-import se.sics.gvod.core.msg.DownloadVideo;
-import se.sics.gvod.core.msg.GetLibrary;
-import se.sics.gvod.core.msg.PlayReady;
-import se.sics.gvod.core.msg.UploadVideo;
+import se.sics.gvod.core.libraryMngr.LibraryUtil;
 import se.sics.gvod.core.util.FileStatus;
 import se.sics.gvod.core.util.ResponseStatus;
+import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -59,15 +56,25 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
-import se.sics.p2ptoolbox.util.filters.IntegerOverlayFilter;
-import se.sics.p2ptoolbox.util.managedStore.FileMngr;
-import se.sics.p2ptoolbox.util.managedStore.HashMngr;
-import se.sics.p2ptoolbox.util.managedStore.StorageMngrFactory;
-import se.sics.p2ptoolbox.videostream.VideoStreamManager;
-import se.sics.p2ptoolbox.videostream.VideoStreamMngrImpl;
+import se.sics.ktoolbox.croupier.CroupierPort;
+import se.sics.ktoolbox.overlaymngr.OverlayMngrPort;
+import se.sics.ktoolbox.overlaymngr.events.OMngrCroupier;
+import se.sics.ktoolbox.util.address.AddressUpdatePort;
+import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.managedStore.FileMngr;
+import se.sics.ktoolbox.util.managedStore.HashMngr;
+import se.sics.ktoolbox.util.managedStore.HashUtil;
+import se.sics.ktoolbox.util.managedStore.StorageMngrFactory;
+import se.sics.ktoolbox.util.network.ports.One2NChannel;
+import se.sics.ktoolbox.util.overlays.MsgOverlayIdExtractor;
+import se.sics.ktoolbox.util.overlays.EventOverlayIdExtractor;
+import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
+import se.sics.ktoolbox.videostream.VideoStreamManager;
+import se.sics.ktoolbox.videostream.VideoStreamMngrImpl;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ * @author Alex Ormenisan <aaor@kth.se>
  */
 public class VoDComp extends ComponentDefinition {
 
@@ -75,42 +82,49 @@ public class VoDComp extends ComponentDefinition {
     public static int noDownloadResume = 0;
 
     private static final Logger LOG = LoggerFactory.getLogger(VoDComp.class);
-
-    Negative<UtilityUpdatePort> utilityUpdate = provides(UtilityUpdatePort.class);
-    Positive<Timer> timer = requires(Timer.class);
-    Positive<Network> network = requires(Network.class);
-    Positive<BootstrapClientPort> bootstrap = requires(BootstrapClientPort.class);
-    Negative<VoDPort> myPort = provides(VoDPort.class);
-
     private final String logPrefix;
+    //*****************************CONNECTIONS**********************************
+    //CONNECT TO
+    //external required ports
+    private final Positive<OverlayMngrPort> omngrPort = requires(OverlayMngrPort.class);
+    private final Positive<VoDCaracalClientPort> caracalClientPort = requires(VoDCaracalClientPort.class);
+    //external providing ports        
+    private final Negative<VoDPort> myPort = provides(VoDPort.class);
+    private final Negative<UtilityUpdatePort> utilityUpdate = provides(UtilityUpdatePort.class);
+    
+    //external provided ports - do NOT connect
+    private final ExtPort extPorts;
+    private One2NChannel<Network> networkEnd;
+    private One2NChannel<CroupierPort> croupierEnd;
+    private One2NChannel<OverlayViewUpdatePort> viewUpdateEnd;
+    //*****************************CONFIGURATION********************************
+    private final SystemKCWrapper systemConfig;
+    private final VoDKCWrapper vodConfig;
+    //***************************INTERNAL STATE*********************************
+    private final ManagedState selfState;
+    //******************************AUX_STATE***********************************
+    //overlayId, <vodPeerReqId, fileName, videoStreamMngr>
+    private final Map<Identifier, Triplet<Identifier, String, VideoStreamManager>> pendingVideoComp = new HashMap<>();
 
-    private final VoDConfig config;
+    public VoDComp(Init init) {
+        systemConfig = new SystemKCWrapper(config());
+        vodConfig = new VoDKCWrapper(config());
+        logPrefix = "<nid:" + systemConfig.id + ">";
+        LOG.info("{}lib folder: {}", logPrefix, vodConfig.videoLibrary);
 
-    private final Map<Integer, Triplet<Component, Component, Component>> videoComps;
-
-    private final Map<UUID, Pair<Pair<String, Integer>, FileMetadata>> pendingUploads;
-    private final Map<UUID, Pair<String, Integer>> pendingDownloads;
-    private final Map<UUID, Pair<String, Integer>> rejoinUploads;
-    private final LibraryMngr libMngr;
-
-    public VoDComp(VoDInit init) {
-        this.config = init.config;
-        this.logPrefix = config.getSelf().toString();
-        LOG.info("{} lib folder: {}", logPrefix, config.getVideoLibrary());
-        this.videoComps = new HashMap<Integer, Triplet<Component, Component, Component>>();
-        this.pendingDownloads = new HashMap<UUID, Pair<String, Integer>>();
-        this.pendingUploads = new HashMap<UUID, Pair<Pair<String, Integer>, FileMetadata>>();
-        this.rejoinUploads = new HashMap<UUID, Pair<String, Integer>>();
-        this.libMngr = new LibraryMngr(config.getVideoLibrary());
-        libMngr.loadLibrary();
+        selfState = new ManagedState(vodConfig.videoLibrary);
+        extPorts = init.extPorts;
+        networkEnd = One2NChannel.getChannel("vod", extPorts.networkPort, new MsgOverlayIdExtractor());
+        croupierEnd = One2NChannel.getChannel("vod", extPorts.croupierPort, new EventOverlayIdExtractor());
+        viewUpdateEnd = One2NChannel.getChannel("vod", extPorts.viewUpdatePort, new EventOverlayIdExtractor());
 
         subscribe(handleStart, control);
-        subscribe(handleBootstrapGlobalResponse, bootstrap);
         subscribe(handleGetLibraryRequest, myPort);
         subscribe(handleUploadVideoRequest, myPort);
         subscribe(handleDownloadVideoRequest, myPort);
-        subscribe(handleAddOverlayResponse, bootstrap);
-        subscribe(handleJoinOverlayResponse, bootstrap);
+        subscribe(handleCroupierConnected, omngrPort);
+        subscribe(handleAddOverlayResponse, caracalClientPort);
+        subscribe(handleJoinOverlayResponse, caracalClientPort);
     }
 
     private Handler handleStart = new Handler<Start>() {
@@ -123,39 +137,33 @@ public class VoDComp extends ComponentDefinition {
     };
 
     private void startUploading() {
-        Map<String, Pair<FileStatus, Integer>> fileStatusMap = libMngr.getLibrary();
+        Map<String, Pair<FileStatus, Identifier>> fileStatusMap = selfState.libMngr.getLibrary();
 
-        for (Map.Entry<String, Pair<FileStatus, Integer>> e : fileStatusMap.entrySet()) {
+        for (Map.Entry<String, Pair<FileStatus, Identifier>> e : fileStatusMap.entrySet()) {
             if (e.getValue().getValue0().equals(FileStatus.UPLOADING)) {
                 String fileName = e.getKey();
-                Integer overlayId = e.getValue().getValue1();
+                Identifier overlayId = e.getValue().getValue1();
                 if (overlayId == null) {
                     LOG.error("{} unexpected null overlayId for video:{}", logPrefix, fileName);
 //                    throw new RuntimeException("unexpected null overlayId for video:" + fileName);
                     System.exit(1);
                 }
 
-                LOG.info("{} - joining upload - fileName:{} overlay:{}", new Object[]{logPrefix, fileName, overlayId});
-                JoinOverlay.Request req = new JoinOverlay.Request(UUID.randomUUID(), overlayId, 0);
-                trigger(req, bootstrap);
-                rejoinUploads.put(req.id, Pair.with(fileName, overlayId));
+                LOG.info("{}joining upload - fileName:{} overlay:{}", new Object[]{logPrefix, fileName, overlayId});
+                CCJoinOverlay.Request req = new CCJoinOverlay.Request(overlayId);
+                trigger(req, caracalClientPort);
+                selfState.rejoinUploads.put(req.getId(), Pair.with(fileName, overlayId));
             }
         }
     }
-
-    public Handler<BootstrapGlobal.Response> handleBootstrapGlobalResponse = new Handler<BootstrapGlobal.Response>() {
-        @Override
-        public void handle(BootstrapGlobal.Response event) {
-        }
-    };
 
     public Handler handleGetLibraryRequest = new Handler<GetLibrary.Request>() {
 
         @Override
         public void handle(GetLibrary.Request req) {
             LOG.trace("{} received get library request", logPrefix);
-            libMngr.reloadLibrary();
-            trigger(new GetLibrary.Response(req.reqId, ResponseStatus.SUCCESS, libMngr.getLibrary()), myPort);
+            selfState.libMngr.reloadLibrary();
+            trigger(req.answer(ResponseStatus.SUCCESS, selfState.libMngr.getLibrary()), myPort);
         }
 
     };
@@ -164,21 +172,22 @@ public class VoDComp extends ComponentDefinition {
 
         @Override
         public void handle(UploadVideo.Request req) {
-            LOG.info("{} - uploa videoName:{} overlay:{}", new Object[]{logPrefix, req.videoName, req.overlayId});
-            String videoNameNoExt = req.videoName.substring(0, req.videoName.indexOf("."));
-            String videoFilePath = config.getVideoLibrary() + File.separator + req.videoName;
-            String hashFilePath = config.getVideoLibrary() + File.separator + videoNameNoExt + ".hash";
+            LOG.info("{} - upload videoName:{} overlay:{}", new Object[]{logPrefix, req.videoName, req.overlayId});
+            String videoNameNoExt = LibraryUtil.removeExtension(req.videoName);
+            String videoFilePath = vodConfig.videoLibrary + File.separator + req.videoName;
+            String hashFilePath = vodConfig.videoLibrary + File.separator + videoNameNoExt + ".hash";
 
             File videoFile = new File(videoFilePath);
             File hashFile = new File(hashFilePath);
             if (hashFile.exists()) {
                 hashFile.delete();
             }
+            DownloadMngrKCWrapper downloadConfig = new DownloadMngrKCWrapper(config());
             try {
                 hashFile.createNewFile();
-                int blockSize = config.getPiecesPerBlock() * config.getPieceSize();
-                HashUtil.makeHashes(videoFilePath, hashFilePath, config.getHashAlg(), blockSize);
-                if (!libMngr.pendingUpload(req.videoName)) {
+                int blockSize = downloadConfig.piecesPerBlock * downloadConfig.pieceSize;
+                HashUtil.makeHashes(videoFilePath, hashFilePath, downloadConfig.hashAlg, blockSize);
+                if (!selfState.libMngr.pendingUpload(req.videoName)) {
                     LOG.error("library manager - pending upload denied for file:{}", req.videoName);
 //                    throw new RuntimeException("library manager - pending upload denied for file:" + req.videoName);
                     System.exit(1);
@@ -192,29 +201,30 @@ public class VoDComp extends ComponentDefinition {
 //                throw new RuntimeException("error writting hash file:" + req.videoName + " to disk", ex);
                 System.exit(1);
             }
-            FileMetadata fileMeta = new FileMetadata(req.videoName, (int) videoFile.length(), config.getPieceSize(), config.getHashAlg(), (int) hashFile.length());
-            trigger(new AddOverlay.Request(req.id, req.overlayId, fileMeta), bootstrap);
-            pendingUploads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), fileMeta));
+            FileMetadata fileMeta = new FileMetadata(req.videoName, (int) videoFile.length(), downloadConfig.pieceSize,
+                    downloadConfig.hashAlg, (int) hashFile.length());
+            trigger(new CCAddOverlay.Request(req.id, req.overlayId, fileMeta), caracalClientPort);
+            selfState.pendingUploads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), fileMeta));
         }
     };
 
-    public Handler<AddOverlay.Response> handleAddOverlayResponse = new Handler<AddOverlay.Response>() {
+    public Handler<CCAddOverlay.Response> handleAddOverlayResponse = new Handler<CCAddOverlay.Response>() {
 
         @Override
-        public void handle(AddOverlay.Response resp) {
+        public void handle(CCAddOverlay.Response resp) {
             LOG.trace("{} - {}", new Object[]{logPrefix, resp});
 
-            Pair<Pair<String, Integer>, FileMetadata> fileInfo = pendingUploads.remove(resp.id);
-            String fileName = fileInfo.getValue0().getValue0();
-            Integer overlayId = fileInfo.getValue0().getValue1();
+            Pair<Pair<String, Identifier>, FileMetadata> fileAux = selfState.pendingUploads.remove(resp.id);
+            Identifier overlayId = fileAux.getValue0().getValue1();
+            FileMetadata fileMeta = fileAux.getValue1();
             if (resp.status == ReqStatus.SUCCESS) {
-                if (!libMngr.upload(fileName, overlayId)) {
-                    LOG.error("{} library manager - upload denied for file:{}", logPrefix, fileName);
-                    throw new RuntimeException("library manager - upload denied for file:" + fileName);
+                if (!selfState.libMngr.upload(fileMeta.fileName, overlayId)) {
+                    LOG.error("{} library manager - upload denied for file:{}", logPrefix, fileMeta.fileName);
+                    throw new RuntimeException("library manager - upload denied for file:" + fileMeta.fileName);
                 }
-                startUpload(resp.id, fileInfo.getValue0().getValue0(), fileInfo.getValue0().getValue1(), fileInfo.getValue1());
+                startUpload(resp.id, overlayId, fileMeta);
             } else {
-                LOG.error("{} error in response message of upload video:{}", logPrefix, fileInfo.getValue0().getValue0());
+                LOG.error("{} error in response message of upload video:{}", logPrefix, fileMeta.fileName);
 //                throw new RuntimeException("error in response message of upload video:" + fileInfo.getValue0().getValue0());
                 System.exit(1);
             }
@@ -226,114 +236,83 @@ public class VoDComp extends ComponentDefinition {
         @Override
         public void handle(DownloadVideo.Request req) {
             LOG.info("{} - {} - videoName:{} overlay:{}", new Object[]{logPrefix, req, req.videoName, req.overlayId});
-            trigger(new JoinOverlay.Request(req.id, req.overlayId, noDownloadResume), bootstrap);
-            pendingDownloads.put(req.id, Pair.with(req.videoName, req.overlayId));
-            if (!libMngr.pendingDownload(req.videoName)) {
+            trigger(new CCJoinOverlay.Request(req.id, req.overlayId), caracalClientPort);
+            selfState.pendingDownloads.put(req.id, Pair.with(Pair.with(req.videoName, req.overlayId), (FileMetadata) null));
+            if (!selfState.libMngr.pendingDownload(req.videoName)) {
                 LOG.error("{} library manager - pending download denied for file:{}", logPrefix, req.videoName);
                 throw new RuntimeException("library manager - pending download denied for file:" + req.videoName);
             }
         }
     };
 
-    public Handler<JoinOverlay.Response> handleJoinOverlayResponse = new Handler<JoinOverlay.Response>() {
+    public Handler<CCJoinOverlay.Response> handleJoinOverlayResponse = new Handler<CCJoinOverlay.Response>() {
 
         @Override
-        public void handle(JoinOverlay.Response resp) {
-            LOG.trace("{} - {}", new Object[]{config.getSelf(), resp});
+        public void handle(CCJoinOverlay.Response resp) {
+            LOG.trace("{} - {}", new Object[]{logPrefix, resp});
 
             if (resp.status == ReqStatus.SUCCESS) {
-                if (pendingDownloads.containsKey(resp.id)) {
-                    Pair<String, Integer> fileInfo = pendingDownloads.remove(resp.id);
-                    startDownload(resp.id, fileInfo.getValue0(), fileInfo.getValue1(), resp.fileMeta);
-                } else if (rejoinUploads.containsKey(resp.id)) {
-                    Pair<String, Integer> fileInfo = rejoinUploads.remove(resp.id);
-                    startUpload(resp.id, fileInfo.getValue0(), fileInfo.getValue1(), resp.fileMeta);
+                if (selfState.pendingDownloads.containsKey(resp.id)) {
+                    selfState.pendingDownloads.put(resp.id, Pair.with(Pair.with(resp.fileMeta.fileName, resp.overlayId), resp.fileMeta));
+                    startDownload(resp.id, resp.overlayId, resp.fileMeta);
+                } else if (selfState.rejoinUploads.containsKey(resp.id)) {
+                    selfState.rejoinUploads.remove(resp.id);
+                    startUpload(resp.id, resp.overlayId, resp.fileMeta);
                 }
             } else {
-                LOG.error("{} error in response message of upload video:{}", logPrefix, resp.fileMeta.fileName);
-                throw new RuntimeException("error in response message of upload video:" + resp.fileMeta.fileName);
+                //TODO Alex - keep track of fileMeta so that in case caracal does not have it, we can re-upload it.
+                if (resp.fileMeta != null) {
+                    LOG.error("{} error in response message of upload video:{}", logPrefix, resp.fileMeta.fileName);
+                    throw new RuntimeException("error in response message of upload video:" + resp.fileMeta.fileName);
+                } else {
+                    LOG.error("{} error in response message of upload video", logPrefix);
+                    throw new RuntimeException("error in response message of upload video");
+                }
             }
         }
     };
 
-    private void startUpload(UUID reqId, String fileName, Integer overlayId, FileMetadata fileMeta) {
+    private void startUpload(Identifier vodReqId, Identifier overlayId, FileMetadata fileMeta) {
         try {
-            Pair<FileMngr, HashMngr> videoMngrs = getUploadVideoMngrs(fileName, fileMeta);
-            startVideoComp(reqId, overlayId, fileMeta, videoMngrs, false);
-            trigger(new GetLibrary.Response(UUID.randomUUID(), ResponseStatus.SUCCESS, libMngr.getLibrary()), myPort);
+            Pair<FileMngr, HashMngr> videoMngrs = getUploadVideoMngrs(fileMeta.fileName, fileMeta);
+            startVideoComp(vodReqId, overlayId, fileMeta, videoMngrs, false);
+            trigger(new GetLibrary.Indication(ResponseStatus.SUCCESS, selfState.libMngr.getLibrary()), myPort);
         } catch (IOException ex) {
-            LOG.error("{} error writting to disk for video:{}", logPrefix, fileName);
-            throw new RuntimeException("error writting to disk for video:" + fileName, ex);
-        } catch (GVoDConfigException.Missing ex) {
-            LOG.error("{} configuration problem in VoDComp:{}", logPrefix, ex.getMessage());
-            throw new RuntimeException(ex);
+            LOG.error("{} error writting to disk for video:{}", logPrefix, fileMeta.fileName);
+            throw new RuntimeException("error writting to disk for video:" + fileMeta.fileName, ex);
         }
     }
 
-    private void startDownload(UUID reqId, String fileName, Integer overlayId, FileMetadata fileMeta) {
+    private void startDownload(Identifier vodReqId, Identifier overlayId, FileMetadata fileMeta) {
         try {
-            if (!libMngr.startDownload(fileName, overlayId)) {
-                LOG.error("{} library manager - download denied for file:{}", logPrefix, fileName);
-                throw new RuntimeException("library manager - download denied for file:" + fileName);
+            if (!selfState.libMngr.startDownload(fileMeta.fileName, overlayId)) {
+                LOG.error("{} library manager - download denied for file:{}", logPrefix, fileMeta.fileName);
+                throw new RuntimeException("library manager - download denied for file:" + fileMeta.fileName);
             }
-            Pair<FileMngr, HashMngr> videoMngrs = getDownloadVideoMngrs(fileName, fileMeta);
-            startVideoComp(reqId, overlayId, fileMeta, videoMngrs, true);
-            trigger(new GetLibrary.Response(UUID.randomUUID(), ResponseStatus.SUCCESS, libMngr.getLibrary()), myPort);
+            Pair<FileMngr, HashMngr> videoMngrs = getDownloadVideoMngrs(fileMeta.fileName, fileMeta);
+            startVideoComp(vodReqId, overlayId, fileMeta, videoMngrs, true);
+            trigger(new GetLibrary.Indication(ResponseStatus.SUCCESS, selfState.libMngr.getLibrary()), myPort);
         } catch (IOException ex) {
-            LOG.error("{} error writting to disk for video:{}", logPrefix, fileName);
-            throw new RuntimeException("error writting to disk for video:" + fileName, ex);
+            LOG.error("{} error writting to disk for video:{}", logPrefix, fileMeta.fileName);
+            throw new RuntimeException("error writting to disk for video:" + fileMeta.fileName, ex);
         } catch (HashUtil.HashBuilderException ex) {
-            LOG.error("{} error creating hash file for video:{}", logPrefix, fileName);
-            throw new RuntimeException("error creating hash file for video:" + fileName, ex);
-        } catch (GVoDConfigException.Missing ex) {
-            LOG.error("{} configuration problem in VoDComp:{}", logPrefix, ex.getMessage());
-            throw new RuntimeException(ex);
+            LOG.error("{} error creating hash file for video:{}", logPrefix, fileMeta.fileName);
+            throw new RuntimeException("error creating hash file for video:" + fileMeta.fileName, ex);
         }
     }
 
-    private void startVideoComp(UUID reqId, int overlayId, FileMetadata fileMeta, Pair<FileMngr, HashMngr> hashedFileMngr, boolean download) {
-        int hashSize = 0;
-        try {
-            hashSize = HashUtil.getHashSize(fileMeta.hashAlg);
-        } catch (GVoDConfigException.Missing ex) {
-            LOG.error("{} unknown hash function:{}", config.getSelf(), fileMeta.hashAlg);
-            System.exit(1);
-        }
-        LOG.info("{} - videoName:{} videoFileSize:{}, hashFileSize:{}, hashSize:{}", new Object[]{config.getSelf(), fileMeta.fileName, fileMeta.fileSize, fileMeta.hashFileSize, hashSize});
-        DownloadMngrConfig downloadMngrConfig = null;
-        ConnMngrConfig connMngrConfig = null;
+    private void startVideoComp(Identifier vodReqId, Identifier overlayId, FileMetadata fileMeta, 
+            Pair<FileMngr, HashMngr> hashedFileMngr, boolean download) {
+        LOG.info("{}videoName:{}, videoFileSize:{}, hashFileSize:{}", new Object[]{logPrefix,
+            fileMeta.fileName, fileMeta.fileSize, fileMeta.hashFileSize});
+        DownloadMngrKCWrapper downloadMngrConfig = new DownloadMngrKCWrapper(config());
+        ConnMngrKCWrapper connMngrConfig = new ConnMngrKCWrapper(config());
 
-        try {
-            downloadMngrConfig = config.getDownloadMngrConfig(overlayId).finalise();
-            connMngrConfig = config.getConnMngrConfig(overlayId).finalise();
-        } catch (GVoDConfigException.Missing ex) {
-            LOG.error("configuration problem in VoDComp " + ex.getMessage());
-            System.exit(1);
-        }
-
-        Component connMngr = create(ConnMngrComp.class, new ConnMngrComp.ConnMngrInit(connMngrConfig));
         AtomicInteger playPos = new AtomicInteger(0);
-        Component downloadMngr = create(DownloadMngrComp.class, new DownloadMngrComp.DownloadMngrInit(downloadMngrConfig, hashedFileMngr.getValue0(), hashedFileMngr.getValue1(), download, playPos));
-        Component croupier = create(CroupierComp.class, new CroupierComp.CroupierInit(overlayId, config.getSelf()));
-        videoComps.put(overlayId, Triplet.with(connMngr, downloadMngr, croupier));
-
-        connect(croupier.getNegative(Timer.class), timer);
-        connect(croupier.getNegative(BootstrapClientPort.class), bootstrap);
-
-        connect(connMngr.getNegative(Network.class), network, new IntegerOverlayFilter(overlayId));
-        connect(connMngr.getNegative(Timer.class), timer);
-        connect(connMngr.getNegative(CroupierPort.class), croupier.getPositive(CroupierPort.class));
-
-        connect(downloadMngr.getNegative(Timer.class), timer);
-        connect(downloadMngr.getNegative(ConnMngrPort.class), connMngr.getPositive(ConnMngrPort.class));
-
-        connect(connMngr.getNegative(UtilityUpdatePort.class), downloadMngr.getPositive(UtilityUpdatePort.class));
-        connect(utilityUpdate, downloadMngr.getPositive(UtilityUpdatePort.class));
-
-        trigger(Start.event, croupier.control());
-        trigger(Start.event, connMngr.control());
-        trigger(Start.event, downloadMngr.control());
-
+        
+        connectVideoComponents(overlayId, download, playPos, hashedFileMngr);
+        trigger(new OMngrCroupier.ConnectRequest(overlayId, false), omngrPort);
+        
         VideoStreamManager vsMngr = null;
         try {
             vsMngr = new VideoStreamMngrImpl(hashedFileMngr.getValue0(), fileMeta.pieceSize, (long) fileMeta.fileSize, playPos);
@@ -341,38 +320,77 @@ public class VoDComp extends ComponentDefinition {
             LOG.error("{} IOException trying to read video:{}", logPrefix, fileMeta.fileName);
             throw new RuntimeException("IOException trying to read video:{}" + fileMeta.fileName, ex);
         }
-        trigger(new PlayReady(reqId, fileMeta.fileName, overlayId, vsMngr), myPort);
+        pendingVideoComp.put(overlayId, Triplet.with(vodReqId, fileMeta.fileName, vsMngr));
+        
+    }
+    
+    private Handler handleCroupierConnected = new Handler<OMngrCroupier.ConnectResponse>() {
+        @Override
+        public void handle(OMngrCroupier.ConnectResponse resp) {
+            LOG.info("{}croupier:{} connected", new Object[]{logPrefix, resp.req.croupierId});
+            Triplet<Identifier, String, VideoStreamManager> videoAuxState = pendingVideoComp.remove(resp.req.croupierId);
+            Quartet<Component, Channel[], Component, Channel[]> comp = selfState.videoComps.get(resp.req.croupierId);
+            if(videoAuxState == null || comp == null) {
+                throw new RuntimeException("vod comp bad state");
+            }
+            trigger(Start.event, comp.getValue0().control());
+            trigger(Start.event, comp.getValue2().control());
+            trigger(new PlayReady(videoAuxState.getValue0(), videoAuxState.getValue1(), resp.req.croupierId, videoAuxState.getValue2()), myPort);
+        }
+    };
+
+    private void connectVideoComponents(Identifier overlayId, boolean download, AtomicInteger playPos, 
+            Pair<FileMngr, HashMngr> hashedFileMngr) {
+        Component connMngrComp = create(ConnMngrComp.class, new ConnMngrComp.Init(overlayId));
+        Channel[] connMngrChannels = new Channel[2];
+        connMngrChannels[0] = connect(connMngrComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
+        networkEnd.addChannel(overlayId, connMngrComp.getNegative(Network.class));
+        connMngrChannels[1] = connect(connMngrComp.getNegative(AddressUpdatePort.class), extPorts.addressUpdatePort, Channel.TWO_WAY);
+        croupierEnd.addChannel(overlayId, connMngrComp.getNegative(CroupierPort.class));
+        viewUpdateEnd.addChannel(overlayId, connMngrComp.getPositive(OverlayViewUpdatePort.class));
+
+        Component dMngrComp = create(DownloadMngrComp.class, new DownloadMngrComp.Init(overlayId, 
+                hashedFileMngr.getValue0(), hashedFileMngr.getValue1(), download, playPos));
+        Channel[] dMngrChannels = new Channel[4];
+        dMngrChannels[0] = connect(dMngrComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
+        dMngrChannels[1] = connect(dMngrComp.getNegative(ConnMngrPort.class), connMngrComp.getPositive(ConnMngrPort.class), Channel.TWO_WAY);
+        dMngrChannels[2] = connect(dMngrComp.getPositive(UtilityUpdatePort.class), connMngrComp.getNegative(UtilityUpdatePort.class), Channel.TWO_WAY);
+        dMngrChannels[3] = connect(dMngrComp.getPositive(UtilityUpdatePort.class), utilityUpdate, Channel.TWO_WAY);
+        //downloadmngr port not connected yet - connect to something
+
+        selfState.videoComps.put(overlayId, Quartet.with(connMngrComp, connMngrChannels, dMngrComp, dMngrChannels));
     }
 
-    private Pair<FileMngr, HashMngr> getUploadVideoMngrs(String video, FileMetadata fileMeta) throws IOException, GVoDConfigException.Missing {
+    private Pair<FileMngr, HashMngr> getUploadVideoMngrs(String video, FileMetadata fileMeta) throws IOException {
 
-        String videoName = video.substring(0, video.indexOf("."));
-        String videoExt = video.substring(video.indexOf("."));
-        String videoFilePath = config.getVideoLibrary() + File.separator + video;
-        String hashFilePath = config.getVideoLibrary() + File.separator + videoName + ".hash";
+        String videoNoExt = LibraryUtil.removeExtension(video);
+        String videoFilePath = vodConfig.videoLibrary + File.separator + video;
+        String hashFilePath = vodConfig.videoLibrary + File.separator + videoNoExt + ".hash";
 
 //        int nrHashPieces = fileMeta.hashFileSize / HashUtil.getHashSize(fileMeta.hashAlg);
 //        PieceTracker hashPieceTracker = new CompletePieceTracker(nrHashPieces);
 //        Storage hashStorage = StorageFactory.getExistingFile(hashFilePath);
 //        HashMngr hashMngr = new CompleteFileMngr(hashStorage, hashPieceTracker);
-        HashMngr hashMngr = StorageMngrFactory.getCompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize, HashUtil.getHashSize(fileMeta.hashAlg));
+        HashMngr hashMngr = StorageMngrFactory.getCompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize,
+                HashUtil.getHashSize(fileMeta.hashAlg));
 
 //        int filePieces = fileMeta.fileSize / fileMeta.pieceSize + (fileMeta.fileSize % fileMeta.pieceSize == 0 ? 0 : 1);
 //        Storage videoStorage = StorageFactory.getExistingFile(videoFilePath, config.pieceSize);
 //        PieceTracker videoPieceTracker = new CompletePieceTracker(filePieces);
 //        FileMngr fileMngr = new SimpleFileMngr(videoStorage, videoPieceTracker);
-        int blockSize = config.getPiecesPerBlock() * config.getPieceSize();
-        FileMngr fileMngr = StorageMngrFactory.getCompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize, config.getPieceSize());
+        DownloadMngrKCWrapper downloadConfig = new DownloadMngrKCWrapper(config());
+        int blockSize = downloadConfig.piecesPerBlock * downloadConfig.pieceSize;
+        FileMngr fileMngr = StorageMngrFactory.getCompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize,
+                downloadConfig.pieceSize);
 
         return Pair.with(fileMngr, hashMngr);
     }
 
-    private Pair<FileMngr, HashMngr> getDownloadVideoMngrs(String video, FileMetadata fileMeta) throws IOException, HashUtil.HashBuilderException, GVoDConfigException.Missing {
-        LOG.info("{} lib directory {}", config.getSelf(), config.getVideoLibrary());
-        String videoName = video.substring(0, video.indexOf("."));
-        String videoExt = video.substring(video.indexOf("."));
-        String videoFilePath = config.getVideoLibrary() + File.separator + video;
-        String hashFilePath = config.getVideoLibrary() + File.separator + videoName + ".hash";
+    private Pair<FileMngr, HashMngr> getDownloadVideoMngrs(String video, FileMetadata fileMeta) throws IOException, HashUtil.HashBuilderException {
+        LOG.info("{}lib directory {}", logPrefix, vodConfig.videoLibrary);
+        String videoNoExt = LibraryUtil.removeExtension(video);
+        String videoFilePath = vodConfig.videoLibrary + File.separator + video;
+        String hashFilePath = vodConfig.videoLibrary + File.separator + videoNoExt + ".hash";
 
         File hashFile = new File(hashFilePath);
         if (hashFile.exists()) {
@@ -383,15 +401,68 @@ public class VoDComp extends ComponentDefinition {
 //        PieceTracker hashPieceTracker = new SimplePieceTracker(hashPieces);
 //        Storage hashStorage = StorageFactory.getEmptyFile(hashFilePath, fileMeta.hashFileSize, HashUtil.getHashSize(fileMeta.hashAlg));
 //        FileMngr hashMngr = new SimpleFileMngr(hashStorage, hashPieceTracker);
-        HashMngr hashMngr = StorageMngrFactory.getIncompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize, HashUtil.getHashSize(fileMeta.hashAlg));
+        HashMngr hashMngr = StorageMngrFactory.getIncompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize,
+                HashUtil.getHashSize(fileMeta.hashAlg));
 
 //        Storage videoStorage = StorageFactory.getEmptyFile(videoFilePath, fileMeta.fileSize, fileMeta.pieceSize);
 //        int filePieces = fileMeta.fileSize / fileMeta.pieceSize + (fileMeta.fileSize % fileMeta.pieceSize == 0 ? 0 : 1);
 //        PieceTracker videoPieceTracker = new SimplePieceTracker(filePieces);
 //        FileMngr fileMngr = new SimpleFileMngr(videoStorage, videoPieceTracker);
-        int blockSize = config.getPiecesPerBlock() * config.getPieceSize();
-        FileMngr fileMngr = StorageMngrFactory.getIncompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize, config.getPieceSize());
+        DownloadMngrKCWrapper downloadConfig = new DownloadMngrKCWrapper(config());
+        int blockSize = downloadConfig.piecesPerBlock * downloadConfig.pieceSize;
+        FileMngr fileMngr = StorageMngrFactory.getIncompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize,
+                downloadConfig.pieceSize);
 
         return Pair.with(fileMngr, hashMngr);
+    }
+
+    public static class Init extends se.sics.kompics.Init<VoDComp> {
+
+        public final ExtPort extPorts;
+
+        public Init(ExtPort extPorts) {
+            super();
+            this.extPorts = extPorts;
+        }
+    }
+
+    public static class ExtPort {
+
+        public final Positive<Timer> timerPort;
+        //network ports
+        public final Positive<Network> networkPort;
+        public final Positive<AddressUpdatePort> addressUpdatePort;
+        //overlay ports
+        public final Positive<CroupierPort> croupierPort;
+        public final Negative<OverlayViewUpdatePort> viewUpdatePort;
+
+        public ExtPort(Positive<Timer> timerPort, Positive<Network> networkPort,
+                Positive<AddressUpdatePort> addressUpdatePort,
+                Positive<CroupierPort> croupierPort, Negative<OverlayViewUpdatePort> viewUpdatePort) {
+            this.timerPort = timerPort;
+            this.networkPort = networkPort;
+            this.addressUpdatePort = addressUpdatePort;
+            this.croupierPort = croupierPort;
+            this.viewUpdatePort = viewUpdatePort;
+        }
+    }
+
+    private class ManagedState {
+
+        //<overlayId, components>
+
+        final Map<Identifier, Quartet<Component, Channel[], Component, Channel[]>> videoComps = new HashMap<>();
+        //<reqId, <<fileName, overlayId>, fileMeta>
+        final Map<Identifier, Pair<Pair<String, Identifier>, FileMetadata>> pendingUploads = new HashMap<>();
+        //<reqId, <<fileName, overlayId>, fileMeta>
+        final Map<Identifier, Pair<Pair<String, Identifier>, FileMetadata>> pendingDownloads = new HashMap<>();
+        //<reqId, <fileName, overlayId>>
+        final Map<Identifier, Pair<String, Identifier>> rejoinUploads = new HashMap<>();
+        private final LibraryMngr libMngr;
+
+        ManagedState(String libFolder) {
+            libMngr = new LibraryMngr(libFolder);
+            libMngr.loadLibrary();
+        }
     }
 }

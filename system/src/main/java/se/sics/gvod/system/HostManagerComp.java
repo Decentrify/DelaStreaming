@@ -19,25 +19,31 @@
 package se.sics.gvod.system;
 
 import com.google.common.util.concurrent.SettableFuture;
+import org.javatuples.Pair;
 import se.sics.gvod.manager.VoDManagerImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.bootstrap.client.BootstrapClientComp;
-import se.sics.gvod.bootstrap.client.BootstrapClientInit;
-import se.sics.gvod.bootstrap.client.BootstrapClientPort;
-import se.sics.gvod.bootstrap.server.BootstrapServerComp;
-import se.sics.gvod.bootstrap.server.peermanager.PeerManagerPort;
+import se.sics.gvod.cc.VoDCaracalClientComp;
+import se.sics.gvod.cc.VoDCaracalClientComp.VoDCaracalClientInit;
+import se.sics.gvod.cc.VoDCaracalClientConfig;
+import se.sics.gvod.cc.VoDCaracalClientPort;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
 import se.sics.gvod.core.VoDComp;
-import se.sics.gvod.core.VoDInit;
 import se.sics.gvod.core.VoDPort;
+import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Init;
+import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
-import se.sics.p2ptoolbox.util.traits.Nated;
+import se.sics.ktoolbox.cc.bootstrap.CCOperationPort;
+import se.sics.ktoolbox.croupier.CroupierPort;
+import se.sics.ktoolbox.overlaymngr.OverlayMngrPort;
+import se.sics.ktoolbox.util.address.AddressUpdatePort;
+import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
+import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -45,62 +51,87 @@ import se.sics.p2ptoolbox.util.traits.Nated;
 public class HostManagerComp extends ComponentDefinition {
 
     private static final Logger log = LoggerFactory.getLogger(HostManagerComp.class);
+    private String logPrefix = " ";
 
-    private Positive<Network> network = requires(Network.class);
-    private Positive<Timer> timer = requires(Timer.class);
+    private final ExtPort extPorts;
+    
+    private Component vodMngrComp;
+    private Pair<Component, Channel[]> vod;
+    private Component vodCaracalClientComp;
 
-    private Component vodMngr;
-    private Component vod;
-    private Component bootstrapClient;
-    private Component bootstrapServer;
-    private Component peerManager;
-    private Component globalCroupier;
-
-    private final HostManagerConfig config;
+    private final HostManagerKCWrapper config;
 
     public HostManagerComp(HostManagerInit init) {
-        log.debug("starting... - self {}, bootstrap server {}",
-                new Object[]{init.config.getSelf(), init.config.getCaracalClient()});
-        this.config = init.config;
+        SystemKCWrapper systemConfig = new SystemKCWrapper(config());
+        logPrefix = "<nid:" + systemConfig.id + "> ";
+        log.debug("{}starting...", logPrefix);
+        extPorts = init.extPorts;
+        config = init.config;
+        connectVoDCaracalClient(init.schemaId);
+        connectVoD();
+        connectVoDMngr(init.gvodSyncIFuture);
+    }
 
-        this.vodMngr = create(VoDManagerImpl.class, new VoDManagerImpl.VoDManagerInit(config.getVoDManagerConfig()));
-        init.gvodSyncIFuture.set(vodMngr.getComponent());
-        this.vod = create(VoDComp.class, new VoDInit(config.getVoDConfig()));
-        this.bootstrapClient = create(BootstrapClientComp.class, new BootstrapClientInit(config.getBootstrapClientConfig()));
+    private void connectVoDCaracalClient(byte[] schemaId) {
+        vodCaracalClientComp = create(VoDCaracalClientComp.class, new VoDCaracalClientInit(new VoDCaracalClientConfig(), schemaId));
+        connect(vodCaracalClientComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
+        connect(vodCaracalClientComp.getNegative(CCOperationPort.class), extPorts.ccOpPort, Channel.TWO_WAY);
+    }
 
-        log.info("{} node is Natted:{}", config.getSelf(), config.getSelf().hasTrait(Nated.class));
-        if (!config.getSelf().hasTrait(Nated.class)) {
-            bootstrapServer = create(BootstrapServerComp.class, new BootstrapServerComp.BootstrapServerInit(config.getBootstrapServerConfig()));
-            peerManager = init.peerManager;
+    private void connectVoD() {
+        VoDComp.ExtPort vodExtPorts = new VoDComp.ExtPort(extPorts.timerPort, extPorts.networkPort, extPorts.addressUpdatePort, 
+               extPorts.croupierPort, extPorts.viewUpdatePort);
+        Component vodComp = create(VoDComp.class, new VoDComp.Init(vodExtPorts));
+        Channel[] vodChannels = new Channel[2];
+        vodChannels[0] = connect(vodComp.getNegative(VoDCaracalClientPort.class), 
+                vodCaracalClientComp.getPositive(VoDCaracalClientPort.class), Channel.TWO_WAY);
+        vodChannels[1] = connect(vodComp.getNegative(OverlayMngrPort.class), extPorts.omngrPort, Channel.TWO_WAY);
+        vod = Pair.with(vodComp, vodChannels);
+    }
 
-            connect(bootstrapServer.getNegative(Network.class), network);
-            connect(bootstrapServer.getNegative(PeerManagerPort.class), peerManager.getPositive(PeerManagerPort.class));
-        } else {
-            bootstrapServer = null;
-            peerManager = null;
-        }
-
-        connect(vodMngr.getNegative(VoDPort.class), vod.getPositive(VoDPort.class));
-        connect(vod.getNegative(Network.class), network);
-        connect(vod.getNegative(BootstrapClientPort.class), bootstrapClient.getPositive(BootstrapClientPort.class));
-        connect(vod.getNegative(Timer.class), timer);
-        connect(bootstrapClient.getNegative(Network.class), network);
-        connect(bootstrapClient.getNegative(Timer.class), timer);
-
-        connect(bootstrapClient.getNegative(UtilityUpdatePort.class), vod.getPositive(UtilityUpdatePort.class));
-        connect(vodMngr.getNegative(UtilityUpdatePort.class), vod.getPositive(UtilityUpdatePort.class));
+    private void connectVoDMngr(SettableFuture gvodSyncIFuture) {
+        this.vodMngrComp = create(VoDManagerImpl.class, new VoDManagerImpl.Init());
+        gvodSyncIFuture.set(vodMngrComp.getComponent());
+        connect(vodMngrComp.getNegative(VoDPort.class), vod.getValue0().getPositive(VoDPort.class), Channel.TWO_WAY);
+        connect(vodMngrComp.getNegative(UtilityUpdatePort.class), vod.getValue0().getPositive(UtilityUpdatePort.class), Channel.TWO_WAY);
     }
 
     public static class HostManagerInit extends Init<HostManagerComp> {
 
-        public final HostManagerConfig config;
-        public final Component peerManager;
+        public final ExtPort extPorts;
+        public final HostManagerKCWrapper config;
         public final SettableFuture gvodSyncIFuture;
+        public final byte[] schemaId;
 
-        public HostManagerInit(HostManagerConfig config, Component peerManager, SettableFuture gvodSyncIFuture) {
+        public HostManagerInit(ExtPort extPorts, HostManagerKCWrapper config, 
+                SettableFuture gvodSyncIFuture, byte[] schemaId) {
+            this.extPorts = extPorts;
             this.config = config;
-            this.peerManager = peerManager;
             this.gvodSyncIFuture = gvodSyncIFuture;
+            this.schemaId = schemaId;
+        }
+    }
+
+    public static class ExtPort {
+
+        public final Positive<Timer> timerPort;
+        public final Positive<Network> networkPort;
+        public final Positive<AddressUpdatePort> addressUpdatePort;
+        public final Positive<CCOperationPort> ccOpPort;
+        public final Positive<OverlayMngrPort> omngrPort;
+        public final Positive<CroupierPort> croupierPort;
+        public final Negative<OverlayViewUpdatePort> viewUpdatePort;
+
+        public ExtPort(Positive<Timer> timerPort, Positive<Network> networkPort, Positive<AddressUpdatePort> addressUpdatePort, 
+                Positive<CCOperationPort> ccOpPort, Positive<OverlayMngrPort> omngrPort, Positive<CroupierPort> croupierPort,
+                Negative<OverlayViewUpdatePort> viewUpdatePort) {
+            this.timerPort = timerPort;
+            this.networkPort = networkPort;
+            this.addressUpdatePort = addressUpdatePort;
+            this.ccOpPort = ccOpPort;
+            this.omngrPort = omngrPort;
+            this.croupierPort = croupierPort;
+            this.viewUpdatePort = viewUpdatePort;
         }
     }
 }

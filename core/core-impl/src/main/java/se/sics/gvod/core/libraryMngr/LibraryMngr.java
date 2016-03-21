@@ -35,6 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.VoDComp;
 import se.sics.gvod.core.util.FileStatus;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.OverlayIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -44,13 +47,28 @@ public class LibraryMngr {
     private static final Logger LOG = LoggerFactory.getLogger(VoDComp.class);
     private static final String STATUS_FILE = "status.file";
 
-    private static final FileFilter mp4Filter = new FileFilter() {
+    static enum AcceptedVideos {
+
+        MP4(".mp4"), MKV(".mkv");
+
+        private String extension;
+
+        private AcceptedVideos(String extension) {
+            this.extension = extension;
+        }
+    }
+    static final FileFilter videoFilter = new FileFilter() {
         @Override
         public boolean accept(File file) {
             if (!file.isFile()) {
                 return false;
             }
-            return file.getName().endsWith(".mp4");
+            for (AcceptedVideos extension : AcceptedVideos.values()) {
+                if (file.getName().endsWith(extension.extension)) {
+                    return true;
+                }
+            }
+            return false;
         }
     };
     private static final FileFilter statusFilter = new FileFilter() {
@@ -64,14 +82,13 @@ public class LibraryMngr {
     };
 
     private final String libPath;
-    private final Map<String, Pair<FileStatus, Integer>> fileMap;
+    private final Map<String, Pair<FileStatus, Identifier>> fileMap = new HashMap<>();
 
     public LibraryMngr(String libPath) {
         this.libPath = libPath;
-        this.fileMap = new HashMap<String, Pair<FileStatus, Integer>>();
     }
 
-    public Map<String, Pair<FileStatus, Integer>> getLibrary() {
+    public Map<String, Pair<FileStatus, Identifier>> getLibrary() {
         return fileMap;
     }
 
@@ -88,20 +105,20 @@ public class LibraryMngr {
     }
 
     public boolean pendingUpload(String file) {
-        Pair<FileStatus, Integer> fileStatus = fileMap.get(file);
+        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
         if (fileStatus == null) {
             return false;
         }
         if (!fileStatus.getValue0().equals(FileStatus.NONE)) {
             return false;
         }
-        fileMap.put(file, Pair.with(FileStatus.PENDING_UPLOAD, (Integer) null));
+        fileMap.put(file, Pair.with(FileStatus.PENDING_UPLOAD, (Identifier) null));
         writeStatusFile();
         return true;
     }
 
-    public boolean upload(String file, int overlayId) {
-        Pair<FileStatus, Integer> fileStatus = fileMap.get(file);
+    public boolean upload(String file, Identifier overlayId) {
+        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
         if (fileStatus == null) {
             return false;
         }
@@ -114,19 +131,19 @@ public class LibraryMngr {
     }
 
     public boolean pendingDownload(String file) {
-        Pair<FileStatus, Integer> fileStatus = fileMap.get(file);
+        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
         if (fileStatus != null) {
             return false;
         }
 
-        fileMap.put(file, Pair.with(FileStatus.PENDING_DOWNLOAD, (Integer) null));
+        fileMap.put(file, Pair.with(FileStatus.PENDING_DOWNLOAD, (Identifier) null));
         writeStatusFile();
         return true;
 
     }
 
-    public boolean startDownload(String file, Integer overlayId) {
-        Pair<FileStatus, Integer> fileStatus = fileMap.get(file);
+    public boolean startDownload(String file, Identifier overlayId) {
+        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
         if (fileStatus == null || !fileStatus.getValue0().equals(FileStatus.PENDING_DOWNLOAD)) {
             return false;
         }
@@ -160,10 +177,10 @@ public class LibraryMngr {
 
     private void reloadFiles() {
         File libDir = new File(libPath);
-        for (File file : libDir.listFiles(mp4Filter)) {
+        for (File file : libDir.listFiles(videoFilter)) {
             LOG.info("library - loading video: {}", file.getName());
             if (!fileMap.containsKey(file.getName())) {
-                fileMap.put(file.getName(), Pair.with(FileStatus.NONE, (Integer) null));
+                fileMap.put(file.getName(), Pair.with(FileStatus.NONE, (Identifier) null));
             }
         }
     }
@@ -198,9 +215,9 @@ public class LibraryMngr {
                 StringTokenizer st = new StringTokenizer(line, ":");
                 String fileName = st.nextToken();
                 FileStatus fileStatus = FileStatus.valueOf(st.nextToken());
-                Integer overlayId = null;
+                Identifier overlayId = null;
                 if (st.hasMoreElements()) {
-                    overlayId = Integer.parseInt(st.nextToken());
+                    overlayId = new IntIdentifier(Integer.parseInt(st.nextToken()));
                 }
                 checkStatus(fileName, fileStatus, overlayId);
             }
@@ -230,37 +247,42 @@ public class LibraryMngr {
         }
     }
 
-    private void checkStatus(String fileName, FileStatus fileStatus, Integer overlayId) {
-        if (fileStatus.equals(FileStatus.NONE) || fileStatus.equals(FileStatus.PENDING_UPLOAD) || fileStatus.equals(FileStatus.PENDING_DOWNLOAD)) {
-            //do nothing
-        } else if (fileStatus.equals(FileStatus.UPLOADING)) {
-            if (fileMap.containsKey(fileName)) {
-                StringTokenizer fileST = new StringTokenizer(fileName, ".");
-                if (fileST.countTokens() != 2) {
-                    LOG.error("bad file name");
-                    throw new RuntimeException("bad file name");
-                }
-                File hashFile = new File(libPath + File.separator + fileST.nextToken() + ".hash");
+    private void checkStatus(String fileName, FileStatus fileStatus, Identifier overlayId) {
+        File dataFile, hashFile;
+        String fileNoExt;
+        try {
+            fileNoExt = LibraryUtil.removeExtension(fileName);
+        } catch (IllegalArgumentException ex) {
+            LOG.error("bad file name:{}", fileName);
+            throw ex;
+        }
+        switch (fileStatus) {
+            case NONE:
+                break;
+            case PENDING_UPLOAD:
+                break;
+            case PENDING_DOWNLOAD:
+                break;
+            case DOWNLOADING:
+                //TODO hash check - continue
+                //for the moment we delete and start anew
+                dataFile = new File(libPath + File.separator + fileName);
+                dataFile.delete();
+                hashFile = new File(libPath + File.separator + fileNoExt + ".hash");
+                hashFile.delete();
+                fileMap.remove(fileName);
+                break;
+            case UPLOADING:
+                hashFile = new File(libPath + File.separator + fileNoExt + ".hash");
                 if (hashFile.exists()) {
                     fileMap.put(fileName, Pair.with(fileStatus, overlayId));
+                } else {
+                    LOG.warn("no hash:{} file for uploading file:{}", hashFile, fileNoExt);
                 }
-            }
-        } else if (fileStatus.equals(FileStatus.DOWNLOADING)) {
-            //TODO hash check - continue
-            //for the moment we delete and start anew
-            File dataFile = new File(libPath + File.separator + fileName);
-            dataFile.delete();
-            StringTokenizer fileST = new StringTokenizer(fileName, ".");
-            if (fileST.countTokens() != 2) {
-                LOG.error("bad file name");
-                throw new RuntimeException("bad file name");
-            }
-            File hashFile = new File(libPath + File.separator + fileST.nextToken() + ".hash");
-            hashFile.delete();
-            fileMap.remove(fileName);
-        } else {
-            LOG.error("logic error - introduced new FileStatus:" + fileStatus.toString() + " and did not add it to the checkStatusFile");
-            throw new RuntimeException("logic error - introduced new FileStatus:" + fileStatus.toString() + " and did not add it to the checkStatusFile");
+                break;
+            default:
+                LOG.error("logic error - introduced new FileStatus:" + fileStatus.toString() + " and did not add it to the checkStatusFile");
+                throw new RuntimeException("logic error - introduced new FileStatus:" + fileStatus.toString() + " and did not add it to the checkStatusFile");
         }
     }
 
@@ -270,16 +292,23 @@ public class LibraryMngr {
         try {
             fw = new FileWriter(libPath + File.separator + STATUS_FILE);
             bw = new BufferedWriter(fw);
-            for (Map.Entry<String, Pair<FileStatus, Integer>> fileStatus : fileMap.entrySet()) {
-                if (!fileStatus.getValue().equals(FileStatus.NONE)) {
-                    bw.write(fileStatus.getKey());
-                    bw.write(":");
-                    bw.write(fileStatus.getValue().getValue0().toString());
-                    if (fileStatus.getValue().getValue1() != null) {
+            for (Map.Entry<String, Pair<FileStatus, Identifier>> fileStatus : fileMap.entrySet()) {
+                switch (fileStatus.getValue().getValue0()) {
+                    case NONE:
+                    case PENDING_DOWNLOAD:
+                    case PENDING_UPLOAD:
+                        continue;
+                    default:
+                        bw.write(fileStatus.getKey());
                         bw.write(":");
-                        bw.write(fileStatus.getValue().getValue1().toString());
-                    }
-                    bw.write("\n");
+                        bw.write(fileStatus.getValue().getValue0().toString());
+                        if (fileStatus.getValue().getValue0() == null) {
+                            LOG.error("write status file - library logic error - missing overlay");
+                            throw new RuntimeException("write status file - library logic error - missing overlay");
+                        }
+                        bw.write(":");
+                        bw.write(((OverlayIdentifier)fileStatus.getValue().getValue1()).getInt());
+                        bw.write("\n");
                 }
             }
         } catch (IOException ex) {

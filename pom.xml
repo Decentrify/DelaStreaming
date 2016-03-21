@@ -4,13 +4,12 @@
     <groupId>se.sics</groupId>
     <artifactId>gvod</artifactId>
     <name>GVoD</name>
-    <version>0.0.4-SNAPSHOT</version>
+    <version>0.0.8-SNAPSHOT</version>
     <packaging>pom</packaging>
     
     <modules>
         <module>common</module>
-        <module>bootstrap</module>
-        <module>croupier-fake</module>
+        <module>caracal-client</module>
         <module>core</module>
         <module>manager</module>
         <module>network</module>
@@ -19,20 +18,19 @@
     </modules>
     
     <properties>
-        <maven.compiler.source>1.6</maven.compiler.source>
-        <maven.compiler.target>1.6</maven.compiler.target>
+        <java.version>1.7</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.compiler.version>1.6</java.compiler.version>
-        <kompics.version>0.8.1-SNAPSHOT</kompics.version>
-        <util.version>1.4-SNAPSHOT</util.version>
-        <videostream.version>1.1-SNAPSHOT</videostream.version>
-        <ipsolver.version>1.0-SNAPSHOT</ipsolver.version>
-        <logger.version>1.5.6</logger.version>
+        <kompics.version>0.9.1-SNAPSHOT</kompics.version>
+        <ktoolbox.version>2.0.1-SNAPSHOT</ktoolbox.version>
+        
+        <logger.version>1.7.5</logger.version>
         <config.version>1.2.1</config.version>
         <guava.version>18.0</guava.version>
         <tuples.version>1.2</tuples.version>
         <junit.version>4.11</junit.version>
-        <netty.version>5.0.0.Alpha1</netty.version>
+        <netty.version>5.0.0.Alpha2</netty.version>
     </properties>
     
     <dependencies>
@@ -49,13 +47,13 @@
         
         <dependency>
             <groupId>se.sics.ktoolbox.util</groupId>
-            <artifactId>basic</artifactId>
-            <version>${util.version}</version>
+            <artifactId>core</artifactId>
+            <version>${ktoolbox.version}</version>
         </dependency>
         <dependency>
             <groupId>se.sics.ktoolbox.util</groupId>
-            <artifactId>kompics-basic</artifactId>
-            <version>${util.version}</version>
+            <artifactId>kcore</artifactId>
+            <version>${ktoolbox.version}</version>
         </dependency>
         
         <dependency>
@@ -72,6 +70,11 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>${guava.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>se.sics.imported</groupId>
+            <artifactId>object-explorer</artifactId>
+            <version>0.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.javatuples</groupId>
@@ -132,8 +135,8 @@
                 <version>3.1</version>
                 <configuration>
                     <encoding>${project.build.sourceEncoding}</encoding>
-                    <source>${java.compiler.version}</source>
-                    <target>${java.compiler.version}</target>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
                     <debug>true</debug>
                     <optimize>true</optimize>
                     <showDeprecations>true</showDeprecations>

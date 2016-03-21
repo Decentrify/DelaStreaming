@@ -19,46 +19,59 @@
 
 package se.sics.gvod.core.downloadMngr;
 
-import java.util.UUID;
-import se.sics.gvod.common.msg.ReqStatus;
-import se.sics.kompics.Request;
-import se.sics.kompics.Response;
+import se.sics.gvod.common.event.GVoDEvent;
+import se.sics.gvod.common.event.ReqStatus;
+import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class Data {
-     public static class Req extends Request {
+     public static class Request extends Direct.Request<Response> implements GVoDEvent  {
 
-        public final UUID id;
-        public final int overlayId;
+        public final Identifier id;
+        public final Identifier overlayId;
         public final long readPos;
         public final int readBlockSize;
 
-        public Req(UUID id, int overlayId, long readPos, int readBlockSize) {
-            super();
-            this.id = id;
+        public Request(Identifier overlayId, long readPos, int readBlockSize) {
+            this.id = UUIDIdentifier.randomId();
             this.overlayId = overlayId;
             this.readPos = readPos;
             this.readBlockSize = readBlockSize;
         }
+
+        @Override
+        public Identifier getId() {
+            return id;
+        }
+        
+        public Response fail(ReqStatus status) {
+            return new Response(this, status, null);
+        }
+        
+        public Response success(byte[] block) {
+            return new Response(this, ReqStatus.SUCCESS, block);
+        }
     }
 
-    public static class Resp extends Response {
+    public static class Response implements Direct.Response, GVoDEvent {
         
-        public final UUID id;
+        public final Request req;
         public final ReqStatus status;
-        public final int overlayId;
-        public final long readPos;
         public final byte[] block;
         
-        public Resp(Req req, ReqStatus status, byte[] block) {
-            super(req);
-            this.id = req.id;
+        private Response(Request req, ReqStatus status, byte[] block) {
+            this.req = req;
             this.status = status;
-            this.overlayId = req.overlayId;
-            this.readPos = req.readPos;
             this.block = block;
+        }
+
+        @Override
+        public Identifier getId() {
+            return req.getId();
         }
     }
 }

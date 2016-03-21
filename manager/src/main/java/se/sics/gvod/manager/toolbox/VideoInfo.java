@@ -18,6 +18,8 @@
  */
 package se.sics.gvod.manager.toolbox;
 
+import se.sics.ktoolbox.util.identifiable.Identifier;
+
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
@@ -25,7 +27,6 @@ public class VideoInfo {
 
     private String name;
     private int overlayId;
-
 
     public String getName() {
         return name;
