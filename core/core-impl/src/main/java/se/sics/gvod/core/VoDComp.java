@@ -114,9 +114,9 @@ public class VoDComp extends ComponentDefinition {
 
         selfState = new ManagedState(vodConfig.videoLibrary);
         extPorts = init.extPorts;
-        networkEnd = One2NChannel.getChannel(extPorts.networkPort, new MsgOverlayIdExtractor());
-        croupierEnd = One2NChannel.getChannel(extPorts.croupierPort, new EventOverlayIdExtractor());
-        viewUpdateEnd = One2NChannel.getChannel(extPorts.viewUpdatePort, new EventOverlayIdExtractor());
+        networkEnd = One2NChannel.getChannel("vod", extPorts.networkPort, new MsgOverlayIdExtractor());
+        croupierEnd = One2NChannel.getChannel("vod", extPorts.croupierPort, new EventOverlayIdExtractor());
+        viewUpdateEnd = One2NChannel.getChannel("vod", extPorts.viewUpdatePort, new EventOverlayIdExtractor());
 
         subscribe(handleStart, control);
         subscribe(handleGetLibraryRequest, myPort);
