@@ -51,13 +51,10 @@ import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.croupier.CroupierPort;
 import se.sics.ktoolbox.croupier.event.CroupierSample;
-import se.sics.ktoolbox.util.address.AddressUpdate;
-import se.sics.ktoolbox.util.address.AddressUpdatePort;
 import se.sics.ktoolbox.util.aggregation.CompTracker;
 import se.sics.ktoolbox.util.aggregation.CompTrackerImpl;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
@@ -83,12 +80,11 @@ public class ConnMngrComp extends ComponentDefinition {
     final Negative<OverlayViewUpdatePort> croupierViewUpdatePort = provides(OverlayViewUpdatePort.class);
     final Positive<CroupierPort> croupierPort = requires(CroupierPort.class);
     final Positive<UtilityUpdatePort> utilityUpdate = requires(UtilityUpdatePort.class);
-    final Positive<AddressUpdatePort> addressUpdate = requires(AddressUpdatePort.class);
     //***************************CONFIGURATION**********************************
     private final ConnMngrKCWrapper connMngrConfig;
     private final Identifier overlayId;
     //***************************EXTERNAL STATE*********************************
-    private KAddress selfAdr = null;
+    private KAddress selfAdr;
     //***************************INTERNAL STATE*********************************
     private ConnectionTracker connTracker;
     private UploadTracker uploadTracker;
@@ -102,9 +98,9 @@ public class ConnMngrComp extends ComponentDefinition {
 
     public ConnMngrComp(Init init) {
         connMngrConfig = new ConnMngrKCWrapper(config());
-        SystemKCWrapper systemConfig = new SystemKCWrapper(config());
+        selfAdr = init.selfAdr;
         overlayId = init.overlayId;
-        logPrefix = "<nid:" + systemConfig.id + ", oid:" + overlayId + "> ";
+        logPrefix = "<nid:" + selfAdr.getId() + ", oid:" + overlayId + "> ";
         LOG.info("{} initiating...", logPrefix);
 
         connTracker = new ConnectionTracker();
@@ -115,7 +111,6 @@ public class ConnMngrComp extends ComponentDefinition {
         subscribe(handleStart, control);
 
         //external state update
-        subscribe(handleSelfAddressUpdate, addressUpdate);
         subscribe(handleUpdateUtility, utilityUpdate);
 
         //state tracking
@@ -124,10 +119,6 @@ public class ConnMngrComp extends ComponentDefinition {
     }
 
     public boolean ready() {
-        if (selfAdr == null) {
-            LOG.warn("{}self adr is not defined", logPrefix);
-            return false;
-        }
         if(selfDesc == null) {
             LOG.warn("{}self desc is not defined", logPrefix);
             return false;
@@ -141,7 +132,6 @@ public class ConnMngrComp extends ComponentDefinition {
         @Override
         public void handle(Start e) {
             LOG.info("{} starting...", logPrefix);
-            trigger(new AddressUpdate.Request(), addressUpdate);
             compTracker.start();
             schedulePeriodicISCheck();
         }
@@ -171,7 +161,6 @@ public class ConnMngrComp extends ComponentDefinition {
         compTracker.registerPositivePort(network);
         compTracker.registerPositivePort(timer);
         compTracker.registerNegativePort(myPort);
-        compTracker.registerPositivePort(addressUpdate);
         compTracker.registerPositivePort(utilityUpdate);
         compTracker.registerPositivePort(croupierPort);
         compTracker.registerNegativePort(croupierViewUpdatePort);
@@ -193,23 +182,6 @@ public class ConnMngrComp extends ComponentDefinition {
     };
 
     //**************************************************************************
-    private Handler handleSelfAddressUpdate = new Handler<AddressUpdate.Indication>() {
-        @Override
-        public void handle(AddressUpdate.Indication update) {
-            LOG.info("{}updating self address from:{} to:{}",
-                    new Object[]{logPrefix, selfAdr, update.localAddress});
-
-            if (!ready()) {
-                selfAdr = update.localAddress;
-                if (ready()) {
-                    start();
-                }
-            } else {
-                selfAdr = update.localAddress;
-            }
-        }
-    };
-
     private Handler<UtilityUpdate> handleUpdateUtility = new Handler<UtilityUpdate>() {
 
         @Override
@@ -393,9 +365,11 @@ public class ConnMngrComp extends ComponentDefinition {
 //**************************************************************************
     public static class Init extends se.sics.kompics.Init<ConnMngrComp> {
 
+        public final KAddress selfAdr;
         public final Identifier overlayId;
 
-        public Init(Identifier overlayId) {
+        public Init(KAddress selfAdr, Identifier overlayId) {
+            this.selfAdr = selfAdr;
             this.overlayId = overlayId;
         }
     }

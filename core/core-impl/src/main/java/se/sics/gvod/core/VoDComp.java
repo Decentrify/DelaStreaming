@@ -59,13 +59,13 @@ import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.croupier.CroupierPort;
 import se.sics.ktoolbox.overlaymngr.OverlayMngrPort;
 import se.sics.ktoolbox.overlaymngr.events.OMngrCroupier;
-import se.sics.ktoolbox.util.address.AddressUpdatePort;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.managedStore.FileMngr;
 import se.sics.ktoolbox.util.managedStore.HashMngr;
 import se.sics.ktoolbox.util.managedStore.HashUtil;
 import se.sics.ktoolbox.util.managedStore.StorageMngrFactory;
+import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.ktoolbox.util.overlays.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.overlays.EventOverlayIdExtractor;
@@ -92,24 +92,25 @@ public class VoDComp extends ComponentDefinition {
     private final Negative<VoDPort> myPort = provides(VoDPort.class);
     private final Negative<UtilityUpdatePort> utilityUpdate = provides(UtilityUpdatePort.class);
     
-    //external provided ports - do NOT connect
-    private final ExtPort extPorts;
+    //************************INTERNAL_NO_CONNECTION****************************
     private One2NChannel<Network> networkEnd;
     private One2NChannel<CroupierPort> croupierEnd;
     private One2NChannel<OverlayViewUpdatePort> viewUpdateEnd;
     //*****************************CONFIGURATION********************************
-    private final SystemKCWrapper systemConfig;
     private final VoDKCWrapper vodConfig;
-    //***************************INTERNAL STATE*********************************
+    //***************************INTERNAL_STATE*********************************
     private final ManagedState selfState;
+    //***************************EXTERNAL_STATE*********************************
+    private final KAddress selfAdr;
+    private final ExtPort extPorts;
     //******************************AUX_STATE***********************************
     //overlayId, <vodPeerReqId, fileName, videoStreamMngr>
     private final Map<Identifier, Triplet<Identifier, String, VideoStreamManager>> pendingVideoComp = new HashMap<>();
 
     public VoDComp(Init init) {
-        systemConfig = new SystemKCWrapper(config());
         vodConfig = new VoDKCWrapper(config());
-        logPrefix = "<nid:" + systemConfig.id + ">";
+        selfAdr = init.selfAdr;
+        logPrefix = "<nid:" + selfAdr.getId() + ">";
         LOG.info("{}lib folder: {}", logPrefix, vodConfig.videoLibrary);
 
         selfState = new ManagedState(vodConfig.videoLibrary);
@@ -341,11 +342,10 @@ public class VoDComp extends ComponentDefinition {
 
     private void connectVideoComponents(Identifier overlayId, boolean download, AtomicInteger playPos, 
             Pair<FileMngr, HashMngr> hashedFileMngr) {
-        Component connMngrComp = create(ConnMngrComp.class, new ConnMngrComp.Init(overlayId));
-        Channel[] connMngrChannels = new Channel[2];
+        Component connMngrComp = create(ConnMngrComp.class, new ConnMngrComp.Init(selfAdr, overlayId));
+        Channel[] connMngrChannels = new Channel[1];
         connMngrChannels[0] = connect(connMngrComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
         networkEnd.addChannel(overlayId, connMngrComp.getNegative(Network.class));
-        connMngrChannels[1] = connect(connMngrComp.getNegative(AddressUpdatePort.class), extPorts.addressUpdatePort, Channel.TWO_WAY);
         croupierEnd.addChannel(overlayId, connMngrComp.getNegative(CroupierPort.class));
         viewUpdateEnd.addChannel(overlayId, connMngrComp.getPositive(OverlayViewUpdatePort.class));
 
@@ -418,10 +418,11 @@ public class VoDComp extends ComponentDefinition {
 
     public static class Init extends se.sics.kompics.Init<VoDComp> {
 
+        public final KAddress selfAdr;
         public final ExtPort extPorts;
 
-        public Init(ExtPort extPorts) {
-            super();
+        public Init(KAddress selfAdr, ExtPort extPorts) {
+            this.selfAdr = selfAdr;
             this.extPorts = extPorts;
         }
     }
@@ -431,17 +432,14 @@ public class VoDComp extends ComponentDefinition {
         public final Positive<Timer> timerPort;
         //network ports
         public final Positive<Network> networkPort;
-        public final Positive<AddressUpdatePort> addressUpdatePort;
         //overlay ports
         public final Positive<CroupierPort> croupierPort;
         public final Negative<OverlayViewUpdatePort> viewUpdatePort;
 
         public ExtPort(Positive<Timer> timerPort, Positive<Network> networkPort,
-                Positive<AddressUpdatePort> addressUpdatePort,
                 Positive<CroupierPort> croupierPort, Negative<OverlayViewUpdatePort> viewUpdatePort) {
             this.timerPort = timerPort;
             this.networkPort = networkPort;
-            this.addressUpdatePort = addressUpdatePort;
             this.croupierPort = croupierPort;
             this.viewUpdatePort = viewUpdatePort;
         }

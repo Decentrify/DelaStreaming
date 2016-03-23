@@ -41,8 +41,8 @@ import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.cc.bootstrap.CCOperationPort;
 import se.sics.ktoolbox.croupier.CroupierPort;
 import se.sics.ktoolbox.overlaymngr.OverlayMngrPort;
-import se.sics.ktoolbox.util.address.AddressUpdatePort;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
+import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 
 /**
@@ -60,10 +60,11 @@ public class HostManagerComp extends ComponentDefinition {
     private Component vodCaracalClientComp;
 
     private final HostManagerKCWrapper config;
+    private KAddress selfAdr;
 
     public HostManagerComp(HostManagerInit init) {
-        SystemKCWrapper systemConfig = new SystemKCWrapper(config());
-        logPrefix = "<nid:" + systemConfig.id + "> ";
+        selfAdr = init.selfAdr;
+        logPrefix = "<nid:" + selfAdr.getId() + "> ";
         log.debug("{}starting...", logPrefix);
         extPorts = init.extPorts;
         config = init.config;
@@ -79,9 +80,9 @@ public class HostManagerComp extends ComponentDefinition {
     }
 
     private void connectVoD() {
-        VoDComp.ExtPort vodExtPorts = new VoDComp.ExtPort(extPorts.timerPort, extPorts.networkPort, extPorts.addressUpdatePort, 
+        VoDComp.ExtPort vodExtPorts = new VoDComp.ExtPort(extPorts.timerPort, extPorts.networkPort,
                extPorts.croupierPort, extPorts.viewUpdatePort);
-        Component vodComp = create(VoDComp.class, new VoDComp.Init(vodExtPorts));
+        Component vodComp = create(VoDComp.class, new VoDComp.Init(selfAdr, vodExtPorts));
         Channel[] vodChannels = new Channel[2];
         vodChannels[0] = connect(vodComp.getNegative(VoDCaracalClientPort.class), 
                 vodCaracalClientComp.getPositive(VoDCaracalClientPort.class), Channel.TWO_WAY);
@@ -98,13 +99,15 @@ public class HostManagerComp extends ComponentDefinition {
 
     public static class HostManagerInit extends Init<HostManagerComp> {
 
+        public final KAddress selfAdr;
         public final ExtPort extPorts;
         public final HostManagerKCWrapper config;
         public final SettableFuture gvodSyncIFuture;
         public final byte[] schemaId;
 
-        public HostManagerInit(ExtPort extPorts, HostManagerKCWrapper config, 
+        public HostManagerInit(KAddress selfAdr, ExtPort extPorts, HostManagerKCWrapper config, 
                 SettableFuture gvodSyncIFuture, byte[] schemaId) {
+            this.selfAdr = selfAdr;
             this.extPorts = extPorts;
             this.config = config;
             this.gvodSyncIFuture = gvodSyncIFuture;
@@ -116,18 +119,16 @@ public class HostManagerComp extends ComponentDefinition {
 
         public final Positive<Timer> timerPort;
         public final Positive<Network> networkPort;
-        public final Positive<AddressUpdatePort> addressUpdatePort;
         public final Positive<CCOperationPort> ccOpPort;
         public final Positive<OverlayMngrPort> omngrPort;
         public final Positive<CroupierPort> croupierPort;
         public final Negative<OverlayViewUpdatePort> viewUpdatePort;
 
-        public ExtPort(Positive<Timer> timerPort, Positive<Network> networkPort, Positive<AddressUpdatePort> addressUpdatePort, 
-                Positive<CCOperationPort> ccOpPort, Positive<OverlayMngrPort> omngrPort, Positive<CroupierPort> croupierPort,
+        public ExtPort(Positive<Timer> timerPort, Positive<Network> networkPort, Positive<CCOperationPort> ccOpPort, 
+                Positive<OverlayMngrPort> omngrPort, Positive<CroupierPort> croupierPort,
                 Negative<OverlayViewUpdatePort> viewUpdatePort) {
             this.timerPort = timerPort;
             this.networkPort = networkPort;
-            this.addressUpdatePort = addressUpdatePort;
             this.ccOpPort = ccOpPort;
             this.omngrPort = omngrPort;
             this.croupierPort = croupierPort;
