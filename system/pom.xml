@@ -43,11 +43,6 @@
             <version>${ktoolbox.version}</version>
         </dependency>
         <dependency>
-            <groupId>se.sics.ktoolbox.ipsolver</groupId>
-            <artifactId>core</artifactId>
-            <version>${ktoolbox.version}</version>
-        </dependency>
-        <dependency>
             <groupId>se.sics.ktoolbox.cc.bootstrap</groupId>
             <artifactId>core</artifactId>
             <version>${ktoolbox.version}</version>
