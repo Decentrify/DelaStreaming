@@ -18,12 +18,12 @@
  */
 package se.sics.gvod.mngr;
 
+import se.sics.gvod.mngr.event.LibraryAddEvent;
 import se.sics.gvod.mngr.event.LibraryContentsEvent;
 import se.sics.gvod.mngr.event.LibraryElementEvent;
 import se.sics.kompics.PortType;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LibraryPort extends PortType {
@@ -32,5 +32,7 @@ public class LibraryPort extends PortType {
         indication(LibraryContentsEvent.Response.class);
         request(LibraryElementEvent.Request.class);
         indication(LibraryElementEvent.Response.class);
+        request(LibraryAddEvent.Request.class);
+        indication(LibraryAddEvent.Response.class);
     }
 }
