@@ -19,6 +19,7 @@
 package se.sics.gvod.mngr;
 
 import se.sics.gvod.mngr.event.LibraryContentsEvent;
+import se.sics.gvod.mngr.event.LibraryElementEvent;
 import se.sics.kompics.PortType;
 
 /**
@@ -29,7 +30,7 @@ public class LibraryPort extends PortType {
     {
         request(LibraryContentsEvent.Request.class);
         indication(LibraryContentsEvent.Response.class);
-        request(LibraryContentsEvent.Request.class);
-        indication(LibraryContentsEvent.Response.class);
+        request(LibraryElementEvent.Request.class);
+        indication(LibraryElementEvent.Response.class);
     }
 }

@@ -22,7 +22,7 @@ import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.Result;
-import se.sics.gvod.mngr.util.TorrentStatus;
+import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
@@ -33,20 +33,16 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 public class LibraryContentsEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
-        public final String fileName;
-        public final Identifier overlayId;
         
-        public Request(Identifier eventId,String fileName, Identifier overlayId) {
+        public Request(Identifier eventId) {
             this.eventId = eventId;
-            this.fileName = fileName;
-            this.overlayId = overlayId;
         }
         
-        public Request(String fileName, Identifier overlayId) {
-            this(UUIDIdentifier.randomId(), fileName, overlayId);
+        public Request() {
+            this(UUIDIdentifier.randomId());
         }
         
-        public Response success(Map<Identifier, Pair<FileInfo, TorrentStatus>> content) {
+        public Response success(Map<Identifier, Pair<FileInfo, TorrentInfo>> content) {
             return new Response(this, Result.success(), content);
         }
         
@@ -64,9 +60,9 @@ public class LibraryContentsEvent {
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
-        public final Map<Identifier, Pair<FileInfo, TorrentStatus>> content;
+        public final Map<Identifier, Pair<FileInfo, TorrentInfo>> content;
         
-        private Response(Request req, Result result, Map<Identifier, Pair<FileInfo, TorrentStatus>> content) {
+        private Response(Request req, Result result, Map<Identifier, Pair<FileInfo, TorrentInfo>> content) {
             this.req = req;
             this.result = result;
             this.content = content;

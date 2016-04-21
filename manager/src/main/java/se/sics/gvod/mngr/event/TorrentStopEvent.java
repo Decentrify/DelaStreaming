@@ -27,51 +27,58 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentStopEvent {
+
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+
         public final Identifier eventId;
         public final String fileName;
         public final Identifier overlayId;
-        
-        public Request(Identifier eventId,String fileName, Identifier overlayId) {
+
+        public Request(Identifier eventId, String fileName, Identifier overlayId) {
             this.eventId = eventId;
             this.fileName = fileName;
             this.overlayId = overlayId;
         }
-        
+
         public Request(String fileName, Identifier overlayId) {
             this(UUIDIdentifier.randomId(), fileName, overlayId);
         }
-        
+
         public Response success() {
             return new Response(this, Result.success());
         }
-        
+
+        public Response badRequest(String description) {
+            return new Response(this, Result.badRequest(description));
+        }
+
         @Override
         public Identifier getId() {
             return eventId;
         }
-        
+
         @Override
         public String toString() {
             return "TorrentStopRequest<" + getId() + ">";
         }
     }
-    
+
     public static class Response implements Direct.Response, VoDMngrEvent {
+
         public final Request req;
         public final Result result;
-        
+
         private Response(Request req, Result result) {
             this.req = req;
             this.result = result;
         }
-        
+
         @Override
         public Identifier getId() {
             return req.getId();
         }
-        
-         @Override
+
+        @Override
         public String toString() {
             return "TorrentStopResponse<" + getId() + ">";
         }

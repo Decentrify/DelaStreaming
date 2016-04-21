@@ -16,34 +16,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+
 package se.sics.gvod.mngr.util;
 
-import java.util.HashMap;
-import java.util.Map;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.network.KAddress;
+import java.util.StringTokenizer;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentInfo {
-
-    public final TorrentStatus status;
-    public final Map<Identifier, KAddress> partners;
-    public final double progress; //percentage
-    public final long downloadSpeed; //byte/s
-    public final long uploadSpeed; //byte/s
+public class LibraryUtil {
     
-    public TorrentInfo(TorrentStatus status, Map<Identifier, KAddress> partners, double progress, long downloadSpeed, long uploadSpeed) {
-        this.status = status;
-        this.partners = partners;
-        this.progress = progress;
-        this.downloadSpeed = downloadSpeed;
-        this.uploadSpeed = uploadSpeed;
-    }
-    
-    public static TorrentInfo none() {
-        return new TorrentInfo(TorrentStatus.NONE, new HashMap<Identifier, KAddress>(), 0, 0, 0);
+    public static String removeExtension(String fileName) throws IllegalArgumentException {
+        String reverseFileName = new StringBuilder(fileName).reverse().toString();
+        StringTokenizer reverseFileNameST = new StringTokenizer(reverseFileName, ".");
+        if (reverseFileNameST.countTokens() < 2) {
+            throw new IllegalArgumentException("bad file name:" + fileName);
+        }
+        return fileName.substring(0, fileName.length() - reverseFileNameST.nextToken().toString().length() - 1);
     }
 }

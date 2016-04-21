@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.mngr.event;
 
+import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.kompics.Direct;
@@ -43,8 +44,12 @@ public class LibraryElementEvent {
             this(UUIDIdentifier.randomId(), fileName, overlayId);
         }
         
-        public Response success(TorrentInfo content) {
-            return new Response(this, Result.success(), content);
+        public Response success(FileInfo fileInfo, TorrentInfo torrentInfo) {
+            return new Response(this, Result.success(), fileInfo, torrentInfo);
+        }
+        
+        public Response badRequest(String description) {
+            return new Response(this, Result.badRequest(description), null, null);
         }
         
         @Override
@@ -61,12 +66,14 @@ public class LibraryElementEvent {
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
-        public final TorrentInfo content;
+        public final FileInfo fileInfo;
+        public final TorrentInfo torrentInfo;
         
-        private Response(Request req, Result result, TorrentInfo content) {
+        private Response(Request req, Result result, FileInfo fileInfo, TorrentInfo torrentInfo) {
             this.req = req;
             this.result = result;
-            this.content = content;
+            this.fileInfo = fileInfo;
+            this.torrentInfo = torrentInfo;
         }
         
         @Override

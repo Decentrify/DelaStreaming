@@ -23,7 +23,7 @@ package se.sics.gvod.mngr.util;
  */
 public class Result {
     public static enum Status {
-        SUCCESS, TIMEOUT, INTERNAL_FAILURE;
+        SUCCESS, TIMEOUT, INTERNAL_FAILURE, BAD_REQUEST;
     }
     
     public final Status status;
@@ -36,5 +36,9 @@ public class Result {
     
     public static Result success() {
         return new Result(Status.SUCCESS, "success");
+    }
+    
+    public static Result badRequest(String description) {
+        return new Result(Status.BAD_REQUEST, description);
     }
 }

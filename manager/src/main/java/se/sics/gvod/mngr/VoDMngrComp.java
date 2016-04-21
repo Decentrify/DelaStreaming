@@ -20,6 +20,7 @@ package se.sics.gvod.mngr;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.gvod.core.VoDPort;
 import se.sics.gvod.mngr.event.TorrentDownloadEvent;
 import se.sics.gvod.mngr.event.LibraryContentsEvent;
 import se.sics.gvod.mngr.event.LibraryElementEvent;
@@ -30,6 +31,7 @@ import se.sics.gvod.mngr.event.VideoStopEvent;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
+import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 
 /**
@@ -43,11 +45,16 @@ public class VoDMngrComp extends ComponentDefinition {
     Negative<LibraryPort> libraryPort = provides(LibraryPort.class);
     Negative<TorrentPort> torrentPort = provides(TorrentPort.class);
     Negative<VideoPort> videoPort = provides(VideoPort.class);
+    Positive<VoDPort> vod = requires(VoDPort.class);
     //**************************INTERNAL_STATE**********************************
-    
+    private final LibraryMngr libMngr;
+    private final TorrentMngr torrentMngr;
     
     public VoDMngrComp(Init init) {
         LOG.info("{}initiating...", logPrefix);
+        
+        libMngr = new LibraryMngr(null, null);
+        torrentMngr = new TorrentMngr();
     
         subscribe(handleStart, control);
         subscribe(handleLibraryContent, libraryPort);
@@ -116,6 +123,5 @@ public class VoDMngrComp extends ComponentDefinition {
     };
     
     public static class Init extends se.sics.kompics.Init<VoDMngrComp> {
-        
     }
 }

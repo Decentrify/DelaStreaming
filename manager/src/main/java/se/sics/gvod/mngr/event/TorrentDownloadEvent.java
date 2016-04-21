@@ -46,6 +46,10 @@ public class TorrentDownloadEvent {
             return new Response(this, Result.success());
         }
         
+        public Response badRequest(String description) {
+            return new Response(this, Result.badRequest(description));
+        }
+        
         @Override
         public Identifier getId() {
             return eventId;

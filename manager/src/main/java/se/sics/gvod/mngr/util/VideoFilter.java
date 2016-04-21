@@ -18,32 +18,36 @@
  */
 package se.sics.gvod.mngr.util;
 
-import java.util.HashMap;
-import java.util.Map;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.network.KAddress;
+import java.io.File;
+import java.io.FileFilter;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentInfo {
+public class VideoFilter implements FileFilter {
 
-    public final TorrentStatus status;
-    public final Map<Identifier, KAddress> partners;
-    public final double progress; //percentage
-    public final long downloadSpeed; //byte/s
-    public final long uploadSpeed; //byte/s
-    
-    public TorrentInfo(TorrentStatus status, Map<Identifier, KAddress> partners, double progress, long downloadSpeed, long uploadSpeed) {
-        this.status = status;
-        this.partners = partners;
-        this.progress = progress;
-        this.downloadSpeed = downloadSpeed;
-        this.uploadSpeed = uploadSpeed;
+    @Override
+    public boolean accept(File file) {
+        if (!file.isFile()) {
+            return false;
+        }
+        for (AcceptedVideos extension : AcceptedVideos.values()) {
+            if (file.getName().endsWith(extension.extension)) {
+                return true;
+            }
+        }
+        return false;
     }
-    
-    public static TorrentInfo none() {
-        return new TorrentInfo(TorrentStatus.NONE, new HashMap<Identifier, KAddress>(), 0, 0, 0);
+
+    static enum AcceptedVideos {
+
+        MP4(".mp4"), MKV(".mkv");
+
+        private String extension;
+
+        private AcceptedVideos(String extension) {
+            this.extension = extension;
+        }
     }
 }
