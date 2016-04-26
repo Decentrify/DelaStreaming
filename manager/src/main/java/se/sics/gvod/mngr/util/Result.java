@@ -41,4 +41,8 @@ public class Result {
     public static Result badRequest(String description) {
         return new Result(Status.BAD_REQUEST, description);
     }
+    
+    public static Result fail(String description) {
+        return new Result(Status.INTERNAL_FAILURE, description);
+    }
 }
