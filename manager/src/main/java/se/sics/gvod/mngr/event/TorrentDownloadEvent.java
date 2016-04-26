@@ -50,6 +50,10 @@ public class TorrentDownloadEvent {
             return new Response(this, Result.badRequest(description));
         }
         
+        public Response fail(String description) {
+            return new Response(this, Result.fail(description));
+        }
+        
         @Override
         public Identifier getId() {
             return eventId;

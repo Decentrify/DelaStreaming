@@ -313,13 +313,7 @@ public class VoDComp extends ComponentDefinition {
         connectVideoComponents(overlayId, download, playPos, hashedFileMngr);
         trigger(new OMngrCroupier.ConnectRequest(overlayId, false), omngrPort);
         
-        VideoStreamManager vsMngr = null;
-        try {
-            vsMngr = new VideoStreamMngrImpl(hashedFileMngr.getValue0(), fileMeta.pieceSize, (long) fileMeta.fileSize, playPos);
-        } catch (IOException ex) {
-            LOG.error("{} IOException trying to read video:{}", logPrefix, fileMeta.fileName);
-            throw new RuntimeException("IOException trying to read video:{}" + fileMeta.fileName, ex);
-        }
+        VideoStreamManager vsMngr = new VideoStreamMngrImpl(hashedFileMngr.getValue0(), fileMeta.pieceSize, (long) fileMeta.fileSize, playPos);
         pendingVideoComp.put(overlayId, Triplet.with(vodReqId, fileMeta.fileName, vsMngr));
         
     }
