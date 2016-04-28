@@ -60,14 +60,14 @@ import se.sics.ktoolbox.croupier.CroupierPort;
 import se.sics.ktoolbox.overlaymngr.OverlayMngrPort;
 import se.sics.ktoolbox.overlaymngr.events.OMngrCroupier;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.managedStore.FileMngr;
-import se.sics.ktoolbox.util.managedStore.HashMngr;
-import se.sics.ktoolbox.util.managedStore.HashUtil;
-import se.sics.ktoolbox.util.managedStore.StorageMngrFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.ktoolbox.util.idextractor.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.idextractor.EventOverlayIdExtractor;
+import se.sics.ktoolbox.util.managedStore.core.FileMngr;
+import se.sics.ktoolbox.util.managedStore.core.HashMngr;
+import se.sics.ktoolbox.util.managedStore.core.impl.StorageMngrFactory;
+import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.overlays.view.OverlayViewUpdatePort;
 import se.sics.ktoolbox.videostream.VideoStreamManager;
 import se.sics.ktoolbox.videostream.VideoStreamMngrImpl;
@@ -364,7 +364,7 @@ public class VoDComp extends ComponentDefinition {
 //        PieceTracker hashPieceTracker = new CompletePieceTracker(nrHashPieces);
 //        Storage hashStorage = StorageFactory.getExistingFile(hashFilePath);
 //        HashMngr hashMngr = new CompleteFileMngr(hashStorage, hashPieceTracker);
-        HashMngr hashMngr = StorageMngrFactory.getCompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize,
+        HashMngr hashMngr = StorageMngrFactory.completeMMHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize,
                 HashUtil.getHashSize(fileMeta.hashAlg));
 
 //        int filePieces = fileMeta.fileSize / fileMeta.pieceSize + (fileMeta.fileSize % fileMeta.pieceSize == 0 ? 0 : 1);
@@ -373,7 +373,7 @@ public class VoDComp extends ComponentDefinition {
 //        FileMngr fileMngr = new SimpleFileMngr(videoStorage, videoPieceTracker);
         DownloadMngrKCWrapper downloadConfig = new DownloadMngrKCWrapper(config());
         int blockSize = downloadConfig.piecesPerBlock * downloadConfig.pieceSize;
-        FileMngr fileMngr = StorageMngrFactory.getCompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize,
+        FileMngr fileMngr = StorageMngrFactory.completeMMFileMngr(videoFilePath, fileMeta.fileSize, blockSize,
                 downloadConfig.pieceSize);
 
         return Pair.with(fileMngr, hashMngr);
@@ -394,7 +394,7 @@ public class VoDComp extends ComponentDefinition {
 //        PieceTracker hashPieceTracker = new SimplePieceTracker(hashPieces);
 //        Storage hashStorage = StorageFactory.getEmptyFile(hashFilePath, fileMeta.hashFileSize, HashUtil.getHashSize(fileMeta.hashAlg));
 //        FileMngr hashMngr = new SimpleFileMngr(hashStorage, hashPieceTracker);
-        HashMngr hashMngr = StorageMngrFactory.getIncompleteHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize,
+        HashMngr hashMngr = StorageMngrFactory.incompleteMMHashMngr(hashFilePath, fileMeta.hashAlg, fileMeta.hashFileSize,
                 HashUtil.getHashSize(fileMeta.hashAlg));
 
 //        Storage videoStorage = StorageFactory.getEmptyFile(videoFilePath, fileMeta.fileSize, fileMeta.pieceSize);
@@ -403,7 +403,7 @@ public class VoDComp extends ComponentDefinition {
 //        FileMngr fileMngr = new SimpleFileMngr(videoStorage, videoPieceTracker);
         DownloadMngrKCWrapper downloadConfig = new DownloadMngrKCWrapper(config());
         int blockSize = downloadConfig.piecesPerBlock * downloadConfig.pieceSize;
-        FileMngr fileMngr = StorageMngrFactory.getIncompleteFileMngr(videoFilePath, fileMeta.fileSize, blockSize,
+        FileMngr fileMngr = StorageMngrFactory.incompleteMMFileMngr(videoFilePath, fileMeta.fileSize, blockSize,
                 downloadConfig.pieceSize);
 
         return Pair.with(fileMngr, hashMngr);

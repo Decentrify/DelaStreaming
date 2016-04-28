@@ -26,14 +26,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.javatuples.Pair;
-import org.javatuples.Quartet;
 import org.javatuples.Quintet;
-import se.sics.ktoolbox.util.managedStore.BlockMngr;
-import se.sics.ktoolbox.util.managedStore.FileMngr;
-import se.sics.ktoolbox.util.managedStore.HashMngr;
-import se.sics.ktoolbox.util.managedStore.HashUtil;
-import se.sics.ktoolbox.util.managedStore.StorageMngrFactory;
-
+import se.sics.ktoolbox.util.managedStore.core.BlockMngr;
+import se.sics.ktoolbox.util.managedStore.core.FileMngr;
+import se.sics.ktoolbox.util.managedStore.core.HashMngr;
+import se.sics.ktoolbox.util.managedStore.core.impl.StorageMngrFactory;
+import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
@@ -158,7 +156,7 @@ public class DownloadMngr {
         }
         for (Integer blockNr : resetBlocks.keySet()) {
             int blockSize = fileMngr.blockSize(blockNr);
-            BlockMngr blankBlock = StorageMngrFactory.getSimpleBlockMngr(blockSize, config.pieceSize);
+            BlockMngr blankBlock = StorageMngrFactory.inMemoryBlockMngr(blockSize, config.pieceSize);
             queuedBlocks.put(blockNr, blankBlock);
             for (int i = 0; i < blankBlock.nrPieces(); i++) {
                 int pieceId = blockNr * config.piecesPerBlock + i;
@@ -206,7 +204,7 @@ public class DownloadMngr {
         }
         //last block might have less nr of pieces than default
         int blockSize = fileMngr.blockSize(nextBlockNr);
-        BlockMngr blankBlock = StorageMngrFactory.getSimpleBlockMngr(blockSize, config.pieceSize);
+        BlockMngr blankBlock = StorageMngrFactory.inMemoryBlockMngr(blockSize, config.pieceSize);
         queuedBlocks.put(nextBlockNr, blankBlock);
         for (int i = 0; i < blankBlock.nrPieces(); i++) {
             int pieceId = nextBlockNr * config.piecesPerBlock + i;

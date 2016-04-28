@@ -50,8 +50,8 @@ import se.sics.ktoolbox.util.aggregation.CompTracker;
 import se.sics.ktoolbox.util.aggregation.CompTrackerImpl;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.managedStore.FileMngr;
-import se.sics.ktoolbox.util.managedStore.HashMngr;
+import se.sics.ktoolbox.util.managedStore.core.FileMngr;
+import se.sics.ktoolbox.util.managedStore.core.HashMngr;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>

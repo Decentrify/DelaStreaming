@@ -34,11 +34,11 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.util.aggregation.AggregationLevel;
-import se.sics.ktoolbox.util.managedStore.FileMngr;
-import se.sics.ktoolbox.util.managedStore.HashMngr;
-import se.sics.ktoolbox.util.managedStore.HashUtil;
-import se.sics.ktoolbox.util.managedStore.StorageMngrFactory;
-
+import se.sics.ktoolbox.util.managedStore.core.FileMngr;
+import se.sics.ktoolbox.util.managedStore.core.HashMngr;
+import se.sics.ktoolbox.util.managedStore.core.ManagedStoreHelper;
+import se.sics.ktoolbox.util.managedStore.core.impl.StorageMngrFactory;
+import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
@@ -70,7 +70,7 @@ public class DownloadMngrTest {
         File uploadFile = new File(uploadFilePath);
         uploadFile.createNewFile();
         generateFile(uploadFile, rand);
-        nrBlocks = StorageMngrFactory.nrPieces(uploadFile.length(), piecesPerBlock * pieceSize);
+        nrBlocks = ManagedStoreHelper.componentNr(uploadFile.length(), piecesPerBlock * pieceSize);
         HashUtil.makeHashes(uploadFilePath, hashFilePath, hashAlg, piecesPerBlock * pieceSize);
     }
 
@@ -132,16 +132,16 @@ public class DownloadMngrTest {
 
         DownloadMngrKCWrapper config = new DownloadMngrKCWrapper(null, 10, 1000, pieceSize, piecesPerBlock, AggregationLevel.NONE, 30000);
         int blockSize = piecesPerBlock * pieceSize;
-        HashMngr uploadHashMngr = StorageMngrFactory.getCompleteHashMngr(hashFilePath, hashAlg, hashFileSize, HashUtil.getHashSize(hashAlg));
-        FileMngr uploadFileMngr = StorageMngrFactory.getCompleteFileMngr(uploadFilePath, fileSize, blockSize, pieceSize);
+        HashMngr uploadHashMngr = StorageMngrFactory.completeMMHashMngr(hashFilePath, hashAlg, hashFileSize, HashUtil.getHashSize(hashAlg));
+        FileMngr uploadFileMngr = StorageMngrFactory.completeMMFileMngr(uploadFilePath, fileSize, blockSize, pieceSize);
         DownloadMngr uploader = new DownloadMngr(config, uploadHashMngr, uploadFileMngr);
 
-        FileMngr download1FileMngr = StorageMngrFactory.getIncompleteFileMngr(download1FilePath, fileSize, blockSize, pieceSize);
-        HashMngr download1HashMngr = StorageMngrFactory.getIncompleteHashMngr(download1HashPath, hashAlg, hashFileSize, HashUtil.getHashSize(hashAlg));
+        FileMngr download1FileMngr = StorageMngrFactory.incompleteMMFileMngr(download1FilePath, fileSize, blockSize, pieceSize);
+        HashMngr download1HashMngr = StorageMngrFactory.incompleteMMHashMngr(download1HashPath, hashAlg, hashFileSize, HashUtil.getHashSize(hashAlg));
         Pair<DownloadMngr, Integer> downloader1 = Pair.with(new DownloadMngr(config, download1HashMngr, download1FileMngr), 0);
 
-        FileMngr download2FileMngr = StorageMngrFactory.getIncompleteFileMngr(download2FilePath, fileSize, blockSize, pieceSize);
-        HashMngr download2HashMngr = StorageMngrFactory.getIncompleteHashMngr(download2HashPath, hashAlg, hashFileSize, HashUtil.getHashSize(hashAlg));
+        FileMngr download2FileMngr = StorageMngrFactory.incompleteMMFileMngr(download2FilePath, fileSize, blockSize, pieceSize);
+        HashMngr download2HashMngr = StorageMngrFactory.incompleteMMHashMngr(download2HashPath, hashAlg, hashFileSize, HashUtil.getHashSize(hashAlg));
         Pair<DownloadMngr, Integer> downloader2 = Pair.with(new DownloadMngr(config, download2HashMngr, download2FileMngr), 0);
 
 //      LOG.info("status file1:{} file2:{} pPieces1:{} pPieces2:{}",

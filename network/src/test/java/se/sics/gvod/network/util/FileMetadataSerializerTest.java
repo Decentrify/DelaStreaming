@@ -28,11 +28,10 @@ import se.sics.gvod.common.util.FileMetadata;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.ktoolbox.util.managedStore.HashUtil;
+import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class FileMetadataSerializerTest {
