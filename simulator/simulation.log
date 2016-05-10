@@ -1,0 +1,1970 @@
+[17:44:08,762] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[17:45:42,870] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[17:47:44,772] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TorrentTestComp} initiating...
+[00:00:00,000] INFO  {TorrentTestComp} starting...
+[19:02:27,678] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+se.sics.kompics.KompicsException: Direct.Response can not be "trigger"ed. It has to "answer" a Direct.Request!
+	at se.sics.kompics.ComponentDefinition.trigger(ComponentDefinition.java:89)
+	at se.sics.gvod.simulator.example.TestExampleComp.access$200(TestExampleComp.java:31)
+	at se.sics.gvod.simulator.example.TestExampleComp$1.handle(TestExampleComp.java:49)
+	at se.sics.gvod.simulator.example.TestExampleComp$1.handle(TestExampleComp.java:45)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(se.sics.kompics.KompicsException: Direct.Response can not be "trigger"ed. It has to "answer" a Direct.Request! thrown in Component(501c9270-20ff-6758-5e33-a8f62587af98):se.sics.gvod.simulator.example.TestExampleComp@3b69e7d1 while handling event se.sics.kompics.Start@31190526) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@2a4fb17b while handling event KompicsFault(se.sics.kompics.KompicsException: Direct.Response can not be "trigger"ed. It has to "answer" a Direct.Request! thrown in Component(501c9270-20ff-6758-5e33-a8f62587af98):se.sics.gvod.simulator.example.TestExampleComp@3b69e7d1 while handling event se.sics.kompics.Start@31190526)) 
+
+
+[19:06:29,249] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+se.sics.kompics.KompicsException: Direct.Response can not be "trigger"ed. It has to "answer" a Direct.Request!
+	at se.sics.kompics.ComponentDefinition.trigger(ComponentDefinition.java:89)
+	at se.sics.gvod.simulator.example.TestExampleComp.access$200(TestExampleComp.java:31)
+	at se.sics.gvod.simulator.example.TestExampleComp$1.handle(TestExampleComp.java:49)
+	at se.sics.gvod.simulator.example.TestExampleComp$1.handle(TestExampleComp.java:45)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(se.sics.kompics.KompicsException: Direct.Response can not be "trigger"ed. It has to "answer" a Direct.Request! thrown in Component(501c9270-20ff-6758-5e33-a8f62587af98):se.sics.gvod.simulator.example.TestExampleComp@6150c3ec while handling event se.sics.kompics.Start@477b4cdf) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@5c6648b0 while handling event KompicsFault(se.sics.kompics.KompicsException: Direct.Response can not be "trigger"ed. It has to "answer" a Direct.Request! thrown in Component(501c9270-20ff-6758-5e33-a8f62587af98):se.sics.gvod.simulator.example.TestExampleComp@6150c3ec while handling event se.sics.kompics.Start@477b4cdf)) 
+
+
+[19:06:53,291] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.ClassCastException: se.sics.gvod.simulator.example.TestExampleEvent$Indication cannot be cast to se.sics.ktoolbox.util.identifiable.Identifiable
+	at se.sics.gvod.simulator.util.TestSyncIComp$1.handle(TestSyncIComp.java:75)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.ClassCastException: se.sics.gvod.simulator.example.TestExampleEvent$Indication cannot be cast to se.sics.ktoolbox.util.identifiable.Identifiable thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@dd05255 while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@477b4cdf) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@5c6648b0 while handling event KompicsFault(java.lang.ClassCastException: se.sics.gvod.simulator.example.TestExampleEvent$Indication cannot be cast to se.sics.ktoolbox.util.identifiable.Identifiable thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@dd05255 while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@477b4cdf)) 
+
+
+[19:09:03,199] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.NullPointerException
+	at se.sics.gvod.simulator.util.TestSyncIComp$1.handle(TestSyncIComp.java:83)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.NullPointerException thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@1573f9fc while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@31190526) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@31304f14 while handling event KompicsFault(java.lang.NullPointerException thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@1573f9fc while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@31190526)) 
+
+
+[19:10:43,034] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.NullPointerException
+	at se.sics.gvod.simulator.util.TestSyncIComp$1.handle(TestSyncIComp.java:74)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.NullPointerException thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@3b0090a4 while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@4d1c00d0) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@59474f18 while handling event KompicsFault(java.lang.NullPointerException thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@3b0090a4 while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@4d1c00d0)) 
+
+
+[19:16:50,100] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.NullPointerException
+	at se.sics.gvod.simulator.util.TestSyncIComp$1.handle(TestSyncIComp.java:75)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.NullPointerException thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@dd05255 while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@477b4cdf) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@5c6648b0 while handling event KompicsFault(java.lang.NullPointerException thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@dd05255 while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@477b4cdf)) 
+
+
+[19:18:34,762] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.NullPointerException
+	at se.sics.gvod.simulator.util.TestSyncIComp$1.handle(TestSyncIComp.java:71)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.NullPointerException thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@44c03695 while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@662ac478) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:53)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@5c6648b0 while handling event KompicsFault(java.lang.NullPointerException thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.util.TestSyncIComp@44c03695 while handling event se.sics.gvod.simulator.example.TestExampleEvent$Indication@662ac478)) 
+
+
+[19:22:30,702] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[19:25:29,666] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[19:28:29,555] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[21:07:26,875] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: se.sics.gvod.simulator.util.TestTerminationComp@6e509ffa has no positive se.sics.kompics.timer.Timer
+	at se.sics.kompics.JavaComponent.getPositive(JavaComponent.java:132)
+	at se.sics.gvod.simulator.example.TestExampleHostComp$1.handle(TestExampleHostComp.java:68)
+	at se.sics.gvod.simulator.example.TestExampleHostComp$1.handle(TestExampleHostComp.java:62)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:33)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: se.sics.gvod.simulator.util.TestTerminationComp@6e509ffa has no positive se.sics.kompics.timer.Timer thrown in Component(05e8b106-f0f5-b4f2-2d0c-d0f14663620f):se.sics.gvod.simulator.example.TestExampleHostComp@22555ebf while handling event se.sics.kompics.Start@5609159b) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:33)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@4c371370 while handling event KompicsFault(java.lang.RuntimeException: se.sics.gvod.simulator.util.TestTerminationComp@6e509ffa has no positive se.sics.kompics.timer.Timer thrown in Component(05e8b106-f0f5-b4f2-2d0c-d0f14663620f):se.sics.gvod.simulator.example.TestExampleHostComp@22555ebf while handling event se.sics.kompics.Start@5609159b)) 
+
+
+[21:09:10,830] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[21:09:52,366] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[21:10:18,277] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+se.sics.kompics.KompicsException: Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.example.TestExampleComp@672872e1 received a Start event while in ACTIVE state. Duplicate Start events are not allowed!
+	at se.sics.kompics.JavaComponent$3.handle(JavaComponent.java:604)
+	at se.sics.kompics.JavaComponent$3.handle(JavaComponent.java:600)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:33)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(se.sics.kompics.KompicsException: Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.example.TestExampleComp@672872e1 received a Start event while in ACTIVE state. Duplicate Start events are not allowed! thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.example.TestExampleComp@672872e1 while handling event se.sics.kompics.Start@5ab9e72c) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:33)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@48f2bd5b while handling event KompicsFault(se.sics.kompics.KompicsException: Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.example.TestExampleComp@672872e1 received a Start event while in ACTIVE state. Duplicate Start events are not allowed! thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.simulator.example.TestExampleComp@672872e1 while handling event se.sics.kompics.Start@5ab9e72c)) 
+
+
+[21:10:57,420] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[21:22:07,917] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[21:23:03,005] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestTerminationComp} initiating...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestTerminationComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[21:24:09,853] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestTerminationComp} initiating...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestTerminationComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[00:00:00,010] DEBUG {TestTerminationComp} periodic check
+[21:26:50,152] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestTerminationComp} initiating...
+[21:27:44,121] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[21:28:51,815] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestTerminationComp} initiating...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestTerminationComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[00:00:01,000] DEBUG {TestTerminationComp} periodic check
+[21:29:52,319] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TestExampleHostComp} initiating...
+[00:00:00,000] INFO  {TestExampleHostComp} starting...
+[00:00:00,000] INFO  {TestTerminationComp} initiating...
+[00:00:00,000] INFO  {TestExampleComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} initiating...
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Response on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestSyncIComp} subscribing handler for:class se.sics.gvod.simulator.example.TestExampleEvent$Indication on:se.sics.gvod.simulator.example.TestExamplePort
+[00:00:00,000] INFO  {TestTerminationComp} starting...
+[00:00:00,000] INFO  {TestExampleComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} starting...
+[00:00:00,000] INFO  {TestSyncIComp} callback
+[00:00:01,000] DEBUG {TestTerminationComp} periodic check
+[00:00:02,000] DEBUG {TestTerminationComp} periodic check
+[00:00:03,000] DEBUG {TestTerminationComp} periodic check
+[00:00:04,000] DEBUG {TestTerminationComp} periodic check
+[00:00:05,000] DEBUG {TestTerminationComp} periodic check
+[00:00:06,000] DEBUG {TestTerminationComp} periodic check
+[00:00:07,000] DEBUG {TestTerminationComp} periodic check
+[00:00:08,000] DEBUG {TestTerminationComp} periodic check
+[00:00:09,000] DEBUG {TestTerminationComp} periodic check
+[00:00:10,000] DEBUG {TestTerminationComp} periodic check
+[00:00:10,000] ERROR {TestTerminationComp} simulation did not terminate in time
+[00:00:10,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: simulation did not terminate in time
+	at se.sics.gvod.simulator.util.TestTerminationComp$2.handle(TestTerminationComp.java:88)
+	at se.sics.gvod.simulator.util.TestTerminationComp$2.handle(TestTerminationComp.java:70)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:33)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:10,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: simulation did not terminate in time thrown in Component(501c9270-20ff-6758-5e33-a8f62587af98):se.sics.gvod.simulator.util.TestTerminationComp@2118cddf while handling event se.sics.gvod.simulator.util.TestTerminationComp$KeepSimulationAlive@f2ff811) 
+
+
+[00:00:10,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.example.ExampleTest.test1(ExampleTest.java:33)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:47)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:44)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:271)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:70)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:50)
+	at org.junit.runners.ParentRunner$3.run(ParentRunner.java:238)
+	at org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:63)
+	at org.junit.runners.ParentRunner.runChildren(ParentRunner.java:236)
+	at org.junit.runners.ParentRunner.access$000(ParentRunner.java:53)
+	at org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:229)
+	at org.junit.runners.ParentRunner.run(ParentRunner.java:309)
+	at org.apache.maven.surefire.junit4.JUnit4TestSet.execute(JUnit4TestSet.java:53)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.executeTestSet(JUnit4Provider.java:123)
+	at org.apache.maven.surefire.junit4.JUnit4Provider.invoke(JUnit4Provider.java:104)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.maven.surefire.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:164)
+	at org.apache.maven.surefire.booter.ProviderFactory$ProviderProxy.invoke(ProviderFactory.java:110)
+	at org.apache.maven.surefire.booter.SurefireStarter.invokeProvider(SurefireStarter.java:175)
+	at org.apache.maven.surefire.booter.SurefireStarter.runSuitesInProcessWhenForked(SurefireStarter.java:107)
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:68)
+[00:00:10,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@4c371370 while handling event KompicsFault(java.lang.RuntimeException: simulation did not terminate in time thrown in Component(501c9270-20ff-6758-5e33-a8f62587af98):se.sics.gvod.simulator.util.TestTerminationComp@2118cddf while handling event se.sics.gvod.simulator.util.TestTerminationComp$KeepSimulationAlive@f2ff811)) 
+
+
+[16:42:30,773] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>starting...
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.UnsupportedOperationException: Not supported yet.
+	at se.sics.gvod.simulator.torrent.ScenarioSetup$1.download(ScenarioSetup.java:48)
+	at se.sics.gvod.core.TorrentComp$TransferInit$1.handle(TorrentComp.java:168)
+	at se.sics.gvod.core.TorrentComp$TransferInit$1.handle(TorrentComp.java:165)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.torrent.SimLauncher.main(SimLauncher.java:30)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.UnsupportedOperationException: Not supported yet. thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.core.TorrentComp@7334aada while handling event se.sics.kompics.Start@158da8e) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.torrent.SimLauncher.main(SimLauncher.java:30)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@75329a49 while handling event KompicsFault(java.lang.UnsupportedOperationException: Not supported yet. thrown in Component(b4865538-05f2-ef1f-005a-e0b38bf72308):se.sics.gvod.core.TorrentComp@7334aada while handling event se.sics.kompics.Start@158da8e)) 
+
+
+[16:43:06,681] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>starting...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>setting up getting torrent
+[00:00:00,000] DEBUG {TorrentComp} <nid:1, oid:13000001>setup GetTorrent state
+[00:00:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:00:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:00:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:00:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:00:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:01:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:01:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:01:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:01:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:01:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:01:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:02:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:02:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:02:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:02:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:02:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:02:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:03:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:03:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:03:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:03:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:03:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:03:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:04:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:04:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:04:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:04:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:04:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:04:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:05:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:05:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:05:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:05:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:05:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:05:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:06:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:06:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:06:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:06:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:06:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:06:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:07:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:07:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:07:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:07:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:07:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:07:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:08:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:08:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:08:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:08:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:08:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:08:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:09:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:09:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:09:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:09:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:09:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:09:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:10:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:10:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:10:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:10:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:10:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:10:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:11:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:11:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:11:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:11:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:11:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:11:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:12:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:12:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:12:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:12:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:12:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:12:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:13:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:13:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:13:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:13:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:13:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:13:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:14:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:14:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:14:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:14:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:14:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:14:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:15:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:15:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:15:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:15:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:15:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:15:50,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:16:00,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:16:10,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:16:20,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:16:30,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[00:16:40,000] INFO  {TorrentComp} {}TransferFSM GetTorrent State
+[09:38:03,618] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentTestHostComp} {}step1 - publish connections
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>starting...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>setting up getting torrent
+[00:00:00,000] DEBUG {TorrentComp} <nid:1, oid:13000001>setup GetTorrent state
+[00:00:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[09:46:54,125] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TestDriver} state1 - publish connection
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: se.sics.gvod.stream.connection.PublishConnections events cannot be triggered on positive se.sics.gvod.stream.connection.ConnectionPort
+	at se.sics.kompics.JavaPort.deliver(JavaPort.java:416)
+	at se.sics.kompics.JavaPort.doTrigger(JavaPort.java:341)
+	at se.sics.kompics.ComponentDefinition.trigger(ComponentDefinition.java:92)
+	at se.sics.kompics.ComponentDefinition$1.trigger(ComponentDefinition.java:455)
+	at se.sics.gvod.simulator.torrent.ScenarioSetup$2.state1(ScenarioSetup.java:140)
+	at se.sics.gvod.simulator.torrent.ScenarioSetup$2.next(ScenarioSetup.java:120)
+	at se.sics.gvod.simulator.torrent.TorrentDriverComp$1.handle(TorrentDriverComp.java:63)
+	at se.sics.gvod.simulator.torrent.TorrentDriverComp$1.handle(TorrentDriverComp.java:59)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.torrent.SimLauncher.main(SimLauncher.java:30)
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>starting...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>setting up getting torrent
+[00:00:00,000] DEBUG {TorrentComp} <nid:1, oid:13000001>setup GetTorrent state
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: se.sics.gvod.stream.connection.PublishConnections events cannot be triggered on positive se.sics.gvod.stream.connection.ConnectionPort thrown in Component(501c9270-20ff-6758-5e33-a8f62587af98):se.sics.gvod.simulator.torrent.TorrentDriverComp@6150c3ec while handling event se.sics.kompics.Start@74e52ef6) 
+
+
+[00:00:00,000] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: You cannot start threads in reproducible simulation mode.
+	at se.sics.kompics.simulator.core.impl.P2pSimulator.java_lang_Thread_start(P2pSimulator.java:483)
+	at se.sics.kompics.simulator.core.SimulatorSystem.start(SimulatorSystem.java:77)
+	at se.sics.kompics.Kompics.handleFault(Kompics.java:324)
+	at se.sics.kompics.JavaComponent.escalateFault(JavaComponent.java:432)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:458)
+	at se.sics.kompics.JavaComponent$1.handle(JavaComponent.java:437)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.simulator.scheduler.BasicSimulationScheduler.proceed(BasicSimulationScheduler.java:55)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:229)
+	at se.sics.kompics.Kompics.createAndStart(Kompics.java:156)
+	at se.sics.kompics.simulator.run.LauncherComp.main(LauncherComp.java:46)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at javassist.Loader.run(Loader.java:291)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:348)
+	at se.sics.kompics.simulator.SimulationScenario.simulate(SimulationScenario.java:328)
+	at se.sics.gvod.simulator.torrent.SimLauncher.main(SimLauncher.java:30)
+[00:00:00,000] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: You cannot start threads in reproducible simulation mode. thrown in Component(bb20b45f-d4d9-5138-3d93-cb799b3970be):se.sics.kompics.simulator.run.LauncherComp@49c386c8 while handling event KompicsFault(java.lang.RuntimeException: se.sics.gvod.stream.connection.PublishConnections events cannot be triggered on positive se.sics.gvod.stream.connection.ConnectionPort thrown in Component(501c9270-20ff-6758-5e33-a8f62587af98):se.sics.gvod.simulator.torrent.TorrentDriverComp@6150c3ec while handling event se.sics.kompics.Start@74e52ef6)) 
+
+
+[09:47:39,344] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TestDriver} state1 - publish connection
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>starting...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>setting up getting torrent
+[00:00:00,000] DEBUG {TorrentComp} <nid:1, oid:13000001>setup GetTorrent state
+[00:00:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[09:50:28,701] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TestDriver} state1 - publish connection
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>starting...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>setting up getting torrent
+[00:00:00,000] DEBUG {TorrentComp} <nid:1, oid:13000001>setup GetTorrent state
+[00:00:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:00:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:01:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:02:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:03:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:04:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:05:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:06:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:07:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:08:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:09:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:10:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:11:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:12:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:13:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:14:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:15:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[00:16:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM GetTorrent State
+[09:55:59,533] INFO  {CodeInstrumentation} no user defined instrumentation exceptions detected
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TorrentTestHostComp} initiating...
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>initiating...
+[00:00:00,000] DEBUG {TorrentComp} <nid:1, oid:13000001>TransferFSM setup InitState
+[00:00:00,000] INFO  {TorrentTestHostComp} starting...
+[00:00:00,000] INFO  {TestDriver} state1 - publish connections
+[00:00:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>starting...
+[00:00:00,000] DEBUG {TorrentComp} <nid:1, oid:13000001>TransferFSM setup GetTorrentState
+[00:00:00,000] DEBUG {TorrentComp} <nid:1, oid:13000001>TransferFSM cleanup InitState
+[00:00:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:00:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:00:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:00:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:00:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:01:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:01:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:01:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:01:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:01:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:01:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:02:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:02:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:02:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:02:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:02:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:02:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:03:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:03:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:03:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:03:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:03:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:03:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:04:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:04:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:04:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:04:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:04:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:04:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:05:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:05:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:05:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:05:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:05:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:05:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:06:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:06:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:06:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:06:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:06:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:06:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:07:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:07:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:07:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:07:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:07:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:07:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:08:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:08:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:08:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:08:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:08:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:08:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:09:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:09:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:09:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:09:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:09:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:09:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:10:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:10:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:10:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:10:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:10:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:10:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:11:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:11:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:11:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:11:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:11:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:11:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:12:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:12:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:12:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:12:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:12:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:12:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:13:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:13:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:13:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:13:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:13:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:13:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:14:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:14:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:14:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:14:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:14:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:14:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:15:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:15:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:15:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:15:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:15:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:15:50,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:16:00,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:16:10,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:16:20,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:16:30,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState
+[00:16:40,000] INFO  {TorrentComp} <nid:1, oid:13000001>TransferFSM - GetTorrentState

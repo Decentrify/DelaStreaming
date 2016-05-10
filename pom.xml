@@ -15,6 +15,7 @@
         <module>network</module>
         <module>system</module>
         <!--        <module>simulation</module>-->
+        <module>simulator</module>
     </modules>
     
     <properties>

@@ -68,13 +68,13 @@ public class DownloadMngr {
                 return Optional.absent();
             }
         }
-        byte data[] = fileMngr.read(readPos, size);
-        return Optional.of(ByteBuffer.wrap(data));
+        ByteBuffer data = fileMngr.read(readPos, size);
+        return Optional.of(data);
     }
     
     public Optional<ByteBuffer> dataRequest(int pieceId) {
         if (fileMngr.hasPiece(pieceId)) {
-            return Optional.of(ByteBuffer.wrap(fileMngr.readPiece(pieceId)));
+            return Optional.of(fileMngr.readPiece(pieceId));
         }
         return Optional.absent();
     }
@@ -99,7 +99,7 @@ public class DownloadMngr {
         Set<Integer> missingHashes = new HashSet<>();
         for (Integer hash : requestedHashes) {
             if (hashMngr.hasHash(hash)) {
-                hashes.put(hash, ByteBuffer.wrap(hashMngr.readHash(hash)));
+                hashes.put(hash, hashMngr.readHash(hash));
             } else {
                 missingHashes.add(hash);
             }
@@ -141,14 +141,14 @@ public class DownloadMngr {
             if (!hashMngr.hasHash(blockNr)) {
                 continue;
             }
-            byte[] blockBytes = block.getValue().getBlock();
-            byte[] blockHash = hashMngr.readHash(blockNr);
-            if (HashUtil.checkHash(config.hashAlg, blockBytes, blockHash)) {
+            ByteBuffer blockBytes = ByteBuffer.wrap(block.getValue().getBlock());
+            ByteBuffer blockHash = hashMngr.readHash(blockNr);
+            if (HashUtil.checkHash(config.hashAlg, blockBytes.array(), blockHash.array())) {
                 fileMngr.writeBlock(blockNr, blockBytes);
                 completedBlocks.add(blockNr);
             } else {
                 //TODO Alex - might need to re-download hash as well
-                resetBlocks.put(blockNr, ByteBuffer.wrap(blockBytes));
+                resetBlocks.put(blockNr, blockBytes);
             }
         }
         for (Integer blockNr : completedBlocks) {
