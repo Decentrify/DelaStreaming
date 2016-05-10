@@ -1,0 +1,679 @@
+/*
+ * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
+ * 2009 Royal Institute of Technology (KTH)
+ *
+ * GVoD is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
+package se.sics.gvod.core;
+
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import org.javatuples.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import se.sics.gvod.common.event.vod.Download;
+import se.sics.gvod.common.util.VodDescriptor;
+import se.sics.gvod.core.util.TorrentDetails;
+import se.sics.gvod.stream.StreamEvent;
+import se.sics.gvod.stream.connection.ConnectionPort;
+import se.sics.gvod.stream.connection.StreamConnections;
+import se.sics.gvod.stream.torrent.event.TorrentGet;
+import se.sics.kompics.ClassMatchedHandler;
+import se.sics.kompics.ComponentDefinition;
+import se.sics.kompics.Handler;
+import se.sics.kompics.Positive;
+import se.sics.kompics.Start;
+import se.sics.kompics.network.Network;
+import se.sics.kompics.network.Transport;
+import se.sics.kompics.timer.CancelTimeout;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.ScheduleTimeout;
+import se.sics.kompics.timer.Timeout;
+import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.managedStore.core.FileMngr;
+import se.sics.ktoolbox.util.managedStore.core.HashMngr;
+import se.sics.ktoolbox.util.managedStore.core.impl.TransferMngr;
+import se.sics.ktoolbox.util.managedStore.core.util.Torrent;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.KHeader;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.ktoolbox.util.network.basic.DecoratedHeader;
+
+/**
+ * @author Alex Ormenisan <aaor@kth.se>
+ */
+public class TorrentComp extends ComponentDefinition {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TorrentComp.class);
+    private String logPrefix;
+
+    //****************************CONNECTIONS***********************************
+    //***********************EXTERNAL_CONNECT_TO********************************
+    private Positive<Timer> timerPort = requires(Timer.class);
+    private Positive<Network> networkPort = requires(Network.class);
+    private Positive<ConnectionPort> connectionPort = requires(ConnectionPort.class);
+    //**************************EXTERNAL_STATE**********************************
+    private final KAddress selfAdr;
+    private final Identifier overlayId;
+    private final long defaultMsgTimeout = 1000;
+    private final long checkPeriod = 10000;
+    //**************************INTERNAL_STATE**********************************
+    private TransferFSM transferFSM;
+    private UUID periodicCheckTId;
+
+    public TorrentComp(Init init) {
+        selfAdr = init.selfAdr;
+        overlayId = init.torrentDetails.getOverlayId();
+        logPrefix = "<nid:" + selfAdr.getId() + ", oid:" + overlayId + ">";
+        LOG.info("{}initiating...", logPrefix);
+
+        subscribe(handleStart, control);
+        subscribe(handleCheck, timerPort);
+
+        transferFSM = new TransferInit(init.torrentDetails);
+        transferFSM.setup();
+    }
+
+    Handler handleStart = new Handler<Start>() {
+        @Override
+        public void handle(Start event) {
+            LOG.info("{}starting...", logPrefix);
+            schedulePeriodicCheck();
+        }
+    };
+
+    Handler handleCheck = new Handler<PeriodicCheck>() {
+        @Override
+        public void handle(PeriodicCheck event) {
+            transferFSM.report();
+        }
+    };
+
+    public void schedulePeriodicCheck() {
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(checkPeriod, checkPeriod);
+        Timeout t = new PeriodicCheck(spt);
+        spt.setTimeoutEvent(t);
+        trigger(spt, timerPort);
+        periodicCheckTId = t.getTimeoutId();
+    }
+
+    private void sendNetwork(KAddress destination, Object content) {
+        KHeader msgHeader = new DecoratedHeader(new BasicHeader(selfAdr, destination, Transport.UDP), overlayId);
+        KContentMsg msg = new BasicContentMsg(msgHeader, content);
+        LOG.trace("{}sending:{}", logPrefix, msg);
+        trigger(msg, networkPort);
+    }
+
+    private void answerNetwork(KContentMsg msg, Object content) {
+        KContentMsg resp = msg.answer(content);
+        LOG.trace("{}sending:{}", logPrefix, resp);
+        trigger(resp, networkPort);
+    }
+
+    interface TransferFSM {
+
+        public void setup();
+
+        public void cleanup();
+        
+        public void next();
+        
+        public void report();
+    }
+
+    class TransferInit implements TransferFSM {
+
+        TorrentDetails torrentDetails;
+
+        public TransferInit(TorrentDetails torrentDetails) {
+            this.torrentDetails = torrentDetails;
+        }
+
+        @Override
+        public void setup() {
+            LOG.debug("{}TransferFSM setup InitState", logPrefix);
+            subscribe(handleFSMStart, control);
+        }
+
+        @Override
+        public void cleanup() {
+            LOG.debug("{}TransferFSM cleanup InitState", logPrefix);
+            unsubscribe(handleFSMStart, control);
+        }
+        
+        @Override
+        public void next() {
+            //I only do something on start event
+        }
+        
+        @Override
+        public void report() {
+            LOG.info("{}TransferFSM - InitState", logPrefix);
+        }
+
+        Handler handleFSMStart = new Handler<Start>() {
+            @Override
+            public void handle(Start event) {
+                if (torrentDetails.download()) {
+                    moveToGetTorrentState();
+                } else {
+                    moveToUploadTorrentState();
+                }
+            }
+        };
+
+        private void moveToGetTorrentState() {
+            GetTorrent nextState = new GetTorrent(torrentDetails);
+            nextState.setup();
+            cleanup();
+            nextState.next();
+            transferFSM = nextState;
+        }
+
+        private void moveToUploadTorrentState() {
+            Torrent torrent = torrentDetails.getTorrent();
+            UploadTorrent nextState = new UploadTorrent(torrent, torrentDetails.fileMngr(torrent), torrentDetails.hashMngr(torrent));
+            nextState.setup();
+            cleanup();
+            transferFSM = nextState;
+        }
+
+    }
+
+    class GetTorrent implements TransferFSM {
+
+        final TorrentDetails torrentDetails;
+
+        final DownloadConn dwnlConn;
+
+        UUID torrentGetTId;
+
+        public GetTorrent(TorrentDetails torrentDetails) {
+            this.torrentDetails = torrentDetails;
+            dwnlConn = new DownloadConn();
+        }
+
+        @Override
+        public void setup() {
+            LOG.debug("{}TransferFSM setup GetTorrentState", logPrefix);
+            subscribe(handlePublishConn, connectionPort);
+            subscribe(handleTorrentResponse, networkPort);
+            subscribe(handleTorrentGetTimeout, timerPort);
+        }
+
+        @Override
+        public void cleanup() {
+            LOG.debug("{}TransferFSM cleanup GetTorrentState", logPrefix);
+            unsubscribe(handlePublishConn, connectionPort);
+            unsubscribe(handleTorrentResponse, networkPort);
+            unsubscribe(handleTorrentGetTimeout, timerPort);
+        }
+        
+        @Override
+        public void next() {
+            trigger(new StreamConnections.Request(), connectionPort);
+        }
+        
+        @Override
+        public void report() {
+            LOG.info("{}TransferFSM - GetTorrentState", logPrefix);
+        }
+
+        Handler handlePublishConn = new Handler<StreamConnections.Indication>() {
+            @Override
+            public void handle(StreamConnections.Indication event) {
+                LOG.debug("{}new connections to:{}", new Object[]{logPrefix, event.connections.keySet()});
+                dwnlConn.addConnections(event.connections, event.descriptors);
+
+                if (torrentGetTId == null) {
+                    sendTorrentRequest();
+                }
+            }
+        };
+
+        ClassMatchedHandler handleTorrentResponse
+                = new ClassMatchedHandler<TorrentGet.Response, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, TorrentGet.Response>>() {
+
+                    @Override
+                    public void handle(TorrentGet.Response content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, TorrentGet.Response> container) {
+                        KAddress target = container.getHeader().getSource();
+                        LOG.debug("{}received torrent response from:{}", new Object[]{logPrefix, target.getId()});
+                        cancelTorrentTimeout();
+                        moveToDownloadState(content.torrent);
+                    }
+                };
+
+        Handler handleTorrentGetTimeout = new Handler<TorrentGetTimeout>() {
+            @Override
+            public void handle(TorrentGetTimeout timeout) {
+                if (timeout.getTimeoutId().equals(torrentGetTId)) {
+                    LOG.info("{}target:{} for torrent timed out", logPrefix, timeout.target.getId());
+                    timedOut(timeout.target);
+                    torrentGetTId = null;
+                    sendTorrentRequest();
+                } else {
+                    LOG.trace("{}late timeout:{}", logPrefix, timeout);
+                }
+            }
+        };
+
+        private void moveToDownloadState(Torrent torrent) {
+            LOG.info("{}setting up for download", logPrefix);
+            DownloadTorrent nextPhase = new DownloadTorrent(torrent, torrentDetails, dwnlConn);
+            nextPhase.setup();
+            cleanup();
+            transferFSM = nextPhase;
+        }
+
+        private void sendTorrentRequest() {
+            KAddress target = getTorrentTarget();
+            LOG.debug("{}request torrent from:{}", logPrefix, target.getId());
+            scheduleTorrentTimeout(target);
+            sendNetwork(target, new TorrentGet.Request());
+        }
+
+        public void scheduleTorrentTimeout(KAddress target) {
+            ScheduleTimeout st = new ScheduleTimeout(defaultMsgTimeout);
+            Timeout t = new TorrentGetTimeout(st, target);
+            st.setTimeoutEvent(t);
+            trigger(st, timerPort);
+            torrentGetTId = t.getTimeoutId();
+        }
+
+        public void cancelTorrentTimeout() {
+            CancelTimeout ct = new CancelTimeout(torrentGetTId);
+            trigger(ct, timerPort);
+            torrentGetTId = null;
+        }
+
+        public void timedOut(KAddress target) {
+            throw new UnsupportedOperationException("not yet defined");
+        }
+
+        public KAddress getTorrentTarget() {
+            throw new UnsupportedOperationException("not yet defined");
+        }
+    }
+
+    class UploadTorrent implements TransferFSM {
+
+        final Torrent torrent;
+        final FileMngr fileMngr;
+        final HashMngr hashMngr;
+
+        public UploadTorrent(Torrent torrent, FileMngr fileMngr, HashMngr hashMngr) {
+            this.torrent = torrent;
+            this.fileMngr = fileMngr;
+            this.hashMngr = hashMngr;
+        }
+
+        @Override
+        public void setup() {
+            subscribe(handleTorrentRequest, networkPort);
+            subscribe(handleHashRequest, networkPort);
+            subscribe(handlePieceRequest, networkPort);
+        }
+
+        @Override
+        public void cleanup() {
+            unsubscribe(handleTorrentRequest, networkPort);
+            unsubscribe(handleHashRequest, networkPort);
+            unsubscribe(handlePieceRequest, networkPort);
+        }
+        
+        @Override
+        public void next() {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+        
+        @Override
+        public void report() {
+            LOG.info("{}TransferFSM GetTorrent Upload", logPrefix);
+        }
+
+        ClassMatchedHandler handleTorrentRequest
+                = new ClassMatchedHandler<TorrentGet.Request, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, TorrentGet.Request>>() {
+
+                    @Override
+                    public void handle(TorrentGet.Request content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, TorrentGet.Request> container) {
+                        KAddress target = container.getHeader().getSource();
+                        LOG.debug("{}received torrent request from:{}", new Object[]{logPrefix, target.getId()});
+                        answerNetwork(container, content.answer(torrent));
+                    }
+                };
+
+        ClassMatchedHandler handleHashRequest
+                = new ClassMatchedHandler<Download.HashRequest, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashRequest>>() {
+
+                    @Override
+                    public void handle(Download.HashRequest content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashRequest> container) {
+                        KAddress target = container.getHeader().getSource();
+                        LOG.debug("{}received hashPos:{} request from:{}", new Object[]{logPrefix, content.targetPos, target.getId()});
+                        Pair<Map<Integer, ByteBuffer>, Set<Integer>> result = hashMngr.readHashes(content.hashes);
+                        answerNetwork(container, content.success(result.getValue0(), result.getValue1()));
+                    }
+                };
+
+        ClassMatchedHandler handlePieceRequest
+                = new ClassMatchedHandler<Download.DataRequest, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataRequest>>() {
+
+                    @Override
+                    public void handle(Download.DataRequest content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataRequest> container) {
+                        KAddress target = container.getHeader().getSource();
+                        LOG.debug("{}received data:{} request from:{}", new Object[]{logPrefix, content.pieceId, target.getId()});
+                        if (fileMngr.hasPiece(content.pieceId)) {
+                            ByteBuffer piece = fileMngr.readPiece(content.pieceId);
+                            answerNetwork(container, content.success(piece));
+                        } else {
+                            answerNetwork(container, content.missingPiece());
+                        }
+                    }
+                };
+    }
+
+    class DownloadTorrent implements TransferFSM {
+
+        final TorrentDetails torrentDetails; //in case I want to reshape the upload phase once download is completed;
+
+        final UploadTorrent upload;
+
+        final DownloadConn dwnlConn;
+        final TransferMngr transferMngr;
+
+        private Map<Identifier, UUID> pendingPieces = new HashMap<>();
+        private Map<Identifier, UUID> pendingHashes = new HashMap<>();
+
+        public DownloadTorrent(Torrent torrent, TorrentDetails torrentDetails, DownloadConn dwnlConn) {
+            this.torrentDetails = torrentDetails;
+            upload = new UploadTorrent(torrent, torrentDetails.fileMngr(torrent), torrentDetails.hashMngr(torrent));
+            this.dwnlConn = dwnlConn;
+            transferMngr = torrentDetails.transferMngr(torrent);
+        }
+
+        @Override
+        public void setup() {
+            upload.setup();
+            subscribe(handlePublishConn, connectionPort);
+            subscribe(handleHashResponse, networkPort);
+            subscribe(handlePieceResponse, networkPort);
+            subscribe(handleHashTimeout, timerPort);
+            subscribe(handlePieceTimeout, timerPort);
+        }
+
+        @Override
+        public void cleanup() {
+            upload.cleanup();
+            unsubscribe(handlePublishConn, connectionPort);
+            unsubscribe(handleHashResponse, networkPort);
+            unsubscribe(handlePieceResponse, networkPort);
+            unsubscribe(handleHashTimeout, timerPort);
+            unsubscribe(handlePieceTimeout, timerPort);
+        }
+        
+        @Override
+        public void next() {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+        
+        @Override
+        public void report() {
+            LOG.info("{}TransferFSM Download/Upload State", logPrefix);
+        }
+
+        Handler handlePublishConn = new Handler<StreamConnections.Indication>() {
+            @Override
+            public void handle(StreamConnections.Indication event) {
+                LOG.debug("{}new connections to:{}", new Object[]{logPrefix, event.connections.keySet()});
+                dwnlConn.addConnections(event.connections, event.descriptors);
+                download();
+            }
+        };
+
+        ClassMatchedHandler handleHashResponse
+                = new ClassMatchedHandler<Download.HashResponse, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashResponse>>() {
+
+                    @Override
+                    public void handle(Download.HashResponse content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashResponse> container) {
+                        KAddress target = container.getHeader().getSource();
+                        LOG.debug("{}received hashPos:{} response from:{}", new Object[]{logPrefix, content.targetPos, target.getId()});
+
+                        if (!cancelPendingHashTimeout(content.getId())) {
+                            LOG.info("{}hash from:{} - posibly late", logPrefix, target.getId());
+                            return;
+                        }
+                        switch (content.status) {
+                            case SUCCESS:
+                                LOG.trace("{}SUCCESS hashes:{} missing hashes:{}", new Object[]{logPrefix, content.hashes.keySet(), content.missingHashes});
+                                transferMngr.writeHashes(content.hashes, content.missingHashes);
+                                download();
+                                return;
+                            case TIMEOUT:
+                            case BUSY:
+                                LOG.debug("{}BUSY/TIMEOUT hashes:{}", logPrefix, content.missingHashes);
+                                transferMngr.writeHashes(content.hashes, content.missingHashes);
+                                return;
+                            default:
+                                LOG.warn("{}illegal status:{}, ignoring", new Object[]{logPrefix, content.status});
+                        }
+                    }
+                };
+
+        ClassMatchedHandler handlePieceResponse
+                = new ClassMatchedHandler<Download.DataResponse, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataResponse>>() {
+
+                    @Override
+                    public void handle(Download.DataResponse content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataResponse> container) {
+                        KAddress target = container.getHeader().getSource();
+                        LOG.debug("{}received data:{} response from:{}", new Object[]{logPrefix, content.pieceId, target.getId()});
+
+                        if (!cancelPendingPieceTimeout(content.getId())) {
+                            LOG.info("{}piece:{} from:{} - posibly late", new Object[]{logPrefix, content.pieceId, target.getId()});
+                            return;
+                        }
+                        switch (content.status) {
+                            case SUCCESS:
+                                LOG.trace("{}SUCCESS piece:{}", new Object[]{logPrefix, content.pieceId});
+                                transferMngr.writePiece(content.pieceId, content.piece);
+                                download();
+                                return;
+                            case TIMEOUT:
+                            case BUSY:
+                                LOG.debug("{}BUSY/TIMEOUT piece:{}", logPrefix, content.pieceId);
+                                transferMngr.resetPiece(content.pieceId);
+                                return;
+                            default:
+                                LOG.warn("{} illegal status:{}, ignoring", new Object[]{logPrefix, content.status});
+                        }
+                    }
+                };
+
+        Handler handleHashTimeout = new Handler<PendingHashTimeout>() {
+            @Override
+            public void handle(PendingHashTimeout timeout) {
+                if (pendingHashes.remove(timeout.request.getId()) != null) {
+                    LOG.debug("{}timeout hash:{} from:{}", new Object[]{logPrefix, timeout.request.targetPos, timeout.target.getId()});
+                    transferMngr.writeHashes(new HashMap<Integer, ByteBuffer>(), timeout.request.hashes);
+                } else {
+                    LOG.trace("{}late timeout:{}", logPrefix, timeout);
+                }
+            }
+        };
+
+        Handler handlePieceTimeout = new Handler<PendingPieceTimeout>() {
+            @Override
+            public void handle(PendingPieceTimeout timeout) {
+                if (pendingPieces.remove(timeout.request.getId()) != null) {
+                    LOG.debug("{}timeout piece:{} from:{}", new Object[]{logPrefix, timeout.request.pieceId, timeout.target.getId()});
+                    transferMngr.resetPiece(timeout.request.pieceId);
+                } else {
+                    LOG.trace("{}late timeout:{}", logPrefix, timeout);
+                }
+            }
+        };
+
+        private void download() {
+            throw new UnsupportedOperationException("not yet defined");
+        }
+
+        private void schedulePendingHashTimeout(Download.HashRequest request, KAddress target) {
+            ScheduleTimeout st = new ScheduleTimeout(defaultMsgTimeout);
+            Timeout t = new PendingHashTimeout(st, request, target);
+            st.setTimeoutEvent(t);
+            trigger(st, timerPort);
+            pendingHashes.put(request.getId(), t.getTimeoutId());
+        }
+
+        private boolean cancelPendingHashTimeout(Identifier pieceId) {
+            UUID tId = pendingHashes.remove(pieceId);
+            if (tId == null) {
+                LOG.trace("{}late timeout for hash:{}", logPrefix, pieceId);
+                return false;
+            }
+            CancelTimeout ct = new CancelTimeout(tId);
+            trigger(ct, timerPort);
+            return true;
+        }
+
+        private void schedulePendingPieceTimeout(Download.DataRequest request, KAddress target) {
+            ScheduleTimeout st = new ScheduleTimeout(defaultMsgTimeout);
+            Timeout t = new PendingPieceTimeout(st, request, target);
+            st.setTimeoutEvent(t);
+            trigger(st, timerPort);
+            pendingPieces.put(request.getId(), t.getTimeoutId());
+        }
+
+        private boolean cancelPendingPieceTimeout(Identifier pieceId) {
+            UUID tId = pendingPieces.remove(pieceId);
+            if (tId == null) {
+                LOG.trace("{}late timeout for piece:{}", logPrefix, pieceId);
+                return false;
+            }
+            CancelTimeout ct = new CancelTimeout(tId);
+            trigger(ct, timerPort);
+            return true;
+        }
+    }
+
+    class DownloadConn {
+
+        Map<Identifier, KAddress> connections = new HashMap<>();
+        Map<Identifier, VodDescriptor> descriptors = new HashMap<>();
+
+        public void addConnections(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
+            this.connections.putAll(connections);
+            this.descriptors.putAll(descriptors);
+        }
+    }
+
+    public static class Init extends se.sics.kompics.Init<TorrentComp> {
+
+        public final KAddress selfAdr;
+        public final TorrentDetails torrentDetails;
+
+        public Init(KAddress selfAdr, TorrentDetails torrentDetails) {
+            this.selfAdr = selfAdr;
+            this.torrentDetails = torrentDetails;
+        }
+    }
+
+    class PeriodicCheck extends Timeout implements StreamEvent {
+
+        public PeriodicCheck(SchedulePeriodicTimeout spt) {
+            super(spt);
+        }
+
+        @Override
+        public Identifier getId() {
+            return new UUIDIdentifier(getTimeoutId());
+        }
+
+        @Override
+        public String toString() {
+            return "PeriodicCheck<" + getId() + ">";
+        }
+    }
+
+    class TorrentGetTimeout extends Timeout implements StreamEvent {
+
+        public final KAddress target;
+
+        public TorrentGetTimeout(ScheduleTimeout st, KAddress target) {
+            super(st);
+            this.target = target;
+        }
+
+        @Override
+        public Identifier getId() {
+            return new UUIDIdentifier(getTimeoutId());
+        }
+
+        @Override
+        public String toString() {
+            return "TorrentGetTimeout<" + getId() + ">";
+        }
+    }
+
+    class PendingHashTimeout extends Timeout implements StreamEvent {
+
+        public final Download.HashRequest request;
+        public final KAddress target;
+
+        public PendingHashTimeout(ScheduleTimeout st, Download.HashRequest request, KAddress target) {
+            super(st);
+            this.request = request;
+            this.target = target;
+        }
+
+        @Override
+        public Identifier getId() {
+            return new UUIDIdentifier(getTimeoutId());
+        }
+
+        @Override
+        public String toString() {
+            return "PendingHashTimeout<" + getId() + ">";
+        }
+    }
+
+    public class PendingPieceTimeout extends Timeout implements StreamEvent {
+
+        public final Download.DataRequest request;
+        public final KAddress target;
+
+        public PendingPieceTimeout(ScheduleTimeout st, Download.DataRequest request, KAddress target) {
+            super(st);
+            this.request = request;
+            this.target = target;
+        }
+
+        @Override
+        public Identifier getId() {
+            return new UUIDIdentifier(getTimeoutId());
+        }
+
+        @Override
+        public String toString() {
+            return "PendingPieceTimeout<" + getId() + ">";
+        }
+    }
+}
