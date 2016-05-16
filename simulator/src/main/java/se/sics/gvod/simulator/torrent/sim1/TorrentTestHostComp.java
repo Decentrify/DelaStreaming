@@ -20,8 +20,11 @@ package se.sics.gvod.simulator.torrent.sim1;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.gvod.stream.congestion.PLedbatTrafficSelector;
+import se.sics.gvod.stream.congestion.PullLedbatComp;
 import se.sics.gvod.stream.torrent.TorrentComp;
-import se.sics.gvod.stream.connection.ConnectionPort;
+import se.sics.gvod.stream.connection.ConnMngrPort;
+import se.sics.gvod.stream.report.ReportComp;
 import se.sics.gvod.stream.torrent.TorrentStatus;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
@@ -31,6 +34,7 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.network.ports.ShortCircuitChannel;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -45,8 +49,10 @@ public class TorrentTestHostComp extends ComponentDefinition {
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<Network> networkPort = requires(Network.class);
     //**************************INTERNAL_STATE**********************************
+    private Component congestionComp;
     private Component torrentComp;
     private Component driverComp;
+    private Component reportComp;
 
     private TorrentComp.Init torrentInit;
     private TorrentDriverComp.Init driverInit;
@@ -66,14 +72,29 @@ public class TorrentTestHostComp extends ComponentDefinition {
 
             driverComp = create(TorrentDriverComp.class, driverInit);
             connect(driverComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
+            connect(driverComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+
+            congestionComp = create(PullLedbatComp.class, new PullLedbatComp.Init());
+            connect(congestionComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+
             torrentComp = create(TorrentComp.class, torrentInit);
             connect(torrentComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-            connect(torrentComp.getNegative(Network.class), driverComp.getPositive(Network.class), Channel.TWO_WAY);
-            connect(torrentComp.getNegative(ConnectionPort.class), driverComp.getPositive(ConnectionPort.class), Channel.TWO_WAY);
+            connect(torrentComp.getNegative(ConnMngrPort.class), driverComp.getPositive(ConnMngrPort.class), Channel.TWO_WAY);
             connect(torrentComp.getPositive(TorrentStatus.class), driverComp.getNegative(TorrentStatus.class), Channel.TWO_WAY);
 
+            //connect driver, congestion, torrent components
+            ShortCircuitChannel scc = ShortCircuitChannel.getChannel(
+                    driverComp.getPositive(Network.class), congestionComp.getPositive(Network.class), new PLedbatTrafficSelector(),
+                    torrentComp.getNegative(Network.class), congestionComp.getNegative(Network.class), new PLedbatTrafficSelector());
+
+            reportComp = create(ReportComp.class, new ReportComp.Init(1000));
+            connect(reportComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+            connect(reportComp.getNegative(TorrentStatus.class), torrentComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
+
             trigger(Start.event, driverComp.control());
+            trigger(Start.event, congestionComp.control());
             trigger(Start.event, torrentComp.control());
+            trigger(Start.event, reportComp.control());
         }
     };
 

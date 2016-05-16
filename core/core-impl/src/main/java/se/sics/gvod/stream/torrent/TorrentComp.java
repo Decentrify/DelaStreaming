@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.stream.torrent;
 
+import se.sics.gvod.stream.torrent.event.Download;
 import com.google.common.base.Optional;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -27,17 +28,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.javatuples.Pair;
-import org.javatuples.Quartet;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.common.event.vod.Download;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.core.util.TorrentDetails;
 import se.sics.gvod.stream.StreamEvent;
-import se.sics.gvod.stream.connection.ConnectionPort;
-import se.sics.gvod.stream.connection.StreamConnections;
-import se.sics.gvod.stream.torrent.event.DownloadFinished;
+import se.sics.gvod.stream.congestion.PLedbatPort;
+import se.sics.gvod.stream.congestion.event.external.PLedbatConnection;
+import se.sics.gvod.stream.connection.ConnMngrPort;
+import se.sics.gvod.stream.connection.event.Connection;
+import se.sics.gvod.stream.torrent.event.DownloadStatus;
 import se.sics.gvod.stream.torrent.event.TorrentGet;
 import se.sics.gvod.stream.util.ConnectionStatus;
 import se.sics.kompics.ClassMatchedHandler;
@@ -80,8 +81,9 @@ public class TorrentComp extends ComponentDefinition {
     //***********************EXTERNAL_CONNECT_TO********************************
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<Network> networkPort = requires(Network.class);
-    Positive<ConnectionPort> connectionPort = requires(ConnectionPort.class);
-    Negative<TorrentStatus> status = provides(TorrentStatus.class);
+    Positive<ConnMngrPort> connectionPort = requires(ConnMngrPort.class);
+    Positive<PLedbatPort> congestionPort = requires(PLedbatPort.class);
+    Negative<TorrentStatus> statusPort = provides(TorrentStatus.class);
     //**************************EXTERNAL_STATE**********************************
     private final KAddress selfAdr;
     private final Identifier overlayId;
@@ -215,13 +217,13 @@ public class TorrentComp extends ComponentDefinition {
 
         final TorrentDetails torrentDetails;
 
-        final DownloadConn dwnlConn;
+        final DwnlConnAux dwnlConn;
 
         UUID torrentGetTId;
 
         public GetTorrent(TorrentDetails torrentDetails) {
             this.torrentDetails = torrentDetails;
-            dwnlConn = new DownloadConn();
+            dwnlConn = new DwnlConnAux();
         }
 
         @Override
@@ -242,7 +244,7 @@ public class TorrentComp extends ComponentDefinition {
 
         @Override
         public void next() {
-            trigger(new StreamConnections.Request(), connectionPort);
+            trigger(new Connection.Request(), connectionPort);
         }
 
         @Override
@@ -250,12 +252,11 @@ public class TorrentComp extends ComponentDefinition {
             LOG.info("{}TransferFSM - GetTorrentState", logPrefix);
         }
 
-        Handler handlePublishConn = new Handler<StreamConnections.Indication>() {
+        Handler handlePublishConn = new Handler<Connection.Indication>() {
             @Override
-            public void handle(StreamConnections.Indication event) {
+            public void handle(Connection.Indication event) {
                 LOG.debug("{}new connections to:{}", new Object[]{logPrefix, event.connections.keySet()});
                 dwnlConn.addConnections(event.connections, event.descriptors);
-
                 if (torrentGetTId == null) {
                     sendTorrentRequest();
                 }
@@ -279,7 +280,7 @@ public class TorrentComp extends ComponentDefinition {
             public void handle(TorrentGetTimeout timeout) {
                 if (timeout.getTimeoutId().equals(torrentGetTId)) {
                     LOG.info("{}target:{} for torrent timed out", logPrefix, timeout.target.getId());
-                    dwnlConn.timedOut(timeout.target);
+                    dwnlConn.mngr.timedOut(timeout.target);
                     torrentGetTId = null;
                     sendTorrentRequest();
                 } else {
@@ -298,7 +299,7 @@ public class TorrentComp extends ComponentDefinition {
         }
 
         private void sendTorrentRequest() {
-            KAddress target = dwnlConn.getRandomConnection();
+            KAddress target = dwnlConn.mngr.getRandomConnection();
             LOG.debug("{}request torrent from:{}", logPrefix, target.getId());
             scheduleTorrentTimeout(target);
             sendNetwork(target, new TorrentGet.Request());
@@ -362,7 +363,7 @@ public class TorrentComp extends ComponentDefinition {
                     public void handle(TorrentGet.Request content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, TorrentGet.Request> container) {
                         KAddress target = container.getHeader().getSource();
                         LOG.debug("{}received torrent request from:{}", new Object[]{logPrefix, target.getId()});
-                        answerNetwork(container, content.answer(torrent));
+                        answerNetwork(container, content.success(torrent));
                     }
                 };
 
@@ -402,19 +403,19 @@ public class TorrentComp extends ComponentDefinition {
         static final int minBlockPlayBuffer = 1;
         static final int minAheadHashes = 10;
         static final long downloadCheckPeriod = 1000;
-        
+
         final TorrentDetails torrentDetails; //in case I want to reshape the upload phase once download is completed;
         final Torrent torrent;
 
         final UploadTorrent upload;
 
-        final DownloadConn dwnlConn;
+        final DwnlConnAux dwnlConn;
         final TransferMngr transferMngr;
 
         private Map<Identifier, UUID> pendingPieces = new HashMap<>();
         private Map<Identifier, UUID> pendingHashes = new HashMap<>();
 
-        public DownloadTorrent(Torrent torrent, TorrentDetails torrentDetails, DownloadConn dwnlConn) {
+        public DownloadTorrent(Torrent torrent, TorrentDetails torrentDetails, DwnlConnAux dwnlConn) {
             this.torrentDetails = torrentDetails;
             this.torrent = torrent;
             Triplet<FileMngr, HashMngr, TransferMngr> torrentMngrs = torrentDetails.torrentMngrs(torrent);
@@ -427,6 +428,8 @@ public class TorrentComp extends ComponentDefinition {
         public void setup() {
             upload.setup();
             subscribe(handlePublishConn, connectionPort);
+            subscribe(dwnlConn.handleConnTracking, congestionPort);
+            subscribe(handleStatusRequest, statusPort);
             subscribe(handleHashResponse, networkPort);
             subscribe(handlePieceResponse, networkPort);
             subscribe(handleHashTimeout, timerPort);
@@ -438,7 +441,7 @@ public class TorrentComp extends ComponentDefinition {
             upload.cleanup();
             internalCleanup();
         }
-        
+
         private void internalCleanup() {
             unsubscribe(handlePublishConn, connectionPort);
             unsubscribe(handleHashResponse, networkPort);
@@ -449,21 +452,29 @@ public class TorrentComp extends ComponentDefinition {
 
         @Override
         public void next() {
+            trigger(new DownloadStatus.Starting(overlayId), statusPort);
             download();
         }
 
         @Override
         public void report() {
             int pendingMsg = pendingPieces.size() + pendingHashes.size();
-            Quartet<Integer, Integer, Integer, Integer> dwnlReport = dwnlConn.report();
-            LOG.info("{}TransferFSM Download[p:{},u:{}/t:{}]<s:{},f:{}>",
-                    new Object[]{logPrefix, pendingMsg, dwnlReport.getValue1(), dwnlReport.getValue0(), dwnlReport.getValue2(), dwnlReport.getValue3()});
+            int usedSlots = dwnlConn.mngr.usedSlots();
+            LOG.info("{}TransferFSM Download[p:{}/u:{}>", new Object[]{logPrefix, pendingMsg, usedSlots});
             upload.report();
         }
 
-        Handler handlePublishConn = new Handler<StreamConnections.Indication>() {
+        Handler handleStatusRequest = new Handler<DownloadStatus.Request>() {
             @Override
-            public void handle(StreamConnections.Indication event) {
+            public void handle(DownloadStatus.Request req) {
+                LOG.trace("{}received:{}", logPrefix, req);
+                answer(req, req.answer(dwnlConn.mngr.reportNReset()));
+            }
+        };
+
+        Handler handlePublishConn = new Handler<Connection.Indication>() {
+            @Override
+            public void handle(Connection.Indication event) {
                 LOG.debug("{}new connections to:{}", new Object[]{logPrefix, event.connections.keySet()});
                 dwnlConn.addConnections(event.connections, event.descriptors);
                 download();
@@ -486,14 +497,14 @@ public class TorrentComp extends ComponentDefinition {
                             case SUCCESS:
                                 LOG.trace("{}SUCCESS hashes:{} missing hashes:{}", new Object[]{logPrefix, content.hashes.keySet(), content.missingHashes});
                                 transferMngr.writeHashes(content.hashes, content.missingHashes);
-                                dwnlConn.completed(target);
+                                dwnlConn.mngr.completed(target);
                                 download();
                                 return;
                             case TIMEOUT:
                             case BUSY:
                                 LOG.debug("{}BUSY/TIMEOUT hashes:{}", logPrefix, content.missingHashes);
                                 transferMngr.writeHashes(content.hashes, content.missingHashes);
-                                dwnlConn.timedOut(target);
+                                dwnlConn.mngr.timedOut(target);
                                 return;
                             default:
                                 LOG.warn("{}illegal status:{}, ignoring", new Object[]{logPrefix, content.status});
@@ -517,14 +528,14 @@ public class TorrentComp extends ComponentDefinition {
                             case SUCCESS:
                                 LOG.trace("{}SUCCESS piece:{}", new Object[]{logPrefix, content.pieceId});
                                 transferMngr.writePiece(content.pieceId, content.piece);
-                                dwnlConn.completed(target);
+                                dwnlConn.mngr.completed(target);
                                 download();
                                 return;
                             case TIMEOUT:
                             case BUSY:
                                 LOG.debug("{}BUSY/TIMEOUT piece:{}", logPrefix, content.pieceId);
                                 transferMngr.resetPiece(content.pieceId);
-                                dwnlConn.timedOut(target);
+                                dwnlConn.mngr.timedOut(target);
                                 return;
                             default:
                                 LOG.warn("{} illegal status:{}, ignoring", new Object[]{logPrefix, content.status});
@@ -561,7 +572,7 @@ public class TorrentComp extends ComponentDefinition {
                 Optional<Set<Integer>> hashes = transferMngr.downloadHash(hashsesPerMsg);
                 if (hashes.isPresent()) {
                     int hashPos = Collections.min(hashes.get());
-                    Optional<KAddress> dwnlSrc = dwnlConn.download(hashPos);
+                    Optional<KAddress> dwnlSrc = dwnlConn.mngr.download(hashPos);
                     if (dwnlSrc.isPresent()) {
                         Download.HashRequest req = new Download.HashRequest(overlayId, hashPos, hashes.get());
                         schedulePendingHashTimeout(req, dwnlSrc.get());
@@ -571,11 +582,11 @@ public class TorrentComp extends ComponentDefinition {
                         //no source - put back
                         transferMngr.writeHashes(new HashMap<Integer, ByteBuffer>(), hashes.get());
                     }
-                } 
+                }
                 Optional<Integer> piece = transferMngr.downloadData();
                 if (piece.isPresent()) {
                     Pair<Integer, Integer> blockDetails = ManagedStoreHelper.componentDetails(piece.get(), torrent.torrentInfo.piecesPerBlock);
-                    Optional<KAddress> dwnlSrc = dwnlConn.download(blockDetails.getValue0());
+                    Optional<KAddress> dwnlSrc = dwnlConn.mngr.download(blockDetails.getValue0());
                     if (dwnlSrc.isPresent()) {
                         Download.DataRequest req = new Download.DataRequest(overlayId, piece.get());
                         schedulePendingPieceTimeout(req, dwnlSrc.get());
@@ -591,7 +602,7 @@ public class TorrentComp extends ComponentDefinition {
                     return;
                 } else {
                     transferMngr.checkCompleteBlocks();
-                    if(transferMngr.isComplete()) {
+                    if (transferMngr.isComplete()) {
                         moveToUploadState();
                         return;
                     }
@@ -603,23 +614,23 @@ public class TorrentComp extends ComponentDefinition {
                 }
             }
         }
-        
+
         private void moveToUploadState() {
             LOG.info("{}cleaning up download state", logPrefix);
-            for(UUID tId : pendingHashes.values()) {
+            for (UUID tId : pendingHashes.values()) {
                 cancelTimeout(tId);
             }
             pendingHashes.clear();
-            for(UUID tId : pendingPieces.values()) {
+            for (UUID tId : pendingPieces.values()) {
                 cancelTimeout(tId);
-            } 
+            }
             pendingPieces.clear();
             internalCleanup();
             transferFSM = upload;
-            
-            trigger(new DownloadFinished(overlayId), status);
+
+            trigger(new DownloadStatus.Done(overlayId), statusPort);
         }
-        
+
         private void cancelTimeout(UUID tId) {
             CancelTimeout ct = new CancelTimeout(tId);
             trigger(ct, timerPort);
@@ -664,79 +675,33 @@ public class TorrentComp extends ComponentDefinition {
         }
     }
 
-    class DownloadConn {
+    public class DwnlConnAux {
 
-        static final int CONNECTION_STARTING_LOAD = 100;
-        Map<Identifier, KAddress> partners = new HashMap<>();
-        Map<Identifier, ConnectionStatus> connectionLoad = new HashMap<>();
-        Map<Identifier, VodDescriptor> partnerStatus = new HashMap<>();
+        public final DwnlConnMngr mngr;
+        final Map<Identifier, PLedbatConnection.TrackRequest> trackingReqs = new HashMap<>();
 
-        private void addConnection(KAddress partner, VodDescriptor descriptor) {
-            partners.put(partner.getId(), partner);
-            connectionLoad.put(partner.getId(), new ConnectionStatus(CONNECTION_STARTING_LOAD));
-            partnerStatus.put(partner.getId(), descriptor);
-        }
-
-        private void removePartner(KAddress partner) {
-            partners.remove(partner.getId());
-            connectionLoad.remove(partner.getId());
-            partnerStatus.remove(partner.getId());
+        public DwnlConnAux() {
+            mngr = new DwnlConnMngr();
         }
 
         public void addConnections(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
-            for (KAddress partner : connections.values()) {
-                addConnection(partner, descriptors.get(partner.getId()));
+            for (Identifier partnerId : connections.keySet()) {
+                KAddress partnerAdr = connections.get(partnerId);
+                VodDescriptor partnerDesc = descriptors.get(partnerId);
+                mngr.addConnection(partnerAdr, partnerDesc);
+
+                PLedbatConnection.TrackRequest trackingReq = new PLedbatConnection.TrackRequest(partnerAdr);
+                trigger(trackingReq, congestionPort);
+                trackingReqs.put(trackingReq.getId(), trackingReq);
             }
         }
 
-        public KAddress getRandomConnection() {
-            Iterator<KAddress> connIt = partners.values().iterator();
-            if (!connIt.hasNext()) {
-                throw new RuntimeException();
+        Handler handleConnTracking = new Handler<PLedbatConnection.TrackResponse>() {
+            @Override
+            public void handle(PLedbatConnection.TrackResponse resp) {
+                mngr.updateSlots(resp.req.target, resp.status);
             }
-            return connIt.next();
-        }
-
-        public void timedOut(KAddress partner) {
-            //TODO Alex
-            ConnectionStatus conn = connectionLoad.get(partner.getId());
-            conn.releaseSlot(false);
-        }
-
-        public void completed(KAddress partner) {
-            ConnectionStatus conn = connectionLoad.get(partner.getId());
-            conn.releaseSlot(true);
-        }
-
-        public Optional<KAddress> download(int downloadPos) {
-            for (Map.Entry<Identifier, ConnectionStatus> conn : connectionLoad.entrySet()) {
-                if (conn.getValue().available()) {
-                    VodDescriptor descriptor = partnerStatus.get(conn.getKey());
-                    if (descriptor.downloadPos == -1 || descriptor.downloadPos >= downloadPos) {
-                        conn.getValue().useSlot();
-                        return Optional.of(partners.get(conn.getKey()));
-                    }
-                }
-            }
-            return Optional.absent();
-        }
-
-        public Quartet<Integer, Integer, Integer, Integer> report() {
-            int maxSlots = 0;
-            int usedSlots = 0;
-            int successSlots = 0;
-            int failedSlots = 0;
-
-            for (ConnectionStatus conn : connectionLoad.values()) {
-                Quartet<Integer, Integer, Integer, Integer> connReport = conn.report();
-                maxSlots += connReport.getValue0();
-                usedSlots += connReport.getValue1();
-                successSlots += connReport.getValue2();
-                failedSlots += connReport.getValue3();
-            }
-
-            return Quartet.with(maxSlots, usedSlots, successSlots, failedSlots);
-        }
+        };
     }
 
     public static class Init extends se.sics.kompics.Init<TorrentComp> {

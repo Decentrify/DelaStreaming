@@ -21,14 +21,16 @@ package se.sics.gvod.network;
 
 import se.sics.gvod.common.event.ReqStatus;
 import se.sics.gvod.common.event.vod.Connection;
-import se.sics.gvod.common.event.vod.Download;
 import se.sics.gvod.common.util.FileMetadata;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.network.util.FileMetadataSerializer;
 import se.sics.gvod.network.util.ReqStatusSerializer;
 import se.sics.gvod.network.util.VodDescriptorSerializer;
 import se.sics.gvod.network.vod.ConnectionSerializer;
-import se.sics.gvod.network.vod.DownloadSerializer;
+import se.sics.gvod.stream.torrent.event.Download;
+import se.sics.gvod.stream.torrent.event.DownloadSerializer;
+import se.sics.gvod.stream.torrent.event.TorrentGet;
+import se.sics.gvod.stream.torrent.event.TorrentGetSerializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.croupier.CroupierSerializerSetup;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
@@ -37,7 +39,7 @@ import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class GVoDSerializerSetup {
-    public static int serializerIds = 11;
+    public static int serializerIds = 13;
     
     public static enum GVoDSerializers {
         FileMetadata(FileMetadata.class, "gvodFileMetadataSerializer"),
@@ -47,6 +49,8 @@ public class GVoDSerializerSetup {
         ConnectionResponse(Connection.Response.class, "gvodConnectionResponseSerializer"),
         ConnectionClose(Connection.Close.class, "gvodConnectionCloseSerializer"),
         ConnectionUpdate(Connection.Update.class, "gvodConnectionUpdateSerializer"),
+        TorrentGetRequest(TorrentGet.Request.class, "gvodTorrentGetRequestSerializer"),
+        TorrentGetResponse(TorrentGet.Response.class, "gvodTorrentGetResponseSerializer"),
         DownloadDataRequest(Download.DataRequest.class, "gvodDownloadDataRequestSerializer"),
         DownloadDataResponse(Download.DataResponse.class, "gvodDownloadDataResponseSerializer"),
         DownloadHashRequest(Download.HashRequest.class, "gvodDownloadHashRequestSerializer"),
@@ -91,6 +95,7 @@ public class GVoDSerializerSetup {
         Serializers.register(vodDescriptorSerializer, GVoDSerializers.VodDescriptor.serializerName);
         Serializers.register(GVoDSerializers.VodDescriptor.serializedClass, GVoDSerializers.VodDescriptor.serializerName);
         
+        
         ConnectionSerializer.Request connectionRequestSerializer = new ConnectionSerializer.Request(currentId++);
         Serializers.register(connectionRequestSerializer, GVoDSerializers.ConnectionRequest.serializerName);
         Serializers.register(GVoDSerializers.ConnectionRequest.serializedClass, GVoDSerializers.ConnectionRequest.serializerName);
@@ -107,6 +112,14 @@ public class GVoDSerializerSetup {
         Serializers.register(connectionUpdateSerializer, GVoDSerializers.ConnectionUpdate.serializerName);
         Serializers.register(GVoDSerializers.ConnectionUpdate.serializedClass, GVoDSerializers.ConnectionUpdate.serializerName);
         
+        TorrentGetSerializer.Request torrentGetRequestSerializer = new TorrentGetSerializer.Request(currentId++);
+        Serializers.register(torrentGetRequestSerializer, GVoDSerializers.TorrentGetRequest.serializerName);
+        Serializers.register(GVoDSerializers.TorrentGetRequest.serializedClass, GVoDSerializers.TorrentGetRequest.serializerName);
+        
+        TorrentGetSerializer.Response torrentGetResponseSerializer = new TorrentGetSerializer.Response(currentId++);
+        Serializers.register(torrentGetResponseSerializer, GVoDSerializers.TorrentGetResponse.serializerName);
+        Serializers.register(GVoDSerializers.TorrentGetResponse.serializedClass, GVoDSerializers.TorrentGetResponse.serializerName);
+
         DownloadSerializer.DataRequest downloadDataRequestSerializer = new DownloadSerializer.DataRequest(currentId++);
         Serializers.register(downloadDataRequestSerializer, GVoDSerializers.DownloadDataRequest.serializerName);
         Serializers.register(GVoDSerializers.DownloadDataRequest.serializedClass, GVoDSerializers.DownloadDataRequest.serializerName);

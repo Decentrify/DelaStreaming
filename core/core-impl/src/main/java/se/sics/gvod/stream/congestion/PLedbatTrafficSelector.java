@@ -16,45 +16,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.util;
+package se.sics.gvod.stream.congestion;
 
-import org.javatuples.Quartet;
+import se.sics.kompics.KompicsEvent;
+import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.ports.TrafficSelector;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnectionStatus {
+public class PLedbatTrafficSelector extends TrafficSelector {
 
-    private int maxSlots;
-    private int usedSlots;
-    private int successSlots;
-    private int failedSlots;
-
-    public ConnectionStatus(int maxSlots) {
-        this.maxSlots = maxSlots;
-        usedSlots = 0;
-        successSlots = 0;
-        failedSlots = 0;
-    }
-
-    public boolean available() {
-        return usedSlots < maxSlots;
-    }
-
-    public void useSlot() {
-        usedSlots++;
-    }
-
-    public void releaseSlot(boolean used) {
-        usedSlots--;
-        if (used) {
-            successSlots++;
-        } else {
-            failedSlots++;
+    @Override
+    public boolean pass(KompicsEvent event) {
+        if(event instanceof KContentMsg) {
+            KContentMsg msg = (KContentMsg)event;
+            if(msg.getContent() instanceof PLedbatMsg) {
+                return true;
+            }
         }
+        return false;
     }
-
-    public Quartet<Integer, Integer, Integer, Integer> report() {
-        return Quartet.with(maxSlots, usedSlots, successSlots, failedSlots);
-    }
+    
 }

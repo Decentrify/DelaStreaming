@@ -16,36 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.torrent.event;
+package se.sics.gvod.stream.connection;
 
-import se.sics.gvod.stream.StreamEvent;
-import se.sics.kompics.KompicsEvent;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.javatuples.Pair;
+import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DownloadFinished implements StreamEvent {
-    public final Identifier eventId;
-    public final Identifier overlayId;
+public class ConnMngr {
+    private final Map<Identifier, KAddress> connections = new HashMap<>();
+    private final Map<Identifier, VodDescriptor> descriptors = new HashMap<>();
     
-    public DownloadFinished(Identifier eventId, Identifier overlayId) {
-        this.eventId = eventId;
-        this.overlayId = overlayId;
+    public void addConn(List<KAddress> conn) {
+        for(KAddress partner : conn) {
+            connections.put(partner.getId(), partner);
+            descriptors.put(partner.getId(), new VodDescriptor(-1));
+        }
     }
     
-    public DownloadFinished(Identifier overlayId) {
-        this(UUIDIdentifier.randomId(), overlayId);
-    }
-    
-    @Override
-    public Identifier getId() {
-        return eventId;
-    }
-    
-    @Override
-    public String toString() {
-        return "Download<" + overlayId + ">Finished<"+ getId() + ">";
+    public Pair<Map, Map> publish() {
+        return Pair.with((Map)new HashMap(connections), (Map)new HashMap(descriptors));
     }
 }

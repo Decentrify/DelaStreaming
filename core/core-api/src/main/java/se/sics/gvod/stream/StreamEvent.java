@@ -20,6 +20,7 @@ package se.sics.gvod.stream;
 
 import se.sics.kompics.KompicsEvent;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

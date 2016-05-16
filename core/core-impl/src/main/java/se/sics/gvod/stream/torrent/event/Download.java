@@ -16,15 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.common.event.vod;
+package se.sics.gvod.stream.torrent.event;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
+import se.sics.gvod.stream.StreamEvent;
+import se.sics.gvod.stream.congestion.PLedbatEvent;
+import se.sics.gvod.stream.congestion.PLedbatMsg;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
@@ -34,7 +38,7 @@ import se.sics.ktoolbox.util.overlays.OverlayEvent;
  */
 public class Download {
 
-    public static class DataRequest implements GVoDEvent, OverlayEvent {
+    public static class DataRequest implements StreamEvent, OverlayEvent, PLedbatMsg.Request {
 
         public final Identifier eventId;
         public final Identifier overlayId;
@@ -53,6 +57,18 @@ public class Download {
         @Override
         public Identifier getId() {
             return eventId;
+        }
+        
+        @Override
+        public Identifier overlayId() {
+            return overlayId;
+        }
+        
+        @Override
+        public Set<Identifier> pendingResp() {
+            Set<Identifier> pendingResp = new HashSet<>();
+            pendingResp.add(eventId);
+            return pendingResp;
         }
         
         @Override
@@ -75,27 +91,28 @@ public class Download {
         public DataResponse busy() {
             return new DataResponse(this, ReqStatus.BUSY, null);
         }
-
-        @Override
-        public Identifier overlayId() {
-            return overlayId;
-        }
     }
 
-    public static class DataResponse implements GVoDEvent, OverlayEvent {
-
+    public static class DataResponse implements StreamEvent, OverlayEvent, PLedbatMsg.Response {
+        Long sendingTime;
+        
         public final Identifier eventId;
         public final Identifier overlayId;
         public final ReqStatus status;
         public final int pieceId;
         public final ByteBuffer piece;
-
-        public DataResponse(Identifier eventId, Identifier overlayId, ReqStatus status, int pieceId, ByteBuffer piece) {
+        
+        DataResponse(Long sendingTime, Identifier eventId, Identifier overlayId, ReqStatus status, int pieceId, ByteBuffer piece) {
+            this.sendingTime = sendingTime;
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.status = status;
             this.pieceId = pieceId;
             this.piece = piece;
+        }
+        
+        private DataResponse(Identifier eventId, Identifier overlayId, ReqStatus status, int pieceId, ByteBuffer piece) {
+            this(null, eventId, overlayId, status, pieceId, piece);
         }
         
         public DataResponse(DataRequest req, ReqStatus status, ByteBuffer piece) {
@@ -116,9 +133,19 @@ public class Download {
         public Identifier overlayId() {
             return overlayId;
         }
+
+        @Override
+        public void setSendingTime(long time) {
+            sendingTime = time;
+        }
+
+        @Override
+        public long getSendingTime() {
+            return sendingTime;
+        }
     }
 
-    public static class HashRequest implements GVoDEvent, OverlayEvent {
+    public static class HashRequest implements StreamEvent, OverlayEvent, PLedbatMsg.Request {
 
         public final Identifier eventId;
         public final Identifier overlayId;
@@ -139,6 +166,18 @@ public class Download {
         public Identifier getId() {
             return eventId;
         }
+        
+        @Override
+        public Identifier overlayId() {
+            return overlayId;
+        }
+        
+        @Override
+        public Set<Identifier> pendingResp() {
+            Set<Identifier> pendingResp = new HashSet<>();
+            pendingResp.add(eventId);
+            return pendingResp;
+        }
 
         @Override
         public String toString() {
@@ -156,14 +195,10 @@ public class Download {
         public HashResponse busy() {
             return new HashResponse(this, ReqStatus.BUSY, new HashMap<Integer, ByteBuffer>(), hashes);
         }
-
-        @Override
-        public Identifier overlayId() {
-            return overlayId;
-        }
     }
 
-    public static class HashResponse implements GVoDEvent, OverlayEvent {
+    public static class HashResponse implements StreamEvent, OverlayEvent, PLedbatMsg.Response {
+        Long sendingTime;
         
         public final Identifier eventId;
         public final Identifier overlayId;
@@ -172,7 +207,8 @@ public class Download {
         public final Map<Integer, ByteBuffer> hashes;
         public final Set<Integer> missingHashes;
 
-        public HashResponse(Identifier eventId, Identifier overlayId, ReqStatus status, int targetPos, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+        HashResponse(Long sendingTime, Identifier eventId, Identifier overlayId, ReqStatus status, int targetPos, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+            this.sendingTime = sendingTime;
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.targetPos = targetPos;
@@ -180,8 +216,9 @@ public class Download {
             this.hashes = hashes;
             this.missingHashes = missingHashes;
         }
-        public HashResponse(HashRequest req, ReqStatus status, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
-           this(req.eventId, req.overlayId, status, req.targetPos, hashes, missingHashes);
+        
+        private HashResponse(HashRequest req, ReqStatus status, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+           this(null, req.eventId, req.overlayId, status, req.targetPos, hashes, missingHashes);
         }
 
         @Override
@@ -197,6 +234,16 @@ public class Download {
         @Override
         public Identifier overlayId() {
             return overlayId;
+        }
+        
+        @Override
+        public void setSendingTime(long time) {
+            sendingTime = time;
+        }
+
+        @Override
+        public long getSendingTime() {
+            return sendingTime;
         }
     }
 }

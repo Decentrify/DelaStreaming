@@ -16,10 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.network.vod;
+package se.sics.gvod.stream.torrent.event;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -31,7 +30,6 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import se.sics.gvod.common.event.vod.Download;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
@@ -65,7 +63,7 @@ public class DownloadSerializerTest {
         buf.getBytes(0, copyBuf, buf.readableBytes());
         copy = (Download.DataRequest) serializer.fromBinary(copyBuf, Optional.absent());
 
-         Assert.assertEquals(original.eventId, copy.eventId);
+        Assert.assertEquals(original.eventId, copy.eventId);
         Assert.assertEquals(original.overlayId, copy.overlayId);
         Assert.assertEquals(original.pieceId, copy.pieceId);
         Assert.assertEquals(0, copyBuf.readableBytes());
@@ -92,6 +90,7 @@ public class DownloadSerializerTest {
 
         Download.DataRequest aux = new Download.DataRequest(new IntIdentifier(10), 10);
         original = aux.success(ByteBuffer.wrap(new byte[]{1, 2, 3, 4, 5}));
+        original.setSendingTime(1024*1024);
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
@@ -105,6 +104,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.status, copy.status);
         Assert.assertEquals(original.pieceId, copy.pieceId);
         Assert.assertEquals(original.piece, copy.piece);
+        Assert.assertEquals(original.sendingTime, copy.sendingTime);
         Assert.assertEquals(0, copyBuf.readableBytes());
 
         //generic
@@ -120,6 +120,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.status, copy.status);
         Assert.assertEquals(original.pieceId, copy.pieceId);
         Assert.assertEquals(original.piece, copy.piece);
+        Assert.assertEquals(original.sendingTime, copy.sendingTime);
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
 
@@ -183,6 +184,7 @@ public class DownloadSerializerTest {
         hashes.put(11, ByteBuffer.wrap(new byte[]{1, 2, 3, 4}));
         hashes.put(13, ByteBuffer.wrap(new byte[]{1, 1, 1, 1}));
         original = aux.success(hashes, missingHashes);
+        original.setSendingTime(1024*1024);
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
@@ -197,6 +199,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.status, copy.status);
         Assert.assertTrue(Sets.symmetricDifference(original.hashes.entrySet(), copy.hashes.entrySet()).isEmpty());
         Assert.assertTrue(Sets.symmetricDifference(original.missingHashes, copy.missingHashes).isEmpty());
+        Assert.assertEquals(original.sendingTime, copy.sendingTime);
         Assert.assertEquals(0, copyBuf.readableBytes());
 
         //generic
@@ -213,6 +216,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.status, copy.status);
         Assert.assertTrue(Sets.symmetricDifference(original.hashes.entrySet(), copy.hashes.entrySet()).isEmpty());
         Assert.assertTrue(Sets.symmetricDifference(original.missingHashes, copy.missingHashes).isEmpty());
+        Assert.assertEquals(original.sendingTime, copy.sendingTime);
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
 }

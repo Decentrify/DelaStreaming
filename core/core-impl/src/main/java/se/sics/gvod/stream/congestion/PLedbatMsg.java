@@ -16,19 +16,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.torrent;
+package se.sics.gvod.stream.congestion;
 
-import se.sics.gvod.stream.torrent.event.DownloadStatus;
-import se.sics.kompics.PortType;
+import java.util.Set;
+import se.sics.ktoolbox.util.identifiable.Identifiable;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentStatus extends PortType {
-    {
-        indication(DownloadStatus.Starting.class);
-        indication(DownloadStatus.Done.class);
-        request(DownloadStatus.Request.class);
-        indication(DownloadStatus.Response.class);
+public class PLedbatMsg {
+
+    public static interface Request extends Identifiable {
+        public Set<Identifier> pendingResp();
+    }
+
+    public static interface Response extends Identifiable {
+
+        public void setSendingTime(long time);
+
+        public long getSendingTime();
     }
 }

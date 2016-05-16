@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.connection;
+package se.sics.gvod.stream.connection.event;
 
 import java.util.Map;
 import se.sics.gvod.common.util.VodDescriptor;
@@ -29,7 +29,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class StreamConnections {
+public class Connection {
     public static class Request extends Direct.Request<Response> implements StreamEvent {
 
         public final Identifier eventId;
@@ -52,7 +52,7 @@ public class StreamConnections {
 
         @Override
         public String toString() {
-            return "StreamConnections.Request<" + getId() + ">";
+            return "Connection.Request<" + getId() + ">";
         }
     }
 
@@ -79,7 +79,7 @@ public class StreamConnections {
 
         @Override
         public String toString() {
-            return "StreamConnections.Indication<" + getId() + ">";
+            return "Connection.Indication<" + getId() + ">";
         }
     }
     
@@ -90,7 +90,7 @@ public class StreamConnections {
         
         @Override
         public String toString() {
-            return "StreamConnections.Response<" + getId() + ">";
+            return "Connection.Response<" + getId() + ">";
         }
     }
 }

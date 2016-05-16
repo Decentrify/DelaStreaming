@@ -17,9 +17,6 @@
  */
 package se.sics.gvod.simulator.torrent.sim1;
 
-import se.sics.gvod.simulator.torrent.sim1.TorrentDriver;
-import se.sics.gvod.simulator.torrent.sim1.TorrentDriverComp;
-import se.sics.gvod.simulator.torrent.sim1.TorrentTestHostComp;
 import se.sics.gvod.stream.torrent.TorrentComp;
 import se.sics.kompics.network.Address;
 import se.sics.kompics.simulator.SimulationScenario;
@@ -37,7 +34,7 @@ public class ScenarioGen {
         @Override
         public StartNodeEvent generate(final Integer nodeId) {
             return new StartNodeEvent() {
-                TorrentDriver dwnlTorrentDriver = ScenarioSetup.dwnlTorrentDriver;
+                TorrentDriver dwnlTorrentDriver = ScenarioSetup.dwnlTorrentDriver(nodeId);
 
                 @Override
                 public Address getNodeAddress() {
@@ -64,7 +61,7 @@ public class ScenarioGen {
         @Override
         public StartNodeEvent generate(final Integer nodeId) {
             return new StartNodeEvent() {
-                TorrentDriver upldTorrentDriver = ScenarioSetup.upldTorrentDriver;
+                TorrentDriver upldTorrentDriver = ScenarioSetup.upldTorrentDriver(nodeId);
 
                 @Override
                 public Address getNodeAddress() {
@@ -91,13 +88,14 @@ public class ScenarioGen {
             {
                 StochasticProcess startUpld = new StochasticProcess() {
                     {
-                        raise(1, startUpldOp, new BasicIntSequentialDistribution(1));
+                        eventInterArrivalTime(constant(100));
+                        raise(ScenarioSetup.nrUploaders, startUpldOp, new BasicIntSequentialDistribution(ScenarioSetup.startingUploaderId));
                     }
                 };
                 
                 StochasticProcess startDwnl = new StochasticProcess() {
                     {
-                        raise(1, startDwnlOp, new BasicIntSequentialDistribution(1));
+                        raise(ScenarioSetup.nrDownloaders, startDwnlOp, new BasicIntSequentialDistribution(ScenarioSetup.startingDownloaderId));
                     }
                 };
 

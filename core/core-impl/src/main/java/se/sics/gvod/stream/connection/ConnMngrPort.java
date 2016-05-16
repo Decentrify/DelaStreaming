@@ -16,19 +16,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.torrent;
+package se.sics.gvod.stream.connection;
 
-import se.sics.gvod.stream.torrent.event.DownloadStatus;
+import se.sics.gvod.stream.connection.event.Connection;
 import se.sics.kompics.PortType;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentStatus extends PortType {
+public class ConnMngrPort extends PortType {
     {
-        indication(DownloadStatus.Starting.class);
-        indication(DownloadStatus.Done.class);
-        request(DownloadStatus.Request.class);
-        indication(DownloadStatus.Response.class);
+        request(Connection.Request.class);
+        indication(Connection.Indication.class);
+        indication(Connection.Response.class);
     }
 }

@@ -16,17 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.connection;
+package se.sics.gvod.stream.congestion;
 
-import se.sics.kompics.PortType;
+import se.sics.gvod.stream.StreamEvent;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnectionPort extends PortType {
-    {
-        request(StreamConnections.Request.class);
-        indication(StreamConnections.Indication.class);
-        indication(StreamConnections.Response.class);
-    }
+public interface PLedbatEvent extends StreamEvent {
 }
