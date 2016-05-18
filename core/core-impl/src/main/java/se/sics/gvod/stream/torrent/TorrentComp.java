@@ -88,7 +88,7 @@ public class TorrentComp extends ComponentDefinition {
     private final LoadModifiersKCWrapper loadModifiersConfig;
     private final KAddress selfAdr;
     private final Identifier overlayId;
-    private final long defaultMsgTimeout = 2000;
+    private final long defaultMsgTimeout;
     private final long checkPeriod = 1000;
     //**************************INTERNAL_STATE**********************************
     private TransferFSM transferFSM;
@@ -102,12 +102,13 @@ public class TorrentComp extends ComponentDefinition {
         logPrefix = "<nid:" + selfAdr.getId() + ", oid:" + overlayId + ">";
         LOG.info("{}initiating...", logPrefix);
 
-        loadModifiersConfig = new LoadModifiersKCWrapper(config());
-        transferFSM = new TransferInit(init.torrentDetails);
-        transferFSM.setup();
-        loadTracker = new LoadTracker(this.proxy, 200, 500, logPrefix + "[TorrentComp]");
         SystemKCWrapper systemConfig = new SystemKCWrapper(config());
         rand = new Random(systemConfig.seed);
+        loadModifiersConfig = new LoadModifiersKCWrapper(config());
+        defaultMsgTimeout = loadModifiersConfig.maxLinkRTT;
+        loadTracker = new LoadTracker(this.proxy, loadModifiersConfig.targetQueueingDelay, loadModifiersConfig.maxQueueingDelay, logPrefix + "[TorrentComp]");
+        transferFSM = new TransferInit(init.torrentDetails);
+        transferFSM.setup();
 
         subscribe(handleStart, control);
         subscribe(handleCheck, timerPort);
