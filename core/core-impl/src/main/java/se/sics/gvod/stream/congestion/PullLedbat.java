@@ -18,9 +18,11 @@
  */
 package se.sics.gvod.stream.congestion;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import se.sics.gvod.stream.congestion.event.external.PLedbatConnection;
 import se.sics.kompics.ComponentProxy;
 
@@ -29,38 +31,51 @@ import se.sics.kompics.ComponentProxy;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class Connection {
+public class PullLedbat {
 
-    public final int HISTORY_SIZE = 20;
-    public final long BASE_HISTORY_ROUND_TIME = 60 * 1000 * 1000; //1 minute
-    public final long TARGET = 100; //100ms 
-    public final double GAIN = 1/100; //set to 1/TARGET
+    public static final int HISTORY_SIZE = 20;
+    public static final long BASE_HISTORY_ROUND_TIME = 1000; //1 second
+    public static final long TARGET = 100; //100ms 
+    public static final double GAIN = 1 / 100; //set to 1/TARGET
 
     public final PLedbatConnection.TrackRequest req;
+    private final Random rand;
     private final LinkedList<Long> baseHistory = new LinkedList<>();
     private final LinkedList<Long> currentHistory = new LinkedList<>();
-    
-    public Connection(PLedbatConnection.TrackRequest req) {
+
+    public PullLedbat(PLedbatConnection.TrackRequest req, Random rand) {
         this.req = req;
+        this.rand = rand;
+        baseHistory.add(Long.MAX_VALUE);
+        currentHistory.add(Long.MAX_VALUE);
     }
 
-    public void incoming(long sendingTime, ComponentProxy proxy) {
+    public void incoming(PLedbatState pLedbatState, ComponentProxy proxy) {
         long now = System.currentTimeMillis();
-        long delay = sendingTime - now;
+        long delay = now - pLedbatState.getSendingTime();
         updateBaseDelay(delay);
         updateCurrentDelay(delay);
-        
-        long queuingDelay = latestQueuingDelay() - Collections.min(baseHistory);
-        double offTarget = ((double)(TARGET - queuingDelay)) / TARGET;
-        if(offTarget >= 0) {
-             proxy.answer(req, req.answer(PLedbatConnection.TrackResponse.Status.SPEED_UP));
-        } else {
-             proxy.answer(req, req.answer(PLedbatConnection.TrackResponse.Status.SLOW_DOWN));
-        }
-    }
 
-    public void timeout(ComponentProxy proxy) {
-        proxy.answer(req, req.answer(PLedbatConnection.TrackResponse.Status.TIMEOUT));
+        Long baseDelay = Collections.min(baseHistory);
+        if (baseDelay.equals(Long.MAX_VALUE)) {
+            pLedbatState.setStatus(PLedbatState.Status.SPEED_UP);
+        } else {
+            long queuingDelay = latestQueuingDelay() - baseDelay;
+            double offTarget = ((double) (TARGET - queuingDelay)) / TARGET;
+            if (offTarget >= 0) {
+                if (rand.nextDouble() < offTarget) {
+                    pLedbatState.setStatus(PLedbatState.Status.SPEED_UP);
+                } else {
+                    pLedbatState.setStatus(PLedbatState.Status.MAINTAIN);
+                }
+            } else {
+                if (rand.nextDouble() < -1 * offTarget) {
+                    pLedbatState.setStatus(PLedbatState.Status.SLOW_DOWN);
+                } else {
+                    pLedbatState.setStatus(PLedbatState.Status.MAINTAIN);
+                }
+            }
+        }
     }
 
     //Maintain BASE_HISTORY delay-minima
@@ -69,7 +84,20 @@ public class Connection {
         baseHistory.set(0, Math.min(baseHistory.get(0), delay));
     }
 
-    public void updateBaseDelayRound() {
+    public String round() {
+        Long baseDelay = Collections.min(baseHistory);
+        String result;
+        if (baseDelay.equals(Long.MAX_VALUE)) {
+            result = "qD:x";
+        } else {
+            long queuingDelay = latestQueuingDelay() - baseDelay;
+            result = "qD:" + queuingDelay;
+        }
+        updateBaseDelayRound();
+        return result;
+    }
+
+    private void updateBaseDelayRound() {
         baseHistory.addFirst(Long.MAX_VALUE);
         if (baseHistory.size() > HISTORY_SIZE) {
             baseHistory.removeLast();
@@ -85,10 +113,10 @@ public class Connection {
 
     //RFC - filter method
     private long latestQueuingDelay() {
-        return (long)Math.floor(mean(currentHistory));
+        return (long) Math.floor(average(currentHistory));
     }
 
-    private double mean(List<Long> values) {
+    private Double average(List<Long> values) {
         double avg = 0;
         int t = 1;
         for (double x : values) {

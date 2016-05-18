@@ -58,14 +58,16 @@ public class DownloadStatus {
 
         public final Identifier eventId;
         public final Identifier overlayId;
+        public final Map<Identifier, ConnectionStatus> connectionStatus;
 
-        public Done(Identifier eventId, Identifier overlayId) {
+        public Done(Identifier eventId, Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus) {
             this.eventId = eventId;
             this.overlayId = overlayId;
+            this.connectionStatus = connectionStatus;
         }
 
-        public Done(Identifier overlayId) {
-            this(UUIDIdentifier.randomId(), overlayId);
+        public Done(Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus) {
+            this(UUIDIdentifier.randomId(), overlayId, connectionStatus);
         }
 
         @Override

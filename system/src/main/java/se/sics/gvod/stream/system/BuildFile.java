@@ -16,37 +16,36 @@
 // * along with this program; if not, write to the Free Software
 // * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // */
+//package se.sics.gvod.stream.system;
 //
-//package se.sics.gvod.system;
-//
-//import com.google.common.util.concurrent.SettableFuture;
-//import se.sics.kompics.Kompics;
-//import se.sics.ktoolbox.ipsolver.msg.GetIp;
+//import java.io.File;
 //
 ///**
-// * @author Alex Ormenisan <aaor@sics.se>
+// * @author Alex Ormenisan <aaor@kth.se>
 // */
+//public class BuildFile {
 //
-//public class Main {
 //    public static void main(String[] args) {
-//        GVoDLauncher.setSyncIFuture(SettableFuture.create());
-//        GVoDLauncher.setIpType(GetIp.NetworkInterfacesMask.PUBLIC);
-//        start();
-//        try {
-//            Kompics.waitForTermination();
-//        } catch (InterruptedException ex) {
-//            System.exit(1);
-//        }
+//        File uploadFile = new File("./src/main/resources/experiment1/uploader/test.txt");
+//        uploadFile.getParentFile().mkdirs();
+//        uploadFile.createNewFile();
+//        generateFile(uploadFile, rand);
+//        HashUtil.makeHashes(uploadFilePath, uploadHashPath, hashAlg, blockSize);
 //    }
 //
-//    public static void start() {
-//        if (Kompics.isOn()) {
-//            Kompics.shutdown();
+//    private void generateFile(File file, Random rand) throws IOException {
+//        FileOutputStream out = new FileOutputStream(file);
+//        for (int i = 0; i < fileBlockSize - 1; i++) {
+//            byte[] data = new byte[blockSize];
+//            rand.nextBytes(data);
+//            out.write(data);
 //        }
-//        Kompics.createAndStart(GVoDLauncher.class, Runtime.getRuntime().availableProcessors(), 20); // Yes 20 is totally arbitrary
+//        byte[] data = new byte[blockSize - 1];
+//        rand.nextBytes(data);
+//        out.write(data);
+//        LOG.info("generatedSize:{}", fileBlockSize);
+//        out.flush();
+//        out.close();
 //    }
-//
-//    public static void stop() {
-//        Kompics.shutdown();
-//    }
+//}
 //}

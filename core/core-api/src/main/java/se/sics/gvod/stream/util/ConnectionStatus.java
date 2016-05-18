@@ -23,13 +23,16 @@ package se.sics.gvod.stream.util;
  */
 public class ConnectionStatus {
 
+    private static final int MAX_SLOTS = 10 * 1024;
+    private final int startingSlots;
     private int maxSlots;
     private int usedSlots;
     private int successSlots;
     private int failedSlots;
 
-    private ConnectionStatus(int maxSlots, int usedSlots, int successSlots, int failedSlots) {
-        this.maxSlots = maxSlots;
+    private ConnectionStatus(int startingSlots, int usedSlots, int successSlots, int failedSlots) {
+        this.startingSlots = startingSlots;
+        this.maxSlots = startingSlots;
         this.usedSlots = usedSlots;
         this.successSlots = successSlots;
         this.failedSlots = failedSlots;
@@ -38,18 +41,25 @@ public class ConnectionStatus {
     public ConnectionStatus(int maxSlots) {
         this(maxSlots, 0, 0, 0);
     }
-    
+
     public void increaseSlots() {
-        maxSlots++;
+        if (maxSlots < MAX_SLOTS) {
+            maxSlots++;
+        }
     }
-    
+
     public void decreaseSlots() {
-        maxSlots--;
+        if (maxSlots > startingSlots) {
+            maxSlots--;
+        }
     }
-    
+
     public void halveSlots() {
-        maxSlots = maxSlots/2;
+        if (maxSlots > startingSlots) {
+            maxSlots = maxSlots / 2;
+        }
     }
+
     public boolean available() {
         return usedSlots < maxSlots;
     }
@@ -66,11 +76,11 @@ public class ConnectionStatus {
             failedSlots++;
         }
     }
-    
+
     public ConnectionStatus copy() {
         return new ConnectionStatus(maxSlots, usedSlots, successSlots, failedSlots);
     }
-    
+
     public void reset() {
         successSlots = 0;
         failedSlots = 0;

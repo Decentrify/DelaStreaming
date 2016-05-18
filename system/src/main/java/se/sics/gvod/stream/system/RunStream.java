@@ -16,22 +16,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.congestion;
 
-import java.util.Set;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+package se.sics.gvod.stream.system;
+
+import se.sics.kompics.Kompics;
 
 /**
- * @author Alex Ormenisan <aaor@kth.se>
+ * @author Alex Ormenisan <aaor@sics.se>
  */
-public class PLedbatMsg {
 
-    public static interface Request extends Identifiable {
-
-        public Set<Identifier> pendingResp();
+public class RunStream {
+    public static void main(String[] args) {
+        start();
+        try {
+            Kompics.waitForTermination();
+        } catch (InterruptedException ex) {
+            System.exit(1);
+        }
     }
 
-    public static interface Response extends PLedbatState, Identifiable {
+    public static void start() {
+        if (Kompics.isOn()) {
+            Kompics.shutdown();
+        }
+        Kompics.createAndStart(StreamHostLauncher.class, Runtime.getRuntime().availableProcessors(), 20); // Yes 20 is totally arbitrary
+    }
+
+    public static void stop() {
+        Kompics.shutdown();
     }
 }

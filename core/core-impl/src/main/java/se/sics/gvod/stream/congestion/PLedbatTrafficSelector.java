@@ -31,7 +31,7 @@ public class PLedbatTrafficSelector extends TrafficSelector {
     public boolean pass(KompicsEvent event) {
         if(event instanceof KContentMsg) {
             KContentMsg msg = (KContentMsg)event;
-            if(msg.getContent() instanceof PLedbatMsg) {
+            if(msg.getContent() instanceof PLedbatMsg.Request || msg.getContent() instanceof PLedbatMsg.Response) {
                 return true;
             }
         }

@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.simulator.torrent.sim1;
 
+import java.util.List;
 import se.sics.gvod.core.util.TorrentDetails;
 import se.sics.gvod.simulator.TestDriver;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -28,4 +29,5 @@ import se.sics.ktoolbox.util.network.KAddress;
 public interface TorrentDriver extends TestDriver {
     public KAddress getSelfAdr();
     public TorrentDetails getTorrentDetails();
+    public List<KAddress> getPartners();
 }

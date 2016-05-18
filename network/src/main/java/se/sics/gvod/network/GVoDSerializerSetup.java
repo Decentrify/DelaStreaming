@@ -27,6 +27,8 @@ import se.sics.gvod.network.util.FileMetadataSerializer;
 import se.sics.gvod.network.util.ReqStatusSerializer;
 import se.sics.gvod.network.util.VodDescriptorSerializer;
 import se.sics.gvod.network.vod.ConnectionSerializer;
+import se.sics.gvod.stream.congestion.PLedbatState;
+import se.sics.gvod.stream.congestion.PLedbatStateImplSerializer;
 import se.sics.gvod.stream.torrent.event.Download;
 import se.sics.gvod.stream.torrent.event.DownloadSerializer;
 import se.sics.gvod.stream.torrent.event.TorrentGet;
@@ -39,9 +41,10 @@ import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class GVoDSerializerSetup {
-    public static int serializerIds = 13;
+    public static int serializerIds = 14;
     
     public static enum GVoDSerializers {
+        PLedbatStateImplSerializer(PLedbatState.Impl.class, "gvodPLedbatStateImplSerializer"),
         FileMetadata(FileMetadata.class, "gvodFileMetadataSerializer"),
         ReqStatus(ReqStatus.class, "gvodReqStatusSerializer"),
         VodDescriptor(VodDescriptor.class, "gvodVodDescriptorSerializer"),
@@ -82,6 +85,10 @@ public class GVoDSerializerSetup {
     
     public static int registerSerializers(int startingId) {
         int currentId = startingId;
+        
+        PLedbatStateImplSerializer pLedbatStateImplSerializer = new PLedbatStateImplSerializer(currentId++);
+        Serializers.register(pLedbatStateImplSerializer, GVoDSerializers.PLedbatStateImplSerializer.serializerName);
+        Serializers.register(GVoDSerializers.PLedbatStateImplSerializer.serializedClass, GVoDSerializers.PLedbatStateImplSerializer.serializerName);
         
         FileMetadataSerializer fileMetadataSerializer = new FileMetadataSerializer(currentId++);
         Serializers.register(fileMetadataSerializer, GVoDSerializers.FileMetadata.serializerName);

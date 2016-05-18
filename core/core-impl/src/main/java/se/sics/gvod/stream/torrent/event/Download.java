@@ -22,13 +22,11 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
 import se.sics.gvod.stream.StreamEvent;
-import se.sics.gvod.stream.congestion.PLedbatEvent;
 import se.sics.gvod.stream.congestion.PLedbatMsg;
+import se.sics.gvod.stream.congestion.PLedbatState;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
@@ -94,16 +92,15 @@ public class Download {
     }
 
     public static class DataResponse implements StreamEvent, OverlayEvent, PLedbatMsg.Response {
-        Long sendingTime;
-        
+        final PLedbatState  pLedbatState;
         public final Identifier eventId;
         public final Identifier overlayId;
         public final ReqStatus status;
         public final int pieceId;
         public final ByteBuffer piece;
         
-        DataResponse(Long sendingTime, Identifier eventId, Identifier overlayId, ReqStatus status, int pieceId, ByteBuffer piece) {
-            this.sendingTime = sendingTime;
+        DataResponse(PLedbatState pLedbatState, Identifier eventId, Identifier overlayId, ReqStatus status, int pieceId, ByteBuffer piece) {
+            this.pLedbatState = pLedbatState;
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.status = status;
@@ -112,7 +109,7 @@ public class Download {
         }
         
         private DataResponse(Identifier eventId, Identifier overlayId, ReqStatus status, int pieceId, ByteBuffer piece) {
-            this(null, eventId, overlayId, status, pieceId, piece);
+            this(new PLedbatState.Impl(), eventId, overlayId, status, pieceId, piece);
         }
         
         public DataResponse(DataRequest req, ReqStatus status, ByteBuffer piece) {
@@ -136,12 +133,22 @@ public class Download {
 
         @Override
         public void setSendingTime(long time) {
-            sendingTime = time;
+            pLedbatState.setSendingTime(time);
         }
 
         @Override
         public long getSendingTime() {
-            return sendingTime;
+            return pLedbatState.getSendingTime();
+        }
+
+        @Override
+        public void setStatus(Status status) {
+            pLedbatState.setStatus(status);
+        }
+
+        @Override
+        public Status getStatus() {
+            return pLedbatState.getStatus();
         }
     }
 
@@ -198,8 +205,7 @@ public class Download {
     }
 
     public static class HashResponse implements StreamEvent, OverlayEvent, PLedbatMsg.Response {
-        Long sendingTime;
-        
+        final PLedbatState pLedbatState;
         public final Identifier eventId;
         public final Identifier overlayId;
         public final ReqStatus status;
@@ -207,8 +213,8 @@ public class Download {
         public final Map<Integer, ByteBuffer> hashes;
         public final Set<Integer> missingHashes;
 
-        HashResponse(Long sendingTime, Identifier eventId, Identifier overlayId, ReqStatus status, int targetPos, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
-            this.sendingTime = sendingTime;
+        HashResponse(PLedbatState pLedbatState, Identifier eventId, Identifier overlayId, ReqStatus status, int targetPos, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+            this.pLedbatState = pLedbatState;
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.targetPos = targetPos;
@@ -218,7 +224,7 @@ public class Download {
         }
         
         private HashResponse(HashRequest req, ReqStatus status, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
-           this(null, req.eventId, req.overlayId, status, req.targetPos, hashes, missingHashes);
+           this(new PLedbatState.Impl(), req.eventId, req.overlayId, status, req.targetPos, hashes, missingHashes);
         }
 
         @Override
@@ -238,12 +244,22 @@ public class Download {
         
         @Override
         public void setSendingTime(long time) {
-            sendingTime = time;
+            pLedbatState.setSendingTime(time);
         }
 
         @Override
         public long getSendingTime() {
-            return sendingTime;
+            return pLedbatState.getSendingTime();
+        }
+
+        @Override
+        public void setStatus(Status status) {
+            pLedbatState.setStatus(status);
+        }
+
+        @Override
+        public Status getStatus() {
+            return pLedbatState.getStatus();
         }
     }
 }

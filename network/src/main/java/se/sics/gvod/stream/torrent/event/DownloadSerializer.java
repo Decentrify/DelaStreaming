@@ -1,5 +1,3 @@
-package se.sics.gvod.stream.torrent.event;
-
 /*
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
@@ -19,6 +17,7 @@ package se.sics.gvod.stream.torrent.event;
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+package se.sics.gvod.stream.torrent.event;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
@@ -28,6 +27,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import se.sics.gvod.common.event.ReqStatus;
+import se.sics.gvod.stream.congestion.PLedbatState;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -83,7 +83,7 @@ public class DownloadSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Download.DataResponse obj = (Download.DataResponse) o;
-            buf.writeLong(obj.sendingTime);
+            Serializers.lookupSerializer(PLedbatState.Impl.class).toBinary(obj.pLedbatState, buf);
             Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(ReqStatus.class).toBinary(obj.status, buf);
@@ -98,7 +98,7 @@ public class DownloadSerializer {
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            long sendingTime = buf.readLong();
+            PLedbatState pLedbatState = (PLedbatState)Serializers.lookupSerializer(PLedbatState.Impl.class).fromBinary(buf, hint);
             Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
             Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
             ReqStatus status = (ReqStatus) Serializers.lookupSerializer(ReqStatus.class).fromBinary(buf, hint);
@@ -107,10 +107,10 @@ public class DownloadSerializer {
                 int size = buf.readInt();
                 byte[] piece = new byte[size];
                 buf.readBytes(piece);
-                return new Download.DataResponse(sendingTime, eventId, overlayId, status, pieceId, ByteBuffer.wrap(piece));
+                return new Download.DataResponse(pLedbatState, eventId, overlayId, status, pieceId, ByteBuffer.wrap(piece));
             } else {
                 //nothing
-                return new Download.DataResponse(sendingTime, eventId, overlayId, status, pieceId, null);
+                return new Download.DataResponse(pLedbatState, eventId, overlayId, status, pieceId, null);
             }
         }
     }
@@ -173,7 +173,7 @@ public class DownloadSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             Download.HashResponse obj = (Download.HashResponse) o;
-            buf.writeLong(obj.sendingTime);
+            Serializers.lookupSerializer(PLedbatState.Impl.class).toBinary(obj.pLedbatState, buf);
             Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(ReqStatus.class).toBinary(obj.status, buf);
@@ -198,7 +198,7 @@ public class DownloadSerializer {
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            long sendingTime = buf.readLong();
+            PLedbatState pLedbatState = (PLedbatState)Serializers.lookupSerializer(PLedbatState.Impl.class).fromBinary(buf, hint);
             Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
             Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
             ReqStatus status = (ReqStatus) Serializers.lookupSerializer(ReqStatus.class).fromBinary(buf, hint);
@@ -223,7 +223,7 @@ public class DownloadSerializer {
                 missingHashes.add(buf.readInt());
             }
 
-            return new Download.HashResponse(sendingTime, eventId, overlayId, status, targetPos, hashes, missingHashes);
+            return new Download.HashResponse(pLedbatState, eventId, overlayId, status, targetPos, hashes, missingHashes);
         }
     }
 }

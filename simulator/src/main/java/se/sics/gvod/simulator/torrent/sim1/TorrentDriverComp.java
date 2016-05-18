@@ -50,7 +50,6 @@ public class TorrentDriverComp extends ComponentDefinition {
     Negative<Network> providedNetworkPort = provides(Network.class);
     Positive<Network> requiredNetworkPort = requires(Network.class);
     Positive<Timer> timerPort = requires(Timer.class);
-    Negative<ConnMngrPort> connectionPort = provides(ConnMngrPort.class);
     Positive<TorrentStatus> torrentStatus = requires(TorrentStatus.class);
 
     private final TorrentDriver torrentDriver;
@@ -60,7 +59,6 @@ public class TorrentDriverComp extends ComponentDefinition {
         LOG.info("{}initiating...", logPrefix);
         subscribe(handleStart, control);
         subscribe(handleDelayedIncoming, timerPort);
-        subscribe(handleStreamConnectionRequest, connectionPort);
         subscribe(handleOutgoing, providedNetworkPort);
         subscribe(handleIncoming, requiredNetworkPort);
         subscribe(handleDownloadFinished, torrentStatus);
@@ -79,13 +77,6 @@ public class TorrentDriverComp extends ComponentDefinition {
     Handler handleDelayedIncoming = new Handler<NetworkDelay>() {
         @Override
         public void handle(NetworkDelay event) {
-            torrentDriver.next(TorrentDriverComp.this.proxy, gv, event);
-        }
-    };
-
-    Handler handleStreamConnectionRequest = new Handler<Connection.Request>() {
-        @Override
-        public void handle(Connection.Request event) {
             torrentDriver.next(TorrentDriverComp.this.proxy, gv, event);
         }
     };

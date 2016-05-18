@@ -16,24 +16,37 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.system;
+package se.sics.gvod.stream.congestion;
 
-import com.google.common.collect.ImmutableMap;
-import se.sics.caracaldb.MessageRegistrator;
-import se.sics.gvod.network.GVoDSerializerSetup;
-import se.sics.ktoolbox.croupier.CroupierSerializerSetup;
-import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
+import com.google.common.base.Optional;
+import io.netty.buffer.ByteBuf;
+import se.sics.kompics.network.netty.serialization.Serializer;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ *
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public class GVoDSystemSerializerSetup {
+public class PLedbatStateImplSerializer implements Serializer {
+    private final int id;
+    
+    public PLedbatStateImplSerializer(int id) {
+        this.id = id;
+    }
+    
+    @Override
+    public int identifier() {
+        return id;
+    }
 
-    public static void oneTimeSetup() {
-        MessageRegistrator.register();
-        int currentId = 128;
-        currentId = BasicSerializerSetup.registerBasicSerializers(currentId);
-        currentId = CroupierSerializerSetup.registerSerializers(currentId);
-        currentId = GVoDSerializerSetup.registerSerializers(currentId);
+    @Override
+    public void toBinary(Object o, ByteBuf buf) {
+        PLedbatState obj = (PLedbatState)o;
+        buf.writeLong(obj.getSendingTime());
+    }
+
+    @Override
+    public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
+        Long sendingTime = buf.readLong();
+        return new PLedbatState.Impl(sendingTime);
     }
 }

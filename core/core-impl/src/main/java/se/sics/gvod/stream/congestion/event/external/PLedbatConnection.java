@@ -50,7 +50,7 @@ public class PLedbatConnection {
 
         @Override
         public String toString() {
-            return "LedbatConnection.TrackResponse<" + getId() + ">";
+            return "LedbatConnection.TrackRequest<" + getId() + ">";
         }
 
         public TrackResponse answer(TrackResponse.Status status) {

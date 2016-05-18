@@ -16,22 +16,28 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.congestion;
+package se.sics.gvod.stream.system;
 
-import java.util.Set;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import java.io.File;
+import java.io.IOException;
+import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class PLedbatMsg {
+public class BuildHash {
 
-    public static interface Request extends Identifiable {
-
-        public Set<Identifier> pendingResp();
-    }
-
-    public static interface Response extends PLedbatState, Identifiable {
+    public static void main(String[] args) throws IOException, HashUtil.HashBuilderException {
+        File dataFile = new File("./src/main/resources/experiment1/uploader/test.txt");
+        if(!dataFile.exists()) {
+            throw new RuntimeException("missing file");
+        }
+        File hashFile = new File("./src/main/resources/experiment1/uploader/test.hash");
+        hashFile.createNewFile();
+        String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
+        int pieceSize = 1024;
+        int piecesPerBlock = 1024;
+        int blockSize = pieceSize * piecesPerBlock;
+        HashUtil.makeHashes(dataFile.getAbsolutePath(), hashFile.getAbsolutePath(), hashAlg, blockSize);
     }
 }

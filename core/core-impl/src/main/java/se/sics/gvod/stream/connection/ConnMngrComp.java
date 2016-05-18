@@ -35,7 +35,7 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public class ConnMngrComp extends ComponentDefinition {
     private static final Logger LOG = LoggerFactory.getLogger(ConnMngrComp.class);
-    private String logPrefix;
+    private String logPrefix = "";
     
     //******************************CONNECTIONS*********************************
     //*************************EXTERNAL_CONNECT_TO******************************

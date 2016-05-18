@@ -18,9 +18,12 @@
  */
 package se.sics.gvod.simulator.torrent.sim1;
 
+import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.stream.congestion.PLedbatTrafficSelector;
+import se.sics.gvod.core.util.TorrentDetails;
+import se.sics.gvod.stream.StreamHostComp;
+import se.sics.gvod.stream.congestion.PLedbatPort;
 import se.sics.gvod.stream.congestion.PullLedbatComp;
 import se.sics.gvod.stream.torrent.TorrentComp;
 import se.sics.gvod.stream.connection.ConnMngrPort;
@@ -34,7 +37,7 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.util.network.ports.ShortCircuitChannel;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -49,19 +52,15 @@ public class TorrentTestHostComp extends ComponentDefinition {
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<Network> networkPort = requires(Network.class);
     //**************************INTERNAL_STATE**********************************
-    private Component congestionComp;
-    private Component torrentComp;
+    private Component streamHostComp;
     private Component driverComp;
-    private Component reportComp;
 
-    private TorrentComp.Init torrentInit;
     private TorrentDriverComp.Init driverInit;
 
     public TorrentTestHostComp(Init init) {
         LOG.info("{}initiating...", logPrefix);
         subscribe(handleStart, control);
 
-        torrentInit = init.torrentInit;
         driverInit = init.driverInit;
     }
 
@@ -70,41 +69,29 @@ public class TorrentTestHostComp extends ComponentDefinition {
         public void handle(Start event) {
             LOG.info("{}starting...", logPrefix);
 
-            driverComp = create(TorrentDriverComp.class, driverInit);
-            connect(driverComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
-            connect(driverComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-
-            congestionComp = create(PullLedbatComp.class, new PullLedbatComp.Init());
-            connect(congestionComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-
-            torrentComp = create(TorrentComp.class, torrentInit);
-            connect(torrentComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-            connect(torrentComp.getNegative(ConnMngrPort.class), driverComp.getPositive(ConnMngrPort.class), Channel.TWO_WAY);
-            connect(torrentComp.getPositive(TorrentStatus.class), driverComp.getNegative(TorrentStatus.class), Channel.TWO_WAY);
-
-            //connect driver, congestion, torrent components
-            ShortCircuitChannel scc = ShortCircuitChannel.getChannel(
-                    driverComp.getPositive(Network.class), congestionComp.getPositive(Network.class), new PLedbatTrafficSelector(),
-                    torrentComp.getNegative(Network.class), congestionComp.getNegative(Network.class), new PLedbatTrafficSelector());
-
-            reportComp = create(ReportComp.class, new ReportComp.Init(1000));
-            connect(reportComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-            connect(reportComp.getNegative(TorrentStatus.class), torrentComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
-
+            connect();
             trigger(Start.event, driverComp.control());
-            trigger(Start.event, congestionComp.control());
-            trigger(Start.event, torrentComp.control());
-            trigger(Start.event, reportComp.control());
+            trigger(Start.event, streamHostComp.control());
         }
     };
 
+    private void connect() {
+        driverComp = create(TorrentDriverComp.class, driverInit);
+        
+        StreamHostComp.ExtPort extPorts = new StreamHostComp.ExtPort(timerPort, driverComp.getPositive(Network.class));
+        streamHostComp = create(StreamHostComp.class, new StreamHostComp.Init(extPorts, driverInit.torrentDriver.getSelfAdr(), 
+                driverInit.torrentDriver.getTorrentDetails(), driverInit.torrentDriver.getPartners()));
+        
+        connect(driverComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
+        connect(driverComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+        connect(driverComp.getNegative(TorrentStatus.class), streamHostComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
+    }
+
     public static class Init extends se.sics.kompics.Init<TorrentTestHostComp> {
 
-        public TorrentComp.Init torrentInit;
         public TorrentDriverComp.Init driverInit;
 
-        public Init(TorrentComp.Init torrentInit, TorrentDriverComp.Init driverInit) {
-            this.torrentInit = torrentInit;
+        public Init(TorrentDriverComp.Init driverInit) {
             this.driverInit = driverInit;
         }
     }

@@ -16,22 +16,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.congestion;
+package se.sics.gvod.stream.system;
 
-import java.util.Set;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.config.KConfigOption.Basic;
+import se.sics.ktoolbox.util.config.options.BasicAddressBootstrapOption;
+import se.sics.ktoolbox.util.config.options.BasicAddressOption;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class PLedbatMsg {
-
-    public static interface Request extends Identifiable {
-
-        public Set<Identifier> pendingResp();
-    }
-
-    public static interface Response extends PLedbatState, Identifiable {
-    }
+public class StreamHostKConfig {
+    public static final BasicAddressOption selfAdr = new BasicAddressOption("selfAdr");
+    public static final Basic<Integer> torrentId = new Basic("experiment.torrentId", Integer.class);
+    public static final BasicAddressBootstrapOption partners = new BasicAddressBootstrapOption("experiment.partners");
+    public static final Basic<String> filePath = new Basic("experiment.filePath", String.class);
+    public static final Basic<String> hashPath = new Basic("experiment.hashPath", String.class);
+    public static final Basic<Boolean> download = new Basic("experiment.download", Boolean.class);
 }

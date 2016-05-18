@@ -16,22 +16,38 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.congestion;
+package se.sics.gvod.stream.report;
 
-import java.util.Set;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
+import se.sics.gvod.stream.StreamEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class PLedbatMsg {
+public class SummaryEvent implements StreamEvent {
+    public final Identifier eventId;
+    public final long transferSize;
+    public final long transferTime;
 
-    public static interface Request extends Identifiable {
-
-        public Set<Identifier> pendingResp();
+    public SummaryEvent(Identifier eventId, long transferSize, long transferTime) {
+        this.eventId = eventId;
+        this.transferSize = transferSize;
+        this.transferTime = transferTime;
     }
-
-    public static interface Response extends PLedbatState, Identifiable {
+    
+    public SummaryEvent(long transferSize, long transferTime) {
+        this(UUIDIdentifier.randomId(), transferSize, transferTime);
+    }
+    
+    @Override
+    public Identifier getId() {
+        return eventId;
+    }
+    
+    @Override
+    public String toString() {
+        return "SummaryEvent<" + getId() + ">";
     }
 }

@@ -17,12 +17,16 @@
  */
 package se.sics.gvod.simulator.torrent.sim1;
 
+import java.util.HashMap;
+import java.util.Map;
 import se.sics.gvod.stream.torrent.TorrentComp;
 import se.sics.kompics.network.Address;
 import se.sics.kompics.simulator.SimulationScenario;
 import se.sics.kompics.simulator.adaptor.Operation1;
 import se.sics.kompics.simulator.adaptor.distributions.extra.BasicIntSequentialDistribution;
 import se.sics.kompics.simulator.events.system.StartNodeEvent;
+import se.sics.ktoolbox.util.config.impl.SystemKConfig;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -49,13 +53,20 @@ public class ScenarioGen {
                 @Override
                 public TorrentTestHostComp.Init getComponentInit() {
                     TorrentDriverComp.Init dwnlDriverInit = new TorrentDriverComp.Init(dwnlTorrentDriver);
-                    TorrentComp.Init dwnlTorrentInit = new TorrentComp.Init(dwnlTorrentDriver.getSelfAdr(), dwnlTorrentDriver.getTorrentDetails());
-                    return new TorrentTestHostComp.Init(dwnlTorrentInit, dwnlDriverInit);
+                    return new TorrentTestHostComp.Init(dwnlDriverInit);
+                }
+
+                @Override
+                public Map<String, Object> initConfigUpdate() {
+                    HashMap<String, Object> configChange = new HashMap<>();
+                    configChange.put(SystemKConfig.id.name, new IntIdentifier(nodeId));
+                    configChange.put(SystemKConfig.seed.name, ScenarioSetup.scenarioSeed + nodeId);
+                    return configChange;
                 }
             };
         }
     };
-    
+
     static Operation1<StartNodeEvent, Integer> startUpldOp = new Operation1<StartNodeEvent, Integer>() {
 
         @Override
@@ -76,8 +87,15 @@ public class ScenarioGen {
                 @Override
                 public TorrentTestHostComp.Init getComponentInit() {
                     TorrentDriverComp.Init upldDriverInit = new TorrentDriverComp.Init(upldTorrentDriver);
-                    TorrentComp.Init upldTorrentInit = new TorrentComp.Init(upldTorrentDriver.getSelfAdr(), upldTorrentDriver.getTorrentDetails());
-                    return new TorrentTestHostComp.Init(upldTorrentInit, upldDriverInit);
+                    return new TorrentTestHostComp.Init(upldDriverInit);
+                }
+
+                @Override
+                public Map<String, Object> initConfigUpdate() {
+                    HashMap<String, Object> configChange = new HashMap<>();
+                    configChange.put(SystemKConfig.id.name, new IntIdentifier(nodeId));
+                    configChange.put(SystemKConfig.seed.name, ScenarioSetup.scenarioSeed + nodeId);
+                    return configChange;
                 }
             };
         }
@@ -92,7 +110,7 @@ public class ScenarioGen {
                         raise(ScenarioSetup.nrUploaders, startUpldOp, new BasicIntSequentialDistribution(ScenarioSetup.startingUploaderId));
                     }
                 };
-                
+
                 StochasticProcess startDwnl = new StochasticProcess() {
                     {
                         raise(ScenarioSetup.nrDownloaders, startDwnlOp, new BasicIntSequentialDistribution(ScenarioSetup.startingDownloaderId));

@@ -28,10 +28,10 @@ import se.sics.gvod.stream.torrent.event.DownloadStatus;
 import se.sics.gvod.stream.util.ConnectionStatus;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
+import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
-import se.sics.kompics.timer.CancelTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
@@ -48,8 +48,12 @@ public class ReportComp extends ComponentDefinition {
 
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<TorrentStatus> torrentPort = requires(TorrentStatus.class);
+    Negative<ReportPort> reportPort = provides(ReportPort.class);
 
     private final long reportDelay;
+    
+    private long startingTime;
+    private long transferSize = 0;
 
     private UUID reportTId;
 
@@ -77,6 +81,7 @@ public class ReportComp extends ComponentDefinition {
         public void handle(DownloadStatus.Starting event) {
             LOG.info("{}download:{} starting", logPrefix, event.overlayId);
             scheduleReport(event.overlayId);
+            startingTime = System.currentTimeMillis();
         }
     };
 
@@ -84,21 +89,29 @@ public class ReportComp extends ComponentDefinition {
         @Override
         public void handle(DownloadStatus.Done event) {
             LOG.info("{}download:{} done", logPrefix, event.overlayId);
+            report(event.overlayId, event.connectionStatus);
             cancelReport();
+            long transferTime = System.currentTimeMillis() - startingTime;
+            trigger(new SummaryEvent(transferSize, transferTime), reportPort);
         }
     };
 
     Handler handleDownloadResponse = new Handler<DownloadStatus.Response>() {
         @Override
         public void handle(DownloadStatus.Response event) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("o:").append(event.overlayId).append("***********\n");
+            report(event.overlayId, event.connectionStatus);
+        }
+    };
+    
+    private void report(Identifier overlayId, Map<Identifier, ConnectionStatus> conn) {
+        StringBuilder sb = new StringBuilder();
+            sb.append("o:").append(overlayId).append("***********\n");
             int maxSlots = 0;
             int usedSlots = 0;
             int successSlots = 0;
             int failedSlots = 0;
-            for (Map.Entry<Identifier, ConnectionStatus> cs : event.connectionStatus.entrySet()) {
-                sb.append("o:").append(event.overlayId).append("n:").append(cs.getKey());
+            for (Map.Entry<Identifier, ConnectionStatus> cs : conn.entrySet()) {
+                sb.append("o:").append(overlayId).append("n:").append(cs.getKey());
                 maxSlots += cs.getValue().maxSlots();
                 sb.append(" ms:").append(cs.getValue().maxSlots());
                 usedSlots += cs.getValue().usedSlots();
@@ -109,14 +122,16 @@ public class ReportComp extends ComponentDefinition {
                 sb.append(" f:").append(cs.getValue().failedSlots());
                 sb.append("\n");
             }
-            sb.append("o:").append(event.overlayId);
+            sb.append("o:").append(overlayId);
             sb.append(" tms:").append(maxSlots);
             sb.append(" tus:").append(usedSlots);
             sb.append(" ts:").append(successSlots);
             sb.append(" tf:").append(failedSlots);
+            
             LOG.info("{}", sb);
-        }
-    };
+            
+            transferSize += 1024 * successSlots;
+    }
 
     Handler handleReport = new Handler<ReportTimeout>() {
         @Override

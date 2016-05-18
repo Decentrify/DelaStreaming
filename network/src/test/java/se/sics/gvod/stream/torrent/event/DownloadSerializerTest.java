@@ -104,7 +104,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.status, copy.status);
         Assert.assertEquals(original.pieceId, copy.pieceId);
         Assert.assertEquals(original.piece, copy.piece);
-        Assert.assertEquals(original.sendingTime, copy.sendingTime);
+        Assert.assertEquals(original.pLedbatState.getSendingTime(), copy.pLedbatState.getSendingTime());
         Assert.assertEquals(0, copyBuf.readableBytes());
 
         //generic
@@ -120,7 +120,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.status, copy.status);
         Assert.assertEquals(original.pieceId, copy.pieceId);
         Assert.assertEquals(original.piece, copy.piece);
-        Assert.assertEquals(original.sendingTime, copy.sendingTime);
+        Assert.assertEquals(original.pLedbatState.getSendingTime(), copy.pLedbatState.getSendingTime());
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
 
@@ -199,7 +199,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.status, copy.status);
         Assert.assertTrue(Sets.symmetricDifference(original.hashes.entrySet(), copy.hashes.entrySet()).isEmpty());
         Assert.assertTrue(Sets.symmetricDifference(original.missingHashes, copy.missingHashes).isEmpty());
-        Assert.assertEquals(original.sendingTime, copy.sendingTime);
+        Assert.assertEquals(original.pLedbatState.getSendingTime(), copy.pLedbatState.getSendingTime());
         Assert.assertEquals(0, copyBuf.readableBytes());
 
         //generic
@@ -216,7 +216,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.status, copy.status);
         Assert.assertTrue(Sets.symmetricDifference(original.hashes.entrySet(), copy.hashes.entrySet()).isEmpty());
         Assert.assertTrue(Sets.symmetricDifference(original.missingHashes, copy.missingHashes).isEmpty());
-        Assert.assertEquals(original.sendingTime, copy.sendingTime);
+        Assert.assertEquals(original.pLedbatState.getSendingTime(), copy.pLedbatState.getSendingTime());
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
 }

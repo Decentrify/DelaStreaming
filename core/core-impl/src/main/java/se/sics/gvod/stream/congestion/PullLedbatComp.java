@@ -20,12 +20,12 @@ package se.sics.gvod.stream.congestion;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.stream.StreamEvent;
 import se.sics.gvod.stream.congestion.event.external.PLedbatConnection;
-import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -33,7 +33,7 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.CancelTimeout;
-import se.sics.kompics.timer.ScheduleTimeout;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -47,7 +47,7 @@ import se.sics.ktoolbox.util.network.KHeader;
  */
 public class PullLedbatComp extends ComponentDefinition {
 
-    private static final Logger LOG = LoggerFactory.getLogger(PullLedbatComp.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PullLedbat.class);
     private String logPrefix = "";
 
     //****************************CONNECTIONS***********************************
@@ -56,27 +56,33 @@ public class PullLedbatComp extends ComponentDefinition {
     Negative<Network> providedNetPort = provides(Network.class);
     Positive<Network> requiredNetPort = requires(Network.class);
     Positive<Timer> timerPort = requires(Timer.class);
+    //**************************EXTERNAL_STATE**********************************
+    private final KAddress selfAdr;
+    private final long baseSeed;
     //**************************INTERNAL_STATE**********************************
-    private final long defaultMsgTimeout = 2000;
-    private final Map<Identifier, Connection> connections = new HashMap<>();
-    //<msgId, timeoutId>
-    private final Map<Identifier, UUID> pendingMsg = new HashMap<>();
+    private final Map<Identifier, PullLedbat> connections = new HashMap<>();
+    private UUID roundTId;
 
     public PullLedbatComp(Init init) {
-        LOG.info("{}initiaiting...", logPrefix);
+        selfAdr = init.selfAdr;
+        logPrefix = "<nid:" + selfAdr.getId() + ">";
+        LOG.info("{}initializing...", logPrefix);
+        
+        baseSeed = init.seed;
 
         subscribe(handleStart, control);
+        subscribe(handleRound, timerPort);
         subscribe(handleTrackConnection, ledbatPort);
         subscribe(handleUntrackConnection, ledbatPort);
-        subscribe(handleOutgoingRequest, providedNetPort);
-        subscribe(handleOutgoingResponse, providedNetPort);
-        subscribe(handleIncomingResponse, requiredNetPort);
+        subscribe(handleOutgoing, providedNetPort);
+        subscribe(handleIncoming, requiredNetPort);
     }
 
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
             LOG.info("{}starting...", logPrefix);
+            scheduleRound();
         }
     };
 
@@ -86,13 +92,25 @@ public class PullLedbatComp extends ComponentDefinition {
         trigger(resp, requiredNetPort);
     }
 
+    Handler handleRound = new Handler<RoundTimeout>() {
+        @Override
+        public void handle(RoundTimeout event) {
+            LOG.debug("{}round", logPrefix);
+            for (Map.Entry<Identifier, PullLedbat> pl : connections.entrySet()) {
+                String report = pl.getValue().round();
+                LOG.debug("{}report {}:{}", new Object[]{logPrefix, pl.getKey(), report});
+            }
+        }
+    };
+
     Handler handleTrackConnection = new Handler<PLedbatConnection.TrackRequest>() {
         @Override
         public void handle(PLedbatConnection.TrackRequest req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            Connection conn = connections.get(req.target.getId());
+            PullLedbat conn = connections.get(req.target.getId());
             if (conn == null) {
-                conn = new Connection(req);
+                conn = new PullLedbat(req, new Random(baseSeed + req.target.getId().partition(Integer.MAX_VALUE)));
+                connections.put(req.target.getId(), conn);
             } else {
                 throw new RuntimeException("missing logic - not yet dealing with multi conn");
             }
@@ -107,73 +125,61 @@ public class PullLedbatComp extends ComponentDefinition {
         }
     };
 
-    ClassMatchedHandler handleOutgoingRequest
-            = new ClassMatchedHandler<PLedbatMsg.Request, KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Request>>() {
-                @Override
-                public void handle(PLedbatMsg.Request content, KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Request> container) {
-                    LOG.trace("{}outgoing:{}", logPrefix, container);
-                    KAddress target = container.getHeader().getSource();
-                    for (Identifier pendingResp : content.pendingResp()) {
-                        pendingMsg.put(pendingResp, schedulePendingAck(target, pendingResp));
-                    }
-                    trigger(container, requiredNetPort);
-                }
-            };
-
-    ClassMatchedHandler handleOutgoingResponse
-            = new ClassMatchedHandler<PLedbatMsg.Response, KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response>>() {
-                @Override
-                public void handle(PLedbatMsg.Response content, KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response> container) {
-                    LOG.trace("{}outgoing:{}", logPrefix, container);
-                    content.setSendingTime(System.currentTimeMillis());
-                    trigger(container, requiredNetPort);
-                }
-            };
-
-    ClassMatchedHandler handleIncomingResponse
-            = new ClassMatchedHandler<PLedbatMsg.Response, KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response>>() {
-                @Override
-                public void handle(PLedbatMsg.Response content, KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response> container) {
-                    LOG.trace("{}incoming:{}", logPrefix, container);
-                    UUID tId = pendingMsg.remove(content.getId());
-                    if (tId == null) {
-                        LOG.debug("{}late:{}", logPrefix, container);
-                        return;
-                    } else {
-                        cancelTimeout(tId);
-                    }
-                    KAddress target = container.getHeader().getSource();
-                    Connection conn = connections.get(target.getId());
-                    if (conn == null) {
-                        LOG.warn("{}no ledbat tracking for target:{}", logPrefix, target);
-                        return;
-                    }
-                    conn.incoming(content.getSendingTime(), proxy);
-                    trigger(container, providedNetPort);
-                }
-            };
-
-    Handler handleMsgTimeout = new Handler<MsgTimeout>() {
+    Handler handleOutgoing = new Handler<KContentMsg>() {
         @Override
-        public void handle(MsgTimeout timeout) {
-            LOG.debug("{}src:{}timeout", logPrefix, timeout.target);
-            UUID tId = pendingMsg.remove(timeout.msgId);
-            if (tId == null) {
-                Connection conn = connections.get(timeout.target.getId());
-                if (conn == null) {
-                    LOG.warn("{}no ledbat tracking for target:{}", logPrefix, timeout.target);
-                    return;
-                }
-                conn.timeout(proxy);
+        public void handle(KContentMsg event) {
+            LOG.trace("{}outgoing:{}", logPrefix, event);
+            if (event.getContent() instanceof PLedbatMsg.Request) {
+                trigger(event, requiredNetPort);
+            } else if (event.getContent() instanceof PLedbatMsg.Response) {
+                KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response> msg = (KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response>) event;
+                PullLedbatComp.this.outgoing(msg.getContent(), msg);
             } else {
-                LOG.debug("{}late:{}", logPrefix, timeout);
-                return;
+                trigger(event, requiredNetPort);
             }
         }
     };
 
-    public static class Init extends se.sics.kompics.Init<PullLedbatComp> {
+    private void outgoing(PLedbatMsg.Response content, KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response> container) {
+        long outgoingTimestamp = System.currentTimeMillis();
+        content.setSendingTime(outgoingTimestamp);
+        trigger(container, requiredNetPort);
+    }
 
+    Handler handleIncoming = new Handler<KContentMsg>() {
+        @Override
+        public void handle(KContentMsg event) {
+            LOG.trace("{}incoming:{}", logPrefix, event);
+            if (event.getContent() instanceof PLedbatMsg.Request) {
+                trigger(event, providedNetPort);
+            } else if (event.getContent() instanceof PLedbatMsg.Response) {
+                KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response> msg = (KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response>) event;
+                PullLedbatComp.this.incoming(msg.getContent(), msg);
+            } else {
+                trigger(event, providedNetPort);
+            }
+        }
+    };
+
+    private void incoming(PLedbatMsg.Response content, KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response> container) {
+        KAddress target = container.getHeader().getSource();
+        PullLedbat conn = connections.get(target.getId());
+        if (conn == null) {
+            LOG.warn("{}no ledbat tracking for target:{}", logPrefix, target);
+            return;
+        }
+        conn.incoming(content, proxy);
+        trigger(container, providedNetPort);
+    }
+
+    public static class Init extends se.sics.kompics.Init<PullLedbatComp> {
+        public final KAddress selfAdr;
+        public final long seed;
+        
+        public Init(KAddress selfAdr, long seed) {
+            this.selfAdr = selfAdr;
+            this.seed = seed;
+        }
     }
 
     public void cancelTimeout(UUID tId) {
@@ -181,23 +187,18 @@ public class PullLedbatComp extends ComponentDefinition {
         trigger(ct, timerPort);
     }
 
-    public UUID schedulePendingAck(KAddress target, Identifier msgId) {
-        ScheduleTimeout st = new ScheduleTimeout(defaultMsgTimeout);
-        Timeout t = new MsgTimeout(st, target, msgId);
-        st.setTimeoutEvent(t);
-        trigger(st, timerPort);
-        return t.getTimeoutId();
+    public void scheduleRound() {
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(PullLedbat.BASE_HISTORY_ROUND_TIME, PullLedbat.BASE_HISTORY_ROUND_TIME);
+        Timeout t = new RoundTimeout(spt);
+        spt.setTimeoutEvent(t);
+        trigger(spt, timerPort);
+        roundTId = t.getTimeoutId();
     }
 
-    public class MsgTimeout extends Timeout implements StreamEvent {
+    public class RoundTimeout extends Timeout implements StreamEvent {
 
-        public final KAddress target;
-        public final Identifier msgId;
-
-        public MsgTimeout(ScheduleTimeout st, KAddress target, Identifier msgId) {
-            super(st);
-            this.target = target;
-            this.msgId = msgId;
+        public RoundTimeout(SchedulePeriodicTimeout spt) {
+            super(spt);
         }
 
         @Override
@@ -207,7 +208,7 @@ public class PullLedbatComp extends ComponentDefinition {
 
         @Override
         public String toString() {
-            return "MsgTimeout<" + getId() + ">";
+            return "RoundTimeout<" + getId() + ">";
         }
     }
 }

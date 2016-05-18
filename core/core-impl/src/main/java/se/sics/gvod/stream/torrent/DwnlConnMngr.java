@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import se.sics.gvod.common.util.VodDescriptor;
+import se.sics.gvod.stream.congestion.PLedbatState;
 import se.sics.gvod.stream.congestion.event.external.PLedbatConnection;
 import se.sics.gvod.stream.util.ConnectionStatus;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -62,11 +63,25 @@ public class DwnlConnMngr {
         //TODO Alex
         ConnectionStatus conn = connectionLoad.get(partner.getId());
         conn.releaseSlot(false);
+        conn.halveSlots();
     }
 
-    public void completed(KAddress partner) {
+    public void completed(KAddress partner, PLedbatState.Status status) {
         ConnectionStatus conn = connectionLoad.get(partner.getId());
         conn.releaseSlot(true);
+        
+        switch (status) {
+            case SPEED_UP:
+                conn.increaseSlots();
+                break;
+            case SLOW_DOWN:
+                conn.decreaseSlots();
+                break;
+            case MAINTAIN:
+                break;
+            default:
+                throw new RuntimeException("missing logic - fix me");
+        }
     }
 
     public Optional<KAddress> download(int downloadPos) {
@@ -99,25 +114,5 @@ public class DwnlConnMngr {
         }
 
         return usedSlots;
-    }
-
-    public void updateSlots(KAddress partner, PLedbatConnection.TrackResponse.Status status) {
-        ConnectionStatus cs = connectionLoad.get(partner.getId());
-        if (cs == null) {
-            throw new RuntimeException("missing logic - fix me");
-        }
-        switch (status) {
-            case SPEED_UP:
-                cs.increaseSlots();
-                break;
-            case SLOW_DOWN:
-                cs.decreaseSlots();
-                break;
-            case TIMEOUT:
-                cs.halveSlots();
-                break;
-            default:
-                throw new RuntimeException("missing logic - fix me");
-        }
     }
 }

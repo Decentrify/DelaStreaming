@@ -22,21 +22,21 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.logging.Level;
-import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.core.util.TorrentDetails;
 import se.sics.gvod.simulator.TestDriver;
-import se.sics.gvod.simulator.torrent.sim1.TorrentDriver;
 import se.sics.gvod.simulator.torrent.sim1.TorrentDriverComp.NetworkDelay;
+import se.sics.gvod.stream.congestion.PLedbatMsg;
 import se.sics.gvod.stream.connection.event.Connection;
 import se.sics.gvod.stream.torrent.event.DownloadStatus;
 import se.sics.gvod.stream.torrent.event.TorrentGet;
@@ -52,7 +52,6 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.identifiable.basic.OverlayIdFactory;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
 import se.sics.ktoolbox.util.managedStore.core.HashMngr;
-import se.sics.ktoolbox.util.managedStore.core.ManagedStoreHelper;
 import se.sics.ktoolbox.util.managedStore.core.impl.StorageMngrFactory;
 import se.sics.ktoolbox.util.managedStore.core.impl.TransferMngr;
 import se.sics.ktoolbox.util.managedStore.core.util.FileInfo;
@@ -63,7 +62,6 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicAddress;
-import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.nat.NatAwareAddressImpl;
 
 /**
@@ -86,12 +84,14 @@ public class ScenarioSetup {
     public static final int startingDownloaderId = 100;
     public static final int nrDownloaders = 1;
     private static final Set<Integer> uploaderIds = new HashSet<>();
-    private static final Map<Integer, Pair<Integer, Integer>> uploaderParam = new HashMap<>();
+    private static final Map<Integer, LinkBehaviour> uploaderParam = new HashMap<>();
+
     static {
-        for (int i = 0; i < nrUploaders; i++) {
-            uploaderIds.add(startingUploaderId + i);
-            uploaderParam.put(startingUploaderId + i, Pair.with((i+1)*10, (i+1)*100));
-        }
+        uploaderIds.add(startingUploaderId);
+        uploaderParam.put(startingUploaderId, new LinkBehaviour(Triplet.with(100, 10, 20), Triplet.with(200, 50, 100), Triplet.with(300, 100, 600)));
+
+        uploaderIds.add(startingUploaderId + 1);
+        uploaderParam.put(startingUploaderId + 1, new LinkBehaviour(Triplet.with(100, 10, 20), Triplet.with(200, 50, 100), Triplet.with(300, 100, 600)));
     }
 
     private static final String torrentName = "test.txt";
@@ -252,8 +252,15 @@ public class ScenarioSetup {
 
             final KAddress selfAdr = getNodeAdr(nodeId);
             final TorrentDetails torrentDetails = downloadTorrentDetails;
+            final List<KAddress> partners = new ArrayList<>();
             final Random rand = new Random(getNodeSeed(nodeId));
             int state = 1;
+
+            {
+                for (int i = startingUploaderId; i < nrUploaders; i++) {
+                    partners.add(getNodeAdr(i));
+                }
+            }
 
             @Override
             public KAddress getSelfAdr() {
@@ -267,26 +274,29 @@ public class ScenarioSetup {
 
             @Override
             public void next(ComponentProxy proxy, GlobalView gv, KompicsEvent event) {
-                if (state == 1 && event instanceof Connection.Request) {
-                    LOG.info("dwnl state1 - publish connections");
-                    state1(proxy, gv, (Connection.Request) event);
-                    state++;
+                 if (state == 1 && event instanceof KContentMsg && ((KContentMsg) event).getContent() instanceof TorrentGet.Request) {
+                    LOG.info("dwnl - outgoing get torrent");
+                    proxy.trigger(event, proxy.getNegative(Network.class).getPair());
                     return;
                 }
-                if (state == 2 && event instanceof BasicContentMsg) {
-                    BasicContentMsg<KAddress, KHeader<KAddress>, Object> msg = (BasicContentMsg) event;
-                    if (msg.getHeader().getSource().getId().equals(selfAdr.getId())) {
-                        LOG.info("dwnl state2 - outgoing traffic");
-                        proxy.trigger(event, proxy.getNegative(Network.class).getPair());
-                    } else if (msg.getHeader().getDestination().getId().equals(selfAdr.getId())) {
-                        LOG.info("dwnl state2 - incoming traffic");
-                        proxy.trigger(event, proxy.getPositive(Network.class).getPair());
-                    }
+                if (state == 1 && event instanceof KContentMsg && ((KContentMsg) event).getContent() instanceof TorrentGet.Response) {
+                    LOG.info("dwnl - incoming get torrent");
+                    proxy.trigger(event, proxy.getPositive(Network.class).getPair());
                     return;
                 }
-                if (state == 2 && event instanceof DownloadStatus.Done) {
+                if (state == 1 && event instanceof KContentMsg && ((KContentMsg) event).getContent() instanceof PLedbatMsg.Request) {
+                    LOG.info("{} dwnl - outgoing traffic", selfAdr.getId());
+                    proxy.trigger(event, proxy.getNegative(Network.class).getPair());
+                    return;
+                }
+                if (state == 1 && event instanceof KContentMsg && ((KContentMsg) event).getContent() instanceof PLedbatMsg.Response) {
+                    LOG.info("{} dwnl - incoming traffic", selfAdr.getId());
+                    proxy.trigger(event, proxy.getPositive(Network.class).getPair());
+                    return;
+                }
+                if (state == 1 && event instanceof DownloadStatus.Done) {
                     state++;
-                    LOG.info("dwnl state3 - finished download");
+                    LOG.info("dwnl state2 - finished download");
                     try {
                         success();
                         gv.terminate();
@@ -312,6 +322,11 @@ public class ScenarioSetup {
 
                 proxy.answer(req, req.answer(connections, descriptors));
             }
+
+            @Override
+            public List<KAddress> getPartners() {
+                return partners;
+            }
         };
     }
 
@@ -323,12 +338,13 @@ public class ScenarioSetup {
             final Random rand = new Random(getNodeSeed(nodeId));
             final TorrentDetails torrentDetails = uploadTorrentDetails;
             int state = 1;
-            Pair<Integer, Integer> delayParam;
-            int pendingMsg = 0;
+            final LinkBehaviour linkBehaviour;
+            int msgOnWire = 0;
 
             {
-                delayParam = uploaderParam.get(nodeId);
+                linkBehaviour = uploaderParam.get(nodeId);
             }
+
             @Override
             public KAddress getSelfAdr() {
                 return selfAdr;
@@ -341,34 +357,57 @@ public class ScenarioSetup {
 
             @Override
             public void next(ComponentProxy proxy, GlobalView gv, KompicsEvent event) {
-                if (state == 1 && event instanceof BasicContentMsg) {
-                    BasicContentMsg<KAddress, KHeader<KAddress>, Object> msg = (BasicContentMsg) event;
-                    if (msg.getHeader().getSource().getId().equals(selfAdr.getId())) {
-                        LOG.info("upld state2 - outgoing traffic");
-                        proxy.trigger(event, proxy.getNegative(Network.class).getPair());
-                    } else if (msg.getHeader().getDestination().getId().equals(selfAdr.getId())) {
-                        LOG.info("upld state2 - incoming traffic");
-//                        proxy.trigger(event, proxy.getPositive(Network.class).getPair());
-                        //delay it
-                        scheduleNetworkDelay(proxy, msg, delayParam.getValue0(), delayParam.getValue1());
-                        pendingMsg++;
-                    } 
+                if (state == 1 && event instanceof KContentMsg && ((KContentMsg) event).getContent() instanceof TorrentGet.Request) {
+                    LOG.info("upld - incoming get torrent");
+                    proxy.trigger(event, proxy.getPositive(Network.class).getPair());
                     return;
                 }
-                if(state == 1 && event instanceof TorrentDriverComp.NetworkDelay) {
+                if (state == 1 && event instanceof KContentMsg && ((KContentMsg) event).getContent() instanceof TorrentGet.Response) {
+                    LOG.info("upld - outgoing get torrent");
+                    proxy.trigger(event, proxy.getNegative(Network.class).getPair());
+                    return;
+                }
+                if (state == 1 && event instanceof KContentMsg && ((KContentMsg) event).getContent() instanceof PLedbatMsg.Request) {
+                    LOG.info("{} upld - incoming traffic", selfAdr.getId());
                     proxy.trigger(event, proxy.getPositive(Network.class).getPair());
-                    pendingMsg--;
+                    return;
+                }
+                if (state == 1 && event instanceof KContentMsg && ((KContentMsg) event).getContent() instanceof PLedbatMsg.Response) {
+//                        LOG.info("upld state2 - outgoing traffic");
+//                        proxy.trigger(event, proxy.getNegative(Network.class).getPair());
+                    int msgDelay = linkBehaviour.delay(rand, msgOnWire);
+                    if (msgDelay == -1) {
+                        LOG.info("{} upld - loss", selfAdr.getId());
+                        msgOnWire--;
+                        return;
+                    }
+                    scheduleNetworkDelay(proxy, (KContentMsg) event, msgDelay);
+                    msgOnWire++;
+                    LOG.info("{}upld - msgOnWire:{}", selfAdr.getId(), msgOnWire);
+                    return;
+                }
+                if (state == 1 && event instanceof TorrentDriverComp.NetworkDelay) {
+                    KContentMsg<KAddress, KHeader<KAddress>, PLedbatMsg.Response> msg = ((TorrentDriverComp.NetworkDelay) event).msg;
+                    LOG.info("{}upld state2 - delivering:{} sendingTime:{}", new Object[]{selfAdr.getId(), msg.getContent().getId(), msg.getContent().getSendingTime()});
+                    TorrentDriverComp.NetworkDelay timeout = (TorrentDriverComp.NetworkDelay) event;
+                    proxy.trigger(timeout.msg, proxy.getNegative(Network.class).getPair());
+                    msgOnWire--;
+                    return;
                 }
                 gv.terminate();
                 throw new RuntimeException("state" + state + " illegal event:" + event.getClass().getCanonicalName());
             }
-            
-            private void scheduleNetworkDelay(ComponentProxy proxy, KContentMsg msg, int minDelay, int maxDelay) {
-                long delay = minDelay + rand.nextInt(maxDelay - minDelay);
+
+            private void scheduleNetworkDelay(ComponentProxy proxy, KContentMsg msg, int delay) {
                 ScheduleTimeout st = new ScheduleTimeout(delay);
                 Timeout t = new NetworkDelay(st, msg);
                 st.setTimeoutEvent(t);
                 proxy.trigger(st, proxy.getNegative(Timer.class).getPair());
+            }
+
+            @Override
+            public List<KAddress> getPartners() {
+                return new ArrayList<KAddress>();
             }
         };
     }
@@ -383,5 +422,39 @@ public class ScenarioSetup {
 
     private static long getNodeSeed(int nodeId) {
         return scenarioSeed + nodeId;
+    }
+
+    public static class LinkBehaviour {
+
+        //<msgOnWire, MinLatency, MaxLatency>
+        private final Triplet<Integer, Integer, Integer> fairlyEmptyState;
+        private final Triplet<Integer, Integer, Integer> mediumLoadState;
+        private final Triplet<Integer, Integer, Integer> highLoadState;
+
+        public LinkBehaviour(Triplet<Integer, Integer, Integer> fairlyEmptyState,
+                Triplet<Integer, Integer, Integer> mediumLoadState,
+                Triplet<Integer, Integer, Integer> highLoadState) {
+            this.fairlyEmptyState = fairlyEmptyState;
+            this.mediumLoadState = mediumLoadState;
+            this.highLoadState = highLoadState;
+        }
+
+        public int delay(Random rand, int msgsOnWire) {
+            int minDelay, maxDelay;
+            if (msgsOnWire < fairlyEmptyState.getValue0()) {
+                minDelay = fairlyEmptyState.getValue1();
+                maxDelay = fairlyEmptyState.getValue2();
+            } else if (msgsOnWire < mediumLoadState.getValue0()) {
+                minDelay = mediumLoadState.getValue1();
+                maxDelay = mediumLoadState.getValue2();
+            } else if (msgsOnWire < highLoadState.getValue0()) {
+                minDelay = highLoadState.getValue1();
+                maxDelay = highLoadState.getValue2();
+            } else {
+                return -1;
+            }
+            int delay = minDelay + rand.nextInt(maxDelay - minDelay);
+            return delay;
+        }
     }
 }

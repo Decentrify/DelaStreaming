@@ -16,22 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.system;
+package se.sics.gvod.stream.report;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import se.sics.kompics.config.Config;
+import se.sics.kompics.PortType;
 
 /**
- * @author Alex Ormenisan <aaor@sics.se>
+ *
+ * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HostManagerKCWrapper {
-
-    private static final Logger LOG = LoggerFactory.getLogger("GVoDConfig");
-
-    public final Config config;
-    
-    public HostManagerKCWrapper(Config config) {
-        this.config = config;
+public class ReportPort extends PortType {
+    {
+        indication(SummaryEvent.class);
     }
 }
