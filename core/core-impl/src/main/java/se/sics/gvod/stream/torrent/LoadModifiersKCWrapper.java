@@ -30,6 +30,7 @@ public class LoadModifiersKCWrapper {
     public final double timeoutSlowDownModifier;
     public final int targetQueueingDelay;
     public final int maxQueueingDelay;
+    public final int maxLinkRTT;
     
     public LoadModifiersKCWrapper(Config config) {
         speedUpModifier = KConfigHelper.read(config, LoadModifiersKConfig.speedUpModifier);
@@ -37,5 +38,6 @@ public class LoadModifiersKCWrapper {
         timeoutSlowDownModifier = KConfigHelper.read(config, LoadModifiersKConfig.timeoutSlowDownModifier);
         targetQueueingDelay = KConfigHelper.read(config, LoadModifiersKConfig.targetQueueingDelay);
         maxQueueingDelay = KConfigHelper.read(config, LoadModifiersKConfig.maxQueueingDelay);
+        maxLinkRTT = KConfigHelper.read(config, LoadModifiersKConfig.maxLinkRTT);
     }
 }
