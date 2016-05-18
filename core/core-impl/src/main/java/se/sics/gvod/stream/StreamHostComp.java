@@ -59,7 +59,7 @@ public class StreamHostComp extends ComponentDefinition {
     private Component reportComp;
     
     private SystemKCWrapper systemConfig;
-    private final long reportingPeriod = 100;
+    private final long reportingPeriod = 10000;
     
     private final KAddress selfAdr;
     private final TorrentDetails torrentDetails;

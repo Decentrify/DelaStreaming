@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import org.javatuples.Pair;
@@ -52,6 +53,7 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
@@ -83,12 +85,15 @@ public class TorrentComp extends ComponentDefinition {
     Positive<PLedbatPort> congestionPort = requires(PLedbatPort.class);
     Negative<TorrentStatus> statusPort = provides(TorrentStatus.class);
     //**************************EXTERNAL_STATE**********************************
+    private final LoadModifiersKCWrapper loadModifiersConfig;
     private final KAddress selfAdr;
     private final Identifier overlayId;
-    private final long defaultMsgTimeout = 1000;
+    private final long defaultMsgTimeout = 2000;
     private final long checkPeriod = 1000;
     //**************************INTERNAL_STATE**********************************
     private TransferFSM transferFSM;
+    private LoadTracker loadTracker;
+    private Random rand;
     private UUID periodicCheckTId;
 
     public TorrentComp(Init init) {
@@ -97,11 +102,15 @@ public class TorrentComp extends ComponentDefinition {
         logPrefix = "<nid:" + selfAdr.getId() + ", oid:" + overlayId + ">";
         LOG.info("{}initiating...", logPrefix);
 
-        subscribe(handleStart, control);
-        subscribe(handleCheck, timerPort);
-
+        loadModifiersConfig = new LoadModifiersKCWrapper(config());
         transferFSM = new TransferInit(init.torrentDetails);
         transferFSM.setup();
+        loadTracker = new LoadTracker(this.proxy, 200, 500, logPrefix + "[TorrentComp]");
+        SystemKCWrapper systemConfig = new SystemKCWrapper(config());
+        rand = new Random(systemConfig.seed);
+
+        subscribe(handleStart, control);
+        subscribe(handleCheck, timerPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -277,7 +286,7 @@ public class TorrentComp extends ComponentDefinition {
             @Override
             public void handle(TorrentGetTimeout timeout) {
                 if (timeout.getTimeoutId().equals(torrentGetTId)) {
-                    LOG.info("{}target:{} for torrent timed out", logPrefix, timeout.target.getId());
+                    LOG.debug("{}target:{} for torrent timed out", logPrefix, timeout.target.getId());
                     dwnlConn.mngr.timedOut(timeout.target);
                     torrentGetTId = null;
                     sendTorrentRequest();
@@ -456,8 +465,12 @@ public class TorrentComp extends ComponentDefinition {
         @Override
         public void report() {
             int pendingMsg = pendingPieces.size() + pendingHashes.size();
-            int usedSlots = dwnlConn.mngr.usedSlots();
-            LOG.info("{}TransferFSM Download[p:{}/u:{}] TransferMngr:{}", new Object[]{logPrefix, pendingMsg, usedSlots, transferMngr});
+            Pair<Integer, Integer> dwnlReport = dwnlConn.mngr.getLoad();
+            Triplet<Long, Long, Long> loadTimes = loadTracker.times();
+            LOG.info("{}load:{} (r:{},h:{},q:{})",
+                    new Object[]{logPrefix, loadTracker.getLoad(), loadTimes.getValue0(), loadTimes.getValue1(), loadTimes.getValue2()});
+            LOG.info("{}TransferFSM Download[p:{},u:{}/m:{}] TransferMngr:{}",
+                    new Object[]{logPrefix, pendingMsg, dwnlReport.getValue0(), dwnlReport.getValue1(), transferMngr});
             upload.report();
         }
 
@@ -487,7 +500,7 @@ public class TorrentComp extends ComponentDefinition {
                         LOG.debug("{}received hashPos:{} response from:{}", new Object[]{logPrefix, content.targetPos, target.getId()});
 
                         if (!cancelPendingHashTimeout(content.getId())) {
-                            LOG.info("{}hash from:{} - posibly late", logPrefix, target.getId());
+                            LOG.debug("{}hash from:{} - posibly late", logPrefix, target.getId());
                             return;
                         }
                         switch (content.status) {
@@ -495,6 +508,7 @@ public class TorrentComp extends ComponentDefinition {
                                 LOG.trace("{}SUCCESS hashes:{} missing hashes:{}", new Object[]{logPrefix, content.hashes.keySet(), content.missingHashes});
                                 transferMngr.writeHashes(content.hashes, content.missingHashes);
                                 dwnlConn.mngr.completed(target, content.getStatus());
+                                loadTracker.trackLoad(content);
                                 download();
                                 return;
                             case TIMEOUT:
@@ -519,7 +533,7 @@ public class TorrentComp extends ComponentDefinition {
                         LOG.debug("{}received data:{} response from:{}", new Object[]{logPrefix, content.pieceId, target.getId()});
 
                         if (!cancelPendingPieceTimeout(content.getId())) {
-                            LOG.info("{}piece:{} from:{} - posibly late", new Object[]{logPrefix, content.pieceId, target.getId()});
+                            LOG.debug("{}piece:{} from:{} - posibly late", new Object[]{logPrefix, content.pieceId, target.getId()});
                             return;
                         }
                         switch (content.status) {
@@ -527,6 +541,7 @@ public class TorrentComp extends ComponentDefinition {
                                 LOG.trace("{}SUCCESS piece:{}", new Object[]{logPrefix, content.pieceId});
                                 transferMngr.writePiece(content.pieceId, content.piece);
                                 dwnlConn.mngr.completed(target, content.getStatus());
+                                loadTracker.trackLoad(content);
                                 download();
                                 return;
                             case TIMEOUT:
@@ -546,7 +561,7 @@ public class TorrentComp extends ComponentDefinition {
             @Override
             public void handle(PendingHashTimeout timeout) {
                 if (pendingHashes.remove(timeout.request.getId()) != null) {
-                    LOG.info("{}timeout hash:{} from:{}", new Object[]{logPrefix, timeout.request.targetPos, timeout.target.getId()});
+                    LOG.debug("{}timeout hash:{} from:{}", new Object[]{logPrefix, timeout.request.targetPos, timeout.target.getId()});
                     transferMngr.writeHashes(new HashMap<Integer, ByteBuffer>(), timeout.request.hashes);
                     dwnlConn.mngr.timedOut(timeout.target);
                     download();
@@ -560,7 +575,7 @@ public class TorrentComp extends ComponentDefinition {
             @Override
             public void handle(PendingPieceTimeout timeout) {
                 if (pendingPieces.remove(timeout.request.getId()) != null) {
-                    LOG.info("{}timeout piece:{} from:{}", new Object[]{logPrefix, timeout.request.pieceId, timeout.target.getId()});
+                    LOG.debug("{}timeout piece:{} from:{}", new Object[]{logPrefix, timeout.request.pieceId, timeout.target.getId()});
                     transferMngr.resetPiece(timeout.request.pieceId);
                     dwnlConn.mngr.timedOut(timeout.target);
                     download();
@@ -571,6 +586,35 @@ public class TorrentComp extends ComponentDefinition {
         };
 
         private void download() {
+            double load = loadTracker.getLoad();
+            if (dwnlConn.mngr.getLoad().getValue0() > 10) {
+                if (load == 1) {
+                    if (rand.nextInt(10) != 0) {
+                        LOG.info("{}too loaded to download", logPrefix);
+                        if (loadTracker.shouldSlowDown()) {
+                            int onTheWire = dwnlConn.mngr.localOverloaded();
+                            loadTracker.slowedDown(onTheWire);
+                        }
+                        report();
+                        return;
+                    }
+                } else if (0 < load) {
+                    if (rand.nextDouble() < load) {
+                        LOG.info("{}too loaded to download", logPrefix);
+                        if (loadTracker.shouldSlowDown()) {
+                            int onTheWire = dwnlConn.mngr.localOverloaded();
+                            loadTracker.slowedDown(onTheWire);
+                        }
+                        report();
+                        return;
+                    }
+                } else {
+                    if (loadTracker.canSpeedUp()) {
+                        int onTheWire = dwnlConn.mngr.localUnderloaded();
+                        loadTracker.spedUp(onTheWire);
+                    }
+                }
+            }
             while (true) {
                 Optional<Set<Integer>> hashes = transferMngr.downloadHash(hashsesPerMsg);
                 if (hashes.isPresent()) {
@@ -611,7 +655,6 @@ public class TorrentComp extends ComponentDefinition {
                     }
                     int prep = transferMngr.prepareDownload(0, new PrepDwnlInfo(hashsesPerMsg, hashMsgPerRound, minBlockPlayBuffer, minAheadHashes));
                     if (prep == -1) {
-                        LOG.info("{}done", logPrefix);
                         return;
                     }
                 }
@@ -682,9 +725,10 @@ public class TorrentComp extends ComponentDefinition {
 
         public final DwnlConnMngr mngr;
         final Map<Identifier, PLedbatConnection.TrackRequest> trackingReqs = new HashMap<>();
+        
 
         public DwnlConnAux() {
-            mngr = new DwnlConnMngr();
+            mngr = new DwnlConnMngr(loadModifiersConfig.timeoutSlowDownModifier, loadModifiersConfig.normalSlowDownModifier, loadModifiersConfig.speedUpModifier);
         }
 
         public void addConnections(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {

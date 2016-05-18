@@ -27,6 +27,10 @@ public interface PLedbatState {
     public void setSendingTime(long time);
 
     public long getSendingTime();
+    
+    public void setReceivedTime(long time);
+
+    public long getReceivedTime();
 
     public void setStatus(Status status);
 
@@ -35,11 +39,13 @@ public interface PLedbatState {
     public static class Impl implements PLedbatState {
 
         private Long sendingTime;
+        private Long receivedTime;
         private Status status;
 
         Impl(Long sendingTime) {
             this.sendingTime = sendingTime;
             status = null;
+            receivedTime = null;
         }
 
         public Impl() {
@@ -54,6 +60,16 @@ public interface PLedbatState {
         @Override
         public long getSendingTime() {
             return sendingTime;
+        }
+        
+        @Override
+        public void setReceivedTime(long time) {
+            this.receivedTime = time;
+        }
+
+        @Override
+        public long getReceivedTime() {
+            return receivedTime;
         }
 
         @Override

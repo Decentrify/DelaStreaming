@@ -140,6 +140,16 @@ public class Download {
         public long getSendingTime() {
             return pLedbatState.getSendingTime();
         }
+        
+        @Override
+        public void setReceivedTime(long time) {
+            pLedbatState.setReceivedTime(time);
+        }
+
+        @Override
+        public long getReceivedTime() {
+            return pLedbatState.getReceivedTime();
+        }
 
         @Override
         public void setStatus(Status status) {
@@ -250,6 +260,16 @@ public class Download {
         @Override
         public long getSendingTime() {
             return pLedbatState.getSendingTime();
+        }
+        
+        @Override
+        public void setReceivedTime(long time) {
+            pLedbatState.setReceivedTime(time);
+        }
+
+        @Override
+        public long getReceivedTime() {
+            return pLedbatState.getReceivedTime();
         }
 
         @Override

@@ -16,22 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.util;
+package se.sics.gvod.stream.torrent;
+
+import se.sics.ktoolbox.util.config.KConfigOption.Basic;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnectionStatus {
-    public final int maxSlots;
-    public final int usedSlots;
-    public final int successSlots;
-    public final int failedSlots;
-    
-    public ConnectionStatus(int maxSlots, int usedSlots, int successSlots, int failedSlots) {
-         this.maxSlots = maxSlots;
-         this.usedSlots = usedSlots;
-         this.successSlots = successSlots;
-         this.failedSlots = failedSlots;
-    }
+public class LoadModifiersKConfig {
+    public static final Basic<Double> speedUpModifier = new Basic("loadModifier.speedUp", Double.class);
+    public static final Basic<Double> normalSlowDownModifier = new Basic("loadModifier.normalSlowDown", Double.class);
+    public static final Basic<Double> timeoutSlowDownModifier = new Basic("loadModifier.timeoutSlowDown", Double.class);
+    public static final Basic<Integer> targetQueueingDelay = new Basic("loadModifier.targetQueueingDelay", Integer.class);
+    public static final Basic<Integer> maxQueueingDelay = new Basic("loadModifier.maxQueueingDelay", Integer.class);
+    public static final Basic<Integer> maxLinkRTT = new Basic("loadModifier.maxLinkRTT", Integer.class);
 }

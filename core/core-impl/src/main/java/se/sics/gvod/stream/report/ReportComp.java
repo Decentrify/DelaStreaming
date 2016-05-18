@@ -112,14 +112,14 @@ public class ReportComp extends ComponentDefinition {
             int failedSlots = 0;
             for (Map.Entry<Identifier, ConnectionStatus> cs : conn.entrySet()) {
                 sb.append("o:").append(overlayId).append("n:").append(cs.getKey());
-                maxSlots += cs.getValue().maxSlots();
-                sb.append(" ms:").append(cs.getValue().maxSlots());
-                usedSlots += cs.getValue().usedSlots();
-                sb.append(" us:").append(cs.getValue().usedSlots());
-                successSlots += cs.getValue().successSlots();
-                sb.append(" s:").append(cs.getValue().successSlots());
-                failedSlots += cs.getValue().failedSlots();
-                sb.append(" f:").append(cs.getValue().failedSlots());
+                maxSlots += cs.getValue().maxSlots;
+                sb.append(" ms:").append(cs.getValue().maxSlots);
+                usedSlots += cs.getValue().usedSlots;
+                sb.append(" us:").append(cs.getValue().usedSlots);
+                successSlots += cs.getValue().successSlots;
+                sb.append(" s:").append(cs.getValue().successSlots);
+                failedSlots += cs.getValue().failedSlots;
+                sb.append(" f:").append(cs.getValue().failedSlots);
                 sb.append("\n");
             }
             sb.append("o:").append(overlayId);
@@ -128,7 +128,7 @@ public class ReportComp extends ComponentDefinition {
             sb.append(" ts:").append(successSlots);
             sb.append(" tf:").append(failedSlots);
             
-            LOG.info("{}", sb);
+            LOG.debug("{}", sb);
             
             transferSize += 1024 * successSlots;
     }

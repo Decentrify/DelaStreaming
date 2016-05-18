@@ -168,6 +168,8 @@ public class PullLedbatComp extends ComponentDefinition {
             LOG.warn("{}no ledbat tracking for target:{}", logPrefix, target);
             return;
         }
+        long incomingTimestamp = System.currentTimeMillis();
+        content.setReceivedTime(incomingTimestamp);
         conn.incoming(content, proxy);
         trigger(container, providedNetPort);
     }
