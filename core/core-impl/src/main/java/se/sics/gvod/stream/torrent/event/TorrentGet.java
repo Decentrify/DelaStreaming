@@ -38,7 +38,7 @@ public class TorrentGet {
             this(UUIDIdentifier.randomId());
         }
         
-        public Response answer(Torrent torrent) {
+        public Response success(Torrent torrent) {
             return new Response(eventId, torrent);
         }
         

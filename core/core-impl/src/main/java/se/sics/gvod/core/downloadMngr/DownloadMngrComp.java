@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.core.downloadMngr;
 
+import se.sics.gvod.stream.torrent.event.Download;
 import com.google.common.base.Optional;
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -28,7 +29,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.common.event.vod.Download;
 import se.sics.gvod.core.connMngr.ConnMngrPort;
 import se.sics.gvod.core.connMngr.event.Ready;
 import se.sics.gvod.common.utility.UtilityUpdate;

@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.core.util;
 
+import org.javatuples.Triplet;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
 import se.sics.ktoolbox.util.managedStore.core.HashMngr;
@@ -31,10 +32,7 @@ public interface TorrentDetails {
     public Identifier getOverlayId();
     
     public boolean download();
-    public boolean hasTorrent();
     public Torrent getTorrent();
     
-    public FileMngr fileMngr(Torrent torrent);
-    public HashMngr hashMngr(Torrent torrent);
-    public TransferMngr transferMngr(Torrent torrent);
+    public Triplet<FileMngr, HashMngr, TransferMngr> torrentMngrs(Torrent torrent);
 }

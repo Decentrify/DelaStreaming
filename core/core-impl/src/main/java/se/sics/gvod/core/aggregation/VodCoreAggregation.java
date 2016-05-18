@@ -18,7 +18,7 @@
  */
 package se.sics.gvod.core.aggregation;
 
-import se.sics.gvod.common.event.vod.Download;
+import se.sics.gvod.stream.torrent.event.Download;
 import se.sics.gvod.common.utility.UtilityUpdate;
 import se.sics.gvod.common.utility.UtilityUpdatePort;
 import se.sics.gvod.core.connMngr.ConnMngrPort;
