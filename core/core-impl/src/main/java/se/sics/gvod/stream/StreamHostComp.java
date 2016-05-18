@@ -90,6 +90,21 @@ public class StreamHostComp extends ComponentDefinition {
         }
     };
     
+    @Override
+    public void tearDown() {
+        disconnect(congestionComp.getNegative(Timer.class), extPorts.timerPort);
+        disconnect(torrentComp.getNegative(Timer.class), extPorts.timerPort);
+        disconnect(torrentComp.getNegative(ConnMngrPort.class), connComp.getPositive(ConnMngrPort.class));
+        disconnect(torrentComp.getNegative(PLedbatPort.class), congestionComp.getPositive(PLedbatPort.class));
+        disconnect(congestionComp.getNegative(Network.class), extPorts.networkPort);
+        disconnect(torrentComp.getNegative(Network.class), congestionComp.getPositive(Network.class));
+        disconnect(reportComp.getNegative(Timer.class), extPorts.timerPort);
+        disconnect(reportComp.getNegative(TorrentStatus.class), torrentComp.getPositive(TorrentStatus.class));
+
+        disconnect(streamStatusPort, torrentComp.getPositive(TorrentStatus.class));
+        disconnect(reportPort, reportComp.getPositive(ReportPort.class));
+    }
+    
     private void connect() {
         connComp = create(ConnMngrComp.class, new ConnMngrComp.Init(partners));
         
