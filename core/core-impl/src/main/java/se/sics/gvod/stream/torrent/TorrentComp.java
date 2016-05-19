@@ -48,6 +48,7 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
+import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.CancelTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
@@ -121,6 +122,13 @@ public class TorrentComp extends ComponentDefinition {
             schedulePeriodicCheck();
         }
     };
+    
+    @Override
+    public void tearDown() {
+        LOG.warn("{}tearing down", logPrefix);
+        cancelPeriodicTimer();
+        transferFSM.cleanup();
+    }
 
     Handler handleCheck = new Handler<StatusCheck>() {
         @Override
@@ -135,6 +143,11 @@ public class TorrentComp extends ComponentDefinition {
         spt.setTimeoutEvent(t);
         trigger(spt, timerPort);
         periodicCheckTId = t.getTimeoutId();
+    }
+    
+    public void cancelPeriodicTimer() {
+        CancelPeriodicTimeout cpt = new CancelPeriodicTimeout(periodicCheckTId);
+        trigger(cpt, timerPort);
     }
 
     private void sendNetwork(KAddress destination, Object content) {

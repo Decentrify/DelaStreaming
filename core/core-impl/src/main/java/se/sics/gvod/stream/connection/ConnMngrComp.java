@@ -60,6 +60,11 @@ public class ConnMngrComp extends ComponentDefinition {
         }
     };
     
+     @Override
+    public void tearDown() {
+        LOG.warn("{}tearing down", logPrefix);
+    }
+    
     Handler handleConnRequest = new Handler<Connection.Request>() {
         @Override
         public void handle(Connection.Request req) {

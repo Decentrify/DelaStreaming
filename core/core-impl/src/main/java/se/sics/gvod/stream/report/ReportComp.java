@@ -75,6 +75,11 @@ public class ReportComp extends ComponentDefinition {
             LOG.info("{}starting...", logPrefix);
         }
     };
+    
+    @Override
+    public void tearDown() {
+        LOG.warn("{}tearing down", logPrefix);
+    }
 
     Handler handleDownloadStarting = new Handler<DownloadStatus.Starting>() {
         @Override
