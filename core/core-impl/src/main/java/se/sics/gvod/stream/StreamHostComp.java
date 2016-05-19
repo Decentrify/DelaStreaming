@@ -57,6 +57,7 @@ public class StreamHostComp extends ComponentDefinition {
     private Component congestionComp;
     private Component torrentComp;
     private Component reportComp;
+    private Channel[] channels;
     
     private SystemKCWrapper systemConfig;
     private final long reportingPeriod = 10000;
@@ -92,43 +93,44 @@ public class StreamHostComp extends ComponentDefinition {
     
     @Override
     public void tearDown() {
-        disconnect(congestionComp.getNegative(Timer.class), extPorts.timerPort);
-        disconnect(torrentComp.getNegative(Timer.class), extPorts.timerPort);
-        disconnect(torrentComp.getNegative(ConnMngrPort.class), connComp.getPositive(ConnMngrPort.class));
-        disconnect(torrentComp.getNegative(PLedbatPort.class), congestionComp.getPositive(PLedbatPort.class));
-        disconnect(congestionComp.getNegative(Network.class), extPorts.networkPort);
-        disconnect(torrentComp.getNegative(Network.class), congestionComp.getPositive(Network.class));
-        disconnect(reportComp.getNegative(Timer.class), extPorts.timerPort);
-        disconnect(reportComp.getNegative(TorrentStatus.class), torrentComp.getPositive(TorrentStatus.class));
-
-        disconnect(streamStatusPort, torrentComp.getPositive(TorrentStatus.class));
-        disconnect(reportPort, reportComp.getPositive(ReportPort.class));
+        LOG.warn("{}tearing down", logPrefix);
+        
+        for(int i = 0; i < channels.length; i++) {
+            disconnect(channels[i]);
+        }
+        channels = null;
+        connComp = null;
+        congestionComp = null;
+        torrentComp = null;
+        reportComp = null;
     }
     
     private void connect() {
+        channels = new Channel[10];
+        
         connComp = create(ConnMngrComp.class, new ConnMngrComp.Init(partners));
         
         congestionComp = create(PullLedbatComp.class, new PullLedbatComp.Init(selfAdr, systemConfig.seed));
-        connect(congestionComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
+        channels[0] = connect(congestionComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
 
         torrentComp = create(TorrentComp.class, new TorrentComp.Init(selfAdr, torrentDetails));
-        connect(torrentComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
-        connect(torrentComp.getNegative(ConnMngrPort.class), connComp.getPositive(ConnMngrPort.class), Channel.TWO_WAY);
-        connect(torrentComp.getNegative(PLedbatPort.class), congestionComp.getPositive(PLedbatPort.class), Channel.TWO_WAY);
+        channels[1] = connect(torrentComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
+        channels[2] = connect(torrentComp.getNegative(ConnMngrPort.class), connComp.getPositive(ConnMngrPort.class), Channel.TWO_WAY);
+        channels[3] = connect(torrentComp.getNegative(PLedbatPort.class), congestionComp.getPositive(PLedbatPort.class), Channel.TWO_WAY);
 
         //connect driver, congestion, torrent components
 //            ShortCircuitChannel scc = ShortCircuitChannel.getChannel(
 //                    driverComp.getPositive(Network.class), congestionComp.getPositive(Network.class), new PLedbatTrafficSelector(),
 //                    torrentComp.getNegative(Network.class), congestionComp.getNegative(Network.class), new PLedbatTrafficSelector());
-        connect(congestionComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
-        connect(torrentComp.getNegative(Network.class), congestionComp.getPositive(Network.class), Channel.TWO_WAY);
+        channels[4] = connect(congestionComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
+        channels[5] = connect(torrentComp.getNegative(Network.class), congestionComp.getPositive(Network.class), Channel.TWO_WAY);
 
         reportComp = create(ReportComp.class, new ReportComp.Init(reportingPeriod));
-        connect(reportComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
-        connect(reportComp.getNegative(TorrentStatus.class), torrentComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
+        channels[6] = connect(reportComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
+        channels[7] = connect(reportComp.getNegative(TorrentStatus.class), torrentComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
 
-        connect(streamStatusPort, torrentComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
-        connect(reportPort, reportComp.getPositive(ReportPort.class), Channel.TWO_WAY);
+        channels[8] = connect(streamStatusPort, torrentComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
+        channels[9] = connect(reportPort, reportComp.getPositive(ReportPort.class), Channel.TWO_WAY);
     }
     
     public static class Init extends se.sics.kompics.Init<StreamHostComp> {
