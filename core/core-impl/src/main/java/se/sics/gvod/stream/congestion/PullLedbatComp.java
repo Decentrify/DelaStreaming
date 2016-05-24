@@ -197,7 +197,7 @@ public class PullLedbatComp extends ComponentDefinition {
         roundTId = t.getTimeoutId();
     }
 
-    public class RoundTimeout extends Timeout implements StreamEvent {
+    public static class RoundTimeout extends Timeout implements StreamEvent {
 
         public RoundTimeout(SchedulePeriodicTimeout spt) {
             super(spt);
