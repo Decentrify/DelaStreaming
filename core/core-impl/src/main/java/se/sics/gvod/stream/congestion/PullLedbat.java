@@ -33,10 +33,10 @@ import se.sics.kompics.ComponentProxy;
  */
 public class PullLedbat {
 
-    public static final int HISTORY_SIZE = 20;
+    public static final int HISTORY_SIZE = 100;
     public static final long BASE_HISTORY_ROUND_TIME = 1000; //1 second
     public static final long TARGET = 100; //100ms 
-    public static final double GAIN = 1 / 100; //set to 1/TARGET
+    public static final double GAIN = 1 / TARGET;
 
     public final PLedbatConnection.TrackRequest req;
     private final Random rand;
@@ -63,17 +63,17 @@ public class PullLedbat {
             long queuingDelay = latestQueuingDelay() - baseDelay;
             double offTarget = ((double) (TARGET - queuingDelay)) / TARGET;
             if (offTarget >= 0) {
-                if (rand.nextDouble() < offTarget) {
+//                if (rand.nextDouble() < offTarget) {
                     pLedbatState.setStatus(PLedbatState.Status.SPEED_UP);
-                } else {
-                    pLedbatState.setStatus(PLedbatState.Status.MAINTAIN);
-                }
+//                } else {
+//                    pLedbatState.setStatus(PLedbatState.Status.MAINTAIN);
+//                }
             } else {
-                if (rand.nextDouble() < -1 * offTarget) {
+//                if (rand.nextDouble() < -1 * offTarget) {
                     pLedbatState.setStatus(PLedbatState.Status.SLOW_DOWN);
-                } else {
-                    pLedbatState.setStatus(PLedbatState.Status.MAINTAIN);
-                }
+//                } else {
+//                    pLedbatState.setStatus(PLedbatState.Status.MAINTAIN);
+//                }
             }
         }
     }
