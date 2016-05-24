@@ -481,8 +481,8 @@ public class TorrentComp extends ComponentDefinition {
         public void report() {
             int pendingMsg = pendingPieces.size() + pendingHashes.size();
 //            Pair<Integer, Integer> dwnlReport = dwnlConn.mngr.getLoad();
-//            LOG.info("{}TransferFSM Download[p:{},u:{}/m:{}] TransferMngr:{}",
-//                    new Object[]{logPrefix, pendingMsg, dwnlReport.getValue0(), dwnlReport.getValue1(), transferMngr});
+            LOG.info("{}TransferFSM Download TransferMngr:{}",
+                    new Object[]{logPrefix, transferMngr.isComplete()});
             upload.report();
         }
 
