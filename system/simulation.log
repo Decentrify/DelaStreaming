@@ -8489,3 +8489,1197 @@ o:1 tms:101 tus:0 ts:13 tf:0
 [16:23:38,393] INFO  {TorrentComp} <nid:1, oid:1>TransferFSM Upload
 [16:23:39,335] INFO  {TorrentComp} <nid:100, oid:1>TransferFSM Upload
 [16:23:40,335] INFO  {TorrentComp} <nid:100, oid:1>TransferFSM Upload
+[13:21:34,391] DEBUG {Sender} starting...
+[13:21:34,620] INFO  {Sender} starting...
+[13:21:34,650] INFO  {NettyNetwork@41234} Alternative Bind Interface set to null
+[13:21:34,725] INFO  {SocketUDT} library location : ./lib/bin
+[13:21:34,725] INFO  {SocketUDT} loader provider  : com.barchart.udt.lib.LibraryLoaderUDT
+[13:21:34,726] INFO  {PluginPropsUDT} ARCH/OS/LINK = x86_64/MacOSX/gpp
+[13:21:34,729] INFO  {LibraryLoaderUDT} Platform supported.
+[13:21:34,730] INFO  {LibraryLoaderUDT} Loading release libraries.
+[13:21:34,841] INFO  {LibraryLoaderUDT} Release libraries loaded.
+[13:21:34,891] DEBUG {Configuration} conf set fs.defaultFS value hdfs://bbc1.sics.se:26801
+[13:21:35,031] DEBUG {MutableMetricsFactory} field org.apache.hadoop.metrics2.lib.MutableRate org.apache.hadoop.security.UserGroupInformation$UgiMetrics.loginSuccess with annotation @org.apache.hadoop.metrics2.annotation.Metric(about=, always=false, sampleName=Ops, type=DEFAULT, value=[Rate of successful kerberos logins and latency (milliseconds)], valueName=Time)
+[13:21:35,041] DEBUG {MutableMetricsFactory} field org.apache.hadoop.metrics2.lib.MutableRate org.apache.hadoop.security.UserGroupInformation$UgiMetrics.loginFailure with annotation @org.apache.hadoop.metrics2.annotation.Metric(about=, always=false, sampleName=Ops, type=DEFAULT, value=[Rate of failed kerberos logins and latency (milliseconds)], valueName=Time)
+[13:21:35,041] DEBUG {MutableMetricsFactory} field org.apache.hadoop.metrics2.lib.MutableRate org.apache.hadoop.security.UserGroupInformation$UgiMetrics.getGroups with annotation @org.apache.hadoop.metrics2.annotation.Metric(about=, always=false, sampleName=Ops, type=DEFAULT, value=[GetGroups], valueName=Time)
+[13:21:35,042] INFO  {UniqueNames} adding name to map UgiMetrics
+[13:21:35,042] DEBUG {MetricsSystemImpl} UgiMetrics, User and group related metrics
+[13:21:35,131] DEBUG {KerberosName} Kerberos krb5 configuration not found, setting default realm to empty
+[13:21:35,133] DEBUG {Groups}  Creating new Groups object
+[13:21:35,136] DEBUG {NativeCodeLoader} Trying to load the custom-built native-hadoop library...
+[13:21:35,137] DEBUG {NativeCodeLoader} Failed to load native-hadoop with error: java.lang.UnsatisfiedLinkError: no hadoop in java.library.path
+[13:21:35,137] DEBUG {NativeCodeLoader} java.library.path=/Applications/NetBeans/NetBeans 8.0.2.app/Contents/Resources/NetBeans/webcommon/bin::/Users/Alex/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
+[13:21:35,137] WARN  {NativeCodeLoader} Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+[13:21:35,137] DEBUG {JniBasedUnixGroupsMappingWithFallback} Falling back to shell based
+[13:21:35,138] DEBUG {JniBasedUnixGroupsMappingWithFallback} Group mapping impl=org.apache.hadoop.security.ShellBasedUnixGroupsMapping
+[13:21:35,225] DEBUG {Shell} Failed to detect a valid hadoop home directory
+java.io.IOException: HADOOP_HOME or hadoop.home.dir are not set.
+	at org.apache.hadoop.util.Shell.checkHadoopHome(Shell.java:265)
+	at org.apache.hadoop.util.Shell.<clinit>(Shell.java:290)
+	at org.apache.hadoop.util.StringUtils.<clinit>(StringUtils.java:76)
+	at org.apache.hadoop.security.Groups.parseStaticMapping(Groups.java:93)
+	at org.apache.hadoop.security.Groups.<init>(Groups.java:77)
+	at org.apache.hadoop.security.Groups.getUserToGroupsMappingService(Groups.java:240)
+	at org.apache.hadoop.security.UserGroupInformation.initialize(UserGroupInformation.java:256)
+	at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:233)
+	at org.apache.hadoop.security.UserGroupInformation.loginUserFromSubject(UserGroupInformation.java:719)
+	at org.apache.hadoop.security.UserGroupInformation.getLoginUser(UserGroupInformation.java:704)
+	at org.apache.hadoop.security.UserGroupInformation.getCurrentUser(UserGroupInformation.java:606)
+	at org.apache.hadoop.fs.FileSystem$Cache$Key.<init>(FileSystem.java:2554)
+	at org.apache.hadoop.fs.FileSystem$Cache$Key.<init>(FileSystem.java:2546)
+	at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:2412)
+	at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:368)
+	at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:167)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsDataStorage.getFileSystem(HopsDataStorage.java:49)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsDataStorage.<init>(HopsDataStorage.java:42)
+	at se.sics.ktoolbox.hops.managedStore.storage.CompleteHopsDataStorage.<init>(CompleteHopsDataStorage.java:30)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsFactory.getComplete(HopsFactory.java:39)
+	at se.sics.gvod.stream.system.hops.Sender$2.<init>(Sender.java:108)
+	at se.sics.gvod.stream.system.hops.Sender.connect(Sender.java:94)
+	at se.sics.gvod.stream.system.hops.Sender.access$200(Sender.java:44)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:81)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:77)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler.access$100(ThreadPoolScheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler$1.run(ThreadPoolScheduler.java:35)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+[13:21:35,235] DEBUG {Shell} setsid is not available on this machine. So not using it.
+[13:21:35,235] DEBUG {Shell} setsid exited with exit code 0
+[13:21:35,235] DEBUG {Groups} Group mapping impl=io.hops.security.HopsGroupsWithFallBack; cacheTimeout=300000; warningDeltaMs=5000
+[13:21:35,241] DEBUG {UserGroupInformation} hadoop login
+[13:21:35,242] DEBUG {UserGroupInformation} hadoop login commit
+[13:21:35,248] DEBUG {UserGroupInformation} using local user:UnixPrincipal: Alex
+[13:21:35,250] DEBUG {UserGroupInformation} UGI loginUser:Alex (auth:SIMPLE)
+[13:21:35,395] DEBUG {Configuration} conf set rpc.engine.org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB value org.apache.hadoop.ipc.ProtobufRpcEngine
+[13:21:35,398] DEBUG {RetryUtils} multipleLinearRandomRetry = null
+[13:21:35,421] DEBUG {Server} rpcKind=RPC_PROTOCOL_BUFFER, rpcRequestWrapperClass=class org.apache.hadoop.ipc.ProtobufRpcEngine$RpcRequestWrapper, rpcInvoker=org.apache.hadoop.ipc.ProtobufRpcEngine$Server$ProtoBufRpcInvoker@13bcbe96
+[13:21:35,426] DEBUG {Client} getting client out of cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:35,688] DEBUG {NamenodeSelector} Client's namenode selection policy is RANDOM_STICKY
+[13:21:35,688] DEBUG {Configuration} conf set rpc.engine.org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB value org.apache.hadoop.ipc.ProtobufRpcEngine
+[13:21:35,688] DEBUG {RetryUtils} multipleLinearRandomRetry = null
+[13:21:35,689] DEBUG {Client} getting client out of cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:35,790] TRACE {ProtobufRpcEngine} 11: Call -> bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {}
+[13:21:35,802] DEBUG {Client} The ping interval is 60000 ms.
+[13:21:35,804] DEBUG {Client} Connecting to bbc1.sics.se/193.10.64.11:26801
+[13:21:35,822] DEBUG {Client} closing ipc connection to bbc1.sics.se/193.10.64.11:26801: Connection refused
+java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:712)
+	at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:529)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:493)
+	at org.apache.hadoop.ipc.Client$Connection.setupConnection(Client.java:604)
+	at org.apache.hadoop.ipc.Client$Connection.setupIOstreams(Client.java:699)
+	at org.apache.hadoop.ipc.Client$Connection.access$2800(Client.java:367)
+	at org.apache.hadoop.ipc.Client.getConnection(Client.java:1462)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1381)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1363)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:206)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:190)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:103)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB.getActiveNamenodesForClient(ClientNamenodeProtocolTranslatorPB.java:883)
+	at org.apache.hadoop.hdfs.NamenodeSelector.createNamenodeClientsFromConfiguration(NamenodeSelector.java:350)
+	at org.apache.hadoop.hdfs.NamenodeSelector.<init>(NamenodeSelector.java:164)
+	at org.apache.hadoop.hdfs.DFSClient.<init>(DFSClient.java:437)
+	at org.apache.hadoop.hdfs.DFSClient.<init>(DFSClient.java:403)
+	at org.apache.hadoop.hdfs.DistributedFileSystem.initialize(DistributedFileSystem.java:130)
+	at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:2397)
+	at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:89)
+	at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:2431)
+	at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:2413)
+	at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:368)
+	at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:167)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsDataStorage.getFileSystem(HopsDataStorage.java:49)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsDataStorage.<init>(HopsDataStorage.java:42)
+	at se.sics.ktoolbox.hops.managedStore.storage.CompleteHopsDataStorage.<init>(CompleteHopsDataStorage.java:30)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsFactory.getComplete(HopsFactory.java:39)
+	at se.sics.gvod.stream.system.hops.Sender$2.<init>(Sender.java:108)
+	at se.sics.gvod.stream.system.hops.Sender.connect(Sender.java:94)
+	at se.sics.gvod.stream.system.hops.Sender.access$200(Sender.java:44)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:81)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:77)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler.access$100(ThreadPoolScheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler$1.run(ThreadPoolScheduler.java:35)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+[13:21:35,823] DEBUG {Client} IPC Client (1069233457) connection to bbc1.sics.se/193.10.64.11:26801 from Alex: closed
+[13:21:35,823] TRACE {ProtobufRpcEngine} 11: Exception <- bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused}
+[13:21:35,824] WARN  {NamenodeSelector} Failed to get list of NN from default NN. Default NN was hdfs://bbc1.sics.se:26801
+[13:21:35,824] DEBUG {Client} stopping client from cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:35,824] DEBUG {NamenodeSelector} Trying to the list of NN from the config file  [hdfs://bbc1.sics.se:26801]
+[13:21:35,824] DEBUG {NamenodeSelector} Trying to connect to  hdfs://bbc1.sics.se:26801
+[13:21:35,824] DEBUG {Configuration} conf set rpc.engine.org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB value org.apache.hadoop.ipc.ProtobufRpcEngine
+[13:21:35,825] DEBUG {RetryUtils} multipleLinearRandomRetry = null
+[13:21:35,825] DEBUG {Client} getting client out of cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:35,825] TRACE {ProtobufRpcEngine} 11: Call -> bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {}
+[13:21:35,825] DEBUG {Client} The ping interval is 60000 ms.
+[13:21:35,825] DEBUG {Client} Connecting to bbc1.sics.se/193.10.64.11:26801
+[13:21:35,827] DEBUG {Client} closing ipc connection to bbc1.sics.se/193.10.64.11:26801: Connection refused
+java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:712)
+	at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:529)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:493)
+	at org.apache.hadoop.ipc.Client$Connection.setupConnection(Client.java:604)
+	at org.apache.hadoop.ipc.Client$Connection.setupIOstreams(Client.java:699)
+	at org.apache.hadoop.ipc.Client$Connection.access$2800(Client.java:367)
+	at org.apache.hadoop.ipc.Client.getConnection(Client.java:1462)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1381)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1363)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:206)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:190)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:103)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB.getActiveNamenodesForClient(ClientNamenodeProtocolTranslatorPB.java:883)
+	at org.apache.hadoop.hdfs.NamenodeSelector.createNamenodeClientsFromConfiguration(NamenodeSelector.java:371)
+	at org.apache.hadoop.hdfs.NamenodeSelector.<init>(NamenodeSelector.java:164)
+	at org.apache.hadoop.hdfs.DFSClient.<init>(DFSClient.java:437)
+	at org.apache.hadoop.hdfs.DFSClient.<init>(DFSClient.java:403)
+	at org.apache.hadoop.hdfs.DistributedFileSystem.initialize(DistributedFileSystem.java:130)
+	at org.apache.hadoop.fs.FileSystem.createFileSystem(FileSystem.java:2397)
+	at org.apache.hadoop.fs.FileSystem.access$200(FileSystem.java:89)
+	at org.apache.hadoop.fs.FileSystem$Cache.getInternal(FileSystem.java:2431)
+	at org.apache.hadoop.fs.FileSystem$Cache.get(FileSystem.java:2413)
+	at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:368)
+	at org.apache.hadoop.fs.FileSystem.get(FileSystem.java:167)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsDataStorage.getFileSystem(HopsDataStorage.java:49)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsDataStorage.<init>(HopsDataStorage.java:42)
+	at se.sics.ktoolbox.hops.managedStore.storage.CompleteHopsDataStorage.<init>(CompleteHopsDataStorage.java:30)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsFactory.getComplete(HopsFactory.java:39)
+	at se.sics.gvod.stream.system.hops.Sender$2.<init>(Sender.java:108)
+	at se.sics.gvod.stream.system.hops.Sender.connect(Sender.java:94)
+	at se.sics.gvod.stream.system.hops.Sender.access$200(Sender.java:44)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:81)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:77)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler.access$100(ThreadPoolScheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler$1.run(ThreadPoolScheduler.java:35)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+[13:21:35,827] DEBUG {Client} IPC Client (1069233457) connection to bbc1.sics.se/193.10.64.11:26801 from Alex: closed
+[13:21:35,828] TRACE {ProtobufRpcEngine} 11: Exception <- bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused}
+[13:21:35,828] ERROR {NamenodeSelector} java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused
+[13:21:35,829] DEBUG {Client} stopping client from cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:35,829] WARN  {NamenodeSelector} No new namenodes were found
+[13:21:35,829] DEBUG {DFSClient} Short circuit read is false
+[13:21:35,835] DEBUG {Configuration} conf set rpc.engine.org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB value org.apache.hadoop.ipc.ProtobufRpcEngine
+[13:21:35,836] DEBUG {RetryUtils} multipleLinearRandomRetry = null
+[13:21:35,836] DEBUG {DFSClient} 1) GETFILEINFO RPC failed. NN was NULL, retries left (2)
+org.apache.hadoop.hdfs.NoAliveNamenodeException: No NameNode is active
+	at org.apache.hadoop.hdfs.NamenodeSelector.getNextNamenode(NamenodeSelector.java:265)
+	at org.apache.hadoop.hdfs.DFSClient$40.getNextNameNode(DFSClient.java:2795)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2893)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2850)
+	at org.apache.hadoop.hdfs.DFSClient.getFileInfo(DFSClient.java:1878)
+	at org.apache.hadoop.hdfs.DistributedFileSystem.getFileStatus(DistributedFileSystem.java:963)
+	at org.apache.hadoop.fs.FileSystem.getLength(FileSystem.java:1434)
+	at se.sics.ktoolbox.hops.managedStore.storage.CompleteHopsDataStorage.length(CompleteHopsDataStorage.java:36)
+	at se.sics.ktoolbox.util.managedStore.core.impl.CompleteFileMngr.<init>(CompleteFileMngr.java:45)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsFactory.getComplete(HopsFactory.java:40)
+	at se.sics.gvod.stream.system.hops.Sender$2.<init>(Sender.java:108)
+	at se.sics.gvod.stream.system.hops.Sender.connect(Sender.java:94)
+	at se.sics.gvod.stream.system.hops.Sender.access$200(Sender.java:44)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:81)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:77)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler.access$100(ThreadPoolScheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler$1.run(ThreadPoolScheduler.java:35)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+[13:21:35,836] DEBUG {Client} getting client out of cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:35,836] DEBUG {DFSClient} 1) RPC failed. Sleep 1000
+[13:21:35,837] TRACE {ProtobufRpcEngine} 14: Call -> bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {}
+[13:21:35,837] DEBUG {Client} The ping interval is 60000 ms.
+[13:21:35,837] DEBUG {Client} Connecting to bbc1.sics.se/193.10.64.11:26801
+[13:21:35,838] DEBUG {Client} closing ipc connection to bbc1.sics.se/193.10.64.11:26801: Connection refused
+java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:712)
+	at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:529)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:493)
+	at org.apache.hadoop.ipc.Client$Connection.setupConnection(Client.java:604)
+	at org.apache.hadoop.ipc.Client$Connection.setupIOstreams(Client.java:699)
+	at org.apache.hadoop.ipc.Client$Connection.access$2800(Client.java:367)
+	at org.apache.hadoop.ipc.Client.getConnection(Client.java:1462)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1381)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1363)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:206)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:190)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:103)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB.getActiveNamenodesForClient(ClientNamenodeProtocolTranslatorPB.java:883)
+	at org.apache.hadoop.hdfs.NamenodeSelector.createNamenodeClientsFromConfiguration(NamenodeSelector.java:350)
+	at org.apache.hadoop.hdfs.NamenodeSelector.periodicNamenodeClientsUpdate(NamenodeSelector.java:423)
+	at org.apache.hadoop.hdfs.NamenodeSelector.run(NamenodeSelector.java:179)
+[13:21:35,838] DEBUG {Client} IPC Client (1069233457) connection to bbc1.sics.se/193.10.64.11:26801 from Alex: closed
+[13:21:35,839] TRACE {ProtobufRpcEngine} 14: Exception <- bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused}
+[13:21:35,839] WARN  {NamenodeSelector} Failed to get list of NN from default NN. Default NN was hdfs://bbc1.sics.se:26801
+[13:21:35,839] DEBUG {Client} stopping client from cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:35,839] DEBUG {NamenodeSelector} Trying to the list of NN from the config file  [hdfs://bbc1.sics.se:26801]
+[13:21:35,839] DEBUG {NamenodeSelector} Trying to connect to  hdfs://bbc1.sics.se:26801
+[13:21:35,839] DEBUG {Configuration} conf set rpc.engine.org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB value org.apache.hadoop.ipc.ProtobufRpcEngine
+[13:21:35,839] DEBUG {RetryUtils} multipleLinearRandomRetry = null
+[13:21:35,839] DEBUG {Client} getting client out of cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:35,839] TRACE {ProtobufRpcEngine} 14: Call -> bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {}
+[13:21:35,840] DEBUG {Client} The ping interval is 60000 ms.
+[13:21:35,840] DEBUG {Client} Connecting to bbc1.sics.se/193.10.64.11:26801
+[13:21:35,841] DEBUG {Client} closing ipc connection to bbc1.sics.se/193.10.64.11:26801: Connection refused
+java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:712)
+	at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:529)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:493)
+	at org.apache.hadoop.ipc.Client$Connection.setupConnection(Client.java:604)
+	at org.apache.hadoop.ipc.Client$Connection.setupIOstreams(Client.java:699)
+	at org.apache.hadoop.ipc.Client$Connection.access$2800(Client.java:367)
+	at org.apache.hadoop.ipc.Client.getConnection(Client.java:1462)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1381)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1363)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:206)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:190)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:103)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB.getActiveNamenodesForClient(ClientNamenodeProtocolTranslatorPB.java:883)
+	at org.apache.hadoop.hdfs.NamenodeSelector.createNamenodeClientsFromConfiguration(NamenodeSelector.java:371)
+	at org.apache.hadoop.hdfs.NamenodeSelector.periodicNamenodeClientsUpdate(NamenodeSelector.java:423)
+	at org.apache.hadoop.hdfs.NamenodeSelector.run(NamenodeSelector.java:179)
+[13:21:35,842] DEBUG {Client} IPC Client (1069233457) connection to bbc1.sics.se/193.10.64.11:26801 from Alex: closed
+[13:21:35,842] TRACE {ProtobufRpcEngine} 14: Exception <- bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused}
+[13:21:35,842] ERROR {NamenodeSelector} java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused
+[13:21:35,842] DEBUG {Client} stopping client from cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:35,843] WARN  {NamenodeSelector} No new namenodes were found
+[13:21:36,841] DEBUG {DFSClient} 1) GETFILEINFO RPC failed. NN was NULL, retries left (1)
+org.apache.hadoop.hdfs.NoAliveNamenodeException: No NameNode is active
+	at org.apache.hadoop.hdfs.NamenodeSelector.getNextNamenode(NamenodeSelector.java:265)
+	at org.apache.hadoop.hdfs.DFSClient$40.getNextNameNode(DFSClient.java:2795)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2893)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2850)
+	at org.apache.hadoop.hdfs.DFSClient.getFileInfo(DFSClient.java:1878)
+	at org.apache.hadoop.hdfs.DistributedFileSystem.getFileStatus(DistributedFileSystem.java:963)
+	at org.apache.hadoop.fs.FileSystem.getLength(FileSystem.java:1434)
+	at se.sics.ktoolbox.hops.managedStore.storage.CompleteHopsDataStorage.length(CompleteHopsDataStorage.java:36)
+	at se.sics.ktoolbox.util.managedStore.core.impl.CompleteFileMngr.<init>(CompleteFileMngr.java:45)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsFactory.getComplete(HopsFactory.java:40)
+	at se.sics.gvod.stream.system.hops.Sender$2.<init>(Sender.java:108)
+	at se.sics.gvod.stream.system.hops.Sender.connect(Sender.java:94)
+	at se.sics.gvod.stream.system.hops.Sender.access$200(Sender.java:44)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:81)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:77)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler.access$100(ThreadPoolScheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler$1.run(ThreadPoolScheduler.java:35)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+[13:21:36,841] DEBUG {Configuration} conf set rpc.engine.org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB value org.apache.hadoop.ipc.ProtobufRpcEngine
+[13:21:36,842] DEBUG {DFSClient} 1) RPC failed. Sleep 2000
+[13:21:36,842] DEBUG {RetryUtils} multipleLinearRandomRetry = null
+[13:21:36,842] DEBUG {Client} getting client out of cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:36,842] TRACE {ProtobufRpcEngine} 14: Call -> bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {}
+[13:21:36,843] DEBUG {Client} The ping interval is 60000 ms.
+[13:21:36,843] DEBUG {Client} Connecting to bbc1.sics.se/193.10.64.11:26801
+[13:21:36,845] DEBUG {Client} closing ipc connection to bbc1.sics.se/193.10.64.11:26801: Connection refused
+java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:712)
+	at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:529)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:493)
+	at org.apache.hadoop.ipc.Client$Connection.setupConnection(Client.java:604)
+	at org.apache.hadoop.ipc.Client$Connection.setupIOstreams(Client.java:699)
+	at org.apache.hadoop.ipc.Client$Connection.access$2800(Client.java:367)
+	at org.apache.hadoop.ipc.Client.getConnection(Client.java:1462)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1381)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1363)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:206)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:190)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:103)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB.getActiveNamenodesForClient(ClientNamenodeProtocolTranslatorPB.java:883)
+	at org.apache.hadoop.hdfs.NamenodeSelector.createNamenodeClientsFromConfiguration(NamenodeSelector.java:350)
+	at org.apache.hadoop.hdfs.NamenodeSelector.periodicNamenodeClientsUpdate(NamenodeSelector.java:423)
+	at org.apache.hadoop.hdfs.NamenodeSelector.run(NamenodeSelector.java:179)
+[13:21:36,845] DEBUG {Client} IPC Client (1069233457) connection to bbc1.sics.se/193.10.64.11:26801 from Alex: closed
+[13:21:36,846] TRACE {ProtobufRpcEngine} 14: Exception <- bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused}
+[13:21:36,846] WARN  {NamenodeSelector} Failed to get list of NN from default NN. Default NN was hdfs://bbc1.sics.se:26801
+[13:21:36,846] DEBUG {Client} stopping client from cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:36,846] DEBUG {NamenodeSelector} Trying to the list of NN from the config file  [hdfs://bbc1.sics.se:26801]
+[13:21:36,846] DEBUG {NamenodeSelector} Trying to connect to  hdfs://bbc1.sics.se:26801
+[13:21:36,847] DEBUG {Configuration} conf set rpc.engine.org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB value org.apache.hadoop.ipc.ProtobufRpcEngine
+[13:21:36,847] DEBUG {RetryUtils} multipleLinearRandomRetry = null
+[13:21:36,847] DEBUG {Client} getting client out of cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:36,847] TRACE {ProtobufRpcEngine} 14: Call -> bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {}
+[13:21:36,847] DEBUG {Client} The ping interval is 60000 ms.
+[13:21:36,847] DEBUG {Client} Connecting to bbc1.sics.se/193.10.64.11:26801
+[13:21:36,849] DEBUG {Client} closing ipc connection to bbc1.sics.se/193.10.64.11:26801: Connection refused
+java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:712)
+	at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:529)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:493)
+	at org.apache.hadoop.ipc.Client$Connection.setupConnection(Client.java:604)
+	at org.apache.hadoop.ipc.Client$Connection.setupIOstreams(Client.java:699)
+	at org.apache.hadoop.ipc.Client$Connection.access$2800(Client.java:367)
+	at org.apache.hadoop.ipc.Client.getConnection(Client.java:1462)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1381)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1363)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:206)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:190)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:103)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB.getActiveNamenodesForClient(ClientNamenodeProtocolTranslatorPB.java:883)
+	at org.apache.hadoop.hdfs.NamenodeSelector.createNamenodeClientsFromConfiguration(NamenodeSelector.java:371)
+	at org.apache.hadoop.hdfs.NamenodeSelector.periodicNamenodeClientsUpdate(NamenodeSelector.java:423)
+	at org.apache.hadoop.hdfs.NamenodeSelector.run(NamenodeSelector.java:179)
+[13:21:36,849] DEBUG {Client} IPC Client (1069233457) connection to bbc1.sics.se/193.10.64.11:26801 from Alex: closed
+[13:21:36,849] TRACE {ProtobufRpcEngine} 14: Exception <- bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused}
+[13:21:36,850] ERROR {NamenodeSelector} java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused
+[13:21:36,850] DEBUG {Client} stopping client from cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:36,850] WARN  {NamenodeSelector} No new namenodes were found
+[13:21:38,842] DEBUG {DFSClient} 1) GETFILEINFO RPC failed. NN was NULL, retries left (0)
+org.apache.hadoop.hdfs.NoAliveNamenodeException: No NameNode is active
+	at org.apache.hadoop.hdfs.NamenodeSelector.getNextNamenode(NamenodeSelector.java:265)
+	at org.apache.hadoop.hdfs.DFSClient$40.getNextNameNode(DFSClient.java:2795)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2893)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2850)
+	at org.apache.hadoop.hdfs.DFSClient.getFileInfo(DFSClient.java:1878)
+	at org.apache.hadoop.hdfs.DistributedFileSystem.getFileStatus(DistributedFileSystem.java:963)
+	at org.apache.hadoop.fs.FileSystem.getLength(FileSystem.java:1434)
+	at se.sics.ktoolbox.hops.managedStore.storage.CompleteHopsDataStorage.length(CompleteHopsDataStorage.java:36)
+	at se.sics.ktoolbox.util.managedStore.core.impl.CompleteFileMngr.<init>(CompleteFileMngr.java:45)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsFactory.getComplete(HopsFactory.java:40)
+	at se.sics.gvod.stream.system.hops.Sender$2.<init>(Sender.java:108)
+	at se.sics.gvod.stream.system.hops.Sender.connect(Sender.java:94)
+	at se.sics.gvod.stream.system.hops.Sender.access$200(Sender.java:44)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:81)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:77)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler.access$100(ThreadPoolScheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler$1.run(ThreadPoolScheduler.java:35)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+[13:21:38,843] DEBUG {DFSClient} 1) RPC failed. Sleep 4000
+[13:21:38,843] DEBUG {Configuration} conf set rpc.engine.org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB value org.apache.hadoop.ipc.ProtobufRpcEngine
+[13:21:38,843] DEBUG {RetryUtils} multipleLinearRandomRetry = null
+[13:21:38,843] DEBUG {Client} getting client out of cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:38,844] TRACE {ProtobufRpcEngine} 14: Call -> bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {}
+[13:21:38,844] DEBUG {Client} The ping interval is 60000 ms.
+[13:21:38,845] DEBUG {Client} Connecting to bbc1.sics.se/193.10.64.11:26801
+[13:21:38,848] DEBUG {Client} closing ipc connection to bbc1.sics.se/193.10.64.11:26801: Connection refused
+java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:712)
+	at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:529)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:493)
+	at org.apache.hadoop.ipc.Client$Connection.setupConnection(Client.java:604)
+	at org.apache.hadoop.ipc.Client$Connection.setupIOstreams(Client.java:699)
+	at org.apache.hadoop.ipc.Client$Connection.access$2800(Client.java:367)
+	at org.apache.hadoop.ipc.Client.getConnection(Client.java:1462)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1381)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1363)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:206)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:190)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:103)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB.getActiveNamenodesForClient(ClientNamenodeProtocolTranslatorPB.java:883)
+	at org.apache.hadoop.hdfs.NamenodeSelector.createNamenodeClientsFromConfiguration(NamenodeSelector.java:350)
+	at org.apache.hadoop.hdfs.NamenodeSelector.periodicNamenodeClientsUpdate(NamenodeSelector.java:423)
+	at org.apache.hadoop.hdfs.NamenodeSelector.run(NamenodeSelector.java:179)
+[13:21:38,849] DEBUG {Client} IPC Client (1069233457) connection to bbc1.sics.se/193.10.64.11:26801 from Alex: closed
+[13:21:38,849] TRACE {ProtobufRpcEngine} 14: Exception <- bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused}
+[13:21:38,849] WARN  {NamenodeSelector} Failed to get list of NN from default NN. Default NN was hdfs://bbc1.sics.se:26801
+[13:21:38,849] DEBUG {Client} stopping client from cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:38,849] DEBUG {NamenodeSelector} Trying to the list of NN from the config file  [hdfs://bbc1.sics.se:26801]
+[13:21:38,849] DEBUG {NamenodeSelector} Trying to connect to  hdfs://bbc1.sics.se:26801
+[13:21:38,849] DEBUG {Configuration} conf set rpc.engine.org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB value org.apache.hadoop.ipc.ProtobufRpcEngine
+[13:21:38,849] DEBUG {RetryUtils} multipleLinearRandomRetry = null
+[13:21:38,849] DEBUG {Client} getting client out of cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:38,850] TRACE {ProtobufRpcEngine} 14: Call -> bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {}
+[13:21:38,850] DEBUG {Client} The ping interval is 60000 ms.
+[13:21:38,850] DEBUG {Client} Connecting to bbc1.sics.se/193.10.64.11:26801
+[13:21:38,852] DEBUG {Client} closing ipc connection to bbc1.sics.se/193.10.64.11:26801: Connection refused
+java.net.ConnectException: Connection refused
+	at sun.nio.ch.SocketChannelImpl.checkConnect(Native Method)
+	at sun.nio.ch.SocketChannelImpl.finishConnect(SocketChannelImpl.java:712)
+	at org.apache.hadoop.net.SocketIOWithTimeout.connect(SocketIOWithTimeout.java:206)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:529)
+	at org.apache.hadoop.net.NetUtils.connect(NetUtils.java:493)
+	at org.apache.hadoop.ipc.Client$Connection.setupConnection(Client.java:604)
+	at org.apache.hadoop.ipc.Client$Connection.setupIOstreams(Client.java:699)
+	at org.apache.hadoop.ipc.Client$Connection.access$2800(Client.java:367)
+	at org.apache.hadoop.ipc.Client.getConnection(Client.java:1462)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1381)
+	at org.apache.hadoop.ipc.Client.call(Client.java:1363)
+	at org.apache.hadoop.ipc.ProtobufRpcEngine$Invoker.invoke(ProtobufRpcEngine.java:206)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+	at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.lang.reflect.Method.invoke(Method.java:483)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invokeMethod(RetryInvocationHandler.java:190)
+	at org.apache.hadoop.io.retry.RetryInvocationHandler.invoke(RetryInvocationHandler.java:103)
+	at com.sun.proxy.$Proxy9.getActiveNamenodesForClient(Unknown Source)
+	at org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB.getActiveNamenodesForClient(ClientNamenodeProtocolTranslatorPB.java:883)
+	at org.apache.hadoop.hdfs.NamenodeSelector.createNamenodeClientsFromConfiguration(NamenodeSelector.java:371)
+	at org.apache.hadoop.hdfs.NamenodeSelector.periodicNamenodeClientsUpdate(NamenodeSelector.java:423)
+	at org.apache.hadoop.hdfs.NamenodeSelector.run(NamenodeSelector.java:179)
+[13:21:38,852] DEBUG {Client} IPC Client (1069233457) connection to bbc1.sics.se/193.10.64.11:26801 from Alex: closed
+[13:21:38,852] TRACE {ProtobufRpcEngine} 14: Exception <- bbc1.sics.se/193.10.64.11:26801: getActiveNamenodesForClient {java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused}
+[13:21:38,852] ERROR {NamenodeSelector} java.net.ConnectException: Call From aaor.sics.se/193.10.67.178 to bbc1.sics.se:26801 failed on connection exception: java.net.ConnectException: Connection refused; For more details see:  http://wiki.apache.org/hadoop/ConnectionRefused
+[13:21:38,853] DEBUG {Client} stopping client from cache: org.apache.hadoop.ipc.Client@442f8489
+[13:21:38,853] WARN  {NamenodeSelector} No new namenodes were found
+[13:21:42,844] WARN  {DFSClient} 1) GETFILEINFO RPC failed
+org.apache.hadoop.hdfs.NoAliveNamenodeException: No NameNode is active
+	at org.apache.hadoop.hdfs.NamenodeSelector.getNextNamenode(NamenodeSelector.java:265)
+	at org.apache.hadoop.hdfs.DFSClient$40.getNextNameNode(DFSClient.java:2795)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2893)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2850)
+	at org.apache.hadoop.hdfs.DFSClient.getFileInfo(DFSClient.java:1878)
+	at org.apache.hadoop.hdfs.DistributedFileSystem.getFileStatus(DistributedFileSystem.java:963)
+	at org.apache.hadoop.fs.FileSystem.getLength(FileSystem.java:1434)
+	at se.sics.ktoolbox.hops.managedStore.storage.CompleteHopsDataStorage.length(CompleteHopsDataStorage.java:36)
+	at se.sics.ktoolbox.util.managedStore.core.impl.CompleteFileMngr.<init>(CompleteFileMngr.java:45)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsFactory.getComplete(HopsFactory.java:40)
+	at se.sics.gvod.stream.system.hops.Sender$2.<init>(Sender.java:108)
+	at se.sics.gvod.stream.system.hops.Sender.connect(Sender.java:94)
+	at se.sics.gvod.stream.system.hops.Sender.access$200(Sender.java:44)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:81)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:77)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler.access$100(ThreadPoolScheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler$1.run(ThreadPoolScheduler.java:35)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+[13:21:42,845] ERROR {Kompics} Handling an event caused a fault! Might be handled later...
+java.lang.RuntimeException: org.apache.hadoop.hdfs.NoAliveNamenodeException: No NameNode is active
+	at se.sics.ktoolbox.hops.managedStore.storage.CompleteHopsDataStorage.length(CompleteHopsDataStorage.java:38)
+	at se.sics.ktoolbox.util.managedStore.core.impl.CompleteFileMngr.<init>(CompleteFileMngr.java:45)
+	at se.sics.ktoolbox.hops.managedStore.storage.HopsFactory.getComplete(HopsFactory.java:40)
+	at se.sics.gvod.stream.system.hops.Sender$2.<init>(Sender.java:108)
+	at se.sics.gvod.stream.system.hops.Sender.connect(Sender.java:94)
+	at se.sics.gvod.stream.system.hops.Sender.access$200(Sender.java:44)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:81)
+	at se.sics.gvod.stream.system.hops.Sender$1.handle(Sender.java:77)
+	at se.sics.kompics.JavaComponent.executeEvent(JavaComponent.java:389)
+	at se.sics.kompics.JavaComponent.execute(JavaComponent.java:333)
+	at se.sics.kompics.Scheduler.executeComponent(Scheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler.access$100(ThreadPoolScheduler.java:15)
+	at se.sics.kompics.scheduler.ThreadPoolScheduler$1.run(ThreadPoolScheduler.java:35)
+	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+	at java.lang.Thread.run(Thread.java:745)
+Caused by: org.apache.hadoop.hdfs.NoAliveNamenodeException: No NameNode is active
+	at org.apache.hadoop.hdfs.NamenodeSelector.getNextNamenode(NamenodeSelector.java:265)
+	at org.apache.hadoop.hdfs.DFSClient$40.getNextNameNode(DFSClient.java:2795)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2893)
+	at org.apache.hadoop.hdfs.DFSClient.doClientActionWithRetry(DFSClient.java:2850)
+	at org.apache.hadoop.hdfs.DFSClient.getFileInfo(DFSClient.java:1878)
+	at org.apache.hadoop.hdfs.DistributedFileSystem.getFileStatus(DistributedFileSystem.java:963)
+	at org.apache.hadoop.fs.FileSystem.getLength(FileSystem.java:1434)
+	at se.sics.ktoolbox.hops.managedStore.storage.CompleteHopsDataStorage.length(CompleteHopsDataStorage.java:36)
+	... 15 more
+[13:21:42,846] ERROR {Kompics} A fault was escalated to the root component: 
+KompicsFault(java.lang.RuntimeException: org.apache.hadoop.hdfs.NoAliveNamenodeException: No NameNode is active thrown in Component(9737b46d-df18-436b-8075-02780aff8f14):se.sics.gvod.stream.system.hops.Sender@3d7ee9e6 while handling event se.sics.kompics.Start@7570db25) 
+
+
+[13:21:42,854] DEBUG {NamenodeSelector} Shuting down client
+[13:21:48,812] DEBUG {Receiver} starting...
+[13:21:48,967] INFO  {Receiver} starting...
+[13:21:48,986] INFO  {NettyNetwork@51234} Alternative Bind Interface set to null
+[13:21:49,041] INFO  {SocketUDT} library location : ./lib/bin
+[13:21:49,041] INFO  {SocketUDT} loader provider  : com.barchart.udt.lib.LibraryLoaderUDT
+[13:21:49,042] INFO  {PluginPropsUDT} ARCH/OS/LINK = x86_64/MacOSX/gpp
+[13:21:49,043] INFO  {LibraryLoaderUDT} Platform supported.
+[13:21:49,043] INFO  {LibraryLoaderUDT} Loading release libraries.
+[13:21:49,151] INFO  {LibraryLoaderUDT} Release libraries loaded.
+[13:21:49,170] INFO  {StreamHostComp} <nid:100> starting...
+[13:21:49,173] INFO  {StreamHostComp} <nid:100> starting...
+[13:21:49,177] INFO  {ConnMngrComp} initiating...
+[13:21:49,190] INFO  {TorrentComp} <nid:2, oid:1>initiating...
+[13:21:49,196] INFO  {ReportComp} initiating...
+[13:21:49,197] INFO  {ConnMngrComp} starting...
+[13:21:49,197] INFO  {ReportComp} starting...
+[13:21:49,205] INFO  {TorrentComp} <nid:2, oid:1>starting...
+[13:21:49,205] TRACE {ConnMngrComp} received:Connection.Request<28264fb8-a707-4848-a207-5806dab97d59>
+[13:21:49,255] INFO  {NettyNetwork@51234} Successfully bound to ip:port /193.10.67.178:51234
+[13:21:49,275] INFO  {NettyNetwork@51234} Successfully bound UDT to ip:port /193.10.67.178:59375 with config: {SO_REUSEADDR=true, CONNECT_TIMEOUT_MILLIS=30000, io.netty.channel.udt.UdtChannelOption#PROTOCOL_SEND_BUFFER_SIZE=100000000, SO_SNDBUF=131072, RCVBUF_ALLOCATOR=io.netty.channel.AdaptiveRecvByteBufAllocator@1b5ec9f, MAX_MESSAGES_PER_READ=16, io.netty.channel.udt.UdtChannelOption#SYSTEM_RECEIVE_BUFFER_SIZE=1048576, ALLOCATOR=PooledByteBufAllocator(directByDefault: true), io.netty.channel.udt.UdtChannelOption#PROTOCOL_RECEIVE_BUFFER_SIZE=100000000, io.netty.channel.udt.UdtChannelOption#SYSTEM_SEND_BUFFER_SIZE=1048576, SO_RCVBUF=131072, WRITE_SPIN_COUNT=16, MESSAGE_SIZE_ESTIMATOR=io.netty.channel.DefaultMessageSizeEstimator@34af8704, WRITE_BUFFER_LOW_WATER_MARK=32768, SO_LINGER=0, SO_BACKLOG=64, AUTO_READ=true, WRITE_BUFFER_HIGH_WATER_MARK=65536}
+[13:21:49,295] INFO  {NettyNetwork@51234} Successfully bound to ip:port /193.10.67.178:51234
+[13:21:49,295] TRACE {NettyNetwork@51234} Channel connected: UDP /193.10.67.178:51234 => null ([id: 0x9807d612, /193.10.67.178:51234])
+[13:21:49,328] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<2ba44723-be58-4cbe-bce3-008754a8e4a5>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:21:50,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:51,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:52,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:53,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:54,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:54,219] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<c207e7d5-c035-44b0-bf2c-87ecc51cc636>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:21:55,210] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:56,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:57,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:58,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:59,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:21:59,210] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<96a6eeb2-fed4-47aa-b316-12ed08c8c043>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:00,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:01,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:02,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:03,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:04,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:04,221] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<3e287c92-2dcf-42d1-8779-76511530bd46>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:05,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:06,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:07,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:08,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:09,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:09,212] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<45092f44-c005-4fb2-be40-3f22edbf0f2d>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:10,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:11,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:12,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:13,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:14,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:14,214] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<567535ea-8256-44d8-b360-aa9938328396>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:15,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:16,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:17,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:18,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:19,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:19,215] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<da998e54-9bfc-44e7-a7d2-961d75fd0ddd>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:20,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:21,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:22,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:23,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:24,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:24,217] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<a6dab5dd-9849-4666-8398-95c6cd7bf8e7>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:25,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:26,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:27,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:28,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:29,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:29,218] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<0b01c19e-3b75-4835-a385-ba6423daa739>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:30,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:31,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:32,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:33,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:34,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:34,219] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<bdb82210-3c85-4f85-9d27-142b33f49a6e>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:35,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:36,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:37,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:38,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:39,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:39,220] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<40fd333f-90ce-43f2-9079-67586ed28f5a>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:40,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:41,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:42,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:43,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:44,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:44,220] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<e8e43df6-e0e6-4ea1-a7ef-a6d0bceeb907>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:45,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:46,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:47,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:48,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:49,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:49,223] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<79523e12-3196-4813-8d68-4f1b6bfe6382>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:50,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:51,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:52,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:53,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:54,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:54,223] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<d3390fa6-5ac4-4ccd-94bd-fa3db2afeb31>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:22:55,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:56,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:57,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:58,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:59,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:22:59,227] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<06dfd00c-f78f-4e49-b1fc-c35e5d58daef>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:00,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:01,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:02,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:03,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:04,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:04,230] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<8203af58-da51-4158-bd92-d0fdc3030a83>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:05,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:06,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:07,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:08,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:09,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:09,234] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<0bba1eaf-88a6-4f4c-a89c-8b68080bc5f1>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:10,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:11,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:12,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:13,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:14,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:14,234] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<fd018ad0-676a-480f-aa4d-6576fd57a572>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:15,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:16,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:17,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:18,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:19,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:19,238] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<3dcadd25-ffde-4755-8b7b-cc1c1e565e56>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:20,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:21,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:22,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:23,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:24,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:24,239] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<9103e251-80a5-43c5-874f-6b2971856805>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:25,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:26,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:27,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:28,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:29,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:29,241] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<5d986288-a76f-47fc-a7e1-d65ddddd811c>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:30,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:31,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:32,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:33,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:34,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:34,245] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<4b04f270-b32b-407e-8df7-d871a8a80a3f>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:35,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:36,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:37,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:38,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:39,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:39,250] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<e5b5849e-64cb-41d7-a7f5-8a384b4380ae>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:40,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:41,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:42,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:43,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:44,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:44,250] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<4aa7f631-72e2-439d-aa99-40d11dccae3e>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:45,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:46,209] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:47,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:48,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:49,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:49,254] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<0b080184-1ce1-485b-aa0a-e01ae5dc73c2>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:50,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:51,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:52,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:53,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:54,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:54,254] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<da2cd56f-b87e-4a45-a7ef-b63a90c204e0>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:23:55,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:56,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:57,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:58,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:59,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:23:59,257] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<48f4a089-3e38-40a5-a78b-b7ec856bc68a>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:00,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:01,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:02,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:03,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:04,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:04,262] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<97b6411d-5152-45b8-879d-7620c7a40f3d>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:05,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:06,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:07,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:08,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:09,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:09,261] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<a2c4af06-de9e-49bf-ad85-d3d4cfbc1bc1>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:10,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:11,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:12,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:13,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:14,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:14,264] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<952e4ffd-8a38-45b3-972f-73ca66f36aa9>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:15,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:16,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:17,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:18,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:19,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:19,266] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<23bc1c1a-8dcb-422c-affb-ff1d910acc7b>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:20,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:21,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:22,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:23,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:24,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:24,267] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<f30ad02e-c32e-4d26-9fad-a4722dc4611e>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:25,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:26,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:27,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:28,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:29,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:29,272] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<d2252d91-5822-4f83-9c4f-cd8dcd18d08e>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:30,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:31,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:32,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:33,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:34,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:34,273] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<f855a14e-0716-4298-9712-b5d28fdabf00>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:35,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:36,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:37,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:38,209] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:39,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:39,275] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<1be8396a-11d1-4456-9e86-d30e274d1afd>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:40,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:41,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:42,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:43,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:44,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:44,280] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<a90c0456-5ed7-47e5-ba8e-a73b2285bde2>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:45,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:46,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:47,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:48,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:49,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:49,283] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<9f9597fe-c27a-481a-8bf7-4303df2595c1>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:50,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:51,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:52,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:53,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:54,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:54,285] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<0d9d8b4a-9ea7-426a-9da9-88cc9977c07b>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:24:55,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:56,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:57,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:58,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:59,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:24:59,290] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<0ce1c7c5-e35b-4154-8595-bac846d6e5b3>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:00,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:01,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:02,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:03,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:04,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:04,294] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<8db1bc92-558a-45c0-a553-95999090b73b>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:05,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:06,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:07,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:08,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:09,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:09,295] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<61ce0745-c728-48ea-a623-98d058889ecf>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:10,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:11,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:12,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:13,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:14,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:14,299] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<1f75950b-0ff8-4b64-af0f-475abaeaf414>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:15,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:16,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:17,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:18,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:19,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:19,303] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<837e6fae-8d38-48b4-ab04-86d5727772bf>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:20,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:21,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:22,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:23,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:24,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:24,303] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<49c12d1c-5c53-4289-868a-59d46b710ac1>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:25,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:26,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:27,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:28,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:29,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:29,307] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<92419a34-39b9-4863-8b2a-ac4b944c6d57>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:30,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:31,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:32,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:33,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:34,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:34,307] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<cd20c912-ec57-44c5-b884-75ad6b503270>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:35,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:36,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:37,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:38,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:39,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:39,307] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<e861301b-c6dd-4639-b0b9-efeb62412d40>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:40,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:41,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:42,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:43,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:44,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:44,308] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<7508a22e-fcde-4bde-87a0-644603cceddc>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:45,209] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:46,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:47,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:48,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:49,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:49,309] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<ed7206d7-c68b-446a-ac04-9173c114db84>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:50,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:51,209] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:52,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:53,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:54,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:54,310] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<bf99c9a7-51e6-4ee4-9d4b-a4505019e84d>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:25:55,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:56,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:57,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:58,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:59,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:25:59,312] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<5ac2e868-341b-4704-ac1e-ce83e76edf8b>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:00,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:01,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:02,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:03,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:04,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:04,314] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<4d099c18-6d38-45e6-8136-15c42461c25a>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:05,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:06,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:07,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:08,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:09,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:09,318] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<ab8a243e-7671-44c5-a1bf-5bb966b0d31e>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:10,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:11,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:12,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:13,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:14,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:14,322] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<0ee07840-dc6a-4e60-8bbb-52b1fe2494cc>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:15,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:16,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:17,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:18,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:19,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:19,326] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<0fa2b2c8-0ae7-4209-8164-77e4318ce2ab>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:20,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:21,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:22,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:23,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:24,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:24,332] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<e62ca97a-3ec7-4cc3-82ee-5ca8edc5d30c>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:25,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:26,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:27,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:28,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:29,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:29,336] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<677db06a-c7cc-47f7-a9bb-058c3f35250d>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:30,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:31,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:32,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:33,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:34,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:34,337] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<9de99616-9e07-434f-a58e-ea328b04f3c0>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:35,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:36,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:37,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:38,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:39,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:39,340] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<eeac0687-787c-4201-8a07-9bab381e5ae7>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:40,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:41,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:42,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:43,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:44,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:44,339] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<d7d17cf4-1db9-418c-8941-c50afeaf035b>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:45,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:46,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:47,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:48,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:49,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:49,342] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<9f31eaf8-9f1f-40c8-a0f3-6a996e6a5801>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:50,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:51,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:52,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:53,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:54,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:54,347] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<6124f0d4-c5b3-4bb5-973e-d69258def284>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:26:55,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:56,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:57,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:58,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:59,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:26:59,351] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<a18825ac-174d-42fe-a52c-0fda5220cf9e>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:00,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:01,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:02,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:03,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:04,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:04,352] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<dba71c07-b559-4789-9f90-44f0d0f7038b>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:05,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:06,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:07,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:08,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:09,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:09,356] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<cbe49cad-ee52-4fef-a9ed-5592e58d05f2>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:10,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:11,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:12,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:13,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:14,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:14,361] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<a39d57e9-fb7f-4b38-8b11-d40a2f23a175>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:15,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:16,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:17,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:18,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:19,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:19,363] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<499a3461-5708-41db-8022-54d41ec0f160>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:20,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:21,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:22,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:23,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:24,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:24,368] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<35a508de-7ce1-4bd4-a1b5-36e7ff073f7d>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:25,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:26,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:27,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:28,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:29,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:29,368] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<52392ab9-2895-48c8-bfce-0405028f5ae3>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:30,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:31,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:32,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:33,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:34,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:34,368] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<d571c5c5-7993-44ca-8b50-0fd80625b369>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:35,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:36,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:37,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:38,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:39,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:39,371] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<8b7bb772-f821-4a07-b9b3-67a390fcdbf2>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:40,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:41,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:42,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:43,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:44,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:44,374] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<746bd827-67a7-43bd-b3eb-e54ddca2771f>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:45,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:46,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:47,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:48,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:49,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:49,376] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<87ec4954-36fe-4613-b468-c5d670263fc8>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:50,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:51,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:52,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:53,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:54,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:54,378] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<5c85d475-9813-46cd-999e-21b60c7b23b7>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:27:55,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:56,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:57,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:58,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:59,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:27:59,382] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<a4fcbf89-443d-4d25-88c4-89170ae941be>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:00,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:01,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:02,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:03,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:04,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:04,383] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<d833b962-dc70-4ea0-8015-ab19c3da3958>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:05,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:06,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:07,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:08,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:09,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:09,384] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<2e72caeb-046f-44b3-9c41-c034cb4a7d99>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:10,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:11,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:12,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:13,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:14,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:14,387] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<3ce40b06-2701-4d3b-81a9-a9a77cd1eb59>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:15,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:16,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:17,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:18,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:19,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:19,391] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<281ce302-5de1-46b3-ac3f-a5793a1ac8f2>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:20,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:21,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:22,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:23,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:24,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:24,396] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<9d1576d9-3fa3-42e1-ae16-4efd038741d3>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:25,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:26,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:27,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:28,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:29,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:29,397] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<a755b96c-c991-41dd-8b15-30687141ab0e>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:30,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:31,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:32,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:33,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:34,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:34,402] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<23c9db8b-af83-4768-8e01-3467823b6779>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:35,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:36,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:37,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:38,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:39,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:39,406] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<2fd5ead2-f6eb-42f2-a3e8-96b443938894>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:40,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:41,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:42,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:43,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:44,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:44,408] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<0f41e8c6-e734-43d1-b301-357ab7b9e0a6>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:45,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:46,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:47,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:48,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:49,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:49,408] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<fa5d0c2b-901a-4ad1-ae59-52abede8c680>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:50,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:51,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:52,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:53,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:54,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:54,412] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<e5d7a613-245b-40a1-9b4a-924139054fe3>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:28:55,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:56,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:57,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:58,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:59,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:28:59,417] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<71e68ea1-e787-4664-8633-7a860b466853>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:00,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:01,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:02,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:03,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:04,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:04,420] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<3f67bd36-0457-48d6-9140-90ca8fa946c3>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:05,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:06,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:07,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:08,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:09,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:09,420] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<c6a5c407-5e6d-4eaf-a52a-840d1e11fdba>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:10,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:11,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:12,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:13,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:14,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:14,423] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<21a2c910-0da6-40fc-8d36-f80398909358>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:15,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:16,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:17,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:18,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:19,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:19,424] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<b6bd59e5-b39c-48bf-9566-365af18d6791>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:20,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:21,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:22,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:23,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:24,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:24,428] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<8cb3eeab-a668-42dd-ae77-811c2a04bae1>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:25,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:26,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:27,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:28,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:29,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:29,431] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<11b856e1-2f1d-43ff-8fcd-c8ee9c0306b6>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:30,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:31,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:32,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:33,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:34,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:34,436] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<09164149-ba9e-4a9b-b959-c812c30c44a1>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:35,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:36,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:37,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:38,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:39,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:39,439] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<f0e1fbb3-409f-4593-8c44-4477a479e2d7>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:40,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:41,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:42,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:43,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:44,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:44,439] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<bd59d24e-6789-4676-8b48-e906d6ed86b4>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:45,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:46,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:47,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:48,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:49,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:49,440] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<c1328e28-2c12-4515-be3a-4f4ae8c8024a>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:50,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:51,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:52,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:53,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:54,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:54,443] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<1f9d512f-bf66-49a6-9fb5-9c068396e069>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:29:55,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:56,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:57,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:58,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:59,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:29:59,444] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<d5654dc3-6d69-4172-bb8e-bc5b24b5b40b>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:30:00,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:01,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:02,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:03,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:04,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:04,449] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<0b47ba95-2037-48a3-85da-27888f02d4ca>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:30:05,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:06,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:07,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:08,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:09,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:09,454] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<1a6b43db-ff0b-4404-9aee-c2594829e564>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:30:10,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:11,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:12,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:13,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:14,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:14,458] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<62a7aa2b-08d3-44de-870a-5a75a82e4f8a>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:30:15,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:16,208] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:17,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:18,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:19,206] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:19,461] DEBUG {NettyNetwork@51234} Sending Datagram message TorrentGet.Request<204645ab-182a-44c9-8afc-5a127c8b0d4e>from:193.10.67.178:51234<2>to:193.10.67.178:41234<1> (51bytes)
+[13:30:20,210] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState
+[13:30:21,207] INFO  {TorrentComp} <nid:2, oid:1>TransferFSM - GetTorrentState

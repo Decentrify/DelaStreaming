@@ -17,8 +17,8 @@ Any value defined here will override the pom.xml file value but is only applicab
     </properties>
     <config-data xmlns="http://www.netbeans.org/ns/maven-config-data/1">
         <configurations>
-            <configuration id="uploader" profiles=""/>
-            <configuration id="downloader" profiles=""/>
+            <configuration id="hopsSender" profiles=""/>
+            <configuration id="hopsReceiver" profiles=""/>
         </configurations>
     </config-data>
 </project-shared-configuration>
