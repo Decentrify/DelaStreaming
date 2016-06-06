@@ -16,11 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr;
+package se.sics.gvod.stream.torrent;
+
+import se.sics.kompics.config.Config;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentMngr {
+public class TransferKCWrapper {
+
+    public final int hashsesPerMsg = 50;
+    public final int minAheadHashes = 10;
     
+    public TransferKCWrapper(Config config) {
+//        torrentId = new IntIdentifier(KConfigHelper.read(config, ExperimentKConfig.torrentId));
+    }
 }

@@ -45,16 +45,13 @@ public class VoDMngrComp extends ComponentDefinition {
     Negative<LibraryPort> libraryPort = provides(LibraryPort.class);
     Negative<TorrentPort> torrentPort = provides(TorrentPort.class);
     Negative<VideoPort> videoPort = provides(VideoPort.class);
-    Positive<VoDPort> vod = requires(VoDPort.class);
     //**************************INTERNAL_STATE**********************************
     private final LibraryMngr libMngr;
-    private final TorrentMngr torrentMngr;
     
     public VoDMngrComp(Init init) {
         LOG.info("{}initiating...", logPrefix);
         
         libMngr = new LibraryMngr(null, null);
-        torrentMngr = new TorrentMngr();
     
         subscribe(handleStart, control);
         subscribe(handleLibraryContent, libraryPort);
@@ -75,36 +72,36 @@ public class VoDMngrComp extends ComponentDefinition {
     
     Handler handleLibraryContent = new Handler<LibraryContentsEvent.Request>() {
         @Override
-        public void handle(LibraryContentsEvent.Request event) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        public void handle(LibraryContentsEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
         }
     };
     
      Handler handleLibraryElement = new Handler<LibraryElementEvent.Request>() {
         @Override
-        public void handle(LibraryElementEvent.Request event) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        public void handle(LibraryElementEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
         }
     };
     
     Handler handleTorrentUpload = new Handler<TorrentUploadEvent.Request>() {
         @Override
-        public void handle(TorrentUploadEvent.Request event) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        public void handle(TorrentUploadEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
         }
     };
     
     Handler handleTorrentDownload = new Handler<TorrentDownloadEvent.Request>() {
         @Override
-        public void handle(TorrentDownloadEvent.Request event) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        public void handle(TorrentDownloadEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
         }
     };
     
     Handler handleTorrentStop = new Handler<TorrentStopEvent.Request>() {
         @Override
-        public void handle(TorrentStopEvent.Request event) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        public void handle(TorrentStopEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
         }
     };
     

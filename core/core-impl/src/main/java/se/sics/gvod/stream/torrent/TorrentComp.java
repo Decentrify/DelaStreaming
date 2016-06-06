@@ -63,7 +63,8 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
 import se.sics.ktoolbox.util.managedStore.core.HashMngr;
 import se.sics.ktoolbox.util.managedStore.core.ManagedStoreHelper;
-import se.sics.ktoolbox.util.managedStore.core.impl.TransferMngr;
+import se.sics.ktoolbox.util.managedStore.core.TransferMngr;
+import se.sics.ktoolbox.util.managedStore.core.impl.SimpleTransferMngr;
 import se.sics.ktoolbox.util.managedStore.core.impl.util.PrepDwnlInfo;
 import se.sics.ktoolbox.util.managedStore.core.util.Torrent;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -227,7 +228,7 @@ public class TorrentComp extends ComponentDefinition {
         private void moveToUploadTorrentState() {
             Torrent torrent = torrentDetails.getTorrent();
             Triplet<FileMngr, HashMngr, TransferMngr> torrentMngrs = torrentDetails.torrentMngrs(torrent);
-            UploadTorrent nextState = new UploadTorrent(torrent, torrentMngrs.getValue0(), torrentMngrs.getValue1());
+            UploadTorrent nextState = new UploadTorrent(torrent, torrentMngrs.getValue0(), torrentMngrs.getValue1(), true);
             nextState.setup();
             cleanup();
             transferFSM = nextState;
@@ -347,13 +348,18 @@ public class TorrentComp extends ComponentDefinition {
         final Torrent torrent;
         final FileMngr fileMngr;
         final HashMngr hashMngr;
+        
+        //hack
+        final boolean uploadOnly;
 
-        public UploadTorrent(Torrent torrent, FileMngr fileMngr, HashMngr hashMngr) {
+        public UploadTorrent(Torrent torrent, FileMngr fileMngr, HashMngr hashMngr, boolean uploadOnly) {
             this.torrent = torrent;
             this.fileMngr = fileMngr;
             this.hashMngr = hashMngr;
+            this.uploadOnly = uploadOnly;
         }
 
+        //TODO Alex fix me - setup and tear down of resources - Download/Upload phase
         @Override
         public void setup() {
             subscribe(handleTorrentRequest, networkPort);
@@ -363,6 +369,9 @@ public class TorrentComp extends ComponentDefinition {
 
         @Override
         public void cleanup() {
+            if(uploadOnly) {
+                fileMngr.tearDown();
+            }
             unsubscribe(handleTorrentRequest, networkPort);
             unsubscribe(handleHashRequest, networkPort);
             unsubscribe(handlePieceRequest, networkPort);
@@ -420,10 +429,10 @@ public class TorrentComp extends ComponentDefinition {
 
     class DownloadTorrent implements TransferFSM {
 
-        static final int hashsesPerMsg = 50;
+        static final int hashsesPerMsg = 1;
         static final int hashMsgPerRound = 1;
         static final int minBlockPlayBuffer = 1;
-        static final int minAheadHashes = 10;
+        static final int minAheadHashes = 1;
         static final long downloadCheckPeriod = 1000;
 
         final TorrentDetails torrentDetails; //in case I want to reshape the upload phase once download is completed;
@@ -441,7 +450,7 @@ public class TorrentComp extends ComponentDefinition {
             this.torrentDetails = torrentDetails;
             this.torrent = torrent;
             Triplet<FileMngr, HashMngr, TransferMngr> torrentMngrs = torrentDetails.torrentMngrs(torrent);
-            upload = new UploadTorrent(torrent, torrentMngrs.getValue0(), torrentMngrs.getValue1());
+            upload = new UploadTorrent(torrent, torrentMngrs.getValue0(), torrentMngrs.getValue1(), false);
             transferMngr = torrentMngrs.getValue2();
             this.dwnlConn = dwnlConn;
         }
@@ -464,6 +473,7 @@ public class TorrentComp extends ComponentDefinition {
         }
 
         private void internalCleanup() {
+            transferMngr.tearDown();
             unsubscribe(handlePublishConn, connectionPort);
             unsubscribe(handleHashResponse, networkPort);
             unsubscribe(handlePieceResponse, networkPort);
@@ -481,8 +491,8 @@ public class TorrentComp extends ComponentDefinition {
         public void report() {
             int pendingMsg = pendingPieces.size() + pendingHashes.size();
 //            Pair<Integer, Integer> dwnlReport = dwnlConn.mngr.getLoad();
-            LOG.info("{}TransferFSM Download TransferMngr:{}",
-                    new Object[]{logPrefix, transferMngr.isComplete()});
+            LOG.info("{}TransferFSM Download TransferMngr:{},{}",
+                    new Object[]{logPrefix, transferMngr.contiguousBlocks(0), transferMngr.percentageComplete()});
             upload.report();
         }
 
@@ -553,14 +563,14 @@ public class TorrentComp extends ComponentDefinition {
                                 transferMngr.writePiece(content.pieceId, content.piece);
                                 dwnlConn.mngr.completed(target, content);
                                 download();
-                                return;
+                                break;
                             case TIMEOUT:
                             case BUSY:
                                 LOG.debug("{}BUSY/TIMEOUT piece:{}", logPrefix, content.pieceId);
                                 transferMngr.resetPiece(content.pieceId);
                                 dwnlConn.mngr.timedOut(target);
                                 download();
-                                return;
+                                break;
                             default:
                                 LOG.warn("{} illegal status:{}, ignoring", new Object[]{logPrefix, content.status});
                         }

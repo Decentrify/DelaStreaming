@@ -16,23 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.core.util;
+package se.sics.gvod.stream.torrent;
 
-import org.javatuples.Triplet;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.managedStore.core.FileMngr;
-import se.sics.ktoolbox.util.managedStore.core.HashMngr;
-import se.sics.ktoolbox.util.managedStore.core.TransferMngr;
-import se.sics.ktoolbox.util.managedStore.core.util.Torrent;
+import se.sics.ktoolbox.util.config.KConfigOption;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface TorrentDetails {
-    public Identifier getOverlayId();
-    
-    public boolean download();
-    public Torrent getTorrent();
-    
-    public Triplet<FileMngr, HashMngr, TransferMngr> torrentMngrs(Torrent torrent);
+public class TransferKConfig {
+    public static final KConfigOption.Basic<Integer> hashesPerMsg = new KConfigOption.Basic("transfer.hashesPerMsg", Integer.class);
+    public static final KConfigOption.Basic<Integer> minAheadHashes = new KConfigOption.Basic("transfer.minAheadHashes", Integer.class);
 }

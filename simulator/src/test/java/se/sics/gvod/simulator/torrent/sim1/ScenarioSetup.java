@@ -52,8 +52,9 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.identifiable.basic.OverlayIdFactory;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
 import se.sics.ktoolbox.util.managedStore.core.HashMngr;
+import se.sics.ktoolbox.util.managedStore.core.TransferMngr;
+import se.sics.ktoolbox.util.managedStore.core.impl.SimpleTransferMngr;
 import se.sics.ktoolbox.util.managedStore.core.impl.StorageMngrFactory;
-import se.sics.ktoolbox.util.managedStore.core.impl.TransferMngr;
 import se.sics.ktoolbox.util.managedStore.core.util.FileInfo;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.managedStore.core.util.Torrent;
@@ -204,8 +205,7 @@ public class ScenarioSetup {
             try {
                 FileMngr fileMngr = StorageMngrFactory.completeMMFileMngr(uploadFilePath, torrent.fileInfo.size, blockSize, torrent.torrentInfo.pieceSize);
                 HashMngr hashMngr = StorageMngrFactory.completeMMHashMngr(uploadHashPath, hashAlg, hashFileSize, hashSize);
-                TransferMngr transferMngr = null;
-                return Triplet.with(fileMngr, hashMngr, transferMngr);
+                return Triplet.with(fileMngr, hashMngr, (TransferMngr) null);
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
             }
@@ -238,7 +238,7 @@ public class ScenarioSetup {
             try {
                 FileMngr fileMngr = StorageMngrFactory.incompleteMMFileMngr(downloadFilePath, torrent.fileInfo.size, blockSize, torrent.torrentInfo.pieceSize);
                 HashMngr hashMngr = StorageMngrFactory.incompleteMMHashMngr(downloadHashPath, hashAlg, hashFileSize, hashSize);
-                TransferMngr transferMngr = new TransferMngr(torrent, hashMngr, fileMngr);
+                TransferMngr transferMngr = new SimpleTransferMngr(torrent, hashMngr, fileMngr);
                 return Triplet.with(fileMngr, hashMngr, transferMngr);
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
