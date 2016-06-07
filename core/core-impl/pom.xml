@@ -39,7 +39,12 @@
             <version>${ktoolbox.version}</version>
         </dependency>
         
-        
+        <!-- TODO Alex - remove -->
+        <dependency>
+            <groupId>se.sics.ktoolbox</groupId>
+            <artifactId>hops</artifactId>
+            <version>${ktoolbox.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>

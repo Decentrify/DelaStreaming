@@ -18,6 +18,8 @@
  */
 package se.sics.gvod.mngr;
 
+import se.sics.gvod.mngr.event.HopsTorrentDownloadEvent;
+import se.sics.gvod.mngr.event.HopsTorrentUploadEvent;
 import se.sics.gvod.mngr.event.TorrentDownloadEvent;
 import se.sics.gvod.mngr.event.TorrentStopEvent;
 import se.sics.gvod.mngr.event.TorrentUploadEvent;
@@ -34,5 +36,10 @@ public class TorrentPort extends PortType {
         indication(TorrentUploadEvent.Response.class);
         request(TorrentStopEvent.Request.class);
         indication(TorrentStopEvent.Response.class);
+        
+        request(HopsTorrentDownloadEvent.Request.class);
+        indication(HopsTorrentDownloadEvent.Response.class);
+        request(HopsTorrentUploadEvent.Request.class);
+        indication(HopsTorrentUploadEvent.Response.class);
     }
 }

@@ -19,6 +19,7 @@
 package se.sics.gvod.mngr.util;
 
 import com.google.common.base.Optional;
+import se.sics.gvod.mngr.util.TorrentStatus;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
