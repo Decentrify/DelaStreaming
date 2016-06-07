@@ -16,23 +16,37 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr;
+package se.sics.gvod.mngr.util;
 
-import se.sics.gvod.mngr.event.LibraryAddEvent;
-import se.sics.gvod.mngr.event.LibraryContentsEvent;
-import se.sics.gvod.mngr.event.LibraryElementGetEvent;
-import se.sics.kompics.PortType;
+import se.sics.ktoolbox.util.Either;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryPort extends PortType {
-    {
-        request(LibraryContentsEvent.Request.class);
-        indication(LibraryContentsEvent.Response.class);
-        request(LibraryElementGetEvent.Request.class);
-        indication(LibraryElementGetEvent.Response.class);
-        request(LibraryAddEvent.Request.class);
-        indication(LibraryAddEvent.Response.class);
+public class LibraryResult {
+    private final Either<Boolean, String> p;
+    
+    private LibraryResult() {
+        p = Either.left(true);
+    }
+    
+    private LibraryResult(String failCause) {
+        p = Either.right(failCause);
+    }
+    
+    public static LibraryResult createSuccess() {
+        return new LibraryResult();
+    }
+    
+    public static LibraryResult createFail(String failCause) {
+        return new LibraryResult(failCause);
+    }
+    
+    public boolean isSuccess() {
+        return p.isLeft();
+    }
+    
+    public String failCause() {
+        return p.getRight();
     }
 }

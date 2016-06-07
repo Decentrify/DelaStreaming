@@ -19,6 +19,7 @@
 package se.sics.gvod.mngr.event;
 
 import se.sics.gvod.mngr.util.FileInfo;
+import se.sics.gvod.mngr.util.LibraryElementSummary;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.kompics.Direct;
@@ -28,20 +29,18 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryElementEvent {
+public class LibraryElementGetEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
-        public final String fileName;
-        public final Identifier overlayId;
+        public final LibraryElementSummary les;
         
-        public Request(Identifier eventId,String fileName, Identifier overlayId) {
+        public Request(Identifier eventId, LibraryElementSummary les) {
             this.eventId = eventId;
-            this.fileName = fileName;
-            this.overlayId = overlayId;
+            this.les = les;
         }
         
-        public Request(String fileName, Identifier overlayId) {
-            this(UUIDIdentifier.randomId(), fileName, overlayId);
+        public Request(LibraryElementSummary les) {
+            this(UUIDIdentifier.randomId(), les);
         }
         
         public Response success(FileInfo fileInfo, TorrentInfo torrentInfo) {

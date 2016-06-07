@@ -16,23 +16,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr;
+package se.sics.gvod.mngr.util;
 
-import se.sics.gvod.mngr.event.LibraryAddEvent;
-import se.sics.gvod.mngr.event.LibraryContentsEvent;
-import se.sics.gvod.mngr.event.LibraryElementGetEvent;
-import se.sics.kompics.PortType;
+import com.google.common.base.Optional;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryPort extends PortType {
-    {
-        request(LibraryContentsEvent.Request.class);
-        indication(LibraryContentsEvent.Response.class);
-        request(LibraryElementGetEvent.Request.class);
-        indication(LibraryElementGetEvent.Response.class);
-        request(LibraryAddEvent.Request.class);
-        indication(LibraryAddEvent.Response.class);
+public class LibraryElementSummary {
+    public final String uri;
+    public final String name;
+    public final TorrentStatus status;
+    public final Optional<Identifier> overlayId;
+    
+    public LibraryElementSummary(String uri, String name, TorrentStatus status, Optional<Identifier> overlayId) {
+        this.uri = uri;
+        this.name = name;
+        this.status = status;
+        this.overlayId = overlayId;
     }
 }

@@ -22,12 +22,14 @@ package se.sics.gvod.mngr.util;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class FileInfo {
+    public final String fileType;
     public final String name;
     public final String uri;
     public final long size;
     public final String shortDescription;
     
-    public FileInfo(String name, String uri, long size, String shortDescription) {
+    public FileInfo(String fileType, String name, String uri, long size, String shortDescription) {
+        this.fileType = fileType;
         this.name = name;
         this.uri = uri;
         this.size = size;

@@ -20,7 +20,6 @@ package se.sics.gvod.mngr.event;
 
 import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.Result;
-import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
