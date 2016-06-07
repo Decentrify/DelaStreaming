@@ -18,6 +18,7 @@
  */
 package se.sics.gvod.mngr;
 
+import se.sics.gvod.mngr.event.HopsContentsEvent;
 import se.sics.gvod.mngr.event.LibraryAddEvent;
 import se.sics.gvod.mngr.event.LibraryContentsEvent;
 import se.sics.gvod.mngr.event.LibraryElementGetEvent;
@@ -34,5 +35,8 @@ public class LibraryPort extends PortType {
         indication(LibraryElementGetEvent.Response.class);
         request(LibraryAddEvent.Request.class);
         indication(LibraryAddEvent.Response.class);
+        
+        request(HopsContentsEvent.Request.class);
+        indication(HopsContentsEvent.Response.class);
     }
 }

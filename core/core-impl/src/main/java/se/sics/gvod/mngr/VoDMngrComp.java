@@ -33,6 +33,7 @@ import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.util.TorrentDetails;
+import se.sics.gvod.mngr.event.HopsContentsEvent;
 import se.sics.gvod.mngr.event.HopsTorrentDownloadEvent;
 import se.sics.gvod.mngr.event.HopsTorrentUploadEvent;
 import se.sics.gvod.mngr.event.LibraryAddEvent;
@@ -106,6 +107,7 @@ public class VoDMngrComp extends ComponentDefinition {
         subscribe(handleVideoPlay, videoPort);
         subscribe(handleVideoStop, videoPort);
 
+        subscribe(handleHopsContents, libraryPort);
         subscribe(handleHopsTorrentUpload, torrentPort);
         subscribe(handleHopsTorrentDownload, torrentPort);
     }
@@ -120,152 +122,158 @@ public class VoDMngrComp extends ComponentDefinition {
     Handler handleLibraryContent = new Handler<LibraryContentsEvent.Request>() {
         @Override
         public void handle(LibraryContentsEvent.Request req) {
-            LOG.info("{}received:{}", logPrefix, req);
-            List<LibraryElementSummary> lesList = new ArrayList<>();
-            for (Map.Entry<Identifier, Pair<FileInfo, TorrentInfo>> e : libraryContents.entrySet()) {
-                LibraryElementSummary les = new LibraryElementSummary(e.getValue().getValue0().uri,
-                        e.getValue().getValue0().name, e.getValue().getValue1().status, Optional.of(e.getKey()));
-                lesList.add(les);
-            }
-            LibraryContentsEvent.Response resp = req.success(lesList);
-            LOG.info("{}answering:{}", logPrefix, resp);
-            answer(req, resp);
+            throw new UnsupportedOperationException();
+//            LOG.info("{}received:{}", logPrefix, req);
+//            List<LibraryElementSummary> lesList = new ArrayList<>();
+//            for (Map.Entry<Identifier, Pair<FileInfo, TorrentInfo>> e : libraryContents.entrySet()) {
+//                LibraryElementSummary les = new LibraryElementSummary(e.getValue().getValue0().uri,
+//                        e.getValue().getValue0().name, e.getValue().getValue1().status, Optional.of(e.getKey()));
+//                lesList.add(les);
+//            }
+//            LibraryContentsEvent.Response resp = req.success(lesList);
+//            LOG.info("{}answering:{}", logPrefix, resp);
+//            answer(req, resp);
         }
     };
 
     Handler handleLibraryElement = new Handler<LibraryElementGetEvent.Request>() {
         @Override
         public void handle(LibraryElementGetEvent.Request req) {
-            LOG.info("{}received:{}", logPrefix, req);
-            if (libraryContents.containsKey(req.les.overlayId.get())) {
-                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.les.overlayId.get());
-                LibraryElementGetEvent.Response resp = req.success(elementInfo.getValue0(), elementInfo.getValue1());
-                LOG.info("{}answering:{}", logPrefix, resp);
-                answer(req, resp);
-            } else {
-                LibraryElementGetEvent.Response resp = req.badRequest("missing library element");
-                LOG.info("{}answering:{}", logPrefix, resp);
-                answer(req, resp);
-            }
+            throw new UnsupportedOperationException();
+//            LOG.info("{}received:{}", logPrefix, req);
+//            if (libraryContents.containsKey(req.les.overlayId.get())) {
+//                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.les.overlayId.get());
+//                LibraryElementGetEvent.Response resp = req.success(elementInfo.getValue0(), elementInfo.getValue1());
+//                LOG.info("{}answering:{}", logPrefix, resp);
+//                answer(req, resp);
+//            } else {
+//                LibraryElementGetEvent.Response resp = req.badRequest("missing library element");
+//                LOG.info("{}answering:{}", logPrefix, resp);
+//                answer(req, resp);
+//            }
         }
     };
 
     Handler handleLibraryAdd = new Handler<LibraryAddEvent.Request>() {
         @Override
         public void handle(LibraryAddEvent.Request req) {
-            LOG.info("{}received:{}", logPrefix, req);
-            if (!libraryContents.containsKey(req.overlayId)) {
-                Map<Identifier, KAddress> partners = new HashMap<>();
-                TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.NONE, partners, 0, 0, 0);
-                libraryContents.put(req.overlayId, Pair.with(req.fileInfo, torrentInfo));
-                LibraryAddEvent.Response resp = req.success();
-                LOG.info("{}answering:{}", logPrefix, resp);
-                answer(req, resp);
-            } else {
-                LibraryAddEvent.Response resp = req.badRequest("element already in library");
-                LOG.info("{}answering:{}", logPrefix, resp);
-                answer(req, resp);
-            }
+            throw new UnsupportedOperationException();
+//            LOG.info("{}received:{}", logPrefix, req);
+//            if (!libraryContents.containsKey(req.overlayId)) {
+//                Map<Identifier, KAddress> partners = new HashMap<>();
+//                TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.NONE, partners, 0, 0, 0);
+//                libraryContents.put(req.overlayId, Pair.with(req.fileInfo, torrentInfo));
+//                LibraryAddEvent.Response resp = req.success();
+//                LOG.info("{}answering:{}", logPrefix, resp);
+//                answer(req, resp);
+//            } else {
+//                LibraryAddEvent.Response resp = req.badRequest("element already in library");
+//                LOG.info("{}answering:{}", logPrefix, resp);
+//                answer(req, resp);
+//            }
         }
     };
 
     Handler handleTorrentUpload = new Handler<TorrentUploadEvent.Request>() {
         @Override
         public void handle(TorrentUploadEvent.Request req) {
-            LOG.info("{}received:{}", logPrefix, req);
-            TorrentUploadEvent.Response resp;
-            if (libraryContents.containsKey(req.overlayId)) {
-                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.overlayId);
-                TorrentStatus status = elementInfo.getValue1().status;
-                switch (status) {
-                    case UPLOADING:
-                        resp = req.success();
-                        break;
-                    case DOWNLOADING:
-                        resp = req.badRequest("can't upload file with none status");
-                        break;
-                    case NONE:
-                        Map<Identifier, KAddress> partners = new HashMap<>();
-                        TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.UPLOADING, partners, 0, 0, 0);
-                        libraryContents.put(req.overlayId, Pair.with(elementInfo.getValue0(), torrentInfo));
-                        createMockUploadHopsTorrent();
-                        resp = req.success();
-                        break;
-                    default:
-                        resp = req.fail("missing logic");
-                }
-            } else {
-                resp = req.badRequest("no such file in library");
-            }
-            LOG.info("{}answering:{}", logPrefix, resp);
-            answer(req, resp);
+            throw new UnsupportedOperationException();
+//            LOG.info("{}received:{}", logPrefix, req);
+//            TorrentUploadEvent.Response resp;
+//            if (libraryContents.containsKey(req.overlayId)) {
+//                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.overlayId);
+//                TorrentStatus status = elementInfo.getValue1().status;
+//                switch (status) {
+//                    case UPLOADING:
+//                        resp = req.success();
+//                        break;
+//                    case DOWNLOADING:
+//                        resp = req.badRequest("can't upload file with none status");
+//                        break;
+//                    case NONE:
+//                        Map<Identifier, KAddress> partners = new HashMap<>();
+//                        TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.UPLOADING, partners, 0, 0, 0);
+//                        libraryContents.put(req.overlayId, Pair.with(elementInfo.getValue0(), torrentInfo));
+//                        createMockUploadHopsTorrent();
+//                        resp = req.success();
+//                        break;
+//                    default:
+//                        resp = req.fail("missing logic");
+//                }
+//            } else {
+//                resp = req.badRequest("no such file in library");
+//            }
+//            LOG.info("{}answering:{}", logPrefix, resp);
+//            answer(req, resp);
         }
     };
 
     Handler handleTorrentDownload = new Handler<TorrentDownloadEvent.Request>() {
         @Override
         public void handle(TorrentDownloadEvent.Request req) {
-            LOG.info("{}received:{}", logPrefix, req);
-            TorrentDownloadEvent.Response resp;
-
-            if (!libraryContents.containsKey(req.overlayId)) {
-                FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.fileName, "", 0, "");
-                Map<Identifier, KAddress> partners = new HashMap<>();
-                TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.DOWNLOADING, partners, 0, 0, 0);
-                libraryContents.put(req.overlayId, Pair.with(fileInfo, torrentInfo));
-                createMockDownloadHopsTorrent();
-                resp = req.success();
-            } else {
-                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.overlayId);
-                TorrentStatus status = elementInfo.getValue1().status;
-                switch (status) {
-                    case UPLOADING:
-                        resp = req.badRequest("can't download file with uploading status");
-                        break;
-                    case DOWNLOADING:
-                        resp = req.success();
-                        break;
-                    case NONE:
-                        resp = req.badRequest("can't download file with none status");
-                        break;
-                    default:
-                        resp = req.fail("missing logic");
-                }
-            }
-            LOG.info("{}answering:{}", logPrefix, resp);
-            answer(req, resp);
+            throw new UnsupportedOperationException();
+//            LOG.info("{}received:{}", logPrefix, req);
+//            TorrentDownloadEvent.Response resp;
+//
+//            if (!libraryContents.containsKey(req.overlayId)) {
+//                FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.fileName, "", 0, "");
+//                Map<Identifier, KAddress> partners = new HashMap<>();
+//                TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.DOWNLOADING, partners, 0, 0, 0);
+//                libraryContents.put(req.overlayId, Pair.with(fileInfo, torrentInfo));
+//                createMockDownloadHopsTorrent();
+//                resp = req.success();
+//            } else {
+//                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.overlayId);
+//                TorrentStatus status = elementInfo.getValue1().status;
+//                switch (status) {
+//                    case UPLOADING:
+//                        resp = req.badRequest("can't download file with uploading status");
+//                        break;
+//                    case DOWNLOADING:
+//                        resp = req.success();
+//                        break;
+//                    case NONE:
+//                        resp = req.badRequest("can't download file with none status");
+//                        break;
+//                    default:
+//                        resp = req.fail("missing logic");
+//                }
+//            }
+//            LOG.info("{}answering:{}", logPrefix, resp);
+//            answer(req, resp);
         }
     };
 
     Handler handleTorrentStop = new Handler<TorrentStopEvent.Request>() {
         @Override
         public void handle(TorrentStopEvent.Request req) {
-            LOG.info("{}received:{}", logPrefix, req);
-            TorrentStopEvent.Response resp;
-            if (libraryContents.containsKey(req.overlayId)) {
-                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.overlayId);
-                switch (elementInfo.getValue1().status) {
-                    case NONE:
-                        resp = req.badRequest("can't stop file with none status");
-                        break;
-                    case UPLOADING:
-                        Map<Identifier, KAddress> partners = new HashMap<>();
-                        TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.NONE, partners, 0, 0, 0);
-                        libraryContents.put(req.overlayId, Pair.with(elementInfo.getValue0(), torrentInfo));
-                        resp = req.success();
-                        break;
-                    case DOWNLOADING:
-                        libraryContents.remove(req.overlayId);
-                        resp = req.success();
-                        break;
-                    default:
-                        resp = req.badRequest("missing logic");
-                }
-            } else {
-                resp = req.badRequest("no such file in library");
-            }
-            LOG.info("{}answering:{}", logPrefix, resp);
-            answer(req, resp);
+            throw new UnsupportedOperationException();
+//            LOG.info("{}received:{}", logPrefix, req);
+//            TorrentStopEvent.Response resp;
+//            if (libraryContents.containsKey(req.overlayId)) {
+//                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.overlayId);
+//                switch (elementInfo.getValue1().status) {
+//                    case NONE:
+//                        resp = req.badRequest("can't stop file with none status");
+//                        break;
+//                    case UPLOADING:
+//                        Map<Identifier, KAddress> partners = new HashMap<>();
+//                        TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.NONE, partners, 0, 0, 0);
+//                        libraryContents.put(req.overlayId, Pair.with(elementInfo.getValue0(), torrentInfo));
+//                        resp = req.success();
+//                        break;
+//                    case DOWNLOADING:
+//                        libraryContents.remove(req.overlayId);
+//                        resp = req.success();
+//                        break;
+//                    default:
+//                        resp = req.badRequest("missing logic");
+//                }
+//            } else {
+//                resp = req.badRequest("no such file in library");
+//            }
+//            LOG.info("{}answering:{}", logPrefix, resp);
+//            answer(req, resp);
         }
     };
 
@@ -283,6 +291,21 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
+    Handler handleHopsContents = new Handler<HopsContentsEvent.Request>() {
+        @Override
+        public void handle(HopsContentsEvent.Request req) {
+            LOG.info("{}received:{}", logPrefix, req);
+            List<LibraryElementSummary> lesList = new ArrayList<>();
+            for (Map.Entry<Identifier, Pair<FileInfo, TorrentInfo>> e : libraryContents.entrySet()) {
+                LibraryElementSummary les = new LibraryElementSummary(e.getValue().getValue0().name, e.getValue().getValue1().status, e.getKey());
+                lesList.add(les);
+            }
+            HopsContentsEvent.Response resp = req.success(lesList);
+            LOG.info("{}answering:{}", logPrefix, resp);
+            answer(req, resp);
+        }
+    };
+
     Handler handleHopsTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
         @Override
         public void handle(HopsTorrentUploadEvent.Request req) {
@@ -292,9 +315,11 @@ public class VoDMngrComp extends ComponentDefinition {
                 resp = req.badRequest("file in library");
             } else {
                 Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.torrentId);
-                TorrentStatus status = elementInfo.getValue1().status;
-                if (status == null) {
+                TorrentStatus status;
+                if (elementInfo == null) {
                     status = TorrentStatus.NONE;
+                } else {
+                    status = elementInfo.getValue1().status;
                 }
                 switch (status) {
                     case UPLOADING:

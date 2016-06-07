@@ -18,24 +18,19 @@
  */
 package se.sics.gvod.mngr.util;
 
-import com.google.common.base.Optional;
-import se.sics.gvod.mngr.util.TorrentStatus;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LibraryElementSummary {
-    public final String uri;
     public final String name;
     public final TorrentStatus status;
-    public final Optional<Identifier> overlayId;
+    public final Identifier torrentId;
     
-    public LibraryElementSummary(String uri, String name, TorrentStatus status, Optional<Identifier> overlayId) {
-        this.uri = uri;
+    public LibraryElementSummary(String name, TorrentStatus status, Identifier torrentId) {
         this.name = name;
         this.status = status;
-        this.overlayId = overlayId;
+        this.torrentId = torrentId;
     }
 }
