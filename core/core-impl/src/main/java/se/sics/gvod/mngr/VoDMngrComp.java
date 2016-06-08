@@ -18,7 +18,6 @@
  */
 package se.sics.gvod.mngr;
 
-import com.google.common.base.Optional;
 import com.google.common.primitives.Ints;
 import java.io.File;
 import java.net.InetAddress;
@@ -27,7 +26,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
 import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
@@ -89,6 +87,7 @@ public class VoDMngrComp extends ComponentDefinition {
     private final KAddress selfAdr;
     //**************************INTERNAL_STATE**********************************
     private Map<Identifier, Pair<FileInfo, TorrentInfo>> libraryContents = new HashMap<>();
+    private Map<Identifier, Component> components = new HashMap<>();
     private Component torrent;
 
     public VoDMngrComp(Init init) {
@@ -334,7 +333,7 @@ public class VoDMngrComp extends ComponentDefinition {
                         Map<Identifier, KAddress> partners = new HashMap<>();
                         TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.UPLOADING, partners, 0, 0, 0);
                         libraryContents.put(req.torrentId, Pair.with(fileInfo, torrentInfo));
-//                        uploadHopsTorrent(req.torrentId, req.fileName, req.dirPath, hopsURL);
+                        uploadHopsTorrent(req.torrentId, req.fileName, req.dirPath, hopsURL);
                         resp = req.success();
                         break;
                     default:
@@ -390,6 +389,7 @@ public class VoDMngrComp extends ComponentDefinition {
 
         StreamHostComp.ExtPort shcExtPorts = new StreamHostComp.ExtPort(extPorts.timerPort, extPorts.networkPort);
         torrent = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, new ArrayList<KAddress>()));
+        components.put(torrentId, torrent);
         trigger(Start.event, torrent.control());
     }
 
@@ -404,7 +404,7 @@ public class VoDMngrComp extends ComponentDefinition {
                 Map<Identifier, KAddress> partners = new HashMap<>();
                 TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.DOWNLOADING, partners, 0, 0, 0);
                 libraryContents.put(req.torrentId, Pair.with(fileInfo, torrentInfo));
-//                downloadHopsTorrent(req.torrentId, req.fileName, req.dirPath, req.hopsIp + ":" + req.hopsPort, req.partners);
+                downloadHopsTorrent(req.torrentId, req.fileName, req.dirPath, req.hopsIp + ":" + req.hopsPort, req.partners);
                 resp = req.success();
             } else {
                 Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.torrentId);
@@ -460,6 +460,7 @@ public class VoDMngrComp extends ComponentDefinition {
         };
         StreamHostComp.ExtPort shcExtPorts = new StreamHostComp.ExtPort(extPorts.timerPort, extPorts.networkPort);
         torrent = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, partners));
+        components.put(torrentId, torrent);
         trigger(Start.event, torrent.control());
     }
 
