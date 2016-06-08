@@ -18,10 +18,13 @@
  */
 package se.sics.gvod.stream.system.hops;
 
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Random;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 
 /**
@@ -31,52 +34,40 @@ public class SetupExperiment {
 
     final static int pieceSize = 1024;
     final static int piecesPerBlock = 1024;
-    final static int blockSize = pieceSize * piecesPerBlock;
-    final static long fileSize = 1024 * 1024 * 400 + 1024 * 100 + 100;
+    final static int nrBlocks = 40;
+    final static long fileSize = piecesPerBlock * pieceSize * nrBlocks + pieceSize * 100;
 
     public static void main(String[] args) throws IOException, HashUtil.HashBuilderException {
-        String experimentDirPath = "./src/main/resources/torrent/";
-        String uploadDirPath = experimentDirPath + "/uploader";
-        File uploadDir = new File(uploadDirPath);
-        if (!uploadDir.exists()) {
-            uploadDir.mkdirs();
-        } else {
-            uploadDir.delete();
-            uploadDir.mkdir();
-        }
+        String hopsURL = "bbc1.sics.se:26801";
+        Configuration conf = new Configuration();
+        conf.set("fs.defaultFS", hopsURL);
+        DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(conf);
 
-        String downloadDirPath = experimentDirPath + "/downloader";
-        File downloadDir = new File(downloadDirPath);
-        if (!downloadDir.exists()) {
-            downloadDir.mkdir();
+        String path = "/experiment";
+        if (!fs.isDirectory(new Path(path))) {
+            fs.mkdirs(new Path(path));
         } else {
-            downloadDir.delete();
-            downloadDir.mkdir();
+            fs.delete(new Path(path), true);
+            fs.mkdirs(new Path(path));
         }
+        String uploadDirPath = path + "/upload";
+        fs.mkdirs(new Path(uploadDirPath));
+        String downloadDirPath = path + "/download";
+        fs.mkdirs(new Path(downloadDirPath));
 
-        File dataFile = new File(uploadDirPath + "/file");
-        dataFile.createNewFile();
+        String dataFile = uploadDirPath + "/file";
         Random rand = new Random(1234);
-        generateFile(dataFile, rand);
-        System.err.println("generated file size:" + fileSize + "/" + dataFile.length());
-
-        if (!dataFile.exists()) {
-            throw new RuntimeException("missing file");
+        try (FSDataOutputStream out = fs.create(new Path(dataFile))) {
+            for (int i = 0; i < fileSize / pieceSize; i++) {
+                byte[] data = new byte[1024];
+                rand.nextBytes(data);
+                out.write(data);
+                out.flush();
+            }
+            System.err.println("created file - expected:"  + fileSize + " created:" + out.size());
+        } catch (IOException ex) {
+            throw new RuntimeException(ex);
         }
-        File hashFile = new File(uploadDirPath + "/file.hash");
-        hashFile.createNewFile();
-        String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
-        HashUtil.makeHashes(dataFile.getAbsolutePath(), hashFile.getAbsolutePath(), hashAlg, blockSize);
-    }
-
-    private static void generateFile(File file, Random rand) throws IOException {
-        FileOutputStream out = new FileOutputStream(file);
-        for (int i = 0; i < fileSize / 100; i++) {
-            byte[] data = new byte[100];
-            rand.nextBytes(data);
-            out.write(data);
-        }
-        out.flush();
-        out.close();
+        fs.close();
     }
 }

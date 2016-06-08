@@ -1,261 +1,223 @@
-/*
- * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
- * 2009 Royal Institute of Technology (KTH)
- *
- * GVoD is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
- */
-package se.sics.gvod.mngr;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileFilter;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.StringTokenizer;
-import org.javatuples.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import se.sics.gvod.manager.util.FileStatus;
-import se.sics.gvod.mngr.util.LibraryUtil;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
-import se.sics.ktoolbox.util.identifiable.basic.OverlayIdentifier;
-
-/**
- * @author Alex Ormenisan <aaor@sics.se>
- */
-public class LibraryMngr {
-
-    private static final Logger LOG = LoggerFactory.getLogger(LibraryMngr.class);
-    private static final String STATUS_FILE = "status.file";
-
-    private static final FileFilter statusFilter = new FileFilter() {
-        @Override
-        public boolean accept(File file) {
-            if (!file.isFile()) {
-                return false;
-            }
-            return file.getName().equals(STATUS_FILE);
-        }
-    };
-    private final FileFilter fileFilter;
-
-    private final String libPath;
-    private final Map<String, Pair<FileStatus, Identifier>> fileMap = new HashMap<>();
-
-    public LibraryMngr(String libPath, FileFilter fileFilter) {
-        this.libPath = libPath;
-        this.fileFilter = fileFilter;
-    }
-
-    public Map<String, Pair<FileStatus, Identifier>> getLibrary() {
-        return fileMap;
-    }
-
-    public void loadLibrary() {
-        checkLibraryDir();
-        reloadFiles();
-        checkStatusFile();
-        readStatusFile();
-        writeStatusFile(); //re-write it after cleanup
-    }
-
-    public void reloadLibrary() {
-        reloadFiles();
-    }
-
-    public boolean upload(String file, Identifier overlayId) {
-        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
-        if (fileStatus == null || !fileStatus.getValue0().equals(FileStatus.NONE)) {
-            return false;
-        }
-        fileMap.put(file, Pair.with(FileStatus.UPLOADING, overlayId));
-        writeStatusFile();
-        return true;
-    }
-
-    public boolean download(String file, Identifier overlayId) {
-        Pair<FileStatus, Identifier> fileStatus = fileMap.get(file);
-        if (fileStatus == null || !fileStatus.getValue0().equals(FileStatus.NONE)) {
-            return false;
-        }
-        fileMap.put(file, Pair.with(FileStatus.DOWNLOADING, overlayId));
-        writeStatusFile();
-        return true;
-    }
-
-    private void checkLibraryDir() {
-        File dir = new File(libPath);
-        if (!dir.isDirectory()) {
-            dir.mkdirs();
-            if (!dir.isDirectory()) {
-                LOG.error("library path is invalid");
-                throw new RuntimeException("library path is invalid");
-            }
-        }
-    }
-
-    private void reloadFiles() {
-        File libDir = new File(libPath);
-        for (File file : libDir.listFiles(fileFilter)) {
-            LOG.info("library - loading video: {}", file.getName());
-            if (!fileMap.containsKey(file.getName())) {
-                fileMap.put(file.getName(), Pair.with(FileStatus.NONE, (Identifier) null));
-            }
-        }
-    }
-
-    private void checkStatusFile() {
-        File libDir = new File(libPath);
-        File[] files = libDir.listFiles(statusFilter);
-        if (files.length == 0) {
-            File statusFile = new File(libPath + File.separator + STATUS_FILE);
-            try {
-                statusFile.createNewFile();
-            } catch (IOException ex) {
-                LOG.error("could not create status check file");
-                throw new RuntimeException("could not create status check file");
-            }
-            return;
-        }
-        if (files.length > 1) {
-            LOG.error("too many status check files");
-            throw new RuntimeException("too many status check files");
-        }
-    }
-
-    private void readStatusFile() {
-        FileReader fr = null;
-        BufferedReader br = null;
-        try {
-            fr = new FileReader(libPath + File.separator + STATUS_FILE);
-            br = new BufferedReader(fr);
-            String line;
-            while ((line = br.readLine()) != null) {
-                StringTokenizer st = new StringTokenizer(line, ":");
-                String fileName = st.nextToken();
-                FileStatus fileStatus = FileStatus.valueOf(st.nextToken());
-                Identifier overlayId = null;
-                if (st.hasMoreElements()) {
-                    overlayId = new IntIdentifier(Integer.parseInt(st.nextToken()));
-                }
-                checkStatus(fileName, fileStatus, overlayId);
-            }
-        } catch (FileNotFoundException ex) {
-            LOG.error("could not find status check file - should not get here");
-            throw new RuntimeException("could not find status check file - should not get here", ex);
-        } catch (IOException ex) {
-            LOG.error("IO problem on read status check file");
-            throw new RuntimeException("IO problem on read status check file", ex);
-        } catch (IllegalArgumentException ex) {
-            LOG.error("bad file status");
-            throw new RuntimeException("bad file status", ex);
-        } catch (NoSuchElementException ex) {
-            LOG.error("bad status format");
-            throw new RuntimeException("bad status format", ex);
-        } finally {
-            try {
-                if (br != null) {
-                    br.close();
-                } else if (fr != null) {
-                    fr.close();
-                }
-            } catch (IOException ex) {
-                LOG.error("error closing status file - read");
-                throw new RuntimeException("error closing status file - read", ex);
-            }
-        }
-    }
-
-    private void checkStatus(String fileName, FileStatus fileStatus, Identifier overlayId) {
-        File dataFile, hashFile;
-        String fileNoExt;
-        try {
-            fileNoExt = LibraryUtil.removeExtension(fileName);
-        } catch (IllegalArgumentException ex) {
-            LOG.error("bad file name:{}", fileName);
-            throw ex;
-        }
-        switch (fileStatus) {
-            case NONE:
-                break;
-            case DOWNLOADING:
-                //TODO hash check - continue
-                //for the moment we delete and start anew
-                dataFile = new File(libPath + File.separator + fileName);
-                dataFile.delete();
-                hashFile = new File(libPath + File.separator + fileNoExt + ".hash");
-                hashFile.delete();
-                fileMap.remove(fileName);
-                break;
-            case UPLOADING:
-                hashFile = new File(libPath + File.separator + fileNoExt + ".hash");
-                if (hashFile.exists()) {
-                    fileMap.put(fileName, Pair.with(fileStatus, overlayId));
-                } else {
-                    LOG.warn("no hash:{} file for uploading file:{}", hashFile, fileNoExt);
-                }
-                break;
-            default:
-                LOG.error("logic error - introduced new FileStatus:" + fileStatus.toString() + " and did not add it to the checkStatusFile");
-                throw new RuntimeException("logic error - introduced new FileStatus:" + fileStatus.toString() + " and did not add it to the checkStatusFile");
-        }
-    }
-
-    private void writeStatusFile() {
-        BufferedWriter bw = null;
-        FileWriter fw = null;
-        try {
-            fw = new FileWriter(libPath + File.separator + STATUS_FILE);
-            bw = new BufferedWriter(fw);
-            for (Map.Entry<String, Pair<FileStatus, Identifier>> fileStatus : fileMap.entrySet()) {
-                switch (fileStatus.getValue().getValue0()) {
-                    case NONE:
-                    default:
-                        bw.write(fileStatus.getKey());
-                        bw.write(":");
-                        bw.write(fileStatus.getValue().getValue0().toString());
-                        if (fileStatus.getValue().getValue0() == null) {
-                            LOG.error("write status file - library logic error - missing overlay");
-                            throw new RuntimeException("write status file - library logic error - missing overlay");
-                        }
-                        bw.write(":");
-                        bw.write(((OverlayIdentifier)fileStatus.getValue().getValue1()).getInt());
-                        bw.write("\n");
-                }
-            }
-        } catch (IOException ex) {
-            LOG.error("IO problem on write status check file");
-            throw new RuntimeException("IO problem on write status check file");
-        } finally {
-            try {
-                if (bw != null) {
-                    bw.close();
-                } else if (fw != null) {
-                    fw.close();
-                }
-            } catch (IOException ex) {
-                LOG.error("error closing status file - write");
-                throw new RuntimeException("error closing status file - write", ex);
-            }
-        }
-    }
-}
+///*
+// * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
+// * 2009 Royal Institute of Technology (KTH)
+// *
+// * GVoD is free software; you can redistribute it and/or
+// * modify it under the terms of the GNU General Public License
+// * as published by the Free Software Foundation; either version 2
+// * of the License, or (at your option) any later version.
+// *
+// * This program is distributed in the hope that it will be useful,
+// * but WITHOUT ANY WARRANTY; without even the implied warranty of
+// * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// * GNU General Public License for more details.
+// *
+// * You should have received a copy of the GNU General Public License
+// * along with this program; if not, write to the Free Software
+// * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+// */
+//package se.sics.gvod.mngr;
+//
+//import com.google.common.base.Optional;
+//import com.google.common.collect.HashBasedTable;
+//import com.google.common.collect.Table;
+//import java.util.ArrayList;
+//import java.util.HashMap;
+//import java.util.List;
+//import java.util.Map;
+//import java.util.TreeMap;
+//import org.javatuples.Pair;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
+//import se.sics.gvod.mngr.util.FileInfo;
+//import se.sics.gvod.mngr.util.LibraryElementSummary;
+//import se.sics.gvod.mngr.util.TorrentStatus;
+//import se.sics.ktoolbox.util.BasicOpResult;
+//import se.sics.ktoolbox.util.identifiable.Identifier;
+//import se.sics.ktoolbox.util.managedStore.resources.FileResourceMngr;
+//import se.sics.ktoolbox.util.managedStore.resources.FileResourceRegistry;
+//
+///**
+// * @author Alex Ormenisan <aaor@kth.se>
+// */
+//public class LibraryMngr {
+//
+//    private static final Logger LOG = LoggerFactory.getLogger(LibraryMngrOld.class);
+//    private static final String STATUS_FILE = "status.file";
+//
+//    //String keys are file uri
+//    private final Map<String, FileInfo> libFiles = new HashMap<>();
+//    private final HashBasedTable<String, Identifier, TorrentStatus> torrents = HashBasedTable.create();
+//
+//    public LibraryMngr() {
+//    }
+//
+//    public boolean containsFile(String uri) {
+//        return libFiles.containsKey(uri);
+//    }
+//    
+//    public boolean containsTorrent(String uri, Identifier overlayId) {
+//        return torrents.contains(uri, overlayId);
+//    }
+//            
+//    public BasicOpResult addElement(FileInfo file) {
+//        if (file.shortDescription.contains(":") || file.shortDescription.contains("\n")) {
+//            LOG.warn("file with uri:{} illegal character in description", file.uri);
+//            return BasicOpResult.createFail("file with uri:" + file.uri + " illegal character in description");
+//        }
+//        if (libFiles.containsKey(file.uri)) {
+//            LOG.warn("file with uri:{} already present in library", file.uri);
+//            return BasicOpResult.createFail("file with uri:" + file.uri + " already present in library");
+//        }
+//        LOG.info("adding element file with uri:{}", file.uri);
+//        libFiles.put(file.uri, file);
+//        return BasicOpResult.success;
+//    }
+//
+//    public BasicOpResult removeElement(String uri, boolean removeFile) {
+//        if (torrents.containsRow(uri)) {
+//            LOG.warn("file with uri:{} is still streaming", uri);
+//            return BasicOpResult.createFail("file with uri:" + uri + " is still streaming");
+//        }
+//        LOG.info("removing element file with uri:{}", uri);
+//        FileInfo file = libFiles.remove(uri);
+//        if (file == null) {
+//            return BasicOpResult.success;
+//        }
+//        if (removeFile) {
+//            FileResourceMngr frMngr = FileResourceRegistry.getMngr(file.fileType);
+//            return frMngr.delete(uri);
+//        }
+//        return BasicOpResult.success;
+//    }
+//
+//    public BasicOpResult upload(String uri, Identifier overlayId) {
+//        if (!libFiles.containsKey(uri)) {
+//            LOG.warn("file with uri:{} is not part of the library", uri);
+//            return BasicOpResult.createFail("file with uri:" + uri + " is not part of the library");
+//        }
+//        if (torrents.containsRow(uri)) {
+//            LOG.warn("file with uri:{} already streaming", uri);
+//            return BasicOpResult.createFail("file with uri:" + uri + " already streaming");
+//        }
+//        if (torrents.containsColumn(overlayId)) {
+//            LOG.warn("file with overlayId:{} already streaming", overlayId);
+//            return BasicOpResult.createFail("file with overlayId:" + overlayId + " already streaming");
+//        }
+//        LOG.info("uploading file with uri:{} overlayId:{}", uri, overlayId);
+//        torrents.put(uri, overlayId, TorrentStatus.UPLOADING);
+//        return BasicOpResult.success;
+//    }
+//
+//    public BasicOpResult download(String uri, Identifier overlayId) {
+//        if (!libFiles.containsKey(uri)) {
+//            LOG.warn("file with uri:{} is not part of the library", uri);
+//            return BasicOpResult.createFail("file with uri:" + uri + " is not part of the library");
+//        }
+//        if (torrents.containsRow(uri)) {
+//            LOG.warn("file with uri:{} already streaming", uri);
+//            return BasicOpResult.createFail("file with uri:" + uri + " already streaming");
+//        }
+//        if (torrents.containsColumn(overlayId)) {
+//            LOG.warn("file with overlayId:{} already streaming", overlayId);
+//            return BasicOpResult.createFail("file with overlayId:" + overlayId + " already streaming");
+//        }
+//        LOG.info("downloading file with uri:{} overlayId:{}", uri, overlayId);
+//        torrents.put(uri, overlayId, TorrentStatus.DOWNLOADING);
+//        return BasicOpResult.success;
+//    }
+//
+//    public BasicOpResult stop(String uri, Identifier overlayId) {
+//        LOG.info("stopping file with uri:{} overlayId:{}", uri, overlayId);
+//        torrents.remove(uri, overlayId);
+//        return BasicOpResult.success;
+//    }
+//
+//    //TODO Alex - I know... looks a bit weird ... fix later
+//    public List<LibraryElementSummary> getContents() {
+//        List<LibraryElementSummary> result = new ArrayList<>();
+//        for (Table.Cell<String, Identifier, TorrentStatus> cell : torrents.cellSet()) {
+//            String fileName = libFiles.get(cell.getRowKey()).name;
+//            LibraryElementSummary les = new LibraryElementSummary(cell.getRowKey(), fileName, cell.getValue(), Optional.of(cell.getColumnKey()));
+//            result.add(les);
+//        }
+//        
+//        for (Map.Entry<String, FileInfo> file : libFiles.entrySet()) {
+//            if (!torrents.containsRow(file.getKey())) {
+//                LibraryElementSummary les = new LibraryElementSummary(file.getKey(), file.getValue().name, TorrentStatus.NONE, Optional.fromNullable((Identifier)null));
+//                result.add(les);
+//            }
+//        }
+//        return result;
+//    }
+//
+////    private void checkStatusFile() {
+////        File appDir = new File(appDirPath);
+////        if (!appDir.isDirectory()) {
+////            LOG.error("missing appDir:{}", appDirPath);
+////            throw new RuntimeException("missing appDir:" + appDirPath);
+////        }
+////        File libFile = new File(appDirPath + File.separator + STATUS_FILE);
+////        if (libFile.isFile()) {
+////            try {
+////                libFile.createNewFile();
+////            } catch (IOException ex) {
+////                LOG.error("status file io error");
+////                throw new RuntimeException(ex);
+////            }
+////        }
+////    }
+////
+////    private void readStatusFile() {
+////        try (BufferedReader br = new BufferedReader(new FileReader(appDirPath + File.separator + STATUS_FILE))) {
+////            String line;
+////            while ((line = br.readLine()) != null) {
+////                StringTokenizer st = new StringTokenizer(line, ":");
+////                String fileName = st.nextToken();
+////                String fileUri = st.nextToken();
+////                TorrentStatus fileStatus = TorrentStatus.valueOf(st.nextToken());
+////                Identifier overlayId = null;
+////                if (!fileStatus.equals(TorrentStatus.NONE)) {
+////                    overlayId = new OverlayIdentifier(Ints.toByteArray(Integer.parseInt(st.nextToken())));
+////                }
+////                String fileDescription = st.nextToken();
+////            }
+////        } catch (FileNotFoundException ex) {
+////            LOG.error("could not find status check file - should not get here");
+////            throw new RuntimeException("could not find status check file - should not get here", ex);
+////        } catch (IOException ex) {
+////            LOG.error("IO problem on read status check file");
+////            throw new RuntimeException("IO problem on read status check file", ex);
+////        } catch (IllegalArgumentException ex) {
+////            LOG.error("bad file status");
+////            throw new RuntimeException("bad file status", ex);
+////        } catch (NoSuchElementException ex) {
+////            LOG.error("bad status format");
+////            throw new RuntimeException("bad status format", ex);
+////        }
+////    }
+////
+////    private void writeStatusFile() {
+////        try (BufferedWriter bw = new BufferedWriter(new FileWriter(appDirPath + File.separator + STATUS_FILE))) {
+////            for (Map.Entry<String, Pair<FileInfo, Pair<Identifier, TorrentStatus>>> file : libFiles.entrySet()) {
+////                bw.write(file.getValue().getValue0().name);
+////                bw.write(":");
+////                bw.write(file.getValue().getValue0().uri);
+////                bw.write(":");
+////                bw.write(file.getValue().getValue1().getValue1().toString());
+////                if (file.getValue().getValue0() == null) {
+////                    LOG.error("write status file - library logic error - missing overlay");
+////                    throw new RuntimeException("write status file - library logic error - missing overlay");
+////                }
+////                bw.write(":");
+////                bw.write(((OverlayIdentifier) file.getValue().getValue1().getValue0()).getInt());
+////                bw.write(":");
+////                bw.write(file.getValue().getValue0().shortDescription);
+////                bw.write("\n");
+////            }
+////        } catch (IOException ex) {
+////            LOG.error("IO problem on write status check file");
+////            throw new RuntimeException("IO problem on write status check file");
+////        }
+////    }
+//}

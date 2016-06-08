@@ -34,7 +34,9 @@ import se.sics.ktoolbox.hops.managedStore.storage.HopsFactory;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
 import se.sics.ktoolbox.util.managedStore.core.HashMngr;
-import se.sics.ktoolbox.util.managedStore.core.impl.TransferMngr;
+import se.sics.ktoolbox.util.managedStore.core.TransferMngr;
+import se.sics.ktoolbox.util.managedStore.core.impl.LBAOTransferMngr;
+import se.sics.ktoolbox.util.managedStore.core.impl.SimpleTransferMngr;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.managedStore.core.util.Torrent;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -137,7 +139,7 @@ public class Receiver extends ComponentDefinition {
                 int hashSize = HashUtil.getHashSize(torrent.torrentInfo.hashAlg);
 
                 Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getIncomplete(hopsURL, filePath, fileSize, hashAlg, blockSize, pieceSize);
-                return fileHashMngr.add(new TransferMngr(torrent, fileHashMngr.getValue1(), fileHashMngr.getValue0()));
+                return fileHashMngr.add((TransferMngr)new LBAOTransferMngr(torrent, fileHashMngr.getValue1(), fileHashMngr.getValue0(), 10));
             }
         };
         List<KAddress> partners = new ArrayList<KAddress>();

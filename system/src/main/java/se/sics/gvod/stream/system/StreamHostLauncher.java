@@ -43,8 +43,9 @@ import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
 import se.sics.ktoolbox.util.managedStore.core.HashMngr;
+import se.sics.ktoolbox.util.managedStore.core.TransferMngr;
 import se.sics.ktoolbox.util.managedStore.core.impl.StorageMngrFactory;
-import se.sics.ktoolbox.util.managedStore.core.impl.TransferMngr;
+import se.sics.ktoolbox.util.managedStore.core.impl.SimpleTransferMngr;
 import se.sics.ktoolbox.util.managedStore.core.util.FileInfo;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.managedStore.core.util.Torrent;
@@ -191,7 +192,7 @@ public class StreamHostLauncher extends ComponentDefinition {
 
                         FileMngr fileMngr = StorageMngrFactory.incompleteMMFileMngr(resourcePath, torrent.fileInfo.size, blockSize, torrent.torrentInfo.pieceSize);
                         HashMngr hashMngr = StorageMngrFactory.incompleteMMHashMngr(resourcePath + ".hash", torrent.torrentInfo.hashAlg, torrent.torrentInfo.hashFileSize, hashSize);
-                        return Triplet.with(fileMngr, hashMngr, new TransferMngr(torrent, hashMngr, fileMngr));
+                        return Triplet.with(fileMngr, hashMngr, (TransferMngr)new SimpleTransferMngr(torrent, hashMngr, fileMngr));
                     } catch (IOException ex) {
                         throw new RuntimeException(ex);
                     }

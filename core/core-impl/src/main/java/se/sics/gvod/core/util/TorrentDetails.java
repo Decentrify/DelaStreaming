@@ -22,7 +22,7 @@ import org.javatuples.Triplet;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
 import se.sics.ktoolbox.util.managedStore.core.HashMngr;
-import se.sics.ktoolbox.util.managedStore.core.impl.TransferMngr;
+import se.sics.ktoolbox.util.managedStore.core.TransferMngr;
 import se.sics.ktoolbox.util.managedStore.core.util.Torrent;
 
 /**
