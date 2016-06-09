@@ -19,7 +19,8 @@
 package se.sics.gvod.mngr.event;
 
 import java.util.List;
-import se.sics.gvod.mngr.util.LibraryElementSummary;
+import se.sics.gvod.mngr.util.ElementSummary;
+import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -29,7 +30,7 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsContentsEvent {
+public class ContentsSummaryEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
         
@@ -41,8 +42,8 @@ public class HopsContentsEvent {
             this(UUIDIdentifier.randomId());
         }
         
-        public Response success(List<LibraryElementSummary> content) {
-            return new Response(this, Result.success(), content);
+        public Response success(List<ElementSummary> value) {
+            return new Response(this, Result.success(), value);
         }
         
         @Override
@@ -52,19 +53,19 @@ public class HopsContentsEvent {
         
         @Override
         public String toString() {
-            return "HopsContentsRequest<" + getId() + ">";
+            return "ContentsSummaryRequest<" + getId() + ">";
         }
     }
     
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
-        public final List<LibraryElementSummary> content;
+        public final List<ElementSummary> value;
         
-        private Response(Request req, Result result, List<LibraryElementSummary> content) {
+        private Response(Request req, Result result, List<ElementSummary> value) {
             this.req = req;
             this.result = result;
-            this.content = content;
+            this.value = value;
         }
         
         @Override
@@ -74,7 +75,7 @@ public class HopsContentsEvent {
         
          @Override
         public String toString() {
-            return "HopsContentsResponse<" + getId() + ">";
+            return "ContentsSummaryResponse<" + getId() + ">";
         }
     }
 }

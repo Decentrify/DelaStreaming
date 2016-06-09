@@ -31,7 +31,8 @@ import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.util.TorrentDetails;
-import se.sics.gvod.mngr.event.HopsContentsEvent;
+import se.sics.gvod.mngr.event.TorrentExtendedStatusEvent;
+import se.sics.gvod.mngr.event.ContentsSummaryEvent;
 import se.sics.gvod.mngr.event.HopsTorrentDownloadEvent;
 import se.sics.gvod.mngr.event.HopsTorrentUploadEvent;
 import se.sics.gvod.mngr.event.LibraryAddEvent;
@@ -42,11 +43,15 @@ import se.sics.gvod.mngr.event.TorrentStopEvent;
 import se.sics.gvod.mngr.event.TorrentUploadEvent;
 import se.sics.gvod.mngr.event.VideoPlayEvent;
 import se.sics.gvod.mngr.event.VideoStopEvent;
+import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.mngr.util.FileInfo;
-import se.sics.gvod.mngr.util.LibraryElementSummary;
+import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.TorrentInfo;
-import se.sics.gvod.mngr.util.TorrentStatus;
+import se.sics.gvod.stream.report.util.TorrentStatus;
 import se.sics.gvod.stream.StreamHostComp;
+import se.sics.gvod.stream.report.event.DownloadSummaryEvent;
+import se.sics.gvod.stream.report.ReportPort;
+import se.sics.gvod.stream.report.event.StatusSummaryEvent;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -59,6 +64,7 @@ import se.sics.ktoolbox.hops.managedStore.storage.HopsFactory;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.identifiable.basic.OverlayIdentifier;
+import se.sics.ktoolbox.util.idextractor.EventOverlayIdExtractor;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
 import se.sics.ktoolbox.util.managedStore.core.HashMngr;
 import se.sics.ktoolbox.util.managedStore.core.TransferMngr;
@@ -69,6 +75,7 @@ import se.sics.ktoolbox.util.managedStore.resources.LocalDiskResource;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicAddress;
 import se.sics.ktoolbox.util.network.nat.NatAwareAddressImpl;
+import se.sics.ktoolbox.util.network.ports.One2NChannel;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -80,21 +87,29 @@ public class VoDMngrComp extends ComponentDefinition {
 
     //***************************CONNECTIONS************************************
     ExtPort extPorts;
+    //**********************EXTERNAL_CONNECT_TO*********************************
     Negative<LibraryPort> libraryPort = provides(LibraryPort.class);
     Negative<TorrentPort> torrentPort = provides(TorrentPort.class);
     Negative<VideoPort> videoPort = provides(VideoPort.class);
+    //*******************INTERNAL_DO_NOT_CONNECT_TO*****************************
+    Positive<ReportPort> reportPort = requires(ReportPort.class);
+    One2NChannel reportChannel;
     //**************************EXTERNAL_STATE**********************************
     private final KAddress selfAdr;
     //**************************INTERNAL_STATE**********************************
     private Map<Identifier, Pair<FileInfo, TorrentInfo>> libraryContents = new HashMap<>();
     private Map<Identifier, Component> components = new HashMap<>();
-    private Component torrent;
+    private Component torrentComp;
+    //****************************AUX_STATE*************************************
+    private Map<Identifier, TorrentExtendedStatusEvent.Request> pendingRequests = new HashMap<>();
 
     public VoDMngrComp(Init init) {
         LOG.info("{}initiating...", logPrefix);
 
         extPorts = init.extPorts;
         selfAdr = init.selfAddress;
+        
+        reportChannel = One2NChannel.getChannel("vodMngrReportChannel", (Negative<ReportPort>)reportPort.getPair(), new EventOverlayIdExtractor());
 
         subscribe(handleStart, control);
         subscribe(handleLibraryContent, libraryPort);
@@ -106,9 +121,13 @@ public class VoDMngrComp extends ComponentDefinition {
         subscribe(handleVideoPlay, videoPort);
         subscribe(handleVideoStop, videoPort);
 
-        subscribe(handleHopsContents, libraryPort);
+        subscribe(handleContentsRequest, libraryPort);
         subscribe(handleHopsTorrentUpload, torrentPort);
         subscribe(handleHopsTorrentDownload, torrentPort);
+        subscribe(handleDownloadCompleted, reportPort);
+        
+        subscribe(handleTorrentStatusRequest, libraryPort);
+        subscribe(handleTorrentStatusResponse, reportPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -125,7 +144,7 @@ public class VoDMngrComp extends ComponentDefinition {
 //            LOG.info("{}received:{}", logPrefix, req);
 //            List<LibraryElementSummary> lesList = new ArrayList<>();
 //            for (Map.Entry<Identifier, Pair<FileInfo, TorrentInfo>> e : libraryContents.entrySet()) {
-//                LibraryElementSummary les = new LibraryElementSummary(e.getValue().getValue0().uri,
+//                TorrentExtendedStatus les = new TorrentExtendedStatus(e.getValue().getValue0().uri,
 //                        e.getValue().getValue0().name, e.getValue().getValue1().status, Optional.of(e.getKey()));
 //                lesList.add(les);
 //            }
@@ -290,16 +309,16 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
-    Handler handleHopsContents = new Handler<HopsContentsEvent.Request>() {
+    Handler handleContentsRequest = new Handler<ContentsSummaryEvent.Request>() {
         @Override
-        public void handle(HopsContentsEvent.Request req) {
+        public void handle(ContentsSummaryEvent.Request req) {
             LOG.info("{}received:{}", logPrefix, req);
-            List<LibraryElementSummary> lesList = new ArrayList<>();
+            List<ElementSummary> esList = new ArrayList<>();
             for (Map.Entry<Identifier, Pair<FileInfo, TorrentInfo>> e : libraryContents.entrySet()) {
-                LibraryElementSummary les = new LibraryElementSummary(e.getValue().getValue0().name, e.getValue().getValue1().status, e.getKey());
-                lesList.add(les);
+                ElementSummary es = new ElementSummary(e.getValue().getValue0().name, e.getKey(), e.getValue().getValue1().getStatus());
+                esList.add(es);
             }
-            HopsContentsEvent.Response resp = req.success(lesList);
+            ContentsSummaryEvent.Response resp = req.success(esList);
             LOG.info("{}answering:{}", logPrefix, resp);
             answer(req, resp);
         }
@@ -318,7 +337,7 @@ public class VoDMngrComp extends ComponentDefinition {
                 if (elementInfo == null) {
                     status = TorrentStatus.NONE;
                 } else {
-                    status = elementInfo.getValue1().status;
+                    status = elementInfo.getValue1().getStatus();
                 }
                 switch (status) {
                     case UPLOADING:
@@ -388,9 +407,10 @@ public class VoDMngrComp extends ComponentDefinition {
         };
 
         StreamHostComp.ExtPort shcExtPorts = new StreamHostComp.ExtPort(extPorts.timerPort, extPorts.networkPort);
-        torrent = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, new ArrayList<KAddress>()));
-        components.put(torrentId, torrent);
-        trigger(Start.event, torrent.control());
+        torrentComp = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, new ArrayList<KAddress>()));
+        reportChannel.addChannel(torrentId, torrentComp.getPositive(ReportPort.class));
+        components.put(torrentId, torrentComp);
+        trigger(Start.event, torrentComp.control());
     }
 
     Handler handleHopsTorrentDownload = new Handler<HopsTorrentDownloadEvent.Request>() {
@@ -408,7 +428,7 @@ public class VoDMngrComp extends ComponentDefinition {
                 resp = req.success();
             } else {
                 Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.torrentId);
-                TorrentStatus status = elementInfo.getValue1().status;
+                TorrentStatus status = elementInfo.getValue1().getStatus();
                 switch (status) {
                     case UPLOADING:
                         resp = req.badRequest("can't download file with uploading status");
@@ -459,10 +479,42 @@ public class VoDMngrComp extends ComponentDefinition {
             }
         };
         StreamHostComp.ExtPort shcExtPorts = new StreamHostComp.ExtPort(extPorts.timerPort, extPorts.networkPort);
-        torrent = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, partners));
-        components.put(torrentId, torrent);
-        trigger(Start.event, torrent.control());
+        torrentComp = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, partners));
+        reportChannel.addChannel(torrentId, torrentComp.getPositive(ReportPort.class));
+        components.put(torrentId, torrentComp);
+        trigger(Start.event, torrentComp.control());
     }
+    
+    Handler handleDownloadCompleted = new Handler<DownloadSummaryEvent>() {
+        @Override
+        public void handle(DownloadSummaryEvent event) {
+            LOG.trace("{}received:{}", logPrefix, event);
+            Pair<FileInfo, TorrentInfo> torrentDetails = libraryContents.get(event.torrentId);
+            if(torrentDetails == null) {
+                //TODO - might happen when i stop torrent
+                return;
+            }
+            torrentDetails.getValue1().finishDownload();
+        }
+    };
+    
+    Handler handleTorrentStatusRequest = new Handler<TorrentExtendedStatusEvent.Request>() {
+        @Override
+        public void handle(TorrentExtendedStatusEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
+            pendingRequests.put(req.eventId, req);
+            trigger(new StatusSummaryEvent.Request(req.eventId, req.torrentId), reportPort);
+        } 
+   };
+    
+    Handler handleTorrentStatusResponse = new Handler<StatusSummaryEvent.Response>() {
+        @Override
+        public void handle(StatusSummaryEvent.Response resp) {
+            LOG.trace("{}received:{}", logPrefix, resp);
+            TorrentExtendedStatusEvent.Request req = pendingRequests.remove(resp.getId());
+            answer(req, req.succes(resp.value));
+        }
+    };
 
     public static class ExtPort {
 
@@ -533,8 +585,8 @@ public class VoDMngrComp extends ComponentDefinition {
         };
 
         StreamHostComp.ExtPort shcExtPorts = new StreamHostComp.ExtPort(extPorts.timerPort, extPorts.networkPort);
-        torrent = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, new ArrayList<KAddress>()));
-        trigger(Start.event, torrent.control());
+        torrentComp = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, new ArrayList<KAddress>()));
+        trigger(Start.event, torrentComp.control());
     }
 
     private void createMockDownloadHopsTorrent() {
@@ -580,8 +632,8 @@ public class VoDMngrComp extends ComponentDefinition {
             throw new RuntimeException(ex);
         }
         partners.add(partner);
-        torrent = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, partners));
-        trigger(Start.event, torrent.control());
+        torrentComp = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, partners));
+        trigger(Start.event, torrentComp.control());
     }
 
 }

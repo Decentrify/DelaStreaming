@@ -20,9 +20,8 @@ package se.sics.gvod.simulator.torrent.sim1;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.stream.connection.ConnMngrPort;
-import se.sics.gvod.stream.connection.event.Connection;
-import se.sics.gvod.stream.torrent.TorrentStatus;
+import se.sics.gvod.stream.report.util.TorrentStatus;
+import se.sics.gvod.stream.torrent.TorrentStatusPort;
 import se.sics.gvod.stream.torrent.event.DownloadStatus;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -50,7 +49,7 @@ public class TorrentDriverComp extends ComponentDefinition {
     Negative<Network> providedNetworkPort = provides(Network.class);
     Positive<Network> requiredNetworkPort = requires(Network.class);
     Positive<Timer> timerPort = requires(Timer.class);
-    Positive<TorrentStatus> torrentStatus = requires(TorrentStatus.class);
+    Positive<TorrentStatusPort> torrentStatus = requires(TorrentStatusPort.class);
 
     private final TorrentDriver torrentDriver;
     private final GlobalView gv;

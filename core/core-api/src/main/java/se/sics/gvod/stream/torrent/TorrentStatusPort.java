@@ -24,7 +24,7 @@ import se.sics.kompics.PortType;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentStatus extends PortType {
+public class TorrentStatusPort extends PortType {
     {
         indication(DownloadStatus.Starting.class);
         indication(DownloadStatus.Done.class);

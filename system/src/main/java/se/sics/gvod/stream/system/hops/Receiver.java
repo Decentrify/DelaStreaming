@@ -17,7 +17,7 @@ import se.sics.gvod.core.util.TorrentDetails;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.gvod.stream.StreamHostComp;
 import se.sics.gvod.stream.report.ReportPort;
-import se.sics.gvod.stream.report.SummaryEvent;
+import se.sics.gvod.stream.report.event.DownloadSummaryEvent;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
@@ -96,9 +96,9 @@ public class Receiver extends ComponentDefinition {
         }
     };
 
-    Handler handleSummary = new Handler<SummaryEvent>() {
+    Handler handleSummary = new Handler<DownloadSummaryEvent>() {
         @Override
-        public void handle(SummaryEvent event) {
+        public void handle(DownloadSummaryEvent event) {
             LOG.info("{}transfer of:{} completed in:{}", new Object[]{logPrefix, event.transferSize, event.transferTime});
         }
     };

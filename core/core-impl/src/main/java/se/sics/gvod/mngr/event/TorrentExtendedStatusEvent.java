@@ -18,10 +18,8 @@
  */
 package se.sics.gvod.mngr.event;
 
-import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.Result;
-import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
@@ -29,26 +27,18 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryElementGetEvent {
+public class TorrentExtendedStatusEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
-        public final TorrentExtendedStatus les;
+        public final Identifier torrentId;
         
-        public Request(Identifier eventId, TorrentExtendedStatus les) {
+        public Request(Identifier eventId, Identifier torrentId) {
             this.eventId = eventId;
-            this.les = les;
+            this.torrentId = torrentId;
         }
         
-        public Request(TorrentExtendedStatus les) {
-            this(UUIDIdentifier.randomId(), les);
-        }
-        
-        public Response success(FileInfo fileInfo, TorrentInfo torrentInfo) {
-            return new Response(this, Result.success(), fileInfo, torrentInfo);
-        }
-        
-        public Response badRequest(String description) {
-            return new Response(this, Result.badRequest(description), null, null);
+        public Request(Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), torrentId);
         }
         
         @Override
@@ -56,33 +46,25 @@ public class LibraryElementGetEvent {
             return eventId;
         }
         
-        @Override
-        public String toString() {
-            return "LibraryElementRequest<" + getId() + ">";
+        public Response succes(TorrentExtendedStatus value) {
+            return new Response(this, Result.success(), value);
         }
     }
     
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
-        public final FileInfo fileInfo;
-        public final TorrentInfo torrentInfo;
+        public final TorrentExtendedStatus value;
         
-        private Response(Request req, Result result, FileInfo fileInfo, TorrentInfo torrentInfo) {
+        public Response(Request req, Result result, TorrentExtendedStatus value) {
             this.req = req;
             this.result = result;
-            this.fileInfo = fileInfo;
-            this.torrentInfo = torrentInfo;
+            this.value = value;
         }
         
         @Override
         public Identifier getId() {
             return req.getId();
-        }
-        
-         @Override
-        public String toString() {
-            return "LibraryElementResponse<" + getId() + ">";
         }
     }
 }

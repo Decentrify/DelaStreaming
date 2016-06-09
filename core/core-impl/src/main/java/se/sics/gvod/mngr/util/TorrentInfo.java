@@ -20,7 +20,7 @@ package se.sics.gvod.mngr.util;
 
 import java.util.HashMap;
 import java.util.Map;
-import se.sics.gvod.mngr.util.TorrentStatus;
+import se.sics.gvod.stream.report.util.TorrentStatus;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 
@@ -30,7 +30,7 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public class TorrentInfo {
 
-    public final TorrentStatus status;
+    private TorrentStatus status;
     public final Map<Identifier, KAddress> partners;
     public final double progress; //percentage
     public final long downloadSpeed; //byte/s
@@ -42,6 +42,14 @@ public class TorrentInfo {
         this.progress = progress;
         this.downloadSpeed = downloadSpeed;
         this.uploadSpeed = uploadSpeed;
+    }
+    
+    public TorrentStatus getStatus() {
+        return status;
+    }
+    
+    public void finishDownload() {
+        status = TorrentStatus.UPLOADING;
     }
     
     public static TorrentInfo none() {

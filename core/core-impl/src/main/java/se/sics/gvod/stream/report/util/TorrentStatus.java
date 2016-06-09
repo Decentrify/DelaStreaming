@@ -16,20 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.report;
-
-import se.sics.gvod.stream.report.event.DownloadSummaryEvent;
-import se.sics.gvod.stream.report.event.StatusSummaryEvent;
-import se.sics.kompics.PortType;
+package se.sics.gvod.stream.report.util;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ReportPort extends PortType {
-    {
-        request(StatusSummaryEvent.Request.class);
-        indication(StatusSummaryEvent.Response.class);
-        indication(DownloadSummaryEvent.class);
-    }
+public enum TorrentStatus {
+    NONE, DOWNLOADING, UPLOADING;
 }

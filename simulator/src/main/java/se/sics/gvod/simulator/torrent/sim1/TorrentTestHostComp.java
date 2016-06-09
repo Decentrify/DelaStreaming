@@ -18,17 +18,11 @@
  */
 package se.sics.gvod.simulator.torrent.sim1;
 
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.core.util.TorrentDetails;
 import se.sics.gvod.stream.StreamHostComp;
-import se.sics.gvod.stream.congestion.PLedbatPort;
-import se.sics.gvod.stream.congestion.PullLedbatComp;
-import se.sics.gvod.stream.torrent.TorrentComp;
-import se.sics.gvod.stream.connection.ConnMngrPort;
-import se.sics.gvod.stream.report.ReportComp;
-import se.sics.gvod.stream.torrent.TorrentStatus;
+import se.sics.gvod.stream.report.util.TorrentStatus;
+import se.sics.gvod.stream.torrent.TorrentStatusPort;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
@@ -37,7 +31,6 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -84,7 +77,7 @@ public class TorrentTestHostComp extends ComponentDefinition {
         
         connect(driverComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
         connect(driverComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-        connect(driverComp.getNegative(TorrentStatus.class), streamHostComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
+        connect(driverComp.getNegative(TorrentStatusPort.class), streamHostComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
     }
 
     public static class Init extends se.sics.kompics.Init<TorrentTestHostComp> {

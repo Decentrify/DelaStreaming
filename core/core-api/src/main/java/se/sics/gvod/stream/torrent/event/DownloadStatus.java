@@ -94,8 +94,8 @@ public class DownloadStatus {
             this(UUIDIdentifier.randomId(), overlayId);
         }
         
-        public Response answer(Map<Identifier, ConnectionStatus> connectionStatus) {
-            return new Response(eventId, overlayId, connectionStatus);
+        public Response answer(Map<Identifier, ConnectionStatus> connectionStatus, int percentageCompleted) {
+            return new Response(eventId, overlayId, connectionStatus, percentageCompleted);
         }
 
         @Override
@@ -113,15 +113,18 @@ public class DownloadStatus {
         public final Identifier eventId;
         public final Identifier overlayId;
         public final Map<Identifier, ConnectionStatus> connectionStatus;
+        public final int percentageCompleted;
 
-        Response(Identifier eventId, Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus) {
+        Response(Identifier eventId, Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus,
+                int percentageCompleted) {
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.connectionStatus = connectionStatus;
+            this.percentageCompleted = percentageCompleted;
         }
 
-        Response(Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus) {
-            this(UUIDIdentifier.randomId(), overlayId, connectionStatus);
+        Response(Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus, int percentageCompleted) {
+            this(UUIDIdentifier.randomId(), overlayId, connectionStatus, percentageCompleted);
         }
 
         @Override

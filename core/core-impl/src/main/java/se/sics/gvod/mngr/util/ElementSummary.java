@@ -18,19 +18,21 @@
  */
 package se.sics.gvod.mngr.util;
 
+import se.sics.gvod.stream.report.util.TorrentStatus;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryElementSummary {
+public class ElementSummary {
+
     public final String name;
-    public final TorrentStatus status;
     public final Identifier torrentId;
-    
-    public LibraryElementSummary(String name, TorrentStatus status, Identifier torrentId) {
+    public final TorrentStatus status;
+
+    public ElementSummary(String name, Identifier torrentId, TorrentStatus status) {
         this.name = name;
-        this.status = status;
         this.torrentId = torrentId;
+        this.status = status;
     }
 }

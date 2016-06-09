@@ -88,7 +88,7 @@ public class TorrentComp extends ComponentDefinition {
     Positive<Network> networkPort = requires(Network.class);
     Positive<ConnMngrPort> connectionPort = requires(ConnMngrPort.class);
     Positive<PLedbatPort> congestionPort = requires(PLedbatPort.class);
-    Negative<TorrentStatus> statusPort = provides(TorrentStatus.class);
+    Negative<TorrentStatusPort> statusPort = provides(TorrentStatusPort.class);
     //**************************EXTERNAL_STATE**********************************
     private final LoadModifiersKCWrapper loadModifiersConfig;
     private final KAddress selfAdr;
@@ -500,7 +500,7 @@ public class TorrentComp extends ComponentDefinition {
             @Override
             public void handle(DownloadStatus.Request req) {
                 LOG.trace("{}received:{}", logPrefix, req);
-                answer(req, req.answer(dwnlConn.mngr.reportNReset()));
+                answer(req, req.answer(dwnlConn.mngr.reportNReset(), (int)transferMngr.percentageComplete()));
             }
         };
 

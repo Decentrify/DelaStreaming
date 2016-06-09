@@ -18,12 +18,16 @@
  */
 package se.sics.gvod.stream.report;
 
+import se.sics.gvod.stream.report.event.DownloadSummaryEvent;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.stream.StreamEvent;
-import se.sics.gvod.stream.torrent.TorrentStatus;
+import se.sics.gvod.stream.report.event.StatusSummaryEvent;
+import se.sics.gvod.stream.report.util.TorrentStatus;
+import se.sics.gvod.stream.torrent.TorrentStatusPort;
 import se.sics.gvod.stream.torrent.event.DownloadStatus;
 import se.sics.gvod.stream.util.ConnectionStatus;
 import se.sics.kompics.ComponentDefinition;
@@ -47,19 +51,25 @@ public class ReportComp extends ComponentDefinition {
     private String logPrefix = "";
 
     Positive<Timer> timerPort = requires(Timer.class);
-    Positive<TorrentStatus> torrentPort = requires(TorrentStatus.class);
+    Positive<TorrentStatusPort> torrentPort = requires(TorrentStatusPort.class);
     Negative<ReportPort> reportPort = provides(ReportPort.class);
 
+    private final Identifier torrentId;
     private final long reportDelay;
+    private static final int pieceSize = 1024;
     
+    private TorrentStatus status = TorrentStatus.NONE;
     private long startingTime;
     private long transferSize = 0;
+    private int downloadSpeed = 0;
+    private int percentageCompleted = 0;
 
     private UUID reportTId;
 
     public ReportComp(Init init) {
         LOG.info("{}initiating...", logPrefix);
 
+        torrentId = init.torrentId;
         reportDelay = init.reportDelay;
 
         subscribe(handleStart, control);
@@ -67,6 +77,8 @@ public class ReportComp extends ComponentDefinition {
         subscribe(handleDownloadDone, torrentPort);
         subscribe(handleDownloadResponse, torrentPort);
         subscribe(handleReport, timerPort);
+        
+        subscribe(handleStatusSummaryRequest, reportPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -87,6 +99,7 @@ public class ReportComp extends ComponentDefinition {
             LOG.info("{}download:{} starting", logPrefix, event.overlayId);
             scheduleReport(event.overlayId);
             startingTime = System.currentTimeMillis();
+            status = TorrentStatus.DOWNLOADING;
         }
     };
 
@@ -97,14 +110,17 @@ public class ReportComp extends ComponentDefinition {
             report(event.overlayId, event.connectionStatus);
             cancelReport();
             long transferTime = System.currentTimeMillis() - startingTime;
-            trigger(new SummaryEvent(transferSize, transferTime), reportPort);
+            trigger(new DownloadSummaryEvent(torrentId, transferSize, transferTime), reportPort);
+            downloadSpeed = 0;
+            status = TorrentStatus.UPLOADING;
         }
     };
 
     Handler handleDownloadResponse = new Handler<DownloadStatus.Response>() {
         @Override
-        public void handle(DownloadStatus.Response event) {
-            report(event.overlayId, event.connectionStatus);
+        public void handle(DownloadStatus.Response resp) {
+            report(resp.overlayId, resp.connectionStatus);
+            percentageCompleted = resp.percentageCompleted;
         }
     };
     
@@ -135,7 +151,8 @@ public class ReportComp extends ComponentDefinition {
             
             LOG.debug("{}", sb);
             
-            transferSize += 1024 * successSlots;
+            transferSize += pieceSize * successSlots;
+            downloadSpeed = (int)(successSlots / (reportDelay/1000));
     }
 
     Handler handleReport = new Handler<ReportTimeout>() {
@@ -145,12 +162,21 @@ public class ReportComp extends ComponentDefinition {
             trigger(new DownloadStatus.Request(event.overlayId), torrentPort);
         }
     };
+    
+    Handler handleStatusSummaryRequest = new Handler<StatusSummaryEvent.Request>() {
+        @Override
+        public void handle(StatusSummaryEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
+            answer(req, req.success(new TorrentExtendedStatus(torrentId, status, downloadSpeed, percentageCompleted)));
+        }
+    };
 
     public static class Init extends se.sics.kompics.Init<ReportComp> {
-
+        public final Identifier torrentId;
         public final long reportDelay;
 
-        public Init(long reportDelay) {
+        public Init(Identifier torrentId, long reportDelay) {
+            this.torrentId = torrentId;
             this.reportDelay = reportDelay;
         }
     }

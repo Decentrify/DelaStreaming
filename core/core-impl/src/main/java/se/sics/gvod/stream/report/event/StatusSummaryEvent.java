@@ -16,39 +16,30 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.report.event;
 
-import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
-import se.sics.gvod.mngr.util.Result;
-import se.sics.gvod.mngr.util.TorrentInfo;
+import se.sics.gvod.stream.StreamEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.overlays.OverlayEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryElementGetEvent {
-    public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+public class StatusSummaryEvent {
+    public static class Request extends Direct.Request<Response> implements StreamEvent, OverlayEvent {
         public final Identifier eventId;
-        public final TorrentExtendedStatus les;
+        public final Identifier torrentId;
         
-        public Request(Identifier eventId, TorrentExtendedStatus les) {
+        public Request(Identifier eventId, Identifier torrentId) {
             this.eventId = eventId;
-            this.les = les;
+            this.torrentId = torrentId;
         }
         
-        public Request(TorrentExtendedStatus les) {
-            this(UUIDIdentifier.randomId(), les);
-        }
-        
-        public Response success(FileInfo fileInfo, TorrentInfo torrentInfo) {
-            return new Response(this, Result.success(), fileInfo, torrentInfo);
-        }
-        
-        public Response badRequest(String description) {
-            return new Response(this, Result.badRequest(description), null, null);
+        public Request(Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), torrentId);
         }
         
         @Override
@@ -57,32 +48,32 @@ public class LibraryElementGetEvent {
         }
         
         @Override
-        public String toString() {
-            return "LibraryElementRequest<" + getId() + ">";
+        public Identifier overlayId() {
+            return torrentId;
+        }
+        
+        public Response success(TorrentExtendedStatus value) {
+            return new Response(this, value);
         }
     }
     
-    public static class Response implements Direct.Response, VoDMngrEvent {
+    public static class Response implements Direct.Response, StreamEvent, OverlayEvent {
         public final Request req;
-        public final Result result;
-        public final FileInfo fileInfo;
-        public final TorrentInfo torrentInfo;
-        
-        private Response(Request req, Result result, FileInfo fileInfo, TorrentInfo torrentInfo) {
+        public final TorrentExtendedStatus value;
+
+        public Response(Request req, TorrentExtendedStatus value) {
             this.req = req;
-            this.result = result;
-            this.fileInfo = fileInfo;
-            this.torrentInfo = torrentInfo;
+            this.value = value;
         }
         
         @Override
         public Identifier getId() {
             return req.getId();
         }
-        
-         @Override
-        public String toString() {
-            return "LibraryElementResponse<" + getId() + ">";
+
+        @Override
+        public Identifier overlayId() {
+            return req.overlayId();
         }
     }
 }

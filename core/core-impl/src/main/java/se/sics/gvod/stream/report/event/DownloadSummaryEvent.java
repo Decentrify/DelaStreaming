@@ -16,29 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.report;
+package se.sics.gvod.stream.report.event;
 
 import se.sics.gvod.stream.StreamEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.overlays.OverlayEvent;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class SummaryEvent implements StreamEvent {
+public class DownloadSummaryEvent implements StreamEvent, OverlayEvent {
     public final Identifier eventId;
+    public final Identifier torrentId;
     public final long transferSize;
     public final long transferTime;
 
-    public SummaryEvent(Identifier eventId, long transferSize, long transferTime) {
+    public DownloadSummaryEvent(Identifier eventId, Identifier torrentId, long transferSize, long transferTime) {
         this.eventId = eventId;
         this.transferSize = transferSize;
         this.transferTime = transferTime;
+        this.torrentId = torrentId;
     }
     
-    public SummaryEvent(long transferSize, long transferTime) {
-        this(UUIDIdentifier.randomId(), transferSize, transferTime);
+    public DownloadSummaryEvent(Identifier torrentId, long transferSize, long transferTime) {
+        this(UUIDIdentifier.randomId(), torrentId, transferSize, transferTime);
     }
     
     @Override
@@ -47,7 +50,12 @@ public class SummaryEvent implements StreamEvent {
     }
     
     @Override
+    public Identifier overlayId() {
+        return torrentId;
+    }
+    
+    @Override
     public String toString() {
-        return "SummaryEvent<" + getId() + ">";
+        return "Download<" + torrentId + ">SummaryEvent<" + getId() + ">";
     }
 }

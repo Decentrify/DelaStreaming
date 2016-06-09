@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.gvod.mngr.util.FileInfo;
-import se.sics.gvod.mngr.util.LibraryElementSummary;
+import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.kompics.Direct;
@@ -44,7 +44,7 @@ public class LibraryContentsEvent {
             this(UUIDIdentifier.randomId());
         }
         
-        public Response success(List<LibraryElementSummary> content) {
+        public Response success(List<TorrentExtendedStatus> content) {
             return new Response(this, Result.success(), content);
         }
         
@@ -62,9 +62,9 @@ public class LibraryContentsEvent {
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
-        public final List<LibraryElementSummary> content;
+        public final List<TorrentExtendedStatus> content;
         
-        private Response(Request req, Result result, List<LibraryElementSummary> content) {
+        private Response(Request req, Result result, List<TorrentExtendedStatus> content) {
             this.req = req;
             this.result = result;
             this.content = content;

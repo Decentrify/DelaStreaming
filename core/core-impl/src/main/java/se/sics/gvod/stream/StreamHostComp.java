@@ -29,7 +29,7 @@ import se.sics.gvod.stream.connection.ConnMngrPort;
 import se.sics.gvod.stream.report.ReportComp;
 import se.sics.gvod.stream.report.ReportPort;
 import se.sics.gvod.stream.torrent.TorrentComp;
-import se.sics.gvod.stream.torrent.TorrentStatus;
+import se.sics.gvod.stream.torrent.TorrentStatusPort;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
@@ -50,7 +50,7 @@ public class StreamHostComp extends ComponentDefinition {
     private String logPrefix = " ";    
     
     private Negative<ReportPort> reportPort = provides(ReportPort.class);
-    private Negative<TorrentStatus> streamStatusPort = provides(TorrentStatus.class);
+    private Negative<TorrentStatusPort> streamStatusPort = provides(TorrentStatusPort.class);
     private final ExtPort extPorts;
     
     private Component connComp;
@@ -60,7 +60,7 @@ public class StreamHostComp extends ComponentDefinition {
     private Channel[] channels;
     
     private SystemKCWrapper systemConfig;
-    private final long reportingPeriod = 10000;
+    private final long reportingPeriod = 1000;
     
     private final KAddress selfAdr;
     private final TorrentDetails torrentDetails;
@@ -125,11 +125,11 @@ public class StreamHostComp extends ComponentDefinition {
         channels[4] = connect(congestionComp.getNegative(Network.class), extPorts.networkPort, Channel.TWO_WAY);
         channels[5] = connect(torrentComp.getNegative(Network.class), congestionComp.getPositive(Network.class), Channel.TWO_WAY);
 
-        reportComp = create(ReportComp.class, new ReportComp.Init(reportingPeriod));
+        reportComp = create(ReportComp.class, new ReportComp.Init(torrentDetails.getOverlayId(), reportingPeriod));
         channels[6] = connect(reportComp.getNegative(Timer.class), extPorts.timerPort, Channel.TWO_WAY);
-        channels[7] = connect(reportComp.getNegative(TorrentStatus.class), torrentComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
+        channels[7] = connect(reportComp.getNegative(TorrentStatusPort.class), torrentComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
 
-        channels[8] = connect(streamStatusPort, torrentComp.getPositive(TorrentStatus.class), Channel.TWO_WAY);
+        channels[8] = connect(streamStatusPort, torrentComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
         channels[9] = connect(reportPort, reportComp.getPositive(ReportPort.class), Channel.TWO_WAY);
     }
     
