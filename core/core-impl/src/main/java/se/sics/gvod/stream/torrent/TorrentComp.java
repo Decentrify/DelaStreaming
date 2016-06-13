@@ -492,7 +492,7 @@ public class TorrentComp extends ComponentDefinition {
             int pendingMsg = pendingPieces.size() + pendingHashes.size();
 //            Pair<Integer, Integer> dwnlReport = dwnlConn.mngr.getLoad();
             LOG.info("{}TransferFSM Download TransferMngr:{},{}",
-                    new Object[]{logPrefix, transferMngr.contiguousBlocks(0), transferMngr.percentageComplete()});
+                    new Object[]{logPrefix, transferMngr.contiguousBlocks(0), 100 * transferMngr.percentageComplete()});
             upload.report();
         }
 
@@ -500,7 +500,7 @@ public class TorrentComp extends ComponentDefinition {
             @Override
             public void handle(DownloadStatus.Request req) {
                 LOG.trace("{}received:{}", logPrefix, req);
-                answer(req, req.answer(dwnlConn.mngr.reportNReset(), (int)transferMngr.percentageComplete()));
+                answer(req, req.answer(dwnlConn.mngr.reportNReset(), (int)(100 * transferMngr.percentageComplete())));
             }
         };
 

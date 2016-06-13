@@ -58,11 +58,11 @@ public class ReportComp extends ComponentDefinition {
     private final long reportDelay;
     private static final int pieceSize = 1024;
     
-    private TorrentStatus status = TorrentStatus.NONE;
+    private TorrentStatus status = TorrentStatus.UPLOADING;
     private long startingTime;
     private long transferSize = 0;
     private int downloadSpeed = 0;
-    private int percentageCompleted = 0;
+    private int percentageCompleted = 100;
 
     private UUID reportTId;
 
@@ -100,6 +100,7 @@ public class ReportComp extends ComponentDefinition {
             scheduleReport(event.overlayId);
             startingTime = System.currentTimeMillis();
             status = TorrentStatus.DOWNLOADING;
+            percentageCompleted = 0;
         }
     };
 
