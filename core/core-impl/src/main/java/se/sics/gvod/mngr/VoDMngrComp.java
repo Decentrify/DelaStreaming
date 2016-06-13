@@ -33,7 +33,9 @@ import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.util.TorrentDetails;
 import se.sics.gvod.mngr.event.TorrentExtendedStatusEvent;
 import se.sics.gvod.mngr.event.ContentsSummaryEvent;
+import se.sics.gvod.mngr.event.HopsFileDeleteEvent;
 import se.sics.gvod.mngr.event.HopsTorrentDownloadEvent;
+import se.sics.gvod.mngr.event.HopsTorrentStopEvent;
 import se.sics.gvod.mngr.event.HopsTorrentUploadEvent;
 import se.sics.gvod.mngr.event.LibraryAddEvent;
 import se.sics.gvod.mngr.event.LibraryContentsEvent;
@@ -45,6 +47,7 @@ import se.sics.gvod.mngr.event.VideoPlayEvent;
 import se.sics.gvod.mngr.event.VideoStopEvent;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.mngr.util.FileInfo;
+import se.sics.gvod.mngr.util.HDFSResource;
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.gvod.stream.report.util.TorrentStatus;
@@ -55,12 +58,14 @@ import se.sics.gvod.stream.report.event.StatusSummaryEvent;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
+import se.sics.kompics.Kill;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.hops.managedStore.storage.HopsFactory;
+import se.sics.ktoolbox.hops.managedStore.storage.HDFSHelper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.identifiable.basic.OverlayIdentifier;
@@ -108,8 +113,8 @@ public class VoDMngrComp extends ComponentDefinition {
 
         extPorts = init.extPorts;
         selfAdr = init.selfAddress;
-        
-        reportChannel = One2NChannel.getChannel("vodMngrReportChannel", (Negative<ReportPort>)reportPort.getPair(), new EventOverlayIdExtractor());
+
+        reportChannel = One2NChannel.getChannel("vodMngrReportChannel", (Negative<ReportPort>) reportPort.getPair(), new EventOverlayIdExtractor());
 
         subscribe(handleStart, control);
         subscribe(handleLibraryContent, libraryPort);
@@ -125,9 +130,12 @@ public class VoDMngrComp extends ComponentDefinition {
         subscribe(handleHopsTorrentUpload, torrentPort);
         subscribe(handleHopsTorrentDownload, torrentPort);
         subscribe(handleDownloadCompleted, reportPort);
-        
+        subscribe(handleHopsTorrentStop, torrentPort);
+
         subscribe(handleTorrentStatusRequest, libraryPort);
         subscribe(handleTorrentStatusResponse, reportPort);
+        
+        subscribe(handleHopsFileDelete, libraryPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -448,7 +456,7 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
-    private void downloadHopsTorrent(final Identifier torrentId, final String fileName, final String dirPath, 
+    private void downloadHopsTorrent(final Identifier torrentId, final String fileName, final String dirPath,
             final String hopsURL, final List<KAddress> partners) {
         TorrentDetails torrentDetails = new TorrentDetails() {
             @Override
@@ -484,35 +492,57 @@ public class VoDMngrComp extends ComponentDefinition {
         components.put(torrentId, torrentComp);
         trigger(Start.event, torrentComp.control());
     }
-    
+
     Handler handleDownloadCompleted = new Handler<DownloadSummaryEvent>() {
         @Override
         public void handle(DownloadSummaryEvent event) {
             LOG.trace("{}received:{}", logPrefix, event);
             Pair<FileInfo, TorrentInfo> torrentDetails = libraryContents.get(event.torrentId);
-            if(torrentDetails == null) {
+            if (torrentDetails == null) {
                 //TODO - might happen when i stop torrent
                 return;
             }
             torrentDetails.getValue1().finishDownload();
         }
     };
-    
+
     Handler handleTorrentStatusRequest = new Handler<TorrentExtendedStatusEvent.Request>() {
         @Override
         public void handle(TorrentExtendedStatusEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
             pendingRequests.put(req.eventId, req);
             trigger(new StatusSummaryEvent.Request(req.eventId, req.torrentId), reportPort);
-        } 
-   };
-    
+        }
+    };
+
     Handler handleTorrentStatusResponse = new Handler<StatusSummaryEvent.Response>() {
         @Override
         public void handle(StatusSummaryEvent.Response resp) {
             LOG.trace("{}received:{}", logPrefix, resp);
             TorrentExtendedStatusEvent.Request req = pendingRequests.remove(resp.getId());
             answer(req, req.succes(resp.value));
+        }
+    };
+
+    Handler handleHopsTorrentStop = new Handler<HopsTorrentStopEvent.Request>() {
+        @Override
+        public void handle(HopsTorrentStopEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
+            Pair<FileInfo, TorrentInfo> tInfo = libraryContents.remove(req.torrentId);
+            Component torrentComp = components.remove(req.torrentId);
+
+            reportChannel.removeChannel(req.torrentId, torrentComp.getPositive(ReportPort.class));
+            trigger(Kill.event, torrentComp.control());
+            answer(req, req.success());
+        }
+    };
+    
+    Handler handleHopsFileDelete = new Handler<HopsFileDeleteEvent.Request>() {
+        @Override
+        public void handle(HopsFileDeleteEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
+            HDFSHelper.delete(req.file.hopsIp, req.file.hopsPort, req.file.dirPath, req.file.fileName);
+            answer(req, req.success());
         }
     };
 
@@ -537,103 +567,4 @@ public class VoDMngrComp extends ComponentDefinition {
             this.selfAddress = selfAddress;
         }
     }
-
-    //hacks
-    private void createMockUploadHopsTorrent() {
-        TorrentDetails torrentDetails = new TorrentDetails() {
-            private final String torrentName = "file";
-            private final String filePath = "/experiment/upload/file";
-            private final Torrent torrent;
-            private final Triplet<FileMngr, HashMngr, TransferMngr> mngrs;
-
-            {
-                String hopsURL = "bbc1.sics.se:26801";
-                int pieceSize = 1024;
-                int piecesPerBlock = 1024;
-                int blockSize = pieceSize * piecesPerBlock;
-                Identifier torrentId = new OverlayIdentifier(Ints.toByteArray(1));
-
-                se.sics.ktoolbox.util.managedStore.core.util.FileInfo fileInfo = se.sics.ktoolbox.util.managedStore.core.util.FileInfo.newFile("file", 42045440);
-                String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
-                se.sics.ktoolbox.util.managedStore.core.util.TorrentInfo torrentInfo = new se.sics.ktoolbox.util.managedStore.core.util.TorrentInfo(1024, 1024, hashAlg, -1);
-                torrent = new Torrent(torrentId, fileInfo, torrentInfo);
-
-                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getComplete(hopsURL, filePath, hashAlg, blockSize, pieceSize);
-                mngrs = fileHashMngr.add((TransferMngr) null);
-                long fileSize = mngrs.getValue0().length();
-            }
-
-            @Override
-            public Identifier getOverlayId() {
-                return torrent.overlayId;
-            }
-
-            @Override
-            public boolean download() {
-                return false;
-            }
-
-            @Override
-            public Torrent getTorrent() {
-                return torrent;
-            }
-
-            @Override
-            public Triplet<FileMngr, HashMngr, TransferMngr> torrentMngrs(Torrent torrent) {
-                return mngrs;
-            }
-        };
-
-        StreamHostComp.ExtPort shcExtPorts = new StreamHostComp.ExtPort(extPorts.timerPort, extPorts.networkPort);
-        torrentComp = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, new ArrayList<KAddress>()));
-        trigger(Start.event, torrentComp.control());
-    }
-
-    private void createMockDownloadHopsTorrent() {
-        TorrentDetails torrentDetails = new TorrentDetails() {
-            private final Identifier overlayId = new OverlayIdentifier(Ints.toByteArray(1));
-
-            @Override
-            public Identifier getOverlayId() {
-                return overlayId;
-            }
-
-            @Override
-            public boolean download() {
-                return true;
-            }
-
-            @Override
-            public Torrent getTorrent() {
-                throw new RuntimeException("logic error");
-            }
-
-            @Override
-            public Triplet<FileMngr, HashMngr, TransferMngr> torrentMngrs(Torrent torrent) {
-                String hopsURL = "bbc1.sics.se:26801";
-                String filePath = "/experiment/download/file";
-                long fileSize = torrent.fileInfo.size;
-                String hashAlg = torrent.torrentInfo.hashAlg;
-                int pieceSize = torrent.torrentInfo.pieceSize;
-                int blockSize = torrent.torrentInfo.piecesPerBlock * pieceSize;
-                int hashSize = HashUtil.getHashSize(torrent.torrentInfo.hashAlg);
-
-                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getIncomplete(hopsURL, filePath, fileSize, hashAlg, blockSize, pieceSize);
-                return fileHashMngr.add((TransferMngr) new LBAOTransferMngr(torrent, fileHashMngr.getValue1(), fileHashMngr.getValue0(), 10));
-            }
-        };
-
-        StreamHostComp.ExtPort shcExtPorts = new StreamHostComp.ExtPort(extPorts.timerPort, extPorts.networkPort);
-        List<KAddress> partners = new ArrayList<>();
-        KAddress partner;
-        try {
-            partner = NatAwareAddressImpl.open(new BasicAddress(InetAddress.getLocalHost(), 30000, new IntIdentifier(1)));
-        } catch (UnknownHostException ex) {
-            throw new RuntimeException(ex);
-        }
-        partners.add(partner);
-        torrentComp = create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, partners));
-        trigger(Start.event, torrentComp.control());
-    }
-
 }

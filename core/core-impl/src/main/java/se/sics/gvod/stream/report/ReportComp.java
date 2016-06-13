@@ -114,6 +114,7 @@ public class ReportComp extends ComponentDefinition {
             trigger(new DownloadSummaryEvent(torrentId, transferSize, transferTime), reportPort);
             downloadSpeed = 0;
             status = TorrentStatus.UPLOADING;
+            percentageCompleted = 100;
         }
     };
 

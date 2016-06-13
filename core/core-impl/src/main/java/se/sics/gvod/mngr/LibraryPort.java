@@ -20,6 +20,7 @@ package se.sics.gvod.mngr;
 
 import se.sics.gvod.mngr.event.TorrentExtendedStatusEvent;
 import se.sics.gvod.mngr.event.ContentsSummaryEvent;
+import se.sics.gvod.mngr.event.HopsFileDeleteEvent;
 import se.sics.gvod.mngr.event.LibraryAddEvent;
 import se.sics.gvod.mngr.event.LibraryContentsEvent;
 import se.sics.gvod.mngr.event.LibraryElementGetEvent;
@@ -42,5 +43,8 @@ public class LibraryPort extends PortType {
         
         request(TorrentExtendedStatusEvent.Request.class);
         indication(TorrentExtendedStatusEvent.Response.class);
+        
+        request(HopsFileDeleteEvent.Request.class);
+        indication(HopsFileDeleteEvent.Response.class);
     }
 }
