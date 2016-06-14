@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.util.TorrentDetails;
 import se.sics.gvod.mngr.event.TorrentExtendedStatusEvent;
 import se.sics.gvod.mngr.event.ContentsSummaryEvent;
-import se.sics.gvod.mngr.event.HopsFileDeleteEvent;
+import se.sics.gvod.mngr.event.library.HopsFileDeleteEvent;
 import se.sics.gvod.mngr.event.HopsTorrentDownloadEvent;
 import se.sics.gvod.mngr.event.HopsTorrentStopEvent;
 import se.sics.gvod.mngr.event.HopsTorrentUploadEvent;
@@ -45,6 +45,7 @@ import se.sics.gvod.mngr.event.TorrentStopEvent;
 import se.sics.gvod.mngr.event.TorrentUploadEvent;
 import se.sics.gvod.mngr.event.VideoPlayEvent;
 import se.sics.gvod.mngr.event.VideoStopEvent;
+import se.sics.gvod.mngr.event.library.HopsFileCreateEvent;
 import se.sics.gvod.mngr.event.system.HopsConnectionEvent;
 import se.sics.gvod.mngr.event.system.SystemAddressEvent;
 import se.sics.gvod.mngr.util.ElementSummary;
@@ -131,10 +132,11 @@ public class VoDMngrComp extends ComponentDefinition {
 
         subscribe(handleSystemAddress, systemPort);
         subscribe(handleHopsConnection, systemPort);
-        
+
         subscribe(handleContentsRequest, libraryPort);
         subscribe(handleTorrentStatusRequest, libraryPort);
         subscribe(handleTorrentStatusResponse, reportPort);
+        subscribe(handleHopsFileCreate, libraryPort);
         subscribe(handleHopsFileDelete, libraryPort);
 
         subscribe(handleHopsTorrentUpload, torrentPort);
@@ -149,7 +151,7 @@ public class VoDMngrComp extends ComponentDefinition {
             LOG.info("{}starting...", logPrefix);
         }
     };
-    
+
     Handler handleSystemAddress = new Handler<SystemAddressEvent.Request>() {
         @Override
         public void handle(SystemAddressEvent.Request req) {
@@ -157,13 +159,13 @@ public class VoDMngrComp extends ComponentDefinition {
             answer(req, req.success(selfAdr));
         }
     };
-    
+
     Handler handleHopsConnection = new Handler<HopsConnectionEvent.Request>() {
         @Override
         public void handle(HopsConnectionEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
             boolean result = HDFSHelper.canConnect(req.connection.hopsIp, req.connection.hopsPort);
-            if(result) {
+            if (result) {
                 answer(req, req.success());
             } else {
                 answer(req, req.fail("cannot connect to hops"));
@@ -567,8 +569,25 @@ public class VoDMngrComp extends ComponentDefinition {
         @Override
         public void handle(HopsFileDeleteEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            HDFSHelper.delete(req.file.hopsIp, req.file.hopsPort, req.file.dirPath, req.file.fileName);
-            answer(req, req.success());
+            boolean result = HDFSHelper.delete(req.file.hopsIp, req.file.hopsPort, req.file.dirPath, req.file.fileName);
+            if (result) {
+                answer(req, req.success());
+            } else {
+                answer(req, req.fail("could not delete file"));
+            }
+        }
+    };
+
+    Handler handleHopsFileCreate = new Handler<HopsFileCreateEvent.Request>() {
+        @Override
+        public void handle(HopsFileCreateEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
+            boolean result = HDFSHelper.create(req.resource.base.hopsIp, req.resource.base.hopsPort, req.resource.base.dirPath, req.resource.base.fileName, req.resource.size);
+            if (result) {
+                answer(req, req.success());
+            } else {
+                answer(req, req.fail("could not create file"));
+            }
         }
     };
 
