@@ -50,8 +50,6 @@ import se.sics.gvod.mngr.event.system.HopsConnectionEvent;
 import se.sics.gvod.mngr.event.system.SystemAddressEvent;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.mngr.util.FileInfo;
-import se.sics.gvod.mngr.util.HDFSResource;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.gvod.stream.report.util.TorrentStatus;
 import se.sics.gvod.stream.StreamHostComp;
@@ -70,8 +68,6 @@ import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.hops.managedStore.storage.HopsFactory;
 import se.sics.ktoolbox.hops.managedStore.storage.HDFSHelper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
-import se.sics.ktoolbox.util.identifiable.basic.OverlayIdentifier;
 import se.sics.ktoolbox.util.idextractor.EventOverlayIdExtractor;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
 import se.sics.ktoolbox.util.managedStore.core.HashMngr;
@@ -569,7 +565,7 @@ public class VoDMngrComp extends ComponentDefinition {
         @Override
         public void handle(HopsFileDeleteEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            boolean result = HDFSHelper.delete(req.file.hopsIp, req.file.hopsPort, req.file.dirPath, req.file.fileName);
+            boolean result = HDFSHelper.delete("glassfish", req.file.hopsIp, req.file.hopsPort, req.file.dirPath, req.file.fileName);
             if (result) {
                 answer(req, req.success());
             } else {
@@ -582,7 +578,7 @@ public class VoDMngrComp extends ComponentDefinition {
         @Override
         public void handle(HopsFileCreateEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            boolean result = HDFSHelper.create(req.resource.base.hopsIp, req.resource.base.hopsPort, req.resource.base.dirPath, req.resource.base.fileName, req.resource.size);
+            boolean result = HDFSHelper.create("glassfish", req.resource.base.hopsIp, req.resource.base.hopsPort, req.resource.base.dirPath, req.resource.base.fileName, req.resource.size);
             if (result) {
                 answer(req, req.success());
             } else {
