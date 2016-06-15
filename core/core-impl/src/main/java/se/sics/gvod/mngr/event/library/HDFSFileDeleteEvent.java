@@ -28,21 +28,23 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsFileDeleteEvent {
+public class HDFSFileDeleteEvent {
 
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
         public final Identifier eventId;
 
-        public final HDFSResource file;
+        public final HDFSResource resource;
+        public final String user;
 
-        public Request(Identifier eventId, HDFSResource file) {
+        public Request(Identifier eventId, HDFSResource resource, String user) {
             this.eventId = eventId;
-            this.file = file;
+            this.resource = resource;
+            this.user = user;
         }
 
-        public Request(HDFSResource file) {
-            this(UUIDIdentifier.randomId(), file);
+        public Request(HDFSResource resource, String user) {
+            this(UUIDIdentifier.randomId(), resource, user);
         }
 
         @Override

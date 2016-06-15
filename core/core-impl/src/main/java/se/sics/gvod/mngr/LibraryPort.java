@@ -20,11 +20,11 @@ package se.sics.gvod.mngr;
 
 import se.sics.gvod.mngr.event.TorrentExtendedStatusEvent;
 import se.sics.gvod.mngr.event.ContentsSummaryEvent;
-import se.sics.gvod.mngr.event.library.HopsFileDeleteEvent;
+import se.sics.gvod.mngr.event.library.HDFSFileDeleteEvent;
 import se.sics.gvod.mngr.event.LibraryAddEvent;
 import se.sics.gvod.mngr.event.LibraryContentsEvent;
 import se.sics.gvod.mngr.event.LibraryElementGetEvent;
-import se.sics.gvod.mngr.event.library.HopsFileCreateEvent;
+import se.sics.gvod.mngr.event.library.HDFSFileCreateEvent;
 import se.sics.kompics.PortType;
 
 /**
@@ -45,9 +45,9 @@ public class LibraryPort extends PortType {
         request(TorrentExtendedStatusEvent.Request.class);
         indication(TorrentExtendedStatusEvent.Response.class);
         
-        request(HopsFileDeleteEvent.Request.class);
-        indication(HopsFileDeleteEvent.Response.class);
-        request(HopsFileCreateEvent.Request.class);
-        indication(HopsFileCreateEvent.Response.class);
+        request(HDFSFileDeleteEvent.Request.class);
+        indication(HDFSFileDeleteEvent.Response.class);
+        request(HDFSFileCreateEvent.Request.class);
+        indication(HDFSFileCreateEvent.Response.class);
     }
 }
