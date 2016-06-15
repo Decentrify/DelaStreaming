@@ -36,19 +36,21 @@ public class HopsTorrentUploadEvent {
         public final int hopsPort;
         public final String dirPath;
         public final String fileName;
+        public final String user;
         public final Identifier torrentId;
 
-        public Request(Identifier eventId, String hopsIp, int hopsPort, String dirPath, String fileName, Identifier torrentId) {
+        public Request(Identifier eventId, String hopsIp, int hopsPort, String dirPath, String fileName, String user, Identifier torrentId) {
             this.eventId = eventId;
             this.hopsIp = hopsIp;
             this.hopsPort = hopsPort;
             this.dirPath = dirPath;
             this.fileName = fileName;
+            this.user = user;
             this.torrentId = torrentId;
         }
 
-        public Request(String hopsIp, int hopsPort, String dirPath, String fileName, Identifier torrentId) {
-            this(UUIDIdentifier.randomId(), hopsIp, hopsPort, dirPath, fileName, torrentId);
+        public Request(String hopsIp, int hopsPort, String dirPath, String fileName, String user, Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), hopsIp, hopsPort, dirPath, fileName, user, torrentId);
         }
 
         @Override

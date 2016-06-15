@@ -104,7 +104,7 @@ public class Sender extends ComponentDefinition {
 
                 String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
 
-                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getComplete(hopsURL, filePath, hashAlg, blockSize, pieceSize);
+                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getComplete("glassfish", hopsURL, filePath, hashAlg, blockSize, pieceSize);
                 mngrs = fileHashMngr.add((TransferMngr) null);
                 long fileSize = mngrs.getValue0().length();
                 torrent = new Torrent(experimentConfig.torrentId, FileInfo.newFile(torrentName, fileSize), new TorrentInfo(pieceSize, piecesPerBlock, hashAlg, -1));

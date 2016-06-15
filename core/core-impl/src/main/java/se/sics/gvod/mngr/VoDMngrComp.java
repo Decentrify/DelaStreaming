@@ -379,7 +379,7 @@ public class VoDMngrComp extends ComponentDefinition {
                         Map<Identifier, KAddress> partners = new HashMap<>();
                         TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.UPLOADING, partners, 0, 0, 0);
                         libraryContents.put(req.torrentId, Pair.with(fileInfo, torrentInfo));
-                        uploadHopsTorrent(req.torrentId, req.fileName, req.dirPath, hopsURL);
+                        uploadHopsTorrent(req.user, req.torrentId, req.fileName, req.dirPath, hopsURL);
                         resp = req.success();
                         break;
                     default:
@@ -391,7 +391,7 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
-    private void uploadHopsTorrent(final Identifier torrentId, final String fileName, final String dirPath, final String hopsURL) {
+    private void uploadHopsTorrent(final String user, final Identifier torrentId, final String fileName, final String dirPath, final String hopsURL) {
         TorrentDetails torrentDetails = new TorrentDetails() {
             private final Torrent torrent;
             private final Triplet<FileMngr, HashMngr, TransferMngr> mngrs;
@@ -402,7 +402,7 @@ public class VoDMngrComp extends ComponentDefinition {
                 int blockSize = pieceSize * piecesPerBlock;
                 String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
 
-                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getComplete(hopsURL, dirPath + File.separator + fileName, hashAlg, blockSize, pieceSize);
+                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getComplete(user, hopsURL, dirPath + File.separator + fileName, hashAlg, blockSize, pieceSize);
                 mngrs = fileHashMngr.add((TransferMngr) null);
                 long fileSize = mngrs.getValue0().length();
 
@@ -451,7 +451,7 @@ public class VoDMngrComp extends ComponentDefinition {
                 Map<Identifier, KAddress> partners = new HashMap<>();
                 TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.DOWNLOADING, partners, 0, 0, 0);
                 libraryContents.put(req.torrentId, Pair.with(fileInfo, torrentInfo));
-                downloadHopsTorrent(req.torrentId, req.fileName, req.dirPath, req.hopsIp + ":" + req.hopsPort, req.partners);
+                downloadHopsTorrent(req.user, req.torrentId, req.fileName, req.dirPath, req.hopsIp + ":" + req.hopsPort, req.partners);
                 resp = req.success();
             } else {
                 Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.torrentId);
@@ -475,7 +475,7 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
-    private void downloadHopsTorrent(final Identifier torrentId, final String fileName, final String dirPath,
+    private void downloadHopsTorrent(final String user, final Identifier torrentId, final String fileName, final String dirPath,
             final String hopsURL, final List<KAddress> partners) {
         TorrentDetails torrentDetails = new TorrentDetails() {
             @Override
@@ -501,7 +501,7 @@ public class VoDMngrComp extends ComponentDefinition {
                 int blockSize = torrent.torrentInfo.piecesPerBlock * pieceSize;
                 int hashSize = HashUtil.getHashSize(torrent.torrentInfo.hashAlg);
 
-                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getIncomplete(hopsURL, dirPath + File.separator + fileName, fileSize, hashAlg, blockSize, pieceSize);
+                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getIncomplete(user, hopsURL, dirPath + File.separator + fileName, fileSize, hashAlg, blockSize, pieceSize);
                 return fileHashMngr.add((TransferMngr) new LBAOTransferMngr(torrent, fileHashMngr.getValue1(), fileHashMngr.getValue0(), 10));
             }
         };

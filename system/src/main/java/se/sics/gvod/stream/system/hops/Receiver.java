@@ -138,7 +138,7 @@ public class Receiver extends ComponentDefinition {
                 int blockSize = torrent.torrentInfo.piecesPerBlock * pieceSize;
                 int hashSize = HashUtil.getHashSize(torrent.torrentInfo.hashAlg);
 
-                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getIncomplete(hopsURL, filePath, fileSize, hashAlg, blockSize, pieceSize);
+                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getIncomplete("glassfish", hopsURL, filePath, fileSize, hashAlg, blockSize, pieceSize);
                 return fileHashMngr.add((TransferMngr)new LBAOTransferMngr(torrent, fileHashMngr.getValue1(), fileHashMngr.getValue0(), 10));
             }
         };

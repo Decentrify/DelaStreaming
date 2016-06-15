@@ -38,21 +38,23 @@ public class HopsTorrentDownloadEvent {
         public final int hopsPort;
         public final String dirPath;
         public final String fileName;
+        public final String user;
         public final Identifier torrentId;
         public final List<KAddress> partners;
 
-        public Request(Identifier eventId, String hopsIp, int hopsPort, String dirPath, String fileName, Identifier torrentId, List<KAddress> partners) {
+        public Request(Identifier eventId, String hopsIp, int hopsPort, String dirPath, String fileName, String user, Identifier torrentId, List<KAddress> partners) {
             this.eventId = eventId;
             this.hopsIp = hopsIp;
             this.hopsPort = hopsPort;
             this.dirPath = dirPath;
             this.fileName = fileName;
+            this.user = user;
             this.torrentId = torrentId;
             this.partners = partners;
         }
 
-        public Request(String hopsIp, int hopsPort, String dirPath, String fileName, Identifier torrentId, List<KAddress> partners) {
-            this(UUIDIdentifier.randomId(), hopsIp, hopsPort, dirPath, fileName, torrentId, partners);
+        public Request(String hopsIp, int hopsPort, String dirPath, String fileName, String user, Identifier torrentId, List<KAddress> partners) {
+            this(UUIDIdentifier.randomId(), hopsIp, hopsPort, dirPath, fileName, user, torrentId, partners);
         }
 
         @Override
