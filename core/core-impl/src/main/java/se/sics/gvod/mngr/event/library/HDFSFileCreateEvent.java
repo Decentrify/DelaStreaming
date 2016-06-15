@@ -20,7 +20,6 @@ package se.sics.gvod.mngr.event.library;
 
 import se.sics.gvod.mngr.event.VoDMngrEvent;
 import se.sics.gvod.mngr.util.HDFSResource;
-import se.sics.gvod.mngr.util.HDFSResourceExtended;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -29,21 +28,25 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsFileCreateEvent {
+public class HDFSFileCreateEvent {
 
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
         public final Identifier eventId;
 
-        public final HDFSResourceExtended resource;
+        public final HDFSResource resource; 
+        public final String user;
+        public final long fileSize;
 
-        public Request(Identifier eventId, HDFSResourceExtended resource) {
+        public Request(Identifier eventId, HDFSResource resource, String user, long fileSize) {
             this.eventId = eventId;
             this.resource = resource;
+            this.user = user;
+            this.fileSize = fileSize;
         }
 
-        public Request(HDFSResourceExtended resource) {
-            this(UUIDIdentifier.randomId(), resource);
+        public Request(HDFSResource resource, String user, long fileSize) {
+            this(UUIDIdentifier.randomId(), resource, user, fileSize);
         }
 
         @Override

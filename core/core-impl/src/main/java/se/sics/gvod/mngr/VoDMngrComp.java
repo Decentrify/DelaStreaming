@@ -18,10 +18,7 @@
  */
 package se.sics.gvod.mngr;
 
-import com.google.common.primitives.Ints;
 import java.io.File;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +30,7 @@ import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.util.TorrentDetails;
 import se.sics.gvod.mngr.event.TorrentExtendedStatusEvent;
 import se.sics.gvod.mngr.event.ContentsSummaryEvent;
-import se.sics.gvod.mngr.event.library.HopsFileDeleteEvent;
+import se.sics.gvod.mngr.event.library.HDFSFileDeleteEvent;
 import se.sics.gvod.mngr.event.HopsTorrentDownloadEvent;
 import se.sics.gvod.mngr.event.HopsTorrentStopEvent;
 import se.sics.gvod.mngr.event.HopsTorrentUploadEvent;
@@ -45,7 +42,7 @@ import se.sics.gvod.mngr.event.TorrentStopEvent;
 import se.sics.gvod.mngr.event.TorrentUploadEvent;
 import se.sics.gvod.mngr.event.VideoPlayEvent;
 import se.sics.gvod.mngr.event.VideoStopEvent;
-import se.sics.gvod.mngr.event.library.HopsFileCreateEvent;
+import se.sics.gvod.mngr.event.library.HDFSFileCreateEvent;
 import se.sics.gvod.mngr.event.system.HopsConnectionEvent;
 import se.sics.gvod.mngr.event.system.SystemAddressEvent;
 import se.sics.gvod.mngr.util.ElementSummary;
@@ -77,8 +74,6 @@ import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.managedStore.core.util.Torrent;
 import se.sics.ktoolbox.util.managedStore.resources.LocalDiskResource;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.network.basic.BasicAddress;
-import se.sics.ktoolbox.util.network.nat.NatAwareAddressImpl;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 
 /**
@@ -238,7 +233,7 @@ public class VoDMngrComp extends ComponentDefinition {
 //                        resp = req.success();
 //                        break;
 //                    case DOWNLOADING:
-//                        resp = req.badRequest("can't upload file with none status");
+//                        resp = req.badRequest("can't upload resource with none status");
 //                        break;
 //                    case NONE:
 //                        Map<Identifier, KAddress> partners = new HashMap<>();
@@ -251,7 +246,7 @@ public class VoDMngrComp extends ComponentDefinition {
 //                        resp = req.fail("missing logic");
 //                }
 //            } else {
-//                resp = req.badRequest("no such file in library");
+//                resp = req.badRequest("no such resource in library");
 //            }
 //            LOG.info("{}answering:{}", logPrefix, resp);
 //            answer(req, resp);
@@ -277,13 +272,13 @@ public class VoDMngrComp extends ComponentDefinition {
 //                TorrentStatus status = elementInfo.getValue1().status;
 //                switch (status) {
 //                    case UPLOADING:
-//                        resp = req.badRequest("can't download file with uploading status");
+//                        resp = req.badRequest("can't download resource with uploading status");
 //                        break;
 //                    case DOWNLOADING:
 //                        resp = req.success();
 //                        break;
 //                    case NONE:
-//                        resp = req.badRequest("can't download file with none status");
+//                        resp = req.badRequest("can't download resource with none status");
 //                        break;
 //                    default:
 //                        resp = req.fail("missing logic");
@@ -304,7 +299,7 @@ public class VoDMngrComp extends ComponentDefinition {
 //                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.overlayId);
 //                switch (elementInfo.getValue1().status) {
 //                    case NONE:
-//                        resp = req.badRequest("can't stop file with none status");
+//                        resp = req.badRequest("can't stop resource with none status");
 //                        break;
 //                    case UPLOADING:
 //                        Map<Identifier, KAddress> partners = new HashMap<>();
@@ -320,7 +315,7 @@ public class VoDMngrComp extends ComponentDefinition {
 //                        resp = req.badRequest("missing logic");
 //                }
 //            } else {
-//                resp = req.badRequest("no such file in library");
+//                resp = req.badRequest("no such resource in library");
 //            }
 //            LOG.info("{}answering:{}", logPrefix, resp);
 //            answer(req, resp);
@@ -561,11 +556,11 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
-    Handler handleHopsFileDelete = new Handler<HopsFileDeleteEvent.Request>() {
+    Handler handleHopsFileDelete = new Handler<HDFSFileDeleteEvent.Request>() {
         @Override
-        public void handle(HopsFileDeleteEvent.Request req) {
+        public void handle(HDFSFileDeleteEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            boolean result = HDFSHelper.delete("glassfish", req.file.hopsIp, req.file.hopsPort, req.file.dirPath, req.file.fileName);
+            boolean result = HDFSHelper.delete(req.user, req.resource.hopsIp, req.resource.hopsPort, req.resource.dirPath, req.resource.fileName);
             if (result) {
                 answer(req, req.success());
             } else {
@@ -574,11 +569,11 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
-    Handler handleHopsFileCreate = new Handler<HopsFileCreateEvent.Request>() {
+    Handler handleHopsFileCreate = new Handler<HDFSFileCreateEvent.Request>() {
         @Override
-        public void handle(HopsFileCreateEvent.Request req) {
+        public void handle(HDFSFileCreateEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            boolean result = HDFSHelper.create("glassfish", req.resource.base.hopsIp, req.resource.base.hopsPort, req.resource.base.dirPath, req.resource.base.fileName, req.resource.size);
+            boolean result = HDFSHelper.create(req.user, req.resource.hopsIp, req.resource.hopsPort, req.resource.dirPath, req.resource.fileName, req.fileSize);
             if (result) {
                 answer(req, req.success());
             } else {
