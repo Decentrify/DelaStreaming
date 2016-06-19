@@ -21,6 +21,7 @@ package se.sics.gvod.mngr.event;
 import java.util.List;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.hops.managedStore.storage.util.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -34,27 +35,21 @@ public class HopsTorrentDownloadEvent {
 
         public final Identifier eventId;
 
-        public final String hopsIp;
-        public final int hopsPort;
-        public final String dirPath;
-        public final String fileName;
+        public final HDFSResource resource;
         public final String user;
         public final Identifier torrentId;
         public final List<KAddress> partners;
 
-        public Request(Identifier eventId, String hopsIp, int hopsPort, String dirPath, String fileName, String user, Identifier torrentId, List<KAddress> partners) {
+        public Request(Identifier eventId, HDFSResource resource, String user, Identifier torrentId, List<KAddress> partners) {
             this.eventId = eventId;
-            this.hopsIp = hopsIp;
-            this.hopsPort = hopsPort;
-            this.dirPath = dirPath;
-            this.fileName = fileName;
+            this.resource = resource;
             this.user = user;
             this.torrentId = torrentId;
             this.partners = partners;
         }
 
-        public Request(String hopsIp, int hopsPort, String dirPath, String fileName, String user, Identifier torrentId, List<KAddress> partners) {
-            this(UUIDIdentifier.randomId(), hopsIp, hopsPort, dirPath, fileName, user, torrentId, partners);
+        public Request(HDFSResource resource, String user, Identifier torrentId, List<KAddress> partners) {
+            this(UUIDIdentifier.randomId(), resource, user, torrentId, partners);
         }
 
         @Override
