@@ -23,6 +23,7 @@ import com.google.common.base.Optional;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -405,7 +406,7 @@ public class TorrentComp extends ComponentDefinition {
                     public void handle(Download.HashRequest content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashRequest> container) {
                         KAddress target = container.getHeader().getSource();
                         LOG.debug("{}received hashPos:{} request from:{}", new Object[]{logPrefix, content.targetPos, target.getId()});
-                        Pair<Map<Integer, ByteBuffer>, Set<Integer>> result = hashMngr.readHashes(content.hashes);
+                        Pair<Map<Integer, ByteBuffer>, Set<Integer>> result = hashMngr.readHashes(target.getId(), content.hashes, content.bufferBlocks);
                         answerNetwork(container, content.success(result.getValue0(), result.getValue1()));
                     }
                 };
@@ -418,7 +419,7 @@ public class TorrentComp extends ComponentDefinition {
                         KAddress target = container.getHeader().getSource();
                         LOG.debug("{}received data:{} request from:{}", new Object[]{logPrefix, content.pieceId, target.getId()});
                         if (fileMngr.hasPiece(content.pieceId)) {
-                            ByteBuffer piece = fileMngr.readPiece(content.pieceId);
+                            ByteBuffer piece = fileMngr.readPiece(target.getId(), content.pieceId, content.bufferBlocks);
                             answerNetwork(container, content.success(piece));
                         } else {
                             answerNetwork(container, content.missingPiece());
@@ -612,7 +613,8 @@ public class TorrentComp extends ComponentDefinition {
                     int hashPos = Collections.min(hashes.get());
                     Optional<KAddress> dwnlSrc = dwnlConn.mngr.download(hashPos);
                     if (dwnlSrc.isPresent()) {
-                        Download.HashRequest req = new Download.HashRequest(overlayId, hashPos, hashes.get());
+                        Set<Integer> bufferBlocks = new HashSet<Integer>();
+                        Download.HashRequest req = new Download.HashRequest(overlayId, hashPos, hashes.get(), bufferBlocks);
                         schedulePendingHashTimeout(req, dwnlSrc.get());
                         sendNetwork(dwnlSrc.get(), req);
                         continue;
@@ -626,7 +628,8 @@ public class TorrentComp extends ComponentDefinition {
                     Pair<Integer, Integer> blockDetails = ManagedStoreHelper.componentDetails(piece.get(), torrent.torrentInfo.piecesPerBlock);
                     Optional<KAddress> dwnlSrc = dwnlConn.mngr.download(blockDetails.getValue0());
                     if (dwnlSrc.isPresent()) {
-                        Download.DataRequest req = new Download.DataRequest(overlayId, piece.get());
+                        Set<Integer> bufferBlocks = new HashSet<Integer>();
+                        Download.DataRequest req = new Download.DataRequest(overlayId, piece.get(), bufferBlocks);
                         schedulePendingPieceTimeout(req, dwnlSrc.get());
                         sendNetwork(dwnlSrc.get(), req);
                         continue;
