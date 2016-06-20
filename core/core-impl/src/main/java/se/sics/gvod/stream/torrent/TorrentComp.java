@@ -614,6 +614,7 @@ public class TorrentComp extends ComponentDefinition {
                     Optional<KAddress> dwnlSrc = dwnlConn.mngr.download(hashPos);
                     if (dwnlSrc.isPresent()) {
                         Set<Integer> bufferBlocks = new HashSet<Integer>();
+                        bufferBlocks.addAll(hashes.get());
                         Download.HashRequest req = new Download.HashRequest(overlayId, hashPos, hashes.get(), bufferBlocks);
                         schedulePendingHashTimeout(req, dwnlSrc.get());
                         sendNetwork(dwnlSrc.get(), req);
@@ -629,6 +630,9 @@ public class TorrentComp extends ComponentDefinition {
                     Optional<KAddress> dwnlSrc = dwnlConn.mngr.download(blockDetails.getValue0());
                     if (dwnlSrc.isPresent()) {
                         Set<Integer> bufferBlocks = new HashSet<Integer>();
+                        //TODO Alex - fix urgent
+                        int blockNr = ManagedStoreHelper.componentNr(piece.get(), 1024);
+                        bufferBlocks.add(blockNr);
                         Download.DataRequest req = new Download.DataRequest(overlayId, piece.get(), bufferBlocks);
                         schedulePendingPieceTimeout(req, dwnlSrc.get());
                         sendNetwork(dwnlSrc.get(), req);
