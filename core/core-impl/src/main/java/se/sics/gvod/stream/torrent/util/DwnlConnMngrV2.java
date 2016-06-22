@@ -84,7 +84,8 @@ public class DwnlConnMngrV2 {
         long handlingTime = System.currentTimeMillis();
         long receivedTime = state.getReceivedTime();
         long kQueueDelay = handlingTime - receivedTime;
-
+        
+        LOG.debug("{}torrent comp queue delay:{}", logPrefix, kQueueDelay);
         if (kQueueDelay < hostParam.minQueueDelay) {
             hostState.fast();
         } else if (hostParam.maxQueueDelay < kQueueDelay) {

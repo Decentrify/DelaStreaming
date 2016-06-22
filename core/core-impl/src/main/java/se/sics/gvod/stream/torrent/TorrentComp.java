@@ -74,6 +74,8 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.network.basic.DecoratedHeader;
+import se.sics.ktoolbox.util.profiling.KProfiler;
+import se.sics.ktoolbox.util.profiling.KProfilerKConfig;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -97,6 +99,7 @@ public class TorrentComp extends ComponentDefinition {
     private final long defaultMsgTimeout;
     private final long checkPeriod = 1000;
     //**************************INTERNAL_STATE**********************************
+    private KProfiler profiler;
     private TransferFSM transferFSM;
     private Random rand;
     private UUID periodicCheckTId;
@@ -107,6 +110,7 @@ public class TorrentComp extends ComponentDefinition {
         logPrefix = "<nid:" + selfAdr.getId() + ", oid:" + overlayId + ">";
         LOG.info("{}initiating...", logPrefix);
 
+        setKProfiler();
         SystemKCWrapper systemConfig = new SystemKCWrapper(config());
         rand = new Random(systemConfig.seed);
         loadModifiersConfig = new LoadModifiersKCWrapper(config());
@@ -118,6 +122,12 @@ public class TorrentComp extends ComponentDefinition {
         subscribe(handleCheck, timerPort);
     }
 
+    private void setKProfiler() {
+        KProfilerKConfig profilerConfig = new KProfilerKConfig(config());
+        KProfiler.Type kProfilerType = profilerConfig.kprofileRegistry.getProfilerType(this);
+        profiler = new KProfiler(kProfilerType);
+    }
+
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
@@ -125,7 +135,7 @@ public class TorrentComp extends ComponentDefinition {
             schedulePeriodicCheck();
         }
     };
-    
+
     @Override
     public void tearDown() {
         LOG.warn("{}tearing down", logPrefix);
@@ -147,7 +157,7 @@ public class TorrentComp extends ComponentDefinition {
         trigger(spt, timerPort);
         periodicCheckTId = t.getTimeoutId();
     }
-    
+
     public void cancelPeriodicTimer() {
         CancelPeriodicTimeout cpt = new CancelPeriodicTimeout(periodicCheckTId);
         trigger(cpt, timerPort);
@@ -349,7 +359,7 @@ public class TorrentComp extends ComponentDefinition {
         final Torrent torrent;
         final FileMngr fileMngr;
         final HashMngr hashMngr;
-        
+
         //hack
         final boolean uploadOnly;
 
@@ -370,7 +380,7 @@ public class TorrentComp extends ComponentDefinition {
 
         @Override
         public void cleanup() {
-            if(uploadOnly) {
+            if (uploadOnly) {
                 fileMngr.tearDown();
             }
             unsubscribe(handleTorrentRequest, networkPort);
@@ -404,10 +414,12 @@ public class TorrentComp extends ComponentDefinition {
 
                     @Override
                     public void handle(Download.HashRequest content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashRequest> container) {
+                        profiler.start("TorrentComp", "uploadHashRequest");
                         KAddress target = container.getHeader().getSource();
                         LOG.debug("{}received hashPos:{} request from:{}", new Object[]{logPrefix, content.targetPos, target.getId()});
                         Pair<Map<Integer, ByteBuffer>, Set<Integer>> result = hashMngr.readHashes(target.getId(), content.hashes, content.bufferBlocks);
                         answerNetwork(container, content.success(result.getValue0(), result.getValue1()));
+                        profiler.end();
                     }
                 };
 
@@ -416,6 +428,7 @@ public class TorrentComp extends ComponentDefinition {
 
                     @Override
                     public void handle(Download.DataRequest content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataRequest> container) {
+                        profiler.start("TorrentComp", "uploadPieceRequest");
                         KAddress target = container.getHeader().getSource();
                         LOG.debug("{}received data:{} request from:{}", new Object[]{logPrefix, content.pieceId, target.getId()});
                         if (fileMngr.hasPiece(content.pieceId)) {
@@ -424,6 +437,7 @@ public class TorrentComp extends ComponentDefinition {
                         } else {
                             answerNetwork(container, content.missingPiece());
                         }
+                        profiler.end();
                     }
                 };
     }
@@ -501,7 +515,7 @@ public class TorrentComp extends ComponentDefinition {
             @Override
             public void handle(DownloadStatus.Request req) {
                 LOG.trace("{}received:{}", logPrefix, req);
-                answer(req, req.answer(dwnlConn.mngr.reportNReset(), (int)(100 * transferMngr.percentageComplete())));
+                answer(req, req.answer(dwnlConn.mngr.reportNReset(), (int) (100 * transferMngr.percentageComplete())));
             }
         };
 
@@ -519,30 +533,32 @@ public class TorrentComp extends ComponentDefinition {
 
                     @Override
                     public void handle(Download.HashResponse content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashResponse> container) {
+                        profiler.start("TorrentComp", "downloadHashResponse");
                         KAddress target = container.getHeader().getSource();
                         LOG.debug("{}received hashPos:{} response from:{}", new Object[]{logPrefix, content.targetPos, target.getId()});
 
                         if (!cancelPendingHashTimeout(content.getId())) {
                             LOG.debug("{}hash from:{} - posibly late", logPrefix, target.getId());
-                            return;
+                        } else {
+                            switch (content.status) {
+                                case SUCCESS:
+                                    LOG.trace("{}SUCCESS hashes:{} missing hashes:{}", new Object[]{logPrefix, content.hashes.keySet(), content.missingHashes});
+                                    transferMngr.writeHashes(content.hashes, content.missingHashes);
+                                    dwnlConn.mngr.completed(target, content);
+                                    download();
+                                    break;
+                                case TIMEOUT:
+                                case BUSY:
+                                    LOG.debug("{}BUSY/TIMEOUT hashes:{}", logPrefix, content.missingHashes);
+                                    transferMngr.writeHashes(content.hashes, content.missingHashes);
+                                    dwnlConn.mngr.timedOut(target);
+                                    download();
+                                    break;
+                                default:
+                                    LOG.warn("{}illegal status:{}, ignoring", new Object[]{logPrefix, content.status});
+                            }
                         }
-                        switch (content.status) {
-                            case SUCCESS:
-                                LOG.trace("{}SUCCESS hashes:{} missing hashes:{}", new Object[]{logPrefix, content.hashes.keySet(), content.missingHashes});
-                                transferMngr.writeHashes(content.hashes, content.missingHashes);
-                                dwnlConn.mngr.completed(target, content);
-                                download();
-                                return;
-                            case TIMEOUT:
-                            case BUSY:
-                                LOG.debug("{}BUSY/TIMEOUT hashes:{}", logPrefix, content.missingHashes);
-                                transferMngr.writeHashes(content.hashes, content.missingHashes);
-                                dwnlConn.mngr.timedOut(target);
-                                download();
-                                return;
-                            default:
-                                LOG.warn("{}illegal status:{}, ignoring", new Object[]{logPrefix, content.status});
-                        }
+                        profiler.end();
                     }
                 };
 
@@ -551,30 +567,32 @@ public class TorrentComp extends ComponentDefinition {
 
                     @Override
                     public void handle(Download.DataResponse content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataResponse> container) {
+                        profiler.start("TorrentComp", "downloadPieceResponse");
                         KAddress target = container.getHeader().getSource();
                         LOG.debug("{}received data:{} response from:{}", new Object[]{logPrefix, content.pieceId, target.getId()});
 
                         if (!cancelPendingPieceTimeout(content.getId())) {
                             LOG.debug("{}piece:{} from:{} - posibly late", new Object[]{logPrefix, content.pieceId, target.getId()});
-                            return;
+                        } else {
+                            switch (content.status) {
+                                case SUCCESS:
+                                    LOG.trace("{}SUCCESS piece:{}", new Object[]{logPrefix, content.pieceId});
+                                    transferMngr.writePiece(content.pieceId, content.piece);
+                                    dwnlConn.mngr.completed(target, content);
+                                    download();
+                                    break;
+                                case TIMEOUT:
+                                case BUSY:
+                                    LOG.debug("{}BUSY/TIMEOUT piece:{}", logPrefix, content.pieceId);
+                                    transferMngr.resetPiece(content.pieceId);
+                                    dwnlConn.mngr.timedOut(target);
+                                    download();
+                                    break;
+                                default:
+                                    LOG.warn("{} illegal status:{}, ignoring", new Object[]{logPrefix, content.status});
+                            }
                         }
-                        switch (content.status) {
-                            case SUCCESS:
-                                LOG.trace("{}SUCCESS piece:{}", new Object[]{logPrefix, content.pieceId});
-                                transferMngr.writePiece(content.pieceId, content.piece);
-                                dwnlConn.mngr.completed(target, content);
-                                download();
-                                break;
-                            case TIMEOUT:
-                            case BUSY:
-                                LOG.debug("{}BUSY/TIMEOUT piece:{}", logPrefix, content.pieceId);
-                                transferMngr.resetPiece(content.pieceId);
-                                dwnlConn.mngr.timedOut(target);
-                                download();
-                                break;
-                            default:
-                                LOG.warn("{} illegal status:{}, ignoring", new Object[]{logPrefix, content.status});
-                        }
+                        profiler.end();
                     }
                 };
 
@@ -717,7 +735,6 @@ public class TorrentComp extends ComponentDefinition {
 
         public final DwnlConnMngrV2 mngr;
         final Map<Identifier, PLedbatConnection.TrackRequest> trackingReqs = new HashMap<>();
-        
 
         public DwnlConnAux() {
             mngr = new DwnlConnMngrV2(new HostParam(), new ConnectionParam());
