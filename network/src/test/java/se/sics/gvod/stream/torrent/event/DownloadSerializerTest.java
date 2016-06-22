@@ -54,7 +54,9 @@ public class DownloadSerializerTest {
         Download.DataRequest original, copy;
         ByteBuf buf, copyBuf;
 
-        original = new Download.DataRequest(new IntIdentifier(10), 10);
+        Set<Integer> bufferBlocks = new HashSet<>();
+        bufferBlocks.add(5);
+        original = new Download.DataRequest(new IntIdentifier(10), 10, bufferBlocks);
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
@@ -66,6 +68,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.eventId, copy.eventId);
         Assert.assertEquals(original.overlayId, copy.overlayId);
         Assert.assertEquals(original.pieceId, copy.pieceId);
+        Assert.assertEquals(original.bufferBlocks, copy.bufferBlocks);
         Assert.assertEquals(0, copyBuf.readableBytes());
 
         //generic
@@ -79,6 +82,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.eventId, copy.eventId);
         Assert.assertEquals(original.overlayId, copy.overlayId);
         Assert.assertEquals(original.pieceId, copy.pieceId);
+        Assert.assertEquals(original.bufferBlocks, copy.bufferBlocks);
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
 
@@ -88,7 +92,9 @@ public class DownloadSerializerTest {
         Download.DataResponse original, copy;
         ByteBuf buf, copyBuf;
 
-        Download.DataRequest aux = new Download.DataRequest(new IntIdentifier(10), 10);
+        Set<Integer> bufferBlocks = new HashSet<>();
+        bufferBlocks.add(5);
+        Download.DataRequest aux = new Download.DataRequest(new IntIdentifier(10), 10, bufferBlocks);
         original = aux.success(ByteBuffer.wrap(new byte[]{1, 2, 3, 4, 5}));
         original.setSendingTime(1024*1024);
         //serializer
@@ -133,7 +139,9 @@ public class DownloadSerializerTest {
         Set<Integer> hashes = new HashSet<>();
         hashes.add(10);
         hashes.add(11);
-        original = new Download.HashRequest(new IntIdentifier(10), 10, hashes);
+        Set<Integer> bufferBlocks = new HashSet<>();
+        bufferBlocks.add(5);
+        original = new Download.HashRequest(new IntIdentifier(10), 10, hashes, bufferBlocks);
         //serializer
         buf = Unpooled.buffer();
         serializer.toBinary(original, buf);
@@ -145,6 +153,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.eventId, copy.eventId);
         Assert.assertEquals(original.overlayId, copy.overlayId);
         Assert.assertEquals(original.targetPos, copy.targetPos);
+        Assert.assertEquals(original.bufferBlocks, copy.bufferBlocks);
         Assert.assertTrue(Sets.symmetricDifference(original.hashes, copy.hashes).isEmpty());
         Assert.assertEquals(0, copyBuf.readableBytes());
 
@@ -159,6 +168,7 @@ public class DownloadSerializerTest {
         Assert.assertEquals(original.eventId, copy.eventId);
         Assert.assertEquals(original.overlayId, copy.overlayId);
         Assert.assertEquals(original.targetPos, copy.targetPos);
+        Assert.assertEquals(original.bufferBlocks, copy.bufferBlocks);
         Assert.assertTrue(Sets.symmetricDifference(original.hashes, copy.hashes).isEmpty());
         Assert.assertEquals(0, copyBuf.readableBytes());
     }
@@ -174,7 +184,9 @@ public class DownloadSerializerTest {
         reqHashes.add(11);
         reqHashes.add(12);
         reqHashes.add(13);
-        Download.HashRequest aux = new Download.HashRequest(new IntIdentifier(10), 10, reqHashes);
+        Set<Integer> bufferBlocks = new HashSet<>();
+        bufferBlocks.add(5);
+        Download.HashRequest aux = new Download.HashRequest(new IntIdentifier(10), 10, reqHashes, bufferBlocks);
         //serializer
 
         Set<Integer> missingHashes = new HashSet<>();

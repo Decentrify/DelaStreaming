@@ -41,15 +41,17 @@ public class Download {
         public final Identifier eventId;
         public final Identifier overlayId;
         public final int pieceId;
+        public final Set<Integer> bufferBlocks;
 
-        public DataRequest(Identifier eventId, Identifier overlayId, int pieceId) {
+        public DataRequest(Identifier eventId, Identifier overlayId, int pieceId, Set<Integer> bufferBlocks) {
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.pieceId = pieceId;
+            this.bufferBlocks = bufferBlocks;
         }
         
-        public DataRequest(Identifier overlayId, int pieceId) {
-            this(UUIDIdentifier.randomId(), overlayId, pieceId);
+        public DataRequest(Identifier overlayId, int pieceId, Set<Integer> bufferBlocks) {
+            this(UUIDIdentifier.randomId(), overlayId, pieceId, bufferBlocks);
         }
 
         @Override
@@ -168,15 +170,17 @@ public class Download {
         public final Identifier overlayId;
         public final int targetPos;
         public final Set<Integer> hashes;
+        public final Set<Integer> bufferBlocks;
 
-        public HashRequest(Identifier eventId, Identifier overlayId, int targetPos, Set<Integer> hashes) {
+        public HashRequest(Identifier eventId, Identifier overlayId, int targetPos, Set<Integer> hashes, Set<Integer> bufferBlocks) {
             this.eventId = eventId;
             this.targetPos = targetPos;
             this.hashes = hashes;
             this.overlayId = overlayId;
+            this.bufferBlocks = bufferBlocks;
         }
-        public HashRequest(Identifier overlayId, int targetPos, Set<Integer> hashes) {
-            this(UUIDIdentifier.randomId(), overlayId, targetPos, hashes);
+        public HashRequest(Identifier overlayId, int targetPos, Set<Integer> hashes, Set<Integer> bufferBlocks) {
+            this(UUIDIdentifier.randomId(), overlayId, targetPos, hashes, bufferBlocks);
         }
         
          @Override

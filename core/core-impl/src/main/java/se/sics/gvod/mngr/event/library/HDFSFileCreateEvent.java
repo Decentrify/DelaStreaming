@@ -19,9 +19,9 @@
 package se.sics.gvod.mngr.event.library;
 
 import se.sics.gvod.mngr.event.VoDMngrEvent;
-import se.sics.gvod.mngr.util.HDFSResource;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.hops.managedStore.storage.util.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 

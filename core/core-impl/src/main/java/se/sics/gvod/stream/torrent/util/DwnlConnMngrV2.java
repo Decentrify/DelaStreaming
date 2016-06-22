@@ -36,8 +36,8 @@ import se.sics.ktoolbox.util.network.KAddress;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DwnlConnMngrV2 {
-     private static final Logger LOG = LoggerFactory.getLogger(ReportComp.class);
-    private String logPrefix;
+
+    private static final Logger LOG = LoggerFactory.getLogger(ReportComp.class);
 
     private final HostParam hostParam;
     private final ConnectionParam connParam;
@@ -46,13 +46,13 @@ public class DwnlConnMngrV2 {
     private final Map<Identifier, VodDescriptor> partnerStatus = new HashMap<>();
 
     private ConnectionStateV2 hostState;
-    
+
     public DwnlConnMngrV2(HostParam hostParam, ConnectionParam connParam) {
         this.hostParam = hostParam;
         this.connParam = connParam;
         hostState = new ConnectionStateV2(connParam);
     }
-    
+
     public void addConnection(KAddress partner, VodDescriptor descriptor) {
         partners.put(partner.getId(), partner);
         connectionLoad.put(partner.getId(), new ConnectionStateV2(connParam));
@@ -73,7 +73,7 @@ public class DwnlConnMngrV2 {
         }
         return connIt.next();
     }
-    
+
     public void timedOut(KAddress partner) {
         hostState.slow();
         ConnectionStateV2 conn = connectionLoad.get(partner.getId());
@@ -85,6 +85,7 @@ public class DwnlConnMngrV2 {
         long receivedTime = state.getReceivedTime();
         long kQueueDelay = handlingTime - receivedTime;
 
+        LOG.debug("torrent comp queue delay:{}", kQueueDelay);
         if (kQueueDelay < hostParam.minQueueDelay) {
             hostState.fast();
         } else if (hostParam.maxQueueDelay < kQueueDelay) {
@@ -92,7 +93,7 @@ public class DwnlConnMngrV2 {
         } else {
             hostState.slow();
         }
-        
+
         ConnectionStateV2 conn = connectionLoad.get(partner.getId());
         switch (state.getStatus()) {
             case SPEED_UP:
@@ -109,7 +110,7 @@ public class DwnlConnMngrV2 {
                 throw new RuntimeException("missing logic - fix me");
         }
     }
-    
+
     public Optional<KAddress> download(int downloadPos) {
         for (Map.Entry<Identifier, ConnectionStateV2> conn : connectionLoad.entrySet()) {
             if (conn.getValue().available() && hostState.available()) {

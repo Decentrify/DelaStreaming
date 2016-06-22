@@ -56,6 +56,10 @@ public class DownloadSerializer {
             Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
             buf.writeInt(obj.pieceId);
+            buf.writeInt(obj.bufferBlocks.size());
+            for(Integer blockNr : obj.bufferBlocks) {
+                buf.writeInt(blockNr);
+            }
         }
 
         @Override
@@ -63,7 +67,12 @@ public class DownloadSerializer {
             Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
             Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
             int pieceId = buf.readInt();
-            return new Download.DataRequest(eventId, overlayId, pieceId);
+            int bufferBlockSize = buf.readInt();
+            Set<Integer> bufferBlocks = new HashSet<>();
+            for(int i = 0; i < bufferBlockSize; i++) {
+                bufferBlocks.add(buf.readInt());
+            }
+            return new Download.DataRequest(eventId, overlayId, pieceId, bufferBlocks);
         }
     }
 
@@ -139,6 +148,10 @@ public class DownloadSerializer {
             for (Integer hash : obj.hashes) {
                 buf.writeInt(hash);
             }
+            buf.writeInt(obj.bufferBlocks.size());
+            for(Integer blockNr : obj.bufferBlocks) {
+                buf.writeInt(blockNr);
+            }
         }
 
         @Override
@@ -152,7 +165,12 @@ public class DownloadSerializer {
             for (int i = 0; i < nrHashes; i++) {
                 hashes.add(buf.readInt());
             }
-            return new Download.HashRequest(eventId, overlayId, targetPos, hashes);
+            int bufferBlockSize = buf.readInt();
+            Set<Integer> bufferBlocks = new HashSet<>();
+            for(int i = 0; i < bufferBlockSize; i++) {
+                bufferBlocks.add(buf.readInt());
+            }
+            return new Download.HashRequest(eventId, overlayId, targetPos, hashes, bufferBlocks);
         }
 
     }

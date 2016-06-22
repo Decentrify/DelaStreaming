@@ -20,6 +20,7 @@ package se.sics.gvod.mngr.event;
 
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.hops.managedStore.storage.util.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
@@ -32,25 +33,19 @@ public class HopsTorrentUploadEvent {
 
         public final Identifier eventId;
 
-        public final String hopsIp;
-        public final int hopsPort;
-        public final String dirPath;
-        public final String fileName;
+        public final HDFSResource resource;
         public final String user;
         public final Identifier torrentId;
 
-        public Request(Identifier eventId, String hopsIp, int hopsPort, String dirPath, String fileName, String user, Identifier torrentId) {
+        public Request(Identifier eventId, HDFSResource resource, String user, Identifier torrentId) {
             this.eventId = eventId;
-            this.hopsIp = hopsIp;
-            this.hopsPort = hopsPort;
-            this.dirPath = dirPath;
-            this.fileName = fileName;
+            this.resource = resource;
             this.user = user;
             this.torrentId = torrentId;
         }
 
-        public Request(String hopsIp, int hopsPort, String dirPath, String fileName, String user, Identifier torrentId) {
-            this(UUIDIdentifier.randomId(), hopsIp, hopsPort, dirPath, fileName, user, torrentId);
+        public Request(HDFSResource resource, String user, Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), resource, user, torrentId);
         }
 
         @Override

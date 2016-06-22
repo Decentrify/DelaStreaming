@@ -322,7 +322,7 @@ public class DownloadMngrComp extends ComponentDefinition {
             return false;
         }
         LOG.trace("{} downloading piece:{}", logPrefix, nextPieceId);
-        trigger(new Download.DataRequest(overlayId, nextPieceId.get()), connMngr);
+        trigger(new Download.DataRequest(overlayId, nextPieceId.get(), null), connMngr);
         return true;
     }
 
@@ -333,7 +333,7 @@ public class DownloadMngrComp extends ComponentDefinition {
         }
         int targetPos = Collections.min(nextHashes.get());
         LOG.trace("{} downloading hashes:{} targetPos:{}", new Object[]{logPrefix, nextHashes.get(), targetPos});
-        trigger(new Download.HashRequest(overlayId, targetPos, nextHashes.get()), connMngr);
+        trigger(new Download.HashRequest(overlayId, targetPos, nextHashes.get(), null), connMngr);
         return true;
     }
 

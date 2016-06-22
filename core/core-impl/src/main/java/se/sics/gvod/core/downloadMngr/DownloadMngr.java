@@ -68,13 +68,13 @@ public class DownloadMngr {
                 return Optional.absent();
             }
         }
-        ByteBuffer data = fileMngr.read(readPos, size);
+        ByteBuffer data = fileMngr.read(null, readPos, size, null);
         return Optional.of(data);
     }
     
     public Optional<ByteBuffer> dataRequest(int pieceId) {
         if (fileMngr.hasPiece(pieceId)) {
-            return Optional.of(fileMngr.readPiece(pieceId));
+            return Optional.of(fileMngr.readPiece(null, pieceId, null));
         }
         return Optional.absent();
     }

@@ -111,6 +111,7 @@ public class ReportComp extends ComponentDefinition {
             report(event.overlayId, event.connectionStatus);
             cancelReport();
             long transferTime = System.currentTimeMillis() - startingTime;
+            LOG.info("{}downoad completed in:{} avg dwnl speed:{} KB/s", new Object[]{logPrefix, transferTime, (double)transferSize/transferTime});
             trigger(new DownloadSummaryEvent(torrentId, transferSize, transferTime), reportPort);
             downloadSpeed = 0;
             status = TorrentStatus.UPLOADING;
