@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr;
+package se.sics.gvod.stream.mngr;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,23 +27,23 @@ import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.util.TorrentDetails;
-import se.sics.gvod.mngr.event.TorrentExtendedStatusEvent;
-import se.sics.gvod.mngr.event.ContentsSummaryEvent;
-import se.sics.gvod.mngr.event.library.HDFSFileDeleteEvent;
-import se.sics.gvod.mngr.event.HopsTorrentDownloadEvent;
-import se.sics.gvod.mngr.event.HopsTorrentStopEvent;
-import se.sics.gvod.mngr.event.HopsTorrentUploadEvent;
-import se.sics.gvod.mngr.event.LibraryAddEvent;
-import se.sics.gvod.mngr.event.LibraryContentsEvent;
-import se.sics.gvod.mngr.event.LibraryElementGetEvent;
-import se.sics.gvod.mngr.event.TorrentDownloadEvent;
-import se.sics.gvod.mngr.event.TorrentStopEvent;
-import se.sics.gvod.mngr.event.TorrentUploadEvent;
-import se.sics.gvod.mngr.event.VideoPlayEvent;
-import se.sics.gvod.mngr.event.VideoStopEvent;
-import se.sics.gvod.mngr.event.library.HDFSFileCreateEvent;
-import se.sics.gvod.mngr.event.system.HopsConnectionEvent;
-import se.sics.gvod.mngr.event.system.SystemAddressEvent;
+import se.sics.gvod.stream.mngr.event.TorrentExtendedStatusEvent;
+import se.sics.gvod.stream.mngr.event.ContentsSummaryEvent;
+import se.sics.gvod.stream.mngr.event.library.HDFSFileDeleteEvent;
+import se.sics.gvod.stream.mngr.event.hops.HopsTorrentDownloadEvent;
+import se.sics.gvod.stream.mngr.event.hops.HopsTorrentStopEvent;
+import se.sics.gvod.stream.mngr.event.hops.HopsTorrentUploadEvent;
+import se.sics.gvod.stream.mngr.event.LibraryAddEvent;
+import se.sics.gvod.stream.mngr.event.LibraryContentsEvent;
+import se.sics.gvod.stream.mngr.event.LibraryElementGetEvent;
+import se.sics.gvod.stream.mngr.event.TorrentDownloadEvent;
+import se.sics.gvod.stream.mngr.event.TorrentStopEvent;
+import se.sics.gvod.stream.mngr.event.TorrentUploadEvent;
+import se.sics.gvod.stream.mngr.event.VideoPlayEvent;
+import se.sics.gvod.stream.mngr.event.VideoStopEvent;
+import se.sics.gvod.stream.mngr.event.library.HDFSFileCreateEvent;
+import se.sics.gvod.stream.mngr.event.system.HopsConnectionEvent;
+import se.sics.gvod.stream.mngr.event.system.SystemAddressEvent;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.TorrentInfo;
@@ -61,9 +61,10 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.hops.managedStore.storage.HopsFactory;
-import se.sics.ktoolbox.hops.managedStore.storage.HDFSHelper;
-import se.sics.ktoolbox.hops.managedStore.storage.util.HDFSResource;
+import se.sics.ktoolbox.hdfs.HDFSHelper;
+import se.sics.ktoolbox.hdfs.HDFSResource;
+import se.sics.ktoolbox.hops.managedStore.HopsFactory;
+import se.sics.ktoolbox.kafka.KafkaResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.idextractor.EventOverlayIdExtractor;
 import se.sics.ktoolbox.util.managedStore.core.FileMngr;
@@ -233,7 +234,7 @@ public class VoDMngrComp extends ComponentDefinition {
 //                        resp = req.success();
 //                        break;
 //                    case DOWNLOADING:
-//                        resp = req.badRequest("can't upload resource with none status");
+//                        resp = req.badRequest("can't upload hdfsResource with none status");
 //                        break;
 //                    case NONE:
 //                        Map<Identifier, KAddress> partners = new HashMap<>();
@@ -246,7 +247,7 @@ public class VoDMngrComp extends ComponentDefinition {
 //                        resp = req.fail("missing logic");
 //                }
 //            } else {
-//                resp = req.badRequest("no such resource in library");
+//                resp = req.badRequest("no such hdfsResource in library");
 //            }
 //            LOG.info("{}answering:{}", logPrefix, resp);
 //            answer(req, resp);
@@ -272,13 +273,13 @@ public class VoDMngrComp extends ComponentDefinition {
 //                TorrentStatus status = elementInfo.getValue1().status;
 //                switch (status) {
 //                    case UPLOADING:
-//                        resp = req.badRequest("can't download resource with uploading status");
+//                        resp = req.badRequest("can't download hdfsResource with uploading status");
 //                        break;
 //                    case DOWNLOADING:
 //                        resp = req.success();
 //                        break;
 //                    case NONE:
-//                        resp = req.badRequest("can't download resource with none status");
+//                        resp = req.badRequest("can't download hdfsResource with none status");
 //                        break;
 //                    default:
 //                        resp = req.fail("missing logic");
@@ -299,7 +300,7 @@ public class VoDMngrComp extends ComponentDefinition {
 //                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.overlayId);
 //                switch (elementInfo.getValue1().status) {
 //                    case NONE:
-//                        resp = req.badRequest("can't stop resource with none status");
+//                        resp = req.badRequest("can't stop hdfsResource with none status");
 //                        break;
 //                    case UPLOADING:
 //                        Map<Identifier, KAddress> partners = new HashMap<>();
@@ -315,7 +316,7 @@ public class VoDMngrComp extends ComponentDefinition {
 //                        resp = req.badRequest("missing logic");
 //                }
 //            } else {
-//                resp = req.badRequest("no such resource in library");
+//                resp = req.badRequest("no such hdfsResource in library");
 //            }
 //            LOG.info("{}answering:{}", logPrefix, resp);
 //            answer(req, resp);
@@ -378,7 +379,7 @@ public class VoDMngrComp extends ComponentDefinition {
                         Map<Identifier, KAddress> partners = new HashMap<>();
                         TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.UPLOADING, partners, 0, 0, 0);
                         libraryContents.put(req.torrentId, Pair.with(fileInfo, torrentInfo));
-                        uploadHopsTorrent(req.resource, req.user, req.torrentId);
+                        uploadHopsTorrent(req.resource, req.torrentId);
                         resp = req.success();
                         break;
                     default:
@@ -390,7 +391,7 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
-    private void uploadHopsTorrent(final HDFSResource resource, final String user, final Identifier torrentId) {
+    private void uploadHopsTorrent(final HDFSResource hdfsResource, final Identifier torrentId) {
         TorrentDetails torrentDetails = new TorrentDetails() {
             private final Torrent torrent;
             private final Triplet<FileMngr, HashMngr, TransferMngr> mngrs;
@@ -401,11 +402,11 @@ public class VoDMngrComp extends ComponentDefinition {
                 int blockSize = pieceSize * piecesPerBlock;
                 String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
 
-                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getCompleteCached(config(), resource, user, hashAlg, blockSize, pieceSize);
+                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getCompleteCached(config(), hdfsResource, null, hashAlg, blockSize, pieceSize);
                 mngrs = fileHashMngr.add((TransferMngr) null);
                 long fileSize = mngrs.getValue0().length();
 
-                se.sics.ktoolbox.util.managedStore.core.util.FileInfo fileInfo = se.sics.ktoolbox.util.managedStore.core.util.FileInfo.newFile(resource.fileName, fileSize);
+                se.sics.ktoolbox.util.managedStore.core.util.FileInfo fileInfo = se.sics.ktoolbox.util.managedStore.core.util.FileInfo.newFile(hdfsResource.fileName, fileSize);
                 se.sics.ktoolbox.util.managedStore.core.util.TorrentInfo torrentInfo
                         = new se.sics.ktoolbox.util.managedStore.core.util.TorrentInfo(pieceSize, piecesPerBlock, hashAlg, -1);
                 torrent = new Torrent(torrentId, fileInfo, torrentInfo);
@@ -446,11 +447,11 @@ public class VoDMngrComp extends ComponentDefinition {
             HopsTorrentDownloadEvent.Response resp;
 
             if (!libraryContents.containsKey(req.torrentId)) {
-                FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.resource.fileName, "", 0, "");
+                FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.hdfsResource.fileName, "", 0, "");
                 Map<Identifier, KAddress> partners = new HashMap<>();
                 TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.DOWNLOADING, partners, 0, 0, 0);
                 libraryContents.put(req.torrentId, Pair.with(fileInfo, torrentInfo));
-                downloadHopsTorrent(req.resource, req.user, req.torrentId, req.partners);
+                downloadHopsTorrent(req.hdfsResource, req.kafkaResource, req.torrentId, req.partners);
                 resp = req.success();
             } else {
                 Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.torrentId);
@@ -474,7 +475,7 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
-    private void downloadHopsTorrent(final HDFSResource resource, final String user, final Identifier torrentId, final List<KAddress> partners) {
+    private void downloadHopsTorrent(final HDFSResource hdfsResource, final KafkaResource kafkaResource, final Identifier torrentId, final List<KAddress> partners) {
         TorrentDetails torrentDetails = new TorrentDetails() {
             @Override
             public Identifier getOverlayId() {
@@ -499,7 +500,7 @@ public class VoDMngrComp extends ComponentDefinition {
                 int blockSize = torrent.torrentInfo.piecesPerBlock * pieceSize;
                 int hashSize = HashUtil.getHashSize(torrent.torrentInfo.hashAlg);
 
-                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getIncompleteCached(config(), resource, user, fileSize, hashAlg, blockSize, pieceSize);
+                Pair<FileMngr, HashMngr> fileHashMngr = HopsFactory.getIncompleteCached(config(), hdfsResource, kafkaResource, fileSize, hashAlg, blockSize, pieceSize);
                 return fileHashMngr.add((TransferMngr) new LBAOTransferMngr(torrent, fileHashMngr.getValue1(), fileHashMngr.getValue0(), 10));
             }
         };
@@ -558,7 +559,7 @@ public class VoDMngrComp extends ComponentDefinition {
         @Override
         public void handle(HDFSFileDeleteEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            boolean result = HDFSHelper.delete(req.resource, req.user);
+            boolean result = HDFSHelper.delete(req.resource);
             if (result) {
                 answer(req, req.success());
             } else {
@@ -571,7 +572,7 @@ public class VoDMngrComp extends ComponentDefinition {
         @Override
         public void handle(HDFSFileCreateEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            boolean result = HDFSHelper.create(req.resource, req.user, req.fileSize);
+            boolean result = HDFSHelper.create(req.resource, req.fileSize);
             if (result) {
                 answer(req, req.success());
             } else {

@@ -16,68 +16,55 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr.event;
 
+import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.hops.managedStore.storage.util.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsTorrentUploadEvent {
-
+public class TorrentExtendedStatusEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
-
         public final Identifier eventId;
-
-        public final HDFSResource resource;
-        public final String user;
         public final Identifier torrentId;
-
-        public Request(Identifier eventId, HDFSResource resource, String user, Identifier torrentId) {
+        
+        public Request(Identifier eventId, Identifier torrentId) {
             this.eventId = eventId;
-            this.resource = resource;
-            this.user = user;
             this.torrentId = torrentId;
         }
-
-        public Request(HDFSResource resource, String user, Identifier torrentId) {
-            this(UUIDIdentifier.randomId(), resource, user, torrentId);
+        
+        public Request(Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), torrentId);
         }
-
+        
         @Override
         public Identifier getId() {
             return eventId;
         }
         
-        public Response success() {
-            return new Response(this, Result.success());
-        }
-        
-        public Response badRequest(String message) {
-            return new Response(this, Result.badRequest(message));
-        }
-        
-        public Response fail(String message) {
-            return new Response(this, Result.fail(message));
+        public Response succes(TorrentExtendedStatus value) {
+            return new Response(this, Result.success(), value);
         }
     }
-
+    
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
+        public final TorrentExtendedStatus value;
         
-        public Response(Request req, Result result) {
+        public Response(Request req, Result result, TorrentExtendedStatus value) {
             this.req = req;
             this.result = result;
+            this.value = value;
         }
-
+        
         @Override
         public Identifier getId() {
-            return req.eventId;
+            return req.getId();
         }
     }
 }

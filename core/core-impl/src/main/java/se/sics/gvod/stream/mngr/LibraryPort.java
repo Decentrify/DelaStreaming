@@ -16,15 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr;
+package se.sics.gvod.stream.mngr;
 
-import se.sics.gvod.mngr.event.TorrentExtendedStatusEvent;
-import se.sics.gvod.mngr.event.ContentsSummaryEvent;
-import se.sics.gvod.mngr.event.library.HDFSFileDeleteEvent;
-import se.sics.gvod.mngr.event.LibraryAddEvent;
-import se.sics.gvod.mngr.event.LibraryContentsEvent;
-import se.sics.gvod.mngr.event.LibraryElementGetEvent;
-import se.sics.gvod.mngr.event.library.HDFSFileCreateEvent;
+import se.sics.gvod.stream.mngr.event.TorrentExtendedStatusEvent;
+import se.sics.gvod.stream.mngr.event.ContentsSummaryEvent;
+import se.sics.gvod.stream.mngr.event.library.HDFSFileDeleteEvent;
+import se.sics.gvod.stream.mngr.event.LibraryAddEvent;
+import se.sics.gvod.stream.mngr.event.LibraryContentsEvent;
+import se.sics.gvod.stream.mngr.event.LibraryElementGetEvent;
+import se.sics.gvod.stream.mngr.event.library.HDFSFileCreateEvent;
 import se.sics.kompics.PortType;
 
 /**

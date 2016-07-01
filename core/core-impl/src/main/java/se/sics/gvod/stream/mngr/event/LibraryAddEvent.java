@@ -16,72 +16,69 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr.event;
 
-import java.util.List;
+import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.hops.managedStore.storage.util.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
-import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsTorrentDownloadEvent {
-
+public class LibraryAddEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
-
         public final Identifier eventId;
-
-        public final HDFSResource resource;
-        public final String user;
-        public final Identifier torrentId;
-        public final List<KAddress> partners;
-
-        public Request(Identifier eventId, HDFSResource resource, String user, Identifier torrentId, List<KAddress> partners) {
+        public final Identifier overlayId;
+        public final FileInfo fileInfo;
+        
+        public Request(Identifier eventId, Identifier overlayId, FileInfo fileInfo) {
             this.eventId = eventId;
-            this.resource = resource;
-            this.user = user;
-            this.torrentId = torrentId;
-            this.partners = partners;
+            this.overlayId = overlayId;
+            this.fileInfo = fileInfo;
         }
-
-        public Request(HDFSResource resource, String user, Identifier torrentId, List<KAddress> partners) {
-            this(UUIDIdentifier.randomId(), resource, user, torrentId, partners);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
+        
+        public Request(Identifier overlayId, FileInfo fileInfo) {
+            this(UUIDIdentifier.randomId(), overlayId, fileInfo);
         }
         
         public Response success() {
             return new Response(this, Result.success());
         }
         
-        public Response badRequest(String message) {
-            return new Response(this, Result.badRequest(message));
+        public Response badRequest(String description) {
+            return new Response(this, Result.badRequest(description));
         }
         
-        public Response fail(String message) {
-            return new Response(this, Result.fail(message));
+        @Override
+        public Identifier getId() {
+            return eventId;
+        }
+        
+        @Override
+        public String toString() {
+            return "LibraryAddRequest<" + getId() + ">";
         }
     }
-
+    
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
         
-        public Response(Request req, Result result) {
+        private Response(Request req, Result result) {
             this.req = req;
             this.result = result;
         }
-
+        
         @Override
         public Identifier getId() {
-            return req.eventId;
+            return req.getId();
+        }
+        
+         @Override
+        public String toString() {
+            return "LibraryAddResponse<" + getId() + ">";
         }
     }
 }

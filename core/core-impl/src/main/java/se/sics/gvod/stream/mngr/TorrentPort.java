@@ -16,14 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr;
+package se.sics.gvod.stream.mngr;
 
-import se.sics.gvod.mngr.event.HopsTorrentDownloadEvent;
-import se.sics.gvod.mngr.event.HopsTorrentStopEvent;
-import se.sics.gvod.mngr.event.HopsTorrentUploadEvent;
-import se.sics.gvod.mngr.event.TorrentDownloadEvent;
-import se.sics.gvod.mngr.event.TorrentStopEvent;
-import se.sics.gvod.mngr.event.TorrentUploadEvent;
+import se.sics.gvod.stream.mngr.event.hops.HopsTorrentDownloadEvent;
+import se.sics.gvod.stream.mngr.event.hops.HopsTorrentStopEvent;
+import se.sics.gvod.stream.mngr.event.hops.HopsTorrentUploadEvent;
+import se.sics.gvod.stream.mngr.event.TorrentDownloadEvent;
+import se.sics.gvod.stream.mngr.event.TorrentStopEvent;
+import se.sics.gvod.stream.mngr.event.TorrentUploadEvent;
 import se.sics.kompics.PortType;
 
 /**

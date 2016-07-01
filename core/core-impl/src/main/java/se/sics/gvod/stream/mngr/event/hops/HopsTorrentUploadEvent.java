@@ -16,72 +16,67 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr.event.hops;
 
 import se.sics.gvod.mngr.util.Result;
+import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.hdfs.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentDownloadEvent {
+public class HopsTorrentUploadEvent {
+
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+
         public final Identifier eventId;
-        public final String fileName;
-        public final Identifier overlayId;
-        
-        public Request(Identifier eventId,String fileName, Identifier overlayId) {
+
+        public final HDFSResource resource;
+        public final Identifier torrentId;
+
+        public Request(Identifier eventId, HDFSResource resource, Identifier torrentId) {
             this.eventId = eventId;
-            this.fileName = fileName;
-            this.overlayId = overlayId;
+            this.resource = resource;
+            this.torrentId = torrentId;
         }
-        
-        public Request(String fileName, Identifier overlayId) {
-            this(UUIDIdentifier.randomId(), fileName, overlayId);
+
+        public Request(HDFSResource resource, Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), resource, torrentId);
+        }
+
+        @Override
+        public Identifier getId() {
+            return eventId;
         }
         
         public Response success() {
             return new Response(this, Result.success());
         }
         
-        public Response badRequest(String description) {
-            return new Response(this, Result.badRequest(description));
+        public Response badRequest(String message) {
+            return new Response(this, Result.badRequest(message));
         }
         
-        public Response fail(String description) {
-            return new Response(this, Result.fail(description));
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        @Override
-        public String toString() {
-            return "TorrentDownloadRequest<" + getId() + ">";
+        public Response fail(String message) {
+            return new Response(this, Result.fail(message));
         }
     }
-    
+
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
         
-        private Response(Request req, Result result) {
+        public Response(Request req, Result result) {
             this.req = req;
             this.result = result;
         }
-        
+
         @Override
         public Identifier getId() {
-            return req.getId();
-        }
-        
-         @Override
-        public String toString() {
-            return "TorrentDownloadResponse<" + getId() + ">";
+            return req.eventId;
         }
     }
 }

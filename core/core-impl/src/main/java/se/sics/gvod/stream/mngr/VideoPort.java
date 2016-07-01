@@ -16,13 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
+import se.sics.gvod.stream.mngr.event.VideoPlayEvent;
+import se.sics.gvod.stream.mngr.event.VideoStopEvent;
+import se.sics.kompics.PortType;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface VoDMngrEvent extends KompicsEvent, Identifiable {
+public class VideoPort extends PortType {
+    {
+        request(VideoPlayEvent.Request.class);
+        indication(VideoPlayEvent.Response.class);
+        request(VideoStopEvent.Request.class);
+        indication(VideoStopEvent.Response.class);
+    }
 }

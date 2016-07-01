@@ -16,34 +16,30 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr.event.system;
 
-import java.util.List;
-import se.sics.gvod.mngr.util.ElementSummary;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
+import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
+import se.sics.gvod.mngr.util.HDFSConnection;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ContentsSummaryEvent {
+public class HopsConnectionEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
+        public final HDFSConnection connection;
         
-        public Request(Identifier eventId) {
+        public Request(Identifier eventId, HDFSConnection connection) {
             this.eventId = eventId;
+            this.connection = connection;
         }
         
-        public Request() {
-            this(UUIDIdentifier.randomId());
-        }
-        
-        public Response success(List<ElementSummary> value) {
-            return new Response(this, Result.success(), value);
+        public Request(HDFSConnection connection) {
+            this(UUIDIdentifier.randomId(), connection);
         }
         
         @Override
@@ -51,31 +47,27 @@ public class ContentsSummaryEvent {
             return eventId;
         }
         
-        @Override
-        public String toString() {
-            return "ContentsSummaryRequest<" + getId() + ">";
+        public Response success() {
+            return new Response(this, Result.success());
+        }
+        
+        public Response fail(String details) {
+            return new Response(this, Result.fail(details));
         }
     }
     
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
-        public final List<ElementSummary> value;
         
-        private Response(Request req, Result result, List<ElementSummary> value) {
+        private Response(Request req, Result result) {
             this.req = req;
             this.result = result;
-            this.value = value;
         }
         
         @Override
         public Identifier getId() {
             return req.getId();
-        }
-        
-         @Override
-        public String toString() {
-            return "ContentsSummaryResponse<" + getId() + ">";
         }
     }
 }

@@ -16,68 +16,74 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr.event.hops;
 
 import java.util.List;
-import java.util.Map;
-import org.javatuples.Pair;
-import se.sics.gvod.mngr.util.FileInfo;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
+import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.gvod.mngr.util.Result;
-import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.hdfs.HDFSResource;
+import se.sics.ktoolbox.kafka.KafkaResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryContentsEvent {
+public class HopsTorrentDownloadEvent {
+
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+
         public final Identifier eventId;
-        
-        public Request(Identifier eventId) {
+
+        public final HDFSResource hdfsResource;
+        public final KafkaResource kafkaResource;
+        public final Identifier torrentId;
+        public final List<KAddress> partners;
+
+        public Request(Identifier eventId, HDFSResource hdfsResource, KafkaResource kafkaResource, Identifier torrentId, List<KAddress> partners) {
             this.eventId = eventId;
+            this.hdfsResource = hdfsResource;
+            this.kafkaResource = kafkaResource;
+            this.torrentId = torrentId;
+            this.partners = partners;
         }
-        
-        public Request() {
-            this(UUIDIdentifier.randomId());
+
+        public Request(HDFSResource hdfsResource, KafkaResource kafkaResource, Identifier torrentId, List<KAddress> partners) {
+            this(UUIDIdentifier.randomId(), hdfsResource, kafkaResource, torrentId, partners);
         }
-        
-        public Response success(List<TorrentExtendedStatus> content) {
-            return new Response(this, Result.success(), content);
-        }
-        
+
         @Override
         public Identifier getId() {
             return eventId;
         }
         
-        @Override
-        public String toString() {
-            return "LibraryContentsRequest<" + getId() + ">";
+        public Response success() {
+            return new Response(this, Result.success());
+        }
+        
+        public Response badRequest(String message) {
+            return new Response(this, Result.badRequest(message));
+        }
+        
+        public Response fail(String message) {
+            return new Response(this, Result.fail(message));
         }
     }
-    
+
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
-        public final List<TorrentExtendedStatus> content;
         
-        private Response(Request req, Result result, List<TorrentExtendedStatus> content) {
+        public Response(Request req, Result result) {
             this.req = req;
             this.result = result;
-            this.content = content;
         }
-        
+
         @Override
         public Identifier getId() {
-            return req.getId();
-        }
-        
-         @Override
-        public String toString() {
-            return "LibraryContentsResponse<" + getId() + ">";
+            return req.eventId;
         }
     }
 }

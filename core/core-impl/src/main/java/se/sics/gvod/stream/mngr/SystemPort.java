@@ -16,10 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr;
+package se.sics.gvod.stream.mngr;
 
-import se.sics.gvod.mngr.event.system.HopsConnectionEvent;
-import se.sics.gvod.mngr.event.system.SystemAddressEvent;
+import se.sics.gvod.stream.mngr.event.system.HopsConnectionEvent;
+import se.sics.gvod.stream.mngr.event.system.SystemAddressEvent;
 import se.sics.kompics.PortType;
 
 /**
