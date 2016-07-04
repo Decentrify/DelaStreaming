@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.mngr.event.library;
+package se.sics.gvod.stream.mngr.hops.event;
 
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.gvod.mngr.util.Result;
@@ -28,21 +28,23 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSFileDeleteEvent {
+public class HDFSFileCreateEvent {
 
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
         public final Identifier eventId;
 
-        public final HDFSResource resource;
+        public final HDFSResource resource; 
+        public final long fileSize;
 
-        public Request(Identifier eventId, HDFSResource resource) {
+        public Request(Identifier eventId, HDFSResource resource, long fileSize) {
             this.eventId = eventId;
             this.resource = resource;
+            this.fileSize = fileSize;
         }
 
-        public Request(HDFSResource resource) {
-            this(UUIDIdentifier.randomId(), resource);
+        public Request(HDFSResource resource, long fileSize) {
+            this(UUIDIdentifier.randomId(), resource, fileSize);
         }
 
         @Override

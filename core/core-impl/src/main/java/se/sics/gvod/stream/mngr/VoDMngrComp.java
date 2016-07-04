@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import se.sics.gvod.core.util.TorrentDetails;
 import se.sics.gvod.stream.mngr.event.TorrentExtendedStatusEvent;
 import se.sics.gvod.stream.mngr.event.ContentsSummaryEvent;
-import se.sics.gvod.stream.mngr.event.library.HDFSFileDeleteEvent;
 import se.sics.gvod.stream.mngr.event.hops.HopsTorrentDownloadEvent;
 import se.sics.gvod.stream.mngr.event.hops.HopsTorrentStopEvent;
 import se.sics.gvod.stream.mngr.event.hops.HopsTorrentUploadEvent;
@@ -41,14 +40,15 @@ import se.sics.gvod.stream.mngr.event.TorrentStopEvent;
 import se.sics.gvod.stream.mngr.event.TorrentUploadEvent;
 import se.sics.gvod.stream.mngr.event.VideoPlayEvent;
 import se.sics.gvod.stream.mngr.event.VideoStopEvent;
-import se.sics.gvod.stream.mngr.event.library.HDFSFileCreateEvent;
-import se.sics.gvod.stream.mngr.event.system.HopsConnectionEvent;
+import se.sics.gvod.stream.mngr.hops.event.HDFSConnectionEvent;
 import se.sics.gvod.stream.mngr.event.system.SystemAddressEvent;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.gvod.stream.report.util.TorrentStatus;
 import se.sics.gvod.stream.StreamHostComp;
+import se.sics.gvod.stream.mngr.hops.HopsMngr;
+import se.sics.gvod.stream.mngr.hops.HopsPort;
 import se.sics.gvod.stream.report.event.DownloadSummaryEvent;
 import se.sics.gvod.stream.report.ReportPort;
 import se.sics.gvod.stream.report.event.StatusSummaryEvent;
@@ -92,12 +92,14 @@ public class VoDMngrComp extends ComponentDefinition {
     Negative<LibraryPort> libraryPort = provides(LibraryPort.class);
     Negative<TorrentPort> torrentPort = provides(TorrentPort.class);
     Negative<VideoPort> videoPort = provides(VideoPort.class);
+    Negative<HopsPort> hopsPort = provides(HopsPort.class);
     //*******************INTERNAL_DO_NOT_CONNECT_TO*****************************
     Positive<ReportPort> reportPort = requires(ReportPort.class);
     One2NChannel reportChannel;
     //**************************EXTERNAL_STATE**********************************
     private final KAddress selfAdr;
     //**************************INTERNAL_STATE**********************************
+    private final HopsMngr hopsMngr;
     private Map<Identifier, Pair<FileInfo, TorrentInfo>> libraryContents = new HashMap<>();
     private Map<Identifier, Component> components = new HashMap<>();
     private Component torrentComp;
@@ -111,7 +113,9 @@ public class VoDMngrComp extends ComponentDefinition {
         selfAdr = init.selfAddress;
 
         reportChannel = One2NChannel.getChannel("vodMngrReportChannel", (Negative<ReportPort>) reportPort.getPair(), new EventOverlayIdExtractor());
-
+        hopsMngr = new HopsMngr(proxy, logPrefix);
+        hopsMngr.subscribe();
+            
         subscribe(handleStart, control);
         subscribe(handleLibraryContent, libraryPort);
         subscribe(handleLibraryElement, libraryPort);
@@ -123,13 +127,10 @@ public class VoDMngrComp extends ComponentDefinition {
         subscribe(handleVideoStop, videoPort);
 
         subscribe(handleSystemAddress, systemPort);
-        subscribe(handleHopsConnection, systemPort);
 
         subscribe(handleContentsRequest, libraryPort);
         subscribe(handleTorrentStatusRequest, libraryPort);
         subscribe(handleTorrentStatusResponse, reportPort);
-        subscribe(handleHopsFileCreate, libraryPort);
-        subscribe(handleHopsFileDelete, libraryPort);
 
         subscribe(handleHopsTorrentUpload, torrentPort);
         subscribe(handleHopsTorrentDownload, torrentPort);
@@ -152,18 +153,7 @@ public class VoDMngrComp extends ComponentDefinition {
         }
     };
 
-    Handler handleHopsConnection = new Handler<HopsConnectionEvent.Request>() {
-        @Override
-        public void handle(HopsConnectionEvent.Request req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            boolean result = HDFSHelper.canConnect(req.connection.hopsIp, req.connection.hopsPort);
-            if (result) {
-                answer(req, req.success());
-            } else {
-                answer(req, req.fail("cannot connect to hops"));
-            }
-        }
-    };
+    
 
     Handler handleLibraryContent = new Handler<LibraryContentsEvent.Request>() {
         @Override
@@ -552,32 +542,6 @@ public class VoDMngrComp extends ComponentDefinition {
             reportChannel.removeChannel(req.torrentId, torrentComp.getPositive(ReportPort.class));
             trigger(Kill.event, torrentComp.control());
             answer(req, req.success());
-        }
-    };
-
-    Handler handleHopsFileDelete = new Handler<HDFSFileDeleteEvent.Request>() {
-        @Override
-        public void handle(HDFSFileDeleteEvent.Request req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            boolean result = HDFSHelper.delete(req.resource);
-            if (result) {
-                answer(req, req.success());
-            } else {
-                answer(req, req.fail("could not delete file"));
-            }
-        }
-    };
-
-    Handler handleHopsFileCreate = new Handler<HDFSFileCreateEvent.Request>() {
-        @Override
-        public void handle(HDFSFileCreateEvent.Request req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            boolean result = HDFSHelper.create(req.resource, req.fileSize);
-            if (result) {
-                answer(req, req.success());
-            } else {
-                answer(req, req.fail("could not create file"));
-            }
         }
     };
 

@@ -18,7 +18,7 @@
  */
 package se.sics.gvod.stream.mngr;
 
-import se.sics.gvod.stream.mngr.event.system.HopsConnectionEvent;
+import se.sics.gvod.stream.mngr.hops.event.HDFSConnectionEvent;
 import se.sics.gvod.stream.mngr.event.system.SystemAddressEvent;
 import se.sics.kompics.PortType;
 
@@ -29,7 +29,5 @@ public class SystemPort extends PortType {
     {
         request(SystemAddressEvent.Request.class);
         indication(SystemAddressEvent.Response.class);
-        request(HopsConnectionEvent.Request.class);
-        indication(HopsConnectionEvent.Response.class);
     }
 }

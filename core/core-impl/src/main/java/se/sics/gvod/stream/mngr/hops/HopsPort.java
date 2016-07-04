@@ -16,25 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.util;
+package se.sics.gvod.stream.mngr.hops;
 
-import org.apache.hadoop.conf.Configuration;
+import se.sics.gvod.stream.mngr.hops.event.HDFSConnectionEvent;
+import se.sics.gvod.stream.mngr.hops.event.HDFSAvroFileCreateEvent;
+import se.sics.gvod.stream.mngr.hops.event.HDFSFileCreateEvent;
+import se.sics.gvod.stream.mngr.hops.event.HDFSFileDeleteEvent;
+import se.sics.kompics.PortType;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSConnection {
-
-    public final Configuration hdfsConfig;
-    
-    public HDFSConnection(String hopsIp, int hopsPort) {
-        this.hdfsConfig = new Configuration();
-        String hopsURL = "hdfs://" + hopsIp + ":" + hopsPort;
-        hdfsConfig.set("fs.defaultFS", hopsURL);
-    }
-    
-    public HDFSConnection(String hdfsXMLPath) {
-        this.hdfsConfig = new Configuration();
-        this.hdfsConfig.addResource(hdfsXMLPath);
+public class HopsPort extends PortType {
+    {
+        request(HDFSConnectionEvent.Request.class);
+        indication(HDFSConnectionEvent.Response.class);
+        request(HDFSFileDeleteEvent.Request.class);
+        indication(HDFSFileDeleteEvent.Response.class);
+        request(HDFSFileCreateEvent.Request.class);
+        indication(HDFSFileCreateEvent.Response.class);
+        request(HDFSAvroFileCreateEvent.Request.class);
+        indication(HDFSAvroFileCreateEvent.Response.class);
     }
 }
