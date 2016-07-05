@@ -102,14 +102,15 @@ public class HopsMngr {
             Random rand = new Random(1234);
             boolean result = HDFSHelper.simpleCreate(req.hdfsResource);
             Schema avroSchema = KafkaHelper.getKafkaSchema(req.kafkaResource);
+            long filesize = 0;
             for(int i = 0; i < req.nrMsgs / 100; i++) {
-                HDFSHelper.append(req.hdfsResource, KafkaHelper.getSimpleAvroMsgsAsBlob(avroSchema, 100, rand));
+                filesize += HDFSHelper.append(req.hdfsResource, KafkaHelper.getSimpleAvroMsgsAsBlob(avroSchema, 100, rand));
             }
             int leftover = (int)(req.nrMsgs % 100);
             if(leftover != 0) {
-                HDFSHelper.append(req.hdfsResource, KafkaHelper.getSimpleAvroMsgsAsBlob(avroSchema, leftover, rand));
+                filesize += HDFSHelper.append(req.hdfsResource, KafkaHelper.getSimpleAvroMsgsAsBlob(avroSchema, leftover, rand));
             } 
-            proxy.answer(req, req.success());
+            proxy.answer(req, req.success(filesize));
         }
     };
 }

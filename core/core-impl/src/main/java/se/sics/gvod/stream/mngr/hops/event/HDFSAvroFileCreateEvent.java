@@ -55,16 +55,16 @@ public class HDFSAvroFileCreateEvent {
             return eventId;
         }
 
-        public Response success() {
-            return new Response(this, Result.success());
+        public Response success(long filesize) {
+            return new Response(this, Result.success(), filesize);
         }
 
         public Response badRequest(String message) {
-            return new Response(this, Result.badRequest(message));
+            return new Response(this, Result.badRequest(message), -1);
         }
 
         public Response fail(String message) {
-            return new Response(this, Result.fail(message));
+            return new Response(this, Result.fail(message), -1);
         }
     }
 
@@ -72,10 +72,12 @@ public class HDFSAvroFileCreateEvent {
 
         public final Request req;
         public final Result result;
+        public final long filesize;
 
-        public Response(Request req, Result result) {
+        public Response(Request req, Result result, long filesize) {
             this.req = req;
             this.result = result;
+            this.filesize = filesize;
         }
 
         @Override
