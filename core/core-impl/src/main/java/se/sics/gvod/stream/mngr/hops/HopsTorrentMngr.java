@@ -82,7 +82,7 @@ public class HopsTorrentMngr {
     private final Positive<ReportPort> reportPort;
     private final One2NChannel reportChannel;
     //**************************************************************************
-    private Map<Identifier, Pair<FileInfo, TorrentInfo>> libraryContents = new HashMap<>();
+    private Library library = new Library();
     private Map<Identifier, Component> components = new HashMap<>();
     //**************************************************************************
     private Map<Identifier, TorrentExtendedStatusEvent.Request> pendingRequests = new HashMap<>();
@@ -113,10 +113,10 @@ public class HopsTorrentMngr {
         public void handle(HopsTorrentUploadEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
             HopsTorrentUploadEvent.Response resp;
-            if (libraryContents.containsKey(req.torrentId)) {
+            if (library.containsTorrent(req.torrentId)) {
                 resp = req.badRequest("file in library");
             } else {
-                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.torrentId);
+                Pair<FileInfo, TorrentInfo> elementInfo = library.getElement(req.torrentId);
                 TorrentStatus status;
                 if (elementInfo == null) {
                     status = TorrentStatus.NONE;
@@ -134,7 +134,7 @@ public class HopsTorrentMngr {
                         FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.hdfsResource.fileName, "", 0, "");
                         Map<Identifier, KAddress> partners = new HashMap<>();
                         TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.UPLOADING, partners, 0, 0, 0);
-                        libraryContents.put(req.torrentId, Pair.with(fileInfo, torrentInfo));
+                        library.addTorrent(req.torrentId,fileInfo, torrentInfo);
                         uploadHopsTorrent(req.hdfsResource, req.torrentId);
                         resp = req.success();
                         break;
@@ -202,15 +202,15 @@ public class HopsTorrentMngr {
             LOG.trace("{}received:{}", logPrefix, req);
             HopsTorrentDownloadEvent.Response resp;
 
-            if (!libraryContents.containsKey(req.torrentId)) {
+            if (!library.containsTorrent(req.torrentId)) {
                 FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.hdfsResource.fileName, "", 0, "");
                 Map<Identifier, KAddress> partners = new HashMap<>();
                 TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.DOWNLOADING, partners, 0, 0, 0);
-                libraryContents.put(req.torrentId, Pair.with(fileInfo, torrentInfo));
+                library.addTorrent(req.torrentId, fileInfo, torrentInfo);
                 downloadHopsTorrent(req.hdfsResource, req.kafkaResource, req.torrentId, req.partners);
                 resp = req.success();
             } else {
-                Pair<FileInfo, TorrentInfo> elementInfo = libraryContents.get(req.torrentId);
+                Pair<FileInfo, TorrentInfo> elementInfo = library.getElement(req.torrentId);
                 TorrentStatus status = elementInfo.getValue1().getStatus();
                 switch (status) {
                     case UPLOADING:
@@ -271,7 +271,7 @@ public class HopsTorrentMngr {
         @Override
         public void handle(HopsTorrentStopEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            Pair<FileInfo, TorrentInfo> tInfo = libraryContents.remove(req.torrentId);
+            Pair<FileInfo, TorrentInfo> tInfo = library.removeTorrent(req.torrentId);
             Component torrentComp = components.remove(req.torrentId);
 
             reportChannel.removeChannel(req.torrentId, torrentComp.getPositive(ReportPort.class));
@@ -284,12 +284,8 @@ public class HopsTorrentMngr {
         @Override
         public void handle(ContentsSummaryEvent.Request req) {
             LOG.info("{}received:{}", logPrefix, req);
-            List<ElementSummary> esList = new ArrayList<>();
-            for (Map.Entry<Identifier, Pair<FileInfo, TorrentInfo>> e : libraryContents.entrySet()) {
-                ElementSummary es = new ElementSummary(e.getValue().getValue0().name, e.getKey(), e.getValue().getValue1().getStatus());
-                esList.add(es);
-            }
-            ContentsSummaryEvent.Response resp = req.success(esList);
+            List<ElementSummary> summary = library.getSummary();
+            ContentsSummaryEvent.Response resp = req.success(summary);
             LOG.info("{}answering:{}", logPrefix, resp);
             proxy.answer(req, resp);
         }
@@ -299,7 +295,7 @@ public class HopsTorrentMngr {
         @Override
         public void handle(DownloadSummaryEvent event) {
             LOG.trace("{}received:{}", logPrefix, event);
-            Pair<FileInfo, TorrentInfo> torrentDetails = libraryContents.get(event.torrentId);
+            Pair<FileInfo, TorrentInfo> torrentDetails = library.getElement(event.torrentId);
             if (torrentDetails == null) {
                 //TODO - might happen when i stop torrent
                 return;
