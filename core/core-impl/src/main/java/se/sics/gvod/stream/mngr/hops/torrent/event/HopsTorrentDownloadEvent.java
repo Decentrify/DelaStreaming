@@ -19,10 +19,11 @@
 package se.sics.gvod.stream.mngr.hops.torrent.event;
 
 import java.util.List;
-import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.gvod.mngr.util.Result;
+import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.hdfs.HDFSResource;
+import se.sics.ktoolbox.hdfs.HopsResource;
 import se.sics.ktoolbox.kafka.KafkaResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
@@ -39,19 +40,22 @@ public class HopsTorrentDownloadEvent {
 
         public final HDFSResource hdfsResource;
         public final KafkaResource kafkaResource;
+        public final HopsResource hopsResource;
         public final Identifier torrentId;
         public final List<KAddress> partners;
 
-        public Request(Identifier eventId, HDFSResource hdfsResource, KafkaResource kafkaResource, Identifier torrentId, List<KAddress> partners) {
+        public Request(Identifier eventId, HDFSResource hdfsResource, KafkaResource kafkaResource, HopsResource hopsResource, 
+                Identifier torrentId, List<KAddress> partners) {
             this.eventId = eventId;
             this.hdfsResource = hdfsResource;
             this.kafkaResource = kafkaResource;
+            this.hopsResource = hopsResource;
             this.torrentId = torrentId;
             this.partners = partners;
         }
 
-        public Request(HDFSResource hdfsResource, KafkaResource kafkaResource, Identifier torrentId, List<KAddress> partners) {
-            this(UUIDIdentifier.randomId(), hdfsResource, kafkaResource, torrentId, partners);
+        public Request(HDFSResource hdfsResource, KafkaResource kafkaResource, HopsResource hopsResource, Identifier torrentId, List<KAddress> partners) {
+            this(UUIDIdentifier.randomId(), hdfsResource, kafkaResource, hopsResource, torrentId, partners);
         }
 
         @Override

@@ -22,6 +22,7 @@ import se.sics.gvod.mngr.util.Result;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.hdfs.HDFSResource;
+import se.sics.ktoolbox.hdfs.HopsResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
@@ -34,17 +35,19 @@ public class HopsTorrentUploadEvent {
 
         public final Identifier eventId;
 
-        public final HDFSResource resource;
+        public final HDFSResource hdfsResource;
+        public final HopsResource hopsResource;
         public final Identifier torrentId;
 
-        public Request(Identifier eventId, HDFSResource resource, Identifier torrentId) {
+        public Request(Identifier eventId, HDFSResource hdfsResource, HopsResource hopsResource, Identifier torrentId) {
             this.eventId = eventId;
-            this.resource = resource;
+            this.hdfsResource = hdfsResource;
+            this.hopsResource = hopsResource;
             this.torrentId = torrentId;
         }
 
-        public Request(HDFSResource resource, Identifier torrentId) {
-            this(UUIDIdentifier.randomId(), resource, torrentId);
+        public Request(HDFSResource hdfsResource, HopsResource hopsResource, Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), hdfsResource, hopsResource, torrentId);
         }
 
         @Override

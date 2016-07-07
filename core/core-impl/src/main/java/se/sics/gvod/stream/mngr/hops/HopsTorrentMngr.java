@@ -131,11 +131,11 @@ public class HopsTorrentMngr {
                         resp = req.badRequest("can't upload file with none status");
                         break;
                     case NONE:
-                        FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.resource.fileName, "", 0, "");
+                        FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.hdfsResource.fileName, "", 0, "");
                         Map<Identifier, KAddress> partners = new HashMap<>();
                         TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.UPLOADING, partners, 0, 0, 0);
                         libraryContents.put(req.torrentId, Pair.with(fileInfo, torrentInfo));
-                        uploadHopsTorrent(req.resource, req.torrentId);
+                        uploadHopsTorrent(req.hdfsResource, req.torrentId);
                         resp = req.success();
                         break;
                     default:
