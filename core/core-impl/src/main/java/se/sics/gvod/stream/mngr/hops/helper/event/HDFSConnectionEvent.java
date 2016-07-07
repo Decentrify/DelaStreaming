@@ -16,37 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.mngr.hops.event;
+package se.sics.gvod.stream.mngr.hops.helper.event;
 
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
+import se.sics.gvod.mngr.util.HDFSConnection;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.hdfs.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSFileCreateEvent {
-
+public class HDFSConnectionEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
-
         public final Identifier eventId;
-
-        public final HDFSResource resource; 
-        public final long fileSize;
-
-        public Request(Identifier eventId, HDFSResource resource, long fileSize) {
+        public final HDFSConnection connection;
+        
+        public Request(Identifier eventId, HDFSConnection connection) {
             this.eventId = eventId;
-            this.resource = resource;
-            this.fileSize = fileSize;
+            this.connection = connection;
         }
-
-        public Request(HDFSResource resource, long fileSize) {
-            this(UUIDIdentifier.randomId(), resource, fileSize);
+        
+        public Request(HDFSConnection connection) {
+            this(UUIDIdentifier.randomId(), connection);
         }
-
+        
         @Override
         public Identifier getId() {
             return eventId;
@@ -56,27 +51,23 @@ public class HDFSFileCreateEvent {
             return new Response(this, Result.success());
         }
         
-        public Response badRequest(String message) {
-            return new Response(this, Result.badRequest(message));
-        }
-        
-        public Response fail(String message) {
-            return new Response(this, Result.fail(message));
+        public Response fail(String details) {
+            return new Response(this, Result.fail(details));
         }
     }
-
+    
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
         
-        public Response(Request req, Result result) {
+        private Response(Request req, Result result) {
             this.req = req;
             this.result = result;
         }
-
+        
         @Override
         public Identifier getId() {
-            return req.eventId;
+            return req.getId();
         }
     }
 }

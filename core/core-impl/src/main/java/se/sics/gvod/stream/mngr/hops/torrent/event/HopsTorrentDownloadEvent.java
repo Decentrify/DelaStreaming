@@ -16,33 +16,42 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.mngr.hops.event;
+package se.sics.gvod.stream.mngr.hops.torrent.event;
 
+import java.util.List;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.hdfs.HDFSResource;
+import se.sics.ktoolbox.kafka.KafkaResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSFileDeleteEvent {
+public class HopsTorrentDownloadEvent {
 
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
         public final Identifier eventId;
 
-        public final HDFSResource resource;
+        public final HDFSResource hdfsResource;
+        public final KafkaResource kafkaResource;
+        public final Identifier torrentId;
+        public final List<KAddress> partners;
 
-        public Request(Identifier eventId, HDFSResource resource) {
+        public Request(Identifier eventId, HDFSResource hdfsResource, KafkaResource kafkaResource, Identifier torrentId, List<KAddress> partners) {
             this.eventId = eventId;
-            this.resource = resource;
+            this.hdfsResource = hdfsResource;
+            this.kafkaResource = kafkaResource;
+            this.torrentId = torrentId;
+            this.partners = partners;
         }
 
-        public Request(HDFSResource resource) {
-            this(UUIDIdentifier.randomId(), resource);
+        public Request(HDFSResource hdfsResource, KafkaResource kafkaResource, Identifier torrentId, List<KAddress> partners) {
+            this(UUIDIdentifier.randomId(), hdfsResource, kafkaResource, torrentId, partners);
         }
 
         @Override

@@ -23,10 +23,10 @@ import org.apache.avro.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.stream.mngr.VoDMngrComp;
-import se.sics.gvod.stream.mngr.hops.event.HDFSAvroFileCreateEvent;
-import se.sics.gvod.stream.mngr.hops.event.HDFSConnectionEvent;
-import se.sics.gvod.stream.mngr.hops.event.HDFSFileCreateEvent;
-import se.sics.gvod.stream.mngr.hops.event.HDFSFileDeleteEvent;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSAvroFileCreateEvent;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSConnectionEvent;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSFileCreateEvent;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSFileDeleteEvent;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -37,14 +37,14 @@ import se.sics.ktoolbox.kafka.producer.AvroParser;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsMngr {
+public class HopsHelperMngr {
     private static final Logger LOG = LoggerFactory.getLogger(VoDMngrComp.class);
     private String logPrefix = "";
     
     private final ComponentProxy proxy;
     private final Negative<HopsPort> hdfsPort;
     
-    public HopsMngr(ComponentProxy proxy, String logPrefix) {
+    public HopsHelperMngr(ComponentProxy proxy, String logPrefix) {
         this.proxy = proxy;
         this.logPrefix = logPrefix;
         hdfsPort = proxy.getPositive(HopsPort.class).getPair();

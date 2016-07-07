@@ -16,22 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.mngr.event.hops;
+package se.sics.gvod.stream.mngr.hops.helper.event;
 
-import java.util.List;
-import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.gvod.mngr.util.Result;
+import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.hdfs.HDFSResource;
 import se.sics.ktoolbox.kafka.KafkaResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
-import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsTorrentDownloadEvent {
+public class HDFSAvroFileCreateEvent {
 
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
@@ -39,46 +37,47 @@ public class HopsTorrentDownloadEvent {
 
         public final HDFSResource hdfsResource;
         public final KafkaResource kafkaResource;
-        public final Identifier torrentId;
-        public final List<KAddress> partners;
+        public final long nrMsgs;
 
-        public Request(Identifier eventId, HDFSResource hdfsResource, KafkaResource kafkaResource, Identifier torrentId, List<KAddress> partners) {
+        public Request(Identifier eventId, HDFSResource hdfsResource, KafkaResource kafkaResource, long nrMsgs) {
             this.eventId = eventId;
             this.hdfsResource = hdfsResource;
             this.kafkaResource = kafkaResource;
-            this.torrentId = torrentId;
-            this.partners = partners;
+            this.nrMsgs = nrMsgs;
         }
 
-        public Request(HDFSResource hdfsResource, KafkaResource kafkaResource, Identifier torrentId, List<KAddress> partners) {
-            this(UUIDIdentifier.randomId(), hdfsResource, kafkaResource, torrentId, partners);
+        public Request(HDFSResource hdfsResource, KafkaResource kafkaResource, long nrMsgs) {
+            this(UUIDIdentifier.randomId(), hdfsResource, kafkaResource, nrMsgs);
         }
 
         @Override
         public Identifier getId() {
             return eventId;
         }
-        
-        public Response success() {
-            return new Response(this, Result.success());
+
+        public Response success(long filesize) {
+            return new Response(this, Result.success(), filesize);
         }
-        
+
         public Response badRequest(String message) {
-            return new Response(this, Result.badRequest(message));
+            return new Response(this, Result.badRequest(message), -1);
         }
-        
+
         public Response fail(String message) {
-            return new Response(this, Result.fail(message));
+            return new Response(this, Result.fail(message), -1);
         }
     }
 
     public static class Response implements Direct.Response, VoDMngrEvent {
+
         public final Request req;
         public final Result result;
-        
-        public Response(Request req, Result result) {
+        public final long filesize;
+
+        public Response(Request req, Result result, long filesize) {
             this.req = req;
             this.result = result;
+            this.filesize = filesize;
         }
 
         @Override

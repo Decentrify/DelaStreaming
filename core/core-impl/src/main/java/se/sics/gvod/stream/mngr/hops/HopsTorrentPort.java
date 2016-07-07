@@ -18,25 +18,31 @@
  */
 package se.sics.gvod.stream.mngr.hops;
 
-import se.sics.gvod.stream.mngr.hops.helper.event.HDFSConnectionEvent;
-import se.sics.gvod.stream.mngr.hops.helper.event.HDFSAvroFileCreateEvent;
-import se.sics.gvod.stream.mngr.hops.helper.event.HDFSFileCreateEvent;
-import se.sics.gvod.stream.mngr.hops.helper.event.HDFSFileDeleteEvent;
+import se.sics.gvod.stream.mngr.event.ContentsSummaryEvent;
+import se.sics.gvod.stream.mngr.event.TorrentExtendedStatusEvent;
+import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentDownloadEvent;
+import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentStopEvent;
+import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentUploadEvent;
 import se.sics.kompics.PortType;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsPort extends PortType {
+public class HopsTorrentPort extends PortType {
+
     {
-        request(HDFSConnectionEvent.Request.class);
-        indication(HDFSConnectionEvent.Response.class);
-        request(HDFSFileDeleteEvent.Request.class);
-        indication(HDFSFileDeleteEvent.Response.class);
-        request(HDFSFileCreateEvent.Request.class);
-        indication(HDFSFileCreateEvent.Response.class);
-        request(HDFSAvroFileCreateEvent.Request.class);
-        indication(HDFSAvroFileCreateEvent.Response.class);
+        request(HopsTorrentDownloadEvent.Request.class);
+        indication(HopsTorrentDownloadEvent.Response.class);
+        request(HopsTorrentUploadEvent.Request.class);
+        indication(HopsTorrentUploadEvent.Response.class);
+        request(HopsTorrentStopEvent.Request.class);
+        indication(HopsTorrentStopEvent.Response.class);
+
+        request(ContentsSummaryEvent.Request.class);
+        indication(ContentsSummaryEvent.Response.class);
+
+        request(TorrentExtendedStatusEvent.Request.class);
+        indication(TorrentExtendedStatusEvent.Response.class);
     }
 }

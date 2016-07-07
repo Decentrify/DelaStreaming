@@ -16,68 +16,59 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.mngr.hops.event;
+package se.sics.gvod.stream.mngr.hops.torrent.event;
 
-import se.sics.gvod.mngr.util.Result;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
+import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.hdfs.HDFSResource;
-import se.sics.ktoolbox.kafka.KafkaResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSAvroFileCreateEvent {
+public class HopsTorrentStopEvent {
 
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
         public final Identifier eventId;
+        public final Identifier torrentId;
 
-        public final HDFSResource hdfsResource;
-        public final KafkaResource kafkaResource;
-        public final long nrMsgs;
-
-        public Request(Identifier eventId, HDFSResource hdfsResource, KafkaResource kafkaResource, long nrMsgs) {
+        public Request(Identifier eventId, Identifier torrentId) {
             this.eventId = eventId;
-            this.hdfsResource = hdfsResource;
-            this.kafkaResource = kafkaResource;
-            this.nrMsgs = nrMsgs;
+            this.torrentId = torrentId;
         }
 
-        public Request(HDFSResource hdfsResource, KafkaResource kafkaResource, long nrMsgs) {
-            this(UUIDIdentifier.randomId(), hdfsResource, kafkaResource, nrMsgs);
+        public Request(Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), torrentId);
         }
 
         @Override
         public Identifier getId() {
             return eventId;
         }
-
-        public Response success(long filesize) {
-            return new Response(this, Result.success(), filesize);
+        
+        public Response success() {
+            return new Response(this, Result.success());
         }
-
+        
         public Response badRequest(String message) {
-            return new Response(this, Result.badRequest(message), -1);
+            return new Response(this, Result.badRequest(message));
         }
-
+        
         public Response fail(String message) {
-            return new Response(this, Result.fail(message), -1);
+            return new Response(this, Result.fail(message));
         }
     }
 
     public static class Response implements Direct.Response, VoDMngrEvent {
-
         public final Request req;
         public final Result result;
-        public final long filesize;
-
-        public Response(Request req, Result result, long filesize) {
+        
+        public Response(Request req, Result result) {
             this.req = req;
             this.result = result;
-            this.filesize = filesize;
         }
 
         @Override

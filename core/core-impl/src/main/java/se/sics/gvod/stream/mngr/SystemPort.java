@@ -18,7 +18,7 @@
  */
 package se.sics.gvod.stream.mngr;
 
-import se.sics.gvod.stream.mngr.hops.event.HDFSConnectionEvent;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSConnectionEvent;
 import se.sics.gvod.stream.mngr.event.system.SystemAddressEvent;
 import se.sics.kompics.PortType;
 

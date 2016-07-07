@@ -16,10 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.mngr.event.hops;
+package se.sics.gvod.stream.mngr.hops.helper.event;
 
-import se.sics.gvod.mngr.util.Result;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
+import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.hdfs.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -28,23 +28,21 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsTorrentUploadEvent {
+public class HDFSFileDeleteEvent {
 
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
         public final Identifier eventId;
 
         public final HDFSResource resource;
-        public final Identifier torrentId;
 
-        public Request(Identifier eventId, HDFSResource resource, Identifier torrentId) {
+        public Request(Identifier eventId, HDFSResource resource) {
             this.eventId = eventId;
             this.resource = resource;
-            this.torrentId = torrentId;
         }
 
-        public Request(HDFSResource resource, Identifier torrentId) {
-            this(UUIDIdentifier.randomId(), resource, torrentId);
+        public Request(HDFSResource resource) {
+            this(UUIDIdentifier.randomId(), resource);
         }
 
         @Override
