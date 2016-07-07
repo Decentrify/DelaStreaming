@@ -16,12 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.mngr.event;
+package se.sics.gvod.stream.mngr.hops.torrent.event;
 
+import com.google.common.base.Optional;
 import java.util.List;
 import se.sics.gvod.mngr.util.ElementSummary;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.Result;
+import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
@@ -33,13 +34,15 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 public class ContentsSummaryEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
+        public final Optional<Integer> projectId;
         
-        public Request(Identifier eventId) {
+        public Request(Identifier eventId, Optional<Integer> projectId) {
             this.eventId = eventId;
+            this.projectId = projectId;
         }
         
-        public Request() {
-            this(UUIDIdentifier.randomId());
+        public Request(Optional<Integer> projectId) {
+            this(UUIDIdentifier.randomId(), projectId);
         }
         
         public Response success(List<ElementSummary> value) {

@@ -18,7 +18,7 @@
  */
 package se.sics.gvod.stream.mngr.hops;
 
-import se.sics.gvod.stream.mngr.event.ContentsSummaryEvent;
+import se.sics.gvod.stream.mngr.hops.torrent.event.ContentsSummaryEvent;
 import se.sics.gvod.stream.mngr.event.TorrentExtendedStatusEvent;
 import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentDownloadEvent;
 import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentStopEvent;

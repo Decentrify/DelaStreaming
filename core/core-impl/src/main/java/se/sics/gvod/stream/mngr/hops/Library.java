@@ -34,6 +34,7 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class Library {
+
     private Map<Identifier, HopsResource> hopsResources = new HashMap<>();
     private Map<Identifier, Pair<FileInfo, TorrentInfo>> libraryContents = new HashMap<>();
 
@@ -45,11 +46,13 @@ public class Library {
         return libraryContents.get(torrentId);
     }
 
-    public void addTorrent(Identifier torrentId, FileInfo fileInfo, TorrentInfo torrentInfo) {
+    public void addTorrent(Identifier torrentId, FileInfo fileInfo, TorrentInfo torrentInfo, HopsResource hopsResource) {
+        hopsResources.put(torrentId, hopsResource);
         libraryContents.put(torrentId, Pair.with(fileInfo, torrentInfo));
     }
 
     public Pair<FileInfo, TorrentInfo> removeTorrent(Identifier torrentId) {
+        hopsResources.remove(torrentId);
         return libraryContents.remove(torrentId);
     }
 
@@ -58,6 +61,18 @@ public class Library {
         for (Map.Entry<Identifier, Pair<FileInfo, TorrentInfo>> e : libraryContents.entrySet()) {
             ElementSummary es = new ElementSummary(e.getValue().getValue0().name, e.getKey(), e.getValue().getValue1().getStatus());
             summary.add(es);
+        }
+        return summary;
+    }
+
+    public List<ElementSummary> getSummary(int projectId) {
+        List<ElementSummary> summary = new ArrayList<>();
+        for (Map.Entry<Identifier, Pair<FileInfo, TorrentInfo>> e : libraryContents.entrySet()) {
+            HopsResource hopsResource = hopsResources.get(e.getKey());
+            if (hopsResource.projectId == projectId) {
+                ElementSummary es = new ElementSummary(e.getValue().getValue0().name, e.getKey(), e.getValue().getValue1().getStatus());
+                summary.add(es);
+            }
         }
         return summary;
     }

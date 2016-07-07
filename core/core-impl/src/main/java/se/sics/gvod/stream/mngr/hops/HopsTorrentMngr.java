@@ -32,7 +32,7 @@ import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.gvod.stream.StreamHostComp;
 import se.sics.gvod.stream.mngr.VoDMngrComp;
-import se.sics.gvod.stream.mngr.event.ContentsSummaryEvent;
+import se.sics.gvod.stream.mngr.hops.torrent.event.ContentsSummaryEvent;
 import se.sics.gvod.stream.mngr.event.TorrentExtendedStatusEvent;
 import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentDownloadEvent;
 import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentStopEvent;
@@ -134,7 +134,7 @@ public class HopsTorrentMngr {
                         FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.hdfsResource.fileName, "", 0, "");
                         Map<Identifier, KAddress> partners = new HashMap<>();
                         TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.UPLOADING, partners, 0, 0, 0);
-                        library.addTorrent(req.torrentId,fileInfo, torrentInfo);
+                        library.addTorrent(req.torrentId,fileInfo, torrentInfo, req.hopsResource);
                         uploadHopsTorrent(req.hdfsResource, req.torrentId);
                         resp = req.success();
                         break;
@@ -206,7 +206,7 @@ public class HopsTorrentMngr {
                 FileInfo fileInfo = new FileInfo(LocalDiskResource.type, req.hdfsResource.fileName, "", 0, "");
                 Map<Identifier, KAddress> partners = new HashMap<>();
                 TorrentInfo torrentInfo = new TorrentInfo(TorrentStatus.DOWNLOADING, partners, 0, 0, 0);
-                library.addTorrent(req.torrentId, fileInfo, torrentInfo);
+                library.addTorrent(req.torrentId, fileInfo, torrentInfo, req.hopsResource);
                 downloadHopsTorrent(req.hdfsResource, req.kafkaResource, req.torrentId, req.partners);
                 resp = req.success();
             } else {
