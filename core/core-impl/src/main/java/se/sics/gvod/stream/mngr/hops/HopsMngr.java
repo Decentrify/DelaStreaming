@@ -23,8 +23,8 @@ import org.apache.avro.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.stream.mngr.VoDMngrComp;
-import se.sics.gvod.stream.mngr.hops.event.HDFSConnectionEvent;
 import se.sics.gvod.stream.mngr.hops.event.HDFSAvroFileCreateEvent;
+import se.sics.gvod.stream.mngr.hops.event.HDFSConnectionEvent;
 import se.sics.gvod.stream.mngr.hops.event.HDFSFileCreateEvent;
 import se.sics.gvod.stream.mngr.hops.event.HDFSFileDeleteEvent;
 import se.sics.kompics.ComponentProxy;
@@ -32,6 +32,7 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.ktoolbox.hdfs.HDFSHelper;
 import se.sics.ktoolbox.kafka.KafkaHelper;
+import se.sics.ktoolbox.kafka.producer.AvroParser;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -104,11 +105,11 @@ public class HopsMngr {
             Schema avroSchema = KafkaHelper.getKafkaSchema(req.kafkaResource);
             long filesize = 0;
             for(int i = 0; i < req.nrMsgs / 100; i++) {
-                filesize += HDFSHelper.append(req.hdfsResource, KafkaHelper.getSimpleAvroMsgsAsBlob(avroSchema, 100, rand));
+                filesize += HDFSHelper.append(req.hdfsResource, AvroParser.nAvroToBlob(avroSchema, 100, rand));
             }
             int leftover = (int)(req.nrMsgs % 100);
             if(leftover != 0) {
-                filesize += HDFSHelper.append(req.hdfsResource, KafkaHelper.getSimpleAvroMsgsAsBlob(avroSchema, leftover, rand));
+                filesize += HDFSHelper.append(req.hdfsResource, AvroParser.nAvroToBlob(avroSchema, leftover, rand));
             } 
             proxy.answer(req, req.success(filesize));
         }
