@@ -16,38 +16,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr;
+package se.sics.gvod.stream.mngr.hops;
 
-import se.sics.gvod.mngr.event.TorrentExtendedStatusEvent;
-import se.sics.gvod.mngr.event.ContentsSummaryEvent;
-import se.sics.gvod.mngr.event.library.HDFSFileDeleteEvent;
-import se.sics.gvod.mngr.event.LibraryAddEvent;
-import se.sics.gvod.mngr.event.LibraryContentsEvent;
-import se.sics.gvod.mngr.event.LibraryElementGetEvent;
-import se.sics.gvod.mngr.event.library.HDFSFileCreateEvent;
+import se.sics.gvod.stream.mngr.hops.torrent.event.ContentsSummaryEvent;
+import se.sics.gvod.stream.mngr.event.TorrentExtendedStatusEvent;
+import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentDownloadEvent;
+import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentStopEvent;
+import se.sics.gvod.stream.mngr.hops.torrent.event.HopsTorrentUploadEvent;
 import se.sics.kompics.PortType;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryPort extends PortType {
+public class HopsTorrentPort extends PortType {
+
     {
-        request(LibraryContentsEvent.Request.class);
-        indication(LibraryContentsEvent.Response.class);
-        request(LibraryElementGetEvent.Request.class);
-        indication(LibraryElementGetEvent.Response.class);
-        request(LibraryAddEvent.Request.class);
-        indication(LibraryAddEvent.Response.class);
-        
+        request(HopsTorrentDownloadEvent.Request.class);
+        indication(HopsTorrentDownloadEvent.Response.class);
+        request(HopsTorrentUploadEvent.Request.class);
+        indication(HopsTorrentUploadEvent.Response.class);
+        request(HopsTorrentStopEvent.Request.class);
+        indication(HopsTorrentStopEvent.Response.class);
+
         request(ContentsSummaryEvent.Request.class);
         indication(ContentsSummaryEvent.Response.class);
-        
+
         request(TorrentExtendedStatusEvent.Request.class);
         indication(TorrentExtendedStatusEvent.Response.class);
-        
-        request(HDFSFileDeleteEvent.Request.class);
-        indication(HDFSFileDeleteEvent.Response.class);
-        request(HDFSFileCreateEvent.Request.class);
-        indication(HDFSFileCreateEvent.Response.class);
     }
 }

@@ -16,67 +16,69 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event.library;
+package se.sics.gvod.stream.mngr.hops.torrent.event;
 
-import se.sics.gvod.mngr.event.VoDMngrEvent;
+import com.google.common.base.Optional;
+import java.util.List;
+import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.mngr.util.Result;
+import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.hops.managedStore.storage.util.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSFileDeleteEvent {
-
+public class ContentsSummaryEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
-
         public final Identifier eventId;
-
-        public final HDFSResource resource;
-        public final String user;
-
-        public Request(Identifier eventId, HDFSResource resource, String user) {
+        public final Optional<Integer> projectId;
+        
+        public Request(Identifier eventId, Optional<Integer> projectId) {
             this.eventId = eventId;
-            this.resource = resource;
-            this.user = user;
+            this.projectId = projectId;
         }
-
-        public Request(HDFSResource resource, String user) {
-            this(UUIDIdentifier.randomId(), resource, user);
+        
+        public Request(Optional<Integer> projectId) {
+            this(UUIDIdentifier.randomId(), projectId);
         }
-
+        
+        public Response success(List<ElementSummary> value) {
+            return new Response(this, Result.success(), value);
+        }
+        
         @Override
         public Identifier getId() {
             return eventId;
         }
         
-        public Response success() {
-            return new Response(this, Result.success());
-        }
-        
-        public Response badRequest(String message) {
-            return new Response(this, Result.badRequest(message));
-        }
-        
-        public Response fail(String message) {
-            return new Response(this, Result.fail(message));
+        @Override
+        public String toString() {
+            return "ContentsSummaryRequest<" + getId() + ">";
         }
     }
-
+    
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
+        public final List<ElementSummary> value;
         
-        public Response(Request req, Result result) {
+        private Response(Request req, Result result, List<ElementSummary> value) {
             this.req = req;
             this.result = result;
+            this.value = value;
         }
-
+        
         @Override
         public Identifier getId() {
-            return req.eventId;
+            return req.getId();
+        }
+        
+         @Override
+        public String toString() {
+            return "ContentsSummaryResponse<" + getId() + ">";
         }
     }
 }

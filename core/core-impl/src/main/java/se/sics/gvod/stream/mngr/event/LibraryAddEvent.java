@@ -16,15 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr.event;
 
-import java.util.List;
-import java.util.Map;
-import org.javatuples.Pair;
 import se.sics.gvod.mngr.util.FileInfo;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.Result;
-import se.sics.gvod.mngr.util.TorrentInfo;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
@@ -32,20 +27,28 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryContentsEvent {
+public class LibraryAddEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
+        public final Identifier overlayId;
+        public final FileInfo fileInfo;
         
-        public Request(Identifier eventId) {
+        public Request(Identifier eventId, Identifier overlayId, FileInfo fileInfo) {
             this.eventId = eventId;
+            this.overlayId = overlayId;
+            this.fileInfo = fileInfo;
         }
         
-        public Request() {
-            this(UUIDIdentifier.randomId());
+        public Request(Identifier overlayId, FileInfo fileInfo) {
+            this(UUIDIdentifier.randomId(), overlayId, fileInfo);
         }
         
-        public Response success(List<TorrentExtendedStatus> content) {
-            return new Response(this, Result.success(), content);
+        public Response success() {
+            return new Response(this, Result.success());
+        }
+        
+        public Response badRequest(String description) {
+            return new Response(this, Result.badRequest(description));
         }
         
         @Override
@@ -55,19 +58,17 @@ public class LibraryContentsEvent {
         
         @Override
         public String toString() {
-            return "LibraryContentsRequest<" + getId() + ">";
+            return "LibraryAddRequest<" + getId() + ">";
         }
     }
     
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
-        public final List<TorrentExtendedStatus> content;
         
-        private Response(Request req, Result result, List<TorrentExtendedStatus> content) {
+        private Response(Request req, Result result) {
             this.req = req;
             this.result = result;
-            this.content = content;
         }
         
         @Override
@@ -77,7 +78,7 @@ public class LibraryContentsEvent {
         
          @Override
         public String toString() {
-            return "LibraryContentsResponse<" + getId() + ">";
+            return "LibraryAddResponse<" + getId() + ">";
         }
     }
 }

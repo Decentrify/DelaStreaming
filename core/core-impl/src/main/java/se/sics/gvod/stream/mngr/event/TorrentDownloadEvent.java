@@ -16,10 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event.system;
+package se.sics.gvod.stream.mngr.event;
 
-import se.sics.gvod.mngr.event.VoDMngrEvent;
-import se.sics.gvod.mngr.util.HDFSConnection;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -28,18 +26,32 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsConnectionEvent {
+public class TorrentDownloadEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
-        public final HDFSConnection connection;
+        public final String fileName;
+        public final Identifier overlayId;
         
-        public Request(Identifier eventId, HDFSConnection connection) {
+        public Request(Identifier eventId,String fileName, Identifier overlayId) {
             this.eventId = eventId;
-            this.connection = connection;
+            this.fileName = fileName;
+            this.overlayId = overlayId;
         }
         
-        public Request(HDFSConnection connection) {
-            this(UUIDIdentifier.randomId(), connection);
+        public Request(String fileName, Identifier overlayId) {
+            this(UUIDIdentifier.randomId(), fileName, overlayId);
+        }
+        
+        public Response success() {
+            return new Response(this, Result.success());
+        }
+        
+        public Response badRequest(String description) {
+            return new Response(this, Result.badRequest(description));
+        }
+        
+        public Response fail(String description) {
+            return new Response(this, Result.fail(description));
         }
         
         @Override
@@ -47,12 +59,9 @@ public class HopsConnectionEvent {
             return eventId;
         }
         
-        public Response success() {
-            return new Response(this, Result.success());
-        }
-        
-        public Response fail(String details) {
-            return new Response(this, Result.fail(details));
+        @Override
+        public String toString() {
+            return "TorrentDownloadRequest<" + getId() + ">";
         }
     }
     
@@ -68,6 +77,11 @@ public class HopsConnectionEvent {
         @Override
         public Identifier getId() {
             return req.getId();
+        }
+        
+         @Override
+        public String toString() {
+            return "TorrentDownloadResponse<" + getId() + ">";
         }
     }
 }

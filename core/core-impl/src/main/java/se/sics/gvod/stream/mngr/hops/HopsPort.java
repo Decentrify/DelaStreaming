@@ -16,20 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr;
+package se.sics.gvod.stream.mngr.hops;
 
-import se.sics.gvod.mngr.event.system.HopsConnectionEvent;
-import se.sics.gvod.mngr.event.system.SystemAddressEvent;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSConnectionEvent;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSAvroFileCreateEvent;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSFileCreateEvent;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSFileDeleteEvent;
 import se.sics.kompics.PortType;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class SystemPort extends PortType {
+public class HopsPort extends PortType {
     {
-        request(SystemAddressEvent.Request.class);
-        indication(SystemAddressEvent.Response.class);
-        request(HopsConnectionEvent.Request.class);
-        indication(HopsConnectionEvent.Response.class);
+        request(HDFSConnectionEvent.Request.class);
+        indication(HDFSConnectionEvent.Response.class);
+        request(HDFSFileDeleteEvent.Request.class);
+        indication(HDFSFileDeleteEvent.Response.class);
+        request(HDFSFileCreateEvent.Request.class);
+        indication(HDFSFileCreateEvent.Response.class);
+        request(HDFSAvroFileCreateEvent.Request.class);
+        indication(HDFSAvroFileCreateEvent.Response.class);
     }
 }

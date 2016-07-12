@@ -16,9 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr.event;
 
-import se.sics.gvod.mngr.util.FileInfo;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -27,22 +26,24 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibraryAddEvent {
+public class TorrentUploadEvent {
+
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+
         public final Identifier eventId;
+        public final String fileName;
         public final Identifier overlayId;
-        public final FileInfo fileInfo;
-        
-        public Request(Identifier eventId, Identifier overlayId, FileInfo fileInfo) {
+
+        public Request(Identifier eventId, String fileName, Identifier overlayId) {
             this.eventId = eventId;
+            this.fileName = fileName;
             this.overlayId = overlayId;
-            this.fileInfo = fileInfo;
         }
-        
-        public Request(Identifier overlayId, FileInfo fileInfo) {
-            this(UUIDIdentifier.randomId(), overlayId, fileInfo);
+
+        public Request(String fileName, Identifier overlayId) {
+            this(UUIDIdentifier.randomId(), fileName, overlayId);
         }
-        
+
         public Response success() {
             return new Response(this, Result.success());
         }
@@ -51,34 +52,39 @@ public class LibraryAddEvent {
             return new Response(this, Result.badRequest(description));
         }
         
+        public Response fail(String description) {
+            return new Response(this, Result.fail(description));
+        }
+
         @Override
         public Identifier getId() {
             return eventId;
         }
-        
+
         @Override
         public String toString() {
-            return "LibraryAddRequest<" + getId() + ">";
+            return "TorrentUploadRequest<" + getId() + ">";
         }
     }
-    
+
     public static class Response implements Direct.Response, VoDMngrEvent {
+
         public final Request req;
         public final Result result;
-        
+
         private Response(Request req, Result result) {
             this.req = req;
             this.result = result;
         }
-        
+
         @Override
         public Identifier getId() {
             return req.getId();
         }
-        
-         @Override
+
+        @Override
         public String toString() {
-            return "LibraryAddResponse<" + getId() + ">";
+            return "TorrentUploadResponse<" + getId() + ">";
         }
     }
 }

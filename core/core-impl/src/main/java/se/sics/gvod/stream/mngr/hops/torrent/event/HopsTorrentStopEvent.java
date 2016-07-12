@@ -16,40 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr.hops.torrent.event;
 
-import java.util.List;
+import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.hops.managedStore.storage.util.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
-import se.sics.ktoolbox.util.network.KAddress;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsTorrentDownloadEvent {
+public class HopsTorrentStopEvent {
 
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
         public final Identifier eventId;
-
-        public final HDFSResource resource;
-        public final String user;
         public final Identifier torrentId;
-        public final List<KAddress> partners;
 
-        public Request(Identifier eventId, HDFSResource resource, String user, Identifier torrentId, List<KAddress> partners) {
+        public Request(Identifier eventId, Identifier torrentId) {
             this.eventId = eventId;
-            this.resource = resource;
-            this.user = user;
             this.torrentId = torrentId;
-            this.partners = partners;
         }
 
-        public Request(HDFSResource resource, String user, Identifier torrentId, List<KAddress> partners) {
-            this(UUIDIdentifier.randomId(), resource, user, torrentId, partners);
+        public Request(Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), torrentId);
         }
 
         @Override

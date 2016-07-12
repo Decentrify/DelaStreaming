@@ -16,25 +16,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.util;
+package se.sics.gvod.stream.mngr;
 
-import org.apache.hadoop.conf.Configuration;
+import se.sics.gvod.stream.mngr.hops.helper.event.HDFSConnectionEvent;
+import se.sics.gvod.stream.mngr.event.system.SystemAddressEvent;
+import se.sics.kompics.PortType;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSConnection {
-
-    public final Configuration hdfsConfig;
-    
-    public HDFSConnection(String hopsIp, int hopsPort) {
-        this.hdfsConfig = new Configuration();
-        String hopsURL = "hdfs://" + hopsIp + ":" + hopsPort;
-        hdfsConfig.set("fs.defaultFS", hopsURL);
-    }
-    
-    public HDFSConnection(String hdfsXMLPath) {
-        this.hdfsConfig = new Configuration();
-        this.hdfsConfig.addResource(hdfsXMLPath);
+public class SystemPort extends PortType {
+    {
+        request(SystemAddressEvent.Request.class);
+        indication(SystemAddressEvent.Response.class);
     }
 }

@@ -16,55 +16,65 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event.system;
+package se.sics.gvod.stream.mngr.hops.helper.event;
 
-import se.sics.gvod.mngr.event.VoDMngrEvent;
+import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.hdfs.HDFSResource;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
-import se.sics.ktoolbox.util.network.KAddress;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class SystemAddressEvent {
+public class HDFSFileDeleteEvent {
+
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+
         public final Identifier eventId;
-        
-        public Request(Identifier eventId) {
+
+        public final HDFSResource resource;
+
+        public Request(Identifier eventId, HDFSResource resource) {
             this.eventId = eventId;
+            this.resource = resource;
         }
-        
-        public Request() {
-            this(UUIDIdentifier.randomId());
+
+        public Request(HDFSResource resource) {
+            this(UUIDIdentifier.randomId(), resource);
         }
-        
-        public Response success(KAddress systemAdr) {
-            return new Response(this, Result.success(), systemAdr);
-        }
-        
+
         @Override
         public Identifier getId() {
             return eventId;
         }
+        
+        public Response success() {
+            return new Response(this, Result.success());
+        }
+        
+        public Response badRequest(String message) {
+            return new Response(this, Result.badRequest(message));
+        }
+        
+        public Response fail(String message) {
+            return new Response(this, Result.fail(message));
+        }
     }
-    
+
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
-        public final KAddress systemAdr;
         
-        private Response(Request req, Result result, KAddress systemAdr) {
+        public Response(Request req, Result result) {
             this.req = req;
             this.result = result;
-            this.systemAdr = systemAdr;
         }
-        
+
         @Override
         public Identifier getId() {
-            return req.getId();
+            return req.eventId;
         }
     }
 }

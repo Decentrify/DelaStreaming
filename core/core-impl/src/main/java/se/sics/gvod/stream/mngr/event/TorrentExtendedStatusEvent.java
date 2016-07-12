@@ -16,8 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.event;
+package se.sics.gvod.stream.mngr.event;
 
+import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.mngr.util.Result;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -26,24 +27,18 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class VideoStopEvent {
+public class TorrentExtendedStatusEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
-        public final String fileName;
-        public final Identifier overlayId;
+        public final Identifier torrentId;
         
-        public Request(Identifier eventId,String fileName, Identifier overlayId) {
+        public Request(Identifier eventId, Identifier torrentId) {
             this.eventId = eventId;
-            this.fileName = fileName;
-            this.overlayId = overlayId;
+            this.torrentId = torrentId;
         }
         
-        public Request(String fileName, Identifier overlayId) {
-            this(UUIDIdentifier.randomId(), fileName, overlayId);
-        }
-        
-        public Response success() {
-            return new Response(this, Result.success());
+        public Request(Identifier torrentId) {
+            this(UUIDIdentifier.randomId(), torrentId);
         }
         
         @Override
@@ -51,29 +46,25 @@ public class VideoStopEvent {
             return eventId;
         }
         
-        @Override
-        public String toString() {
-            return "VideoStopRequest<" + getId() + ">";
+        public Response succes(TorrentExtendedStatus value) {
+            return new Response(this, Result.success(), value);
         }
     }
     
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
         public final Result result;
+        public final TorrentExtendedStatus value;
         
-        private Response(Request req, Result result) {
+        public Response(Request req, Result result, TorrentExtendedStatus value) {
             this.req = req;
             this.result = result;
+            this.value = value;
         }
         
         @Override
         public Identifier getId() {
             return req.getId();
-        }
-        
-         @Override
-        public String toString() {
-            return "VideoStopResponse<" + getId() + ">";
         }
     }
 }
