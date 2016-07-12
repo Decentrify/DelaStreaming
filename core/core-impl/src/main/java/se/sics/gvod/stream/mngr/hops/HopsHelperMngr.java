@@ -102,7 +102,7 @@ public class HopsHelperMngr {
             LOG.trace("{}received:{}", logPrefix, req);
             Random rand = new Random(1234);
             boolean result = HDFSHelper.simpleCreate(req.hdfsResource);
-            Schema avroSchema = KafkaHelper.getKafkaSchema(req.kafkaResource);
+            Schema avroSchema = KafkaHelper.getKafkaSchemaByTopic(req.kafkaResource);
             long filesize = 0;
             for(int i = 0; i < req.nrMsgs / 10000; i++) {
                 filesize += HDFSHelper.append(req.hdfsResource, AvroParser.nAvroToBlob(avroSchema, 10000, rand));
