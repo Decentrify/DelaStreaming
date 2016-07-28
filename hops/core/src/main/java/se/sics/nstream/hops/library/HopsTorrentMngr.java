@@ -37,15 +37,16 @@ import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.hops.HopsFED;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSHelper;
 import se.sics.nstream.hops.hdfs.HDFSResource;
-import se.sics.nstream.library.event.torrent.ContentsSummaryEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
 import se.sics.nstream.hops.manifest.ManifestJSON;
 import se.sics.nstream.library.LibraryMngrComp;
+import se.sics.nstream.library.event.torrent.ContentsSummaryEvent;
 import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 import se.sics.nstream.library.util.TorrentStatus;
 import se.sics.nstream.transfer.Transfer;
@@ -124,7 +125,7 @@ public class HopsTorrentMngr {
             HopsTorrentUploadEvent.Response resp;
             switch (status) {
                 case UPLOADING:
-                    if (compareUploadDetails(library.getManifest(req.torrentId), library.getExtendedDetails(req.torrentId), req.manifest, req.extendedDetails)) {
+                    if (compareUploadDetails(library.getManifest(req.torrentId), Pair.with(req.hdfsEndpoint, req.manifestResource))) {
                         resp = req.alreadyExists(Result.success(true));
                     } else {
                         resp = req.alreadyExists(Result.badArgument("existing - upload details do not match"));
@@ -139,13 +140,14 @@ public class HopsTorrentMngr {
                     proxy.answer(req, resp);
                     break;
                 case NONE:
-                    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.manifest.getValue0().user);
-                    Result<ManifestJSON> manifest = HDFSHelper.readManifest(ugi, req.manifest.getValue0(), req.manifest.getValue1());
+                    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.hdfsEndpoint.user);
+                    Result<ManifestJSON> manifest = HDFSHelper.readManifest(ugi, req.hdfsEndpoint, req.manifestResource);
                     if (manifest.isSuccess()) {
                         byte[] torrentByte = HDFSHelper.getManifestByte(manifest.getValue());
                         TorrentDetails torrentDetails = ManifestJSON.getTorrentDetails(manifest.getValue());
-                        TransferDetails transferDetails = new TransferDetails(torrentDetails, req.extendedDetails);
-                        library.upload(req.torrentId, req.manifest, transferDetails);
+                        Map<String, FileExtendedDetails> extendedDetails = getUploadExtendedDetails(req.hdfsEndpoint, req.manifestResource, torrentDetails);
+                        TransferDetails transferDetails = new TransferDetails(torrentDetails, extendedDetails);
+                        library.upload(req.torrentId, Pair.with(req.hdfsEndpoint, req.manifestResource), transferDetails);
                         uploadHopsTorrent(req.torrentId, torrentByte, transferDetails);
                         pendingExtUpld.put(req.torrentId, req);
                     } else {
@@ -163,8 +165,16 @@ public class HopsTorrentMngr {
         }
     };
 
-    private boolean compareUploadDetails(Pair<HDFSEndpoint, HDFSResource> foundManifest, Map<String, FileExtendedDetails> foundDetails,
-            Pair<HDFSEndpoint, HDFSResource> expectedManifest, Map<String, FileExtendedDetails> expectedDetails) {
+    private Map<String, FileExtendedDetails> getUploadExtendedDetails(HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource, TorrentDetails torrentDetails) {
+        Map<String, FileExtendedDetails> extendedDetails = new HashMap<>();
+        for (String fileName : torrentDetails.baseDetails.keySet()) {
+            FileExtendedDetails fed = new HopsFED(Pair.with(hdfsEndpoint, new HDFSResource(manifestResource.dirPath, fileName)));
+            extendedDetails.put(fileName, fed);
+        }
+        return extendedDetails;
+    }
+
+    private boolean compareUploadDetails(Pair<HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
         //TODO Alex - what needs to match?
         return false;
     }
@@ -238,7 +248,7 @@ public class HopsTorrentMngr {
             }
         }
     };
-    
+
     private boolean compareDownloadManifest(Pair<HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
         //TODO Alex - what needs to match?
         return false;
@@ -274,7 +284,7 @@ public class HopsTorrentMngr {
                     }
                 } else {
                     cleanAndDestroy(req.torrentId);
-                    if(hopsReq != null) {
+                    if (hopsReq != null) {
                         Result<Boolean> r = Result.failure(manifestResult.status, manifestResult.getException());
                         HopsTorrentDownloadEvent.StartResponse hopsResp = hopsReq.starting(r);
                         LOG.trace("{}sending:{}", logPrefix, hopsResp);

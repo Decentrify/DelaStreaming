@@ -18,8 +18,6 @@
  */
 package se.sics.nstream.hops.library.event.core;
 
-import java.util.Map;
-import org.javatuples.Pair;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -28,7 +26,6 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
-import se.sics.nstream.util.FileExtendedDetails;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -39,18 +36,18 @@ public class HopsTorrentUploadEvent {
 
         public final Identifier eventId;
         public final Identifier torrentId;
-        public final Pair<HDFSEndpoint, HDFSResource> manifest;
-        public final Map<String, FileExtendedDetails> extendedDetails;
+        public final HDFSEndpoint hdfsEndpoint;
+        public final HDFSResource manifestResource;
 
-        public Request(Identifier eventId, Identifier torrentId, Pair<HDFSEndpoint, HDFSResource> manifest, Map<String, FileExtendedDetails> extendedDetails) {
+        public Request(Identifier eventId, Identifier torrentId, HDFSEndpoint hdfsEndpoint,  HDFSResource manifestResource) {
             this.eventId = eventId;
             this.torrentId = torrentId;
-            this.manifest = manifest;
-            this.extendedDetails = extendedDetails;
+            this.hdfsEndpoint = hdfsEndpoint;
+            this.manifestResource = manifestResource;
         }
 
-        public Request(Identifier torrentId, Pair<HDFSEndpoint, HDFSResource> manifest, Map<String, FileExtendedDetails> extendedDetails) {
-            this(UUIDIdentifier.randomId(), torrentId, manifest, extendedDetails);
+        public Request(Identifier torrentId, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
+            this(UUIDIdentifier.randomId(), torrentId, hdfsEndpoint, hdfsResource);
         }
 
         @Override

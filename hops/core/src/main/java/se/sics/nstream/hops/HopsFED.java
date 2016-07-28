@@ -43,6 +43,10 @@ public class HopsFED implements FileExtendedDetails {
         this.secondaryResource = secondaryResource;
     }
     
+    public HopsFED(Pair<HDFSEndpoint, HDFSResource> mainResource) {
+        this(mainResource, (Optional)Optional.absent());
+    }
+    
     @Override
     public Pair<StreamEndpoint, StreamResource> getMainResource() {
         return (Pair)mainResource;
