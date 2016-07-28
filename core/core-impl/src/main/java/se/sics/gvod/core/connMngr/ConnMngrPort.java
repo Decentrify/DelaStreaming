@@ -18,7 +18,7 @@
  */
 package se.sics.gvod.core.connMngr;
 
-import se.sics.gvod.stream.torrent.event.Download;
+import se.sics.nstream.torrent.event.Download;
 import se.sics.gvod.core.connMngr.event.Ready;
 import se.sics.kompics.PortType;
 

@@ -18,7 +18,7 @@
  */
 package se.sics.gvod.stream.report.event;
 
-import se.sics.gvod.stream.StreamEvent;
+import se.sics.nstream.StreamEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;

@@ -13,3 +13,5 @@
 /simulator/target/
 /simulator/simulation*
 /system/simulation*
+/hops/network/target/
+/hops/core/target/

@@ -23,6 +23,12 @@
             <version>${project.version}</version>
         </dependency>
         
+        <dependency> 
+            <groupId>se.sics.ktoolbox.util</groupId>
+            <artifactId>kcore</artifactId>
+            <version>${ktoolbox.version}</version>
+        </dependency>
+        
         <dependency>
             <groupId>se.sics.ktoolbox.overlaymngr</groupId>
             <artifactId>api</artifactId>

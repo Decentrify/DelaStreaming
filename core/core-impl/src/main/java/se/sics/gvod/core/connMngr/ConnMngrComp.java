@@ -29,7 +29,7 @@ import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.common.event.vod.Connection;
-import se.sics.gvod.stream.torrent.event.Download;
+import se.sics.nstream.torrent.event.Download;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.common.utility.UtilityUpdate;
 import se.sics.gvod.common.utility.UtilityUpdatePort;

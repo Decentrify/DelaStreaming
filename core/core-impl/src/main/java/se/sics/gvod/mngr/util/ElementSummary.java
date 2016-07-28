@@ -18,7 +18,7 @@
  */
 package se.sics.gvod.mngr.util;
 
-import se.sics.gvod.stream.report.util.TorrentStatus;
+import se.sics.nstream.library.util.TorrentStatus;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**

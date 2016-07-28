@@ -19,7 +19,7 @@
 package se.sics.gvod.stream.torrent.event;
 
 import java.util.Map;
-import se.sics.gvod.stream.StreamEvent;
+import se.sics.nstream.StreamEvent;
 import se.sics.gvod.stream.util.ConnectionStatus;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;

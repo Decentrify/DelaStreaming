@@ -24,7 +24,7 @@ import java.util.Random;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.stream.StreamEvent;
+import se.sics.nstream.StreamEvent;
 import se.sics.gvod.stream.congestion.event.external.PLedbatConnection;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;

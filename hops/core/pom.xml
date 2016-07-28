@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>se.sics.gvod</groupId>
+        <artifactId>hops</artifactId>
+        <version>0.0.8-SNAPSHOT</version>
+    </parent>
+    <groupId>se.sics.gvod.hops</groupId>
+    <artifactId>core</artifactId>
+    <packaging>jar</packaging>
+    <name>GVoD Hops Core</name>
+    
+    <properties>
+        <hops.version>2.4.0</hops.version>
+        <kafkautil.version>0.1</kafkautil.version>
+        <avro.version>1.8.1</avro.version>
+    </properties>
+    
+    <dependencies>
+        <dependency> 
+            <groupId>se.sics.gvod.core</groupId>
+            <artifactId>core-impl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.hops</groupId>
+            <artifactId>hadoop-client</artifactId>
+            <version>${hops.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.hops</groupId>
+            <artifactId>kafka-util</artifactId>
+            <version>${kafkautil.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+            <version>${avro.version}</version>
+        </dependency>
+        <dependency>
+           <groupId>org.json</groupId>
+           <artifactId>json</artifactId>
+           <version>20140107</version>
+       </dependency>
+        
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${logger.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
