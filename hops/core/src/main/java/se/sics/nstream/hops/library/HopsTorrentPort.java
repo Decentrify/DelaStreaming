@@ -33,6 +33,8 @@ public class HopsTorrentPort extends PortType {
         request(HopsTorrentDownloadEvent.StartRequest.class);
         indication(HopsTorrentDownloadEvent.Starting.class);
         indication(HopsTorrentDownloadEvent.AlreadyExists.class);
+        request(HopsTorrentDownloadEvent.AdvanceRequest.class);
+        indication(HopsTorrentDownloadEvent.AdvanceResponse.class);
         request(HopsTorrentUploadEvent.Request.class);
         indication(HopsTorrentUploadEvent.Uploading.class);
         indication(HopsTorrentUploadEvent.AlreadyExists.class);
