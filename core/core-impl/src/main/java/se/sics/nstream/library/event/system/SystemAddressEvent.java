@@ -41,7 +41,7 @@ public class SystemAddressEvent {
         }
         
         public Response success(KAddress systemAdr) {
-            return new Response(this, Result.Status.SUCCESS, systemAdr);
+            return new Response(this, Result.success(systemAdr));
         }
         
         @Override
@@ -52,12 +52,10 @@ public class SystemAddressEvent {
     
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
-        public final Result.Status result;
-        public final KAddress systemAdr;
+        public final Result<KAddress> systemAdr;
         
-        private Response(Request req, Result.Status result, KAddress systemAdr) {
+        private Response(Request req, Result<KAddress> systemAdr) {
             this.req = req;
-            this.result = result;
             this.systemAdr = systemAdr;
         }
         

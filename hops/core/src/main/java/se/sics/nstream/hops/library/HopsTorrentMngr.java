@@ -40,7 +40,7 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSHelper;
 import se.sics.nstream.hops.hdfs.HDFSResource;
-import se.sics.nstream.hops.library.event.core.ContentsSummaryEvent;
+import se.sics.nstream.library.event.torrent.ContentsSummaryEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;

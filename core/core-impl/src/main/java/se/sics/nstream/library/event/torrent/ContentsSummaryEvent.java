@@ -18,7 +18,9 @@
  */
 package se.sics.nstream.library.event.torrent;
 
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
+import com.google.common.base.Optional;
+import java.util.List;
+import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -26,20 +28,25 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.result.Result;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentExtendedStatusEvent {
+public class ContentsSummaryEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
-        public final Identifier torrentId;
+        public final Optional<Integer> projectId;
         
-        public Request(Identifier eventId, Identifier torrentId) {
+        public Request(Identifier eventId, Optional<Integer> projectId) {
             this.eventId = eventId;
-            this.torrentId = torrentId;
+            this.projectId = projectId;
         }
         
-        public Request(Identifier torrentId) {
-            this(UUIDIdentifier.randomId(), torrentId);
+        public Request(Optional<Integer> projectId) {
+            this(UUIDIdentifier.randomId(), projectId);
+        }
+        
+        public Response success(List<ElementSummary> value) {
+            return new Response(this, Result.success(value));
         }
         
         @Override
@@ -47,16 +54,17 @@ public class TorrentExtendedStatusEvent {
             return eventId;
         }
         
-        public Response succes(TorrentExtendedStatus value) {
-            return new Response(this, Result.success(value));
+        @Override
+        public String toString() {
+            return "ContentsSummaryRequest<" + getId() + ">";
         }
     }
     
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
-        public final Result<TorrentExtendedStatus> result;
+        public final Result<List<ElementSummary>> result;
         
-        public Response(Request req, Result<TorrentExtendedStatus> result) {
+        private Response(Request req, Result<List<ElementSummary>> result) {
             this.req = req;
             this.result = result;
         }
@@ -64,6 +72,11 @@ public class TorrentExtendedStatusEvent {
         @Override
         public Identifier getId() {
             return req.getId();
+        }
+        
+         @Override
+        public String toString() {
+            return "ContentsSummaryResponse<" + getId() + ">";
         }
     }
 }

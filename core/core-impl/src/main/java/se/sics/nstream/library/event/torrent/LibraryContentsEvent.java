@@ -16,11 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library.event.core;
+package se.sics.nstream.library.event.torrent;
 
-import com.google.common.base.Optional;
 import java.util.List;
-import se.sics.gvod.mngr.util.ElementSummary;
+import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -28,25 +27,22 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.result.Result;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ContentsSummaryEvent {
+public class LibraryContentsEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
-        public final Optional<Integer> projectId;
         
-        public Request(Identifier eventId, Optional<Integer> projectId) {
+        public Request(Identifier eventId) {
             this.eventId = eventId;
-            this.projectId = projectId;
         }
         
-        public Request(Optional<Integer> projectId) {
-            this(UUIDIdentifier.randomId(), projectId);
+        public Request() {
+            this(UUIDIdentifier.randomId());
         }
         
-        public Response success(List<ElementSummary> value) {
-            return new Response(this, Result.success(value));
+        public Response success(List<TorrentExtendedStatus> content) {
+            return new Response(this, Result.success(content));
         }
         
         @Override
@@ -56,17 +52,17 @@ public class ContentsSummaryEvent {
         
         @Override
         public String toString() {
-            return "ContentsSummaryRequest<" + getId() + ">";
+            return "LibraryContentsRequest<" + getId() + ">";
         }
     }
     
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
-        public final Result<List<ElementSummary>> result;
+        public final Result<List<TorrentExtendedStatus>> content;
         
-        private Response(Request req, Result<List<ElementSummary>> result) {
+        private Response(Request req, Result<List<TorrentExtendedStatus>> content) {
             this.req = req;
-            this.result = result;
+            this.content = content;
         }
         
         @Override
@@ -76,7 +72,7 @@ public class ContentsSummaryEvent {
         
          @Override
         public String toString() {
-            return "ContentsSummaryResponse<" + getId() + ">";
+            return "LibraryContentsResponse<" + getId() + ">";
         }
     }
 }
