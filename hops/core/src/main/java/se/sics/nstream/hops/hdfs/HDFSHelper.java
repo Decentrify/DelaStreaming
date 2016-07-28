@@ -245,13 +245,18 @@ public class HDFSHelper {
             Result<ManifestJSON> result = ugi.doAs(new PrivilegedExceptionAction<Result<ManifestJSON>>() {
                 @Override
                 public Result<ManifestJSON> run() {
-                    try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig);
-                            FSDataInputStream in = fs.open(new Path(filePath))) {
-                        long manifestLength = fs.getLength(new Path(filePath));
-                        byte[] manifestByte = new byte[(int) manifestLength];
-                        in.readFully(manifestByte);
-                        ManifestJSON manifest = getManifestJSON(manifestByte);
-                        return Result.success(manifest);
+                    try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+                        if (!fs.isFile(new Path(filePath))) {
+                            LOG.warn("{}file does not exist", new Object[]{logPrefix, filePath});
+                            return Result.externalSafeFailure(new HDFSException("hdfs file read"));
+                        }
+                        try (FSDataInputStream in = fs.open(new Path(filePath))) {
+                            long manifestLength = fs.getLength(new Path(filePath));
+                            byte[] manifestByte = new byte[(int) manifestLength];
+                            in.readFully(manifestByte);
+                            ManifestJSON manifest = getManifestJSON(manifestByte);
+                            return Result.success(manifest);
+                        }
                     } catch (IOException ex) {
                         LOG.warn("{}could not read file:{} ex:{}", new Object[]{logPrefix, filePath, ex.getMessage()});
                         return Result.externalSafeFailure(new HDFSException("hdfs file read", ex));

@@ -62,6 +62,7 @@ public class LibraryMngrComp extends ComponentDefinition {
         selfAdr = init.selfAddress;
         torrentProvider = init.torrentProvider;
         setupTorrentProvider();
+        LOG.info("{}initiated", logPrefix);
 
         subscribe(handleStart, control);
         subscribe(handleSystemAddress, systemPort);

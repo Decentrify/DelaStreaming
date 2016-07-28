@@ -22,6 +22,10 @@ package se.sics.nstream.hops.hdfs;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HDFSException extends Exception {
+    public HDFSException(String msg) {
+        super(msg);
+    }
+            
     public HDFSException(String msg, Exception ex) {
         super(msg, ex);
     }
