@@ -18,19 +18,20 @@
  */
 package se.sics.nstream.util.event;
 
-import se.sics.nstream.StreamEvent;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.StreamEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class StreamMsg {
 
-    public static interface Request extends StreamEvent {
+    public static interface Request extends StreamEvent, OverlayEvent {
     }
 
-    public static interface Response extends StreamEvent {
+    public static interface Response extends StreamEvent, OverlayEvent {
 
         public Result.Status getStatus();
     }

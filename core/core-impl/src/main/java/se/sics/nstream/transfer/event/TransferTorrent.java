@@ -31,48 +31,61 @@ public class TransferTorrent {
     public static class Request implements StreamMsg.Request {
 
         public final Identifier eventId;
+        public final Identifier overlayId;
 
-        public Request(Identifier eventId) {
+        public Request(Identifier eventId, Identifier overlayId) {
             this.eventId = eventId;
+            this.overlayId = overlayId;
         }
 
-        public Request() {
-            this(UUIDIdentifier.randomId());
+        public Request(Identifier overlayId) {
+            this(UUIDIdentifier.randomId(), overlayId);
         }
 
         @Override
         public Identifier getId() {
             return eventId;
         }
+        
+        @Override
+        public Identifier overlayId() {
+            return overlayId;
+        }
 
         public Response success(byte[] torrent) {
-            return new Response(eventId, Result.Status.SUCCESS, torrent);
+            return new Response(this, Result.Status.SUCCESS, torrent);
         }
         
         public Response busy() {
-            return new Response(eventId, Result.Status.BUSY, null);
+            return new Response(this, Result.Status.BUSY, null);
         }
     }
 
     public static class Response implements StreamMsg.Response {
 
         public final Identifier eventId;
+        public final Identifier overlayId;
         public final Result.Status status;
         public final byte[] torrent;
         
-        public Response(Identifier eventId, Result.Status status, byte[] torrent) {
+        Response(Identifier eventId, Identifier overlayId, Result.Status status, byte[] torrent) {
             this.eventId = eventId;
+            this.overlayId = overlayId;
             this.status = status;
             this.torrent = torrent;
         }
-        
-        public Response(Result.Status status, byte[] torrent) {
-            this(UUIDIdentifier.randomId(), status, torrent);
+        public Response(Request req, Result.Status status, byte[] torrent) {
+            this(req.eventId, req.overlayId, status, torrent);
         }
-
+        
         @Override
         public Identifier getId() {
             return eventId;
+        }
+        
+         @Override
+        public Identifier overlayId() {
+            return overlayId;
         }
 
         @Override

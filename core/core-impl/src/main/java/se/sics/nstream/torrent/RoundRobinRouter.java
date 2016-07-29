@@ -16,21 +16,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.test;
+package se.sics.nstream.torrent;
 
-import se.sics.ktoolbox.util.test.EqualComparator;
-import se.sics.nstream.hops.HopsFES;
+import java.util.LinkedList;
+import java.util.List;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsFESEqc implements EqualComparator<HopsFES> {
-
+public class RoundRobinRouter implements Router {
+    private final LinkedList<KAddress> partners = new LinkedList<>();
+    
+    public RoundRobinRouter(List<KAddress> partners) {
+        this.partners.addAll(partners);
+    }
     @Override
-    public boolean isEqual(HopsFES o1, HopsFES o2) {
-        if(!o1.avroJsonSchema.equals(o2.avroJsonSchema)) {
-            return false;
-        }
-        return true;
+    public KAddress randomPartner() {
+        KAddress first = partners.removeFirst();
+        partners.add(first);
+        return first;
     }
 }

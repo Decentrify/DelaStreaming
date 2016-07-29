@@ -16,22 +16,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.library;
+package se.sics.nstream.hops.library;
 
+import java.util.ArrayList;
 import java.util.List;
-import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.PortType;
-import se.sics.kompics.config.Config;
-import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.util.CoreExtPorts;
+import se.sics.nstream.hops.hdfs.HDFSPort;
+import se.sics.nstream.hops.kafka.KafkaPort;
+import se.sics.nstream.torrent.StorageProvider;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface TorrentProvider {
-    public List<Class<PortType>> providesPorts();
-    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, CoreExtPorts extPorts);
-    public void start();
-    public void close();
+public class HopsStorageProvider implements StorageProvider {
+    @Override
+    public List<Class<PortType>> requiresPorts() {
+        List ports = new ArrayList();
+        ports.add(HDFSPort.class);
+        ports.add(KafkaPort.class);
+        return ports;
+    }
 }

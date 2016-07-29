@@ -30,28 +30,6 @@ import se.sics.nstream.util.TransferDetails;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class Transfer {
-    public static class UploadIndication implements StreamEvent, OverlayEvent {
-        public final Identifier eventId;
-        public final Identifier torrentId;
-        public final Result<Boolean> result;
-
-        public UploadIndication(Identifier torrentId, Result<Boolean> result) {
-            this.eventId = UUIDIdentifier.randomId();
-            this.torrentId = torrentId;
-            this.result = result;
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        @Override
-        public Identifier overlayId() {
-            return torrentId;
-        }
-    }
-
     public static class DownloadRequest extends Direct.Request<DownloadResponse> implements StreamEvent, OverlayEvent {
 
         public final Identifier eventId;

@@ -26,7 +26,6 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.util.event.StreamMsg;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentTimeout {

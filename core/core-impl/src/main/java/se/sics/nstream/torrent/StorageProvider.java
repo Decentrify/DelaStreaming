@@ -16,37 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops;
+package se.sics.nstream.torrent;
 
-import com.google.common.base.Optional;
-import io.netty.buffer.ByteBuf;
-import se.sics.kompics.network.netty.serialization.Serializer;
-import se.sics.ktoolbox.util.StringSerializerHelper;
+import java.util.List;
+import se.sics.kompics.PortType;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsFESSerializer implements Serializer {
-    private final int id;
-    
-    public HopsFESSerializer(int id) {
-        this.id = id;
-    }
-    
-    @Override
-    public int identifier() {
-        return id;
-    }
-
-    @Override
-    public void toBinary(Object o, ByteBuf buf) {
-        HopsFES obj = (HopsFES)o;
-        StringSerializerHelper.toBinary(obj.avroJsonSchema, buf);
-    }
-
-    @Override
-    public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-        String avroJsonSchema = StringSerializerHelper.fromBinary(buf);
-        return new HopsFES(avroJsonSchema);
-    }
+public interface StorageProvider {
+    public List<Class<PortType>> requiresPorts();
 }

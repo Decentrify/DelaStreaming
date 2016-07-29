@@ -45,12 +45,14 @@ public class TransferTorrentSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             TransferTorrent.Request obj = (TransferTorrent.Request)o;
             Serializers.toBinary(obj.eventId, buf);
+            Serializers.toBinary(obj.overlayId, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
-            return new TransferTorrent.Request(eventId);
+            Identifier overlayId = (Identifier)Serializers.fromBinary(buf, hint);
+            return new TransferTorrent.Request(eventId, overlayId);
         }
     }
     
@@ -70,19 +72,21 @@ public class TransferTorrentSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             TransferTorrent.Response obj = (TransferTorrent.Response)o;
             Serializers.toBinary(obj.eventId, buf);
+            Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(Result.Status.class).toBinary(obj.status, buf);
-            buf.writeInt(obj.torrent.length);
+            buf.writeInt((obj.torrent == null ? 0 : obj.torrent.length));
             buf.writeBytes(obj.torrent);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier)Serializers.fromBinary(buf, hint);
             Result.Status status = (Result.Status)Serializers.lookupSerializer(Result.Status.class).fromBinary(buf, hint);
             int torrentLength = buf.readInt();
             byte[] torrent = new byte[torrentLength];
             buf.readBytes(torrent);
-            return new TransferTorrent.Response(eventId, status, torrent);
+            return new TransferTorrent.Response(eventId, overlayId, status, torrent);
         }
     }
 }

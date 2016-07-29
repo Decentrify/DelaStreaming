@@ -12,7 +12,7 @@
         <!--<module>caracal-client</module>-->
         <module>core</module>
         <!--<module>manager</module>-->
-        <!--<module>network</module>-->
+        <module>network</module>
         <!--<module>system</module>-->
         <!--        <module>simulation</module>-->
         <!--<module>simulator</module>-->

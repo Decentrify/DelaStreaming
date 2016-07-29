@@ -53,22 +53,22 @@ public class LibraryMngrComp extends ComponentDefinition {
     //**************************EXTERNAL_STATE**********************************
     private final KAddress selfAdr;
     //**************************INTERNAL_STATE**********************************
-    private final TorrentProvider torrentProvider;
+    private final LibraryProvider torrentProvider;
 
     public LibraryMngrComp(Init init) {
         LOG.info("{}initiating...", logPrefix);
 
         extPorts = init.extPorts;
         selfAdr = init.selfAddress;
-        torrentProvider = init.torrentProvider;
-        setupTorrentProvider();
+        torrentProvider = init.libraryProvider;
+        setupLibraryProvider();
         LOG.info("{}initiated", logPrefix);
 
         subscribe(handleStart, control);
         subscribe(handleSystemAddress, systemPort);
     }
 
-    private void setupTorrentProvider() {
+    private void setupLibraryProvider() {
         for (Class<PortType> r : torrentProvider.providesPorts()) {
             providedPorts.add(provides(r));
         }
@@ -100,12 +100,12 @@ public class LibraryMngrComp extends ComponentDefinition {
 
         public final CoreExtPorts extPorts;
         public final KAddress selfAddress;
-        public final TorrentProvider torrentProvider;
+        public final LibraryProvider libraryProvider;
 
-        public Init(CoreExtPorts extPorts, KAddress selfAddress, TorrentProvider torrentProvider) {
+        public Init(CoreExtPorts extPorts, KAddress selfAddress, LibraryProvider libraryProvider) {
             this.extPorts = extPorts;
             this.selfAddress = selfAddress;
-            this.torrentProvider = torrentProvider;
+            this.libraryProvider = libraryProvider;
         }
     }
 }

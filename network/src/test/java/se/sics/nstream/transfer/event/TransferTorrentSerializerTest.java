@@ -27,6 +27,8 @@ import org.junit.Test;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.test.TransferTorrentEqc;
@@ -51,7 +53,7 @@ public class TransferTorrentSerializerTest {
         TransferTorrent.Request original, copy;
         ByteBuf serializedOriginal, serializedCopy;
         
-        original = new TransferTorrent.Request();
+        original = new TransferTorrent.Request(new IntIdentifier(10));
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
@@ -70,7 +72,7 @@ public class TransferTorrentSerializerTest {
         TransferTorrent.Response original, copy;
         ByteBuf serializedOriginal, serializedCopy;
         
-        original = new TransferTorrent.Response(Result.Status.SUCCESS, new byte[]{1,2,3});
+        original = new TransferTorrent.Response(UUIDIdentifier.randomId(), new IntIdentifier(10), Result.Status.SUCCESS, new byte[]{1,2,3});
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 

@@ -28,7 +28,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.stream.report.event.DownloadSummaryEvent;
-import se.sics.kompics.Component;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -58,7 +57,7 @@ import se.sics.nstream.util.TransferDetails;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsTorrentMngr {
+public class HopsLibraryMngr {
 
     private static final Logger LOG = LoggerFactory.getLogger(LibraryMngrComp.class);
     private String logPrefix = "";
@@ -69,32 +68,30 @@ public class HopsTorrentMngr {
     //**************************************************************************
     private final CoreExtPorts extPorts;
     private final Negative<HopsTorrentPort> torrentPort;
+    //**********************INTERNAL_DO_NOT_CONNECT_TO**************************
     private final Negative<TransferMngrPort> transferMngrPort;
 //    private final Positive<ReportPort> reportPort;
 //    private final One2NChannel reportChannel;
     //**************************************************************************
     private Library library = new Library();
-    private Map<Identifier, Component> components = new HashMap<>();
+    private HopsTorrentCompMngr components;
     //**************************************************************************
     private Map<Identifier, HopsTorrentDownloadEvent.StartRequest> pendingExtDwnl = new HashMap<>();
     private Map<Identifier, Transfer.DownloadRequest> pendingIntDwnl = new HashMap<>();
-
     private Map<Identifier, TorrentExtendedStatusEvent.Request> pendingRequests = new HashMap<>();
 
-    public HopsTorrentMngr(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, CoreExtPorts extPorts) {
+    public HopsLibraryMngr(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, CoreExtPorts extPorts) {
         this.proxy = proxy;
         this.logPrefix = logPrefix;
         this.config = config;
         this.extPorts = extPorts;
         this.selfAdr = selfAdr;
+        components = new HopsTorrentCompMngr(selfAdr, proxy, extPorts, logPrefix);
         torrentPort = proxy.getPositive(HopsTorrentPort.class).getPair();
         transferMngrPort = proxy.getPositive(TransferMngrPort.class).getPair();
 //        reportPort = proxy.getNegative(ReportPort.class).getPair();
 //        reportChannel = One2NChannel.getChannel("vodMngrReportChannel", (Negative<ReportPort>) reportPort.getPair(), new EventOverlayIdExtractor());
-        subscribe();
-    }
 
-    public void subscribe() {
         proxy.subscribe(handleHopsTorrentUpload, torrentPort);
         proxy.subscribe(handleHopsTorrentDownload, torrentPort);
         proxy.subscribe(handleTransferDetailsReq, transferMngrPort);
@@ -115,6 +112,8 @@ public class HopsTorrentMngr {
         library.destroyed(torrentId);
         //TODO Alex - destory and clean;
     }
+    //**************************************************************************
+    
 
     //**********************************UPLOAD**********************************
     Handler handleHopsTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
@@ -148,7 +147,7 @@ public class HopsTorrentMngr {
                         Map<String, FileExtendedDetails> extendedDetails = getUploadExtendedDetails(req.hdfsEndpoint, req.manifestResource, torrentDetails);
                         TransferDetails transferDetails = new TransferDetails(torrentDetails, extendedDetails);
                         library.upload(req.torrentId, Pair.with(req.hdfsEndpoint, req.manifestResource), transferDetails);
-                        uploadHopsTorrent(req.torrentId, torrentByte, transferDetails);
+                        components.startUpload(transferMngrPort.getPair(), req.torrentId, req.hdfsEndpoint, Pair.with(torrentByte, transferDetails));
                         
                         HopsTorrentUploadEvent.Response hopsResp = req.uploading(Result.success(true));
                         LOG.trace("{}sending:{}", logPrefix, hopsResp);
@@ -182,15 +181,6 @@ public class HopsTorrentMngr {
         return false;
     }
 
-    private void uploadHopsTorrent(Identifier torrentId, byte[] torrentByte, TransferDetails transferDetails) {
-        LOG.info("{}setting up upload:{}", logPrefix, torrentId);
-
-//        StreamHostComp.ExtPort shcExtPorts = new StreamHostComp.ExtPort(extPorts.timerPort, extPorts.networkPort);
-//        Component torrentComp = proxy.create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, new ArrayList<KAddress>()));
-//        reportChannel.addChannel(torrentId, torrentComp.getPositive(ReportPort.class));
-//        components.put(torrentId, torrentComp);
-//        proxy.trigger(Start.event, torrentComp.control());
-    }
     //*******************************DOWNLOAD***********************************
     Handler handleHopsTorrentDownload = new Handler<HopsTorrentDownloadEvent.StartRequest>() {
         @Override
@@ -201,7 +191,7 @@ public class HopsTorrentMngr {
             switch (status) {
                 case NONE:
                     library.startingDownload(req.torrentId, req.manifest);
-                    downloadHopsTorrent(req.torrentId, req.partners);
+                    components.startDownload(transferMngrPort.getPair(), req.torrentId, req.partners);
                     pendingExtDwnl.put(req.torrentId, req);
                     break;
                 case UPLOADING:
@@ -233,15 +223,6 @@ public class HopsTorrentMngr {
     private boolean compareDownloadManifest(Pair<HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
         //TODO Alex - what needs to match?
         return false;
-    }
-
-    private void downloadHopsTorrent(Identifier torrentId, List<KAddress> partners) {
-        LOG.info("{}setting up download:{}", logPrefix, torrentId);
-//        StreamHostComp.ExtPort shcExtPorts = new StreamHostComp.ExtPort(extPorts.timerPort, extPorts.networkPort);
-//        Component torrentComp = proxy.create(StreamHostComp.class, new StreamHostComp.Init(shcExtPorts, selfAdr, torrentDetails, partners));
-//        reportChannel.addChannel(torrentId, torrentComp.getPositive(ReportPort.class));
-//        components.put(torrentId, torrentComp);
-//        proxy.trigger(Start.event, torrentComp.control());
     }
 
     Handler handleTransferDetailsReq = new Handler<Transfer.DownloadRequest>() {

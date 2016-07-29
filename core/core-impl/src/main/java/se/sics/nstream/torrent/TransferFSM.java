@@ -30,7 +30,6 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.CancelTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
-import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -38,7 +37,6 @@ import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
-import se.sics.ktoolbox.util.network.basic.DecoratedHeader;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.transfer.MultiFileTransfer;
@@ -82,8 +80,8 @@ public abstract class TransferFSM {
     public void handleExtendedTorrentResp(Transfer.DownloadResponse resp) {
     }
 
-    protected void request(KAddress partner, KompicsEvent content, Timeout timeout) {
-        KHeader header = new DecoratedHeader(new BasicHeader(cs.selfAdr, partner, Transport.UDP), cs.overlayId);
+    protected void request(KAddress partner, KompicsEvent content, ScheduleTimeout timeout) {
+        KHeader header = new BasicHeader(cs.selfAdr, partner, Transport.UDP);
         KContentMsg msg = new BasicContentMsg(header, content);
         LOG.trace("{}sending:{}", cs.logPrefix, msg);
         cs.proxy.trigger(msg, cs.networkPort);
@@ -150,7 +148,7 @@ public abstract class TransferFSM {
                 cancelTimeout(tid.getValue0());
                 if (Result.Status.isSuccess(resp.status)) {
                     torrentByte = resp.torrent;
-                    cs.proxy.trigger(new Transfer.DownloadRequest(cs.overlayId, Result.success(torrentByte)), cs.timerPort);
+                    cs.proxy.trigger(new Transfer.DownloadRequest(cs.overlayId, Result.success(torrentByte)), cs.transferMngrPort);
                 } else {
                     requestTorrentDetails();
                 }
@@ -164,11 +162,17 @@ public abstract class TransferFSM {
 
         private void requestTorrentDetails() {
             KAddress target = cs.router.randomPartner();
+            TransferTorrent.Request req = new TransferTorrent.Request(cs.overlayId);
+            ScheduleTimeout timeout = scheduleTorrentTimeout(req.eventId, target);
+            request(target, req, timeout);
+        }
+        
+        private ScheduleTimeout scheduleTorrentTimeout(Identifier eventId, KAddress target) {
             ScheduleTimeout st = new ScheduleTimeout(cs.torrentConfig.netDelay);
             TorrentTimeout.Metadata tt = new TorrentTimeout.Metadata(st, target);
-            TransferTorrent.Request req = new TransferTorrent.Request();
-            tid = Pair.with(tt.getTimeoutId(), req.eventId);
-            request(target, req, tt);
+            st.setTimeoutEvent(tt);
+            tid = Pair.with(tt.getTimeoutId(), eventId);
+            return st;
         }
     }
 
@@ -226,7 +230,6 @@ public abstract class TransferFSM {
         
         @Override
         public void start() {
-            cs.proxy.trigger(new Transfer.UploadIndication(cs.overlayId, Result.success(true)), cs.transferMngrPort);
         }
 
         @Override
