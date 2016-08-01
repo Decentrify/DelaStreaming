@@ -36,18 +36,20 @@ public class HopsTorrentUploadEvent {
 
         public final Identifier eventId;
         public final Identifier torrentId;
+        public final String torrentName;
         public final HDFSEndpoint hdfsEndpoint;
         public final HDFSResource manifestResource;
 
-        public Request(Identifier eventId, Identifier torrentId, HDFSEndpoint hdfsEndpoint,  HDFSResource manifestResource) {
+        public Request(Identifier eventId, Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint,  HDFSResource manifestResource) {
             this.eventId = eventId;
             this.torrentId = torrentId;
+            this.torrentName = torrentName;
             this.hdfsEndpoint = hdfsEndpoint;
             this.manifestResource = manifestResource;
         }
 
-        public Request(Identifier torrentId, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
-            this(UUIDIdentifier.randomId(), torrentId, hdfsEndpoint, hdfsResource);
+        public Request(Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
+            this(UUIDIdentifier.randomId(), torrentId, torrentName, hdfsEndpoint, hdfsResource);
         }
 
         @Override

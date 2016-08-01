@@ -31,7 +31,7 @@ import se.sics.ktoolbox.util.result.Result;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ContentsSummaryEvent {
+public class HopsContentsEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
         public final Optional<Integer> projectId;

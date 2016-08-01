@@ -22,8 +22,7 @@ import se.sics.kompics.PortType;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
-import se.sics.nstream.library.event.torrent.ContentsSummaryEvent;
-import se.sics.nstream.library.event.torrent.LibraryContentsEvent;
+import se.sics.nstream.library.event.torrent.HopsContentsEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -40,10 +39,10 @@ public class HopsTorrentPort extends PortType {
         indication(HopsTorrentUploadEvent.AlreadyExists.class);
         request(HopsTorrentStopEvent.Request.class);
         indication(HopsTorrentStopEvent.Response.class);
-
-        request(LibraryContentsEvent.Request.class);
-        indication(LibraryContentsEvent.Response.class);
-        request(ContentsSummaryEvent.Request.class);
-        indication(ContentsSummaryEvent.Response.class);
+        request(HopsContentsEvent.Request.class);
+        indication(HopsContentsEvent.Response.class);
+        
+//        request(LibraryContentsEvent.Request.class);
+//        indication(LibraryContentsEvent.Response.class);
     }
 }

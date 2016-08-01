@@ -26,12 +26,12 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
  */
 public class ElementSummary {
 
-    public final String name;
+    public final String fileName;
     public final Identifier torrentId;
     public final TorrentStatus status;
 
     public ElementSummary(String name, Identifier torrentId, TorrentStatus status) {
-        this.name = name;
+        this.fileName = name;
         this.torrentId = torrentId;
         this.status = status;
     }

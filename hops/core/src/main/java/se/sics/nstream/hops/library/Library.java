@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
+import org.javatuples.Triplet;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
@@ -38,8 +39,9 @@ import se.sics.nstream.util.TransferDetails;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class Library {
-    private final Map<Identifier, TorrentStatus> torrentStatus = new HashMap<>();
-    private final Map<Identifier, Pair<HDFSEndpoint, HDFSResource>> manifests = new HashMap<>();
+
+    private final Map<Identifier, Pair<String, TorrentStatus>> torrentStatus = new HashMap<>();
+    private final Map<Identifier, Triplet<String, HDFSEndpoint, HDFSResource>> manifests = new HashMap<>();
     private final Map<Identifier, TorrentDetails> pendingDownload = new HashMap<>();
     private final Map<Identifier, TransferDetails> torrents = new HashMap<>();
 
@@ -48,71 +50,76 @@ public class Library {
     }
 
     public TorrentStatus getStatus(Identifier torrentId) {
-        TorrentStatus status = torrentStatus.get(torrentId);
-        if(status == null) {
-            status = TorrentStatus.NONE;
+        Pair<String, TorrentStatus> status = torrentStatus.get(torrentId);
+        if (status == null) {
+            status = Pair.with("", TorrentStatus.NONE);
         }
-        return status;
+        return status.getValue1();
     }
 
     public void destroyed(Identifier torrentId) {
         remove(torrentId);
-        torrentStatus.put(torrentId, TorrentStatus.DESTROYED);
+        Pair<String, TorrentStatus> status = torrentStatus.remove(torrentId);
+        status = Pair.with(status.getValue0(), TorrentStatus.DESTROYED);
+        torrentStatus.put(torrentId, status);
     }
-    
-    public void upload(Identifier torrentId, Pair<HDFSEndpoint, HDFSResource> manifest, TransferDetails transferDetails) {
-        torrentStatus.put(torrentId, TorrentStatus.UPLOADING);
-        manifests.put(torrentId, manifest);
+
+    public void upload(Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, TransferDetails transferDetails) {
+        torrentStatus.put(torrentId, Pair.with(torrentName, TorrentStatus.UPLOADING));
+        manifests.put(torrentId, Triplet.with(torrentName, hdfsEndpoint, manifest));
         torrents.put(torrentId, transferDetails);
     }
-    
-    public void startingDownload(Identifier torrentId, Pair<HDFSEndpoint, HDFSResource> manifest) {
-        torrentStatus.put(torrentId, TorrentStatus.PENDING_DOWNLOAD);
-        manifests.put(torrentId, manifest);
+
+    public void startingDownload(Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest) {
+        torrentStatus.put(torrentId, Pair.with(torrentName, TorrentStatus.PENDING_DOWNLOAD));
+        manifests.put(torrentId, Triplet.with(torrentName, hdfsEndpoint, manifest));
     }
-    
+
     public void pendingDownload(Identifier torrentId, TorrentDetails torrentDetails) {
         pendingDownload.put(torrentId, torrentDetails);
     }
-    
+
     public Map<String, FileExtendedDetails> getExtendedDetails(Identifier torrentId) {
         TransferDetails aux = torrents.get(torrentId);
         return aux.extended;
     }
-    
+
     public Optional<TorrentDetails> getTorrentDetails(Identifier torrentId) {
         return Optional.fromNullable(pendingDownload.get(torrentId));
     }
-    
-    public Pair<HDFSEndpoint, HDFSResource> getManifest(Identifier torrentId) {
+
+    public Triplet<String, HDFSEndpoint, HDFSResource> getManifest(Identifier torrentId) {
         return manifests.get(torrentId);
     }
-    
+
     public TransferDetails download(Identifier torrentId, Map<String, FileExtendedDetails> extendedDetails) {
-        torrentStatus.put(torrentId, TorrentStatus.DOWNLOADING);
+        Pair<String, TorrentStatus> status = torrentStatus.remove(torrentId);
+        status = Pair.with(status.getValue0(), TorrentStatus.DOWNLOADING);
+        torrentStatus.put(torrentId, status);
         TorrentDetails torrentDetails = pendingDownload.remove(torrentId);
         TransferDetails transferDetails = new TransferDetails(torrentDetails, extendedDetails);
         torrents.put(torrentId, transferDetails);
         return transferDetails;
     }
-    
+
     public void finishDownload(Identifier torrentId) {
-        torrentStatus.put(torrentId, TorrentStatus.UPLOADING);
+        Pair<String, TorrentStatus> status = torrentStatus.remove(torrentId);
+        status = Pair.with(status.getValue0(), TorrentStatus.UPLOADING);
+        torrentStatus.put(torrentId, status);
     }
 
-    public void remove(Identifier torrentId) {
+    private void remove(Identifier torrentId) {
         manifests.remove(torrentId);
         pendingDownload.remove(torrentId);
         torrents.remove(torrentId);
-        torrentStatus.remove(torrentId);
     }
 
     public List<ElementSummary> getSummary() {
         List<ElementSummary> summary = new ArrayList<>();
-//        for (Map.Entry<Identifier, Pair<FileInfo, TorrentInfo>> e : libraryContents.entrySet()) {
-//            ElementSummary es = new ElementSummary(e.getValue().getValue0().name, e.getKey(), e.getValue().getValue1().getStatus());
-//            summary.add(es);
-//        }
+        for (Map.Entry<Identifier, Pair<String, TorrentStatus>> e : torrentStatus.entrySet()) {
+            ElementSummary es = new ElementSummary(e.getValue().getValue0(), e.getKey(), e.getValue().getValue1());
+            summary.add(es);
+        }
         return summary;
     }
 

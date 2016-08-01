@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.javatuples.Pair;
+import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.mngr.util.ElementSummary;
@@ -44,7 +45,7 @@ import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
 import se.sics.nstream.hops.manifest.ManifestJSON;
 import se.sics.nstream.library.LibraryMngrComp;
-import se.sics.nstream.library.event.torrent.ContentsSummaryEvent;
+import se.sics.nstream.library.event.torrent.HopsContentsEvent;
 import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 import se.sics.nstream.library.util.TorrentStatus;
 import se.sics.nstream.transfer.Transfer;
@@ -146,7 +147,7 @@ public class HopsLibraryMngr {
                         TorrentDetails torrentDetails = ManifestJSON.getTorrentDetails(manifest.getValue());
                         Map<String, FileExtendedDetails> extendedDetails = getUploadExtendedDetails(req.hdfsEndpoint, req.manifestResource, torrentDetails);
                         TransferDetails transferDetails = new TransferDetails(torrentDetails, extendedDetails);
-                        library.upload(req.torrentId, Pair.with(req.hdfsEndpoint, req.manifestResource), transferDetails);
+                        library.upload(req.torrentId, req.torrentName, req.hdfsEndpoint, req.manifestResource, transferDetails);
                         components.startUpload(transferMngrPort.getPair(), req.torrentId, req.hdfsEndpoint, Pair.with(torrentByte, transferDetails));
 
                         HopsTorrentUploadEvent.Response hopsResp = req.uploading(Result.success(true));
@@ -176,7 +177,7 @@ public class HopsLibraryMngr {
         return extendedDetails;
     }
 
-    private boolean compareUploadDetails(Pair<HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
+    private boolean compareUploadDetails(Triplet<String, HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
         //TODO Alex - what needs to match?
         return false;
     }
@@ -191,7 +192,7 @@ public class HopsLibraryMngr {
             switch (status) {
                 case DESTROYED:
                 case NONE:
-                    library.startingDownload(req.torrentId, req.manifest);
+                    library.startingDownload(req.torrentId, req.torrentName, req.hdfsEndpoint, req.manifest);
                     components.startDownload(transferMngrPort.getPair(), req.torrentId, req.partners);
                     pendingExtDwnl.put(req.torrentId, req);
                     break;
@@ -221,7 +222,7 @@ public class HopsLibraryMngr {
         }
     };
 
-    private boolean compareDownloadManifest(Pair<HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
+    private boolean compareDownloadManifest(Triplet<String, HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
         //TODO Alex - what needs to match?
         return false;
     }
@@ -233,9 +234,9 @@ public class HopsLibraryMngr {
             HopsTorrentDownloadEvent.StartRequest hopsReq = pendingExtDwnl.remove(req.torrentId);
             if (req.torrentByte.isSuccess()) {
                 ManifestJSON manifest = HDFSHelper.getManifestJSON(req.torrentByte.getValue());
-                Pair<HDFSEndpoint, HDFSResource> manifestResource = library.getManifest(req.torrentId);
-                UserGroupInformation ugi = UserGroupInformation.createRemoteUser(manifestResource.getValue0().user);
-                Result<Boolean> manifestResult = HDFSHelper.writeManifest(ugi, manifestResource.getValue0(), manifestResource.getValue1(), manifest);
+                Triplet<String, HDFSEndpoint, HDFSResource> manifestResource = library.getManifest(req.torrentId);
+                UserGroupInformation ugi = UserGroupInformation.createRemoteUser(manifestResource.getValue1().user);
+                Result<Boolean> manifestResult = HDFSHelper.writeManifest(ugi, manifestResource.getValue1(), manifestResource.getValue2(), manifest);
                 if (manifestResult.isSuccess()) {
                     TorrentDetails torrentDetails = ManifestJSON.getTorrentDetails(manifest);
                     pendingIntDwnl.put(req.torrentId, req);
@@ -295,12 +296,12 @@ public class HopsLibraryMngr {
         }
     };
 
-    Handler handleContentsRequest = new Handler<ContentsSummaryEvent.Request>() {
+    Handler handleContentsRequest = new Handler<HopsContentsEvent.Request>() {
         @Override
-        public void handle(ContentsSummaryEvent.Request req) {
+        public void handle(HopsContentsEvent.Request req) {
             LOG.info("{}received:{}", logPrefix, req);
             List<ElementSummary> summary = library.getSummary();
-            ContentsSummaryEvent.Response resp = req.success(summary);
+            HopsContentsEvent.Response resp = req.success(summary);
             LOG.info("{}answering:{}", logPrefix, resp);
             proxy.answer(req, resp);
         }

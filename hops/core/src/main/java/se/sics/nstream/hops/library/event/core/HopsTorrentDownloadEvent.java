@@ -21,6 +21,7 @@ package se.sics.nstream.hops.library.event.core;
 import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
+import org.javatuples.Triplet;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
@@ -40,18 +41,22 @@ public class HopsTorrentDownloadEvent {
 
         public final Identifier eventId;
         public final Identifier torrentId;
-        public final Pair<HDFSEndpoint, HDFSResource> manifest;
+        public final String torrentName;
+        public final HDFSEndpoint hdfsEndpoint;
+        public final HDFSResource manifest;
         public final List<KAddress> partners;
 
-        public StartRequest(Identifier eventId, Identifier torrentId, Pair<HDFSEndpoint, HDFSResource> manifest, List<KAddress> partners) {
+        public StartRequest(Identifier eventId, Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
             this.eventId = eventId;
             this.torrentId = torrentId;
+            this.torrentName = torrentName;
+            this.hdfsEndpoint = hdfsEndpoint;
             this.manifest = manifest;
             this.partners = partners;
         }
 
-        public StartRequest(Identifier torrentId, Pair<HDFSEndpoint, HDFSResource> manifest, List<KAddress> partners) {
-            this(UUIDIdentifier.randomId(), torrentId, manifest, partners);
+        public StartRequest(Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
+            this(UUIDIdentifier.randomId(), torrentId, torrentName, hdfsEndpoint, manifest, partners);
         }
 
         @Override
@@ -59,7 +64,7 @@ public class HopsTorrentDownloadEvent {
             return eventId;
         }
         
-        public StartResponse alreadyExists(Result<Pair<Pair<HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result) {
+        public StartResponse alreadyExists(Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result) {
             return new AlreadyExists(this, result);
         }
 
@@ -90,9 +95,9 @@ public class HopsTorrentDownloadEvent {
     public static class AlreadyExists implements StartResponse {
 
         public final StartRequest req;
-        public final Result<Pair<Pair<HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result;
+        public final Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result;
 
-        public AlreadyExists(StartRequest req, Result<Pair<Pair<HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result) {
+        public AlreadyExists(StartRequest req, Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result) {
             this.req = req;
             this.result = result;
         }
