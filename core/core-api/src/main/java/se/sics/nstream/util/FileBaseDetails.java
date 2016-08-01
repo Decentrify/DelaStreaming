@@ -18,8 +18,6 @@
  */
 package se.sics.nstream.util;
 
-import se.sics.nstream.util.BlockDetails;
-
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */

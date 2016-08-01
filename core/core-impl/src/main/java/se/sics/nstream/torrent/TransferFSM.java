@@ -42,7 +42,7 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.transfer.MultiFileTransfer;
 import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngrPort;
-import se.sics.nstream.transfer.event.TransferTorrent;
+import se.sics.nstream.torrent.event.TorrentGet;
 import se.sics.nstream.util.TransferDetails;
 
 /**
@@ -66,7 +66,7 @@ public abstract class TransferFSM {
 
     public abstract void close();
 
-    public void handleTorrentReq(KContentMsg msg, TransferTorrent.Request req) {
+    public void handleTorrentReq(KContentMsg msg, TorrentGet.Request req) {
         LOG.trace("{}received:{}", cs.logPrefix, msg);
         answer(msg, req.busy());
     }
@@ -74,7 +74,7 @@ public abstract class TransferFSM {
     public void handleTorrentTimeout(TorrentTimeout.Metadata timeout) {
     }
 
-    public void handleTorrentResp(KContentMsg msg, TransferTorrent.Response resp) {
+    public void handleTorrentResp(KContentMsg msg, TorrentGet.Response resp) {
     }
 
     public void handleExtendedTorrentResp(Transfer.DownloadResponse resp) {
@@ -142,7 +142,7 @@ public abstract class TransferFSM {
         }
 
         @Override
-        public void handleTorrentResp(KContentMsg msg, TransferTorrent.Response resp) {
+        public void handleTorrentResp(KContentMsg msg, TorrentGet.Response resp) {
              LOG.trace("{}received:{}", cs.logPrefix, msg);
             if (tid.getValue1().equals(resp.getId())) {
                 cancelTimeout(tid.getValue0());
@@ -162,7 +162,7 @@ public abstract class TransferFSM {
 
         private void requestTorrentDetails() {
             KAddress target = cs.router.randomPartner();
-            TransferTorrent.Request req = new TransferTorrent.Request(cs.overlayId);
+            TorrentGet.Request req = new TorrentGet.Request(cs.overlayId);
             ScheduleTimeout timeout = scheduleTorrentTimeout(req.eventId, target);
             request(target, req, timeout);
         }
@@ -200,7 +200,7 @@ public abstract class TransferFSM {
         }
 
         @Override
-        public void handleTorrentReq(KContentMsg msg, TransferTorrent.Request req) {
+        public void handleTorrentReq(KContentMsg msg, TorrentGet.Request req) {
             answer(msg, req.success(torrentByte));
         }
     }

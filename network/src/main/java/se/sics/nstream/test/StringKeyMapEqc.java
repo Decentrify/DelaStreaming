@@ -16,13 +16,36 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream;
+package se.sics.nstream.test;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
+import java.util.Map;
+import se.sics.ktoolbox.util.test.EqualComparator;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StreamEvent extends KompicsEvent, Identifiable {
+public class StringKeyMapEqc<V extends Object> implements EqualComparator<Map<String, V>> {
+    private final EqualComparator<V> auxEqc;
+    
+    public StringKeyMapEqc(EqualComparator<V> auxeqc) {
+        this.auxEqc = auxeqc;
+    }
+    
+    @Override
+    public boolean isEqual(Map<String, V> o1, Map<String, V> o2) {
+        if (o1.size() != o2.size()) {
+            return false;
+        }
+        for (Map.Entry<String, V> e1 : o1.entrySet()) {
+            V e2 = o2.get(e1.getKey());
+            if (e2 == null) {
+                return false;
+            }
+            if (!auxEqc.isEqual(e1.getValue(), e2)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

@@ -28,18 +28,18 @@ import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.storage.buffer.WriteResult;
 import se.sics.nstream.storage.cache.DelayedRead;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.FileBWC;
-import se.sics.nstream.util.result.BlockWriteCallback;
 import se.sics.nstream.util.FileBaseDetails;
-import se.sics.nstream.util.result.HashWriteCallback;
-import se.sics.nstream.util.result.PieceWriteCallback;
+import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
+import se.sics.nstream.util.result.BlockWriteCallback;
+import se.sics.nstream.util.result.HashWriteCallback;
+import se.sics.nstream.util.result.PieceWriteCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

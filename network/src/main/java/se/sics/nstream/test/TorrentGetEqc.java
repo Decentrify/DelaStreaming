@@ -1,9 +1,3 @@
-package se.sics.nstream.test;
-
-import java.util.Arrays;
-import se.sics.ktoolbox.util.test.EqualComparator;
-import se.sics.nstream.transfer.event.TransferTorrent;
-
 /*
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
@@ -22,15 +16,20 @@ import se.sics.nstream.transfer.event.TransferTorrent;
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.nstream.test;
+
+import java.util.Arrays;
+import se.sics.ktoolbox.util.test.EqualComparator;
+import se.sics.nstream.torrent.event.TorrentGet;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TransferTorrentEqc {
-    public static class Request implements EqualComparator<TransferTorrent.Request> {
+public class TorrentGetEqc {
+    public static class Request implements EqualComparator<TorrentGet.Request> {
         @Override
-        public boolean isEqual(TransferTorrent.Request o1, TransferTorrent.Request o2) {
+        public boolean isEqual(TorrentGet.Request o1, TorrentGet.Request o2) {
             if(!o1.eventId.equals(o2.eventId)) {
                 return false;
             }
@@ -38,9 +37,9 @@ public class TransferTorrentEqc {
         }
     }
     
-    public static class Response implements EqualComparator<TransferTorrent.Response> {
+    public static class Response implements EqualComparator<TorrentGet.Response> {
         @Override
-        public boolean isEqual(TransferTorrent.Response o1, TransferTorrent.Response o2) {
+        public boolean isEqual(TorrentGet.Response o1, TorrentGet.Response o2) {
             if(!o1.eventId.equals(o2.eventId)) {
                 return false;
             }

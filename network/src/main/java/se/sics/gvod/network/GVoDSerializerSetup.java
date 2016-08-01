@@ -19,13 +19,19 @@
 
 package se.sics.gvod.network;
 
-import se.sics.gvod.stream.congestion.PLedbatState;
-import se.sics.gvod.stream.congestion.PLedbatStateImplSerializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.croupier.CroupierSerializerSetup;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
-import se.sics.nstream.transfer.event.TransferTorrent;
-import se.sics.nstream.transfer.event.TransferTorrentSerializer;
+import se.sics.nstream.storage.cache.KHint;
+import se.sics.nstream.storage.cache.KHintSummarySerializer;
+import se.sics.nstream.torrent.event.BlockGet;
+import se.sics.nstream.torrent.event.BlockGetSerializer;
+import se.sics.nstream.torrent.event.HashGet;
+import se.sics.nstream.torrent.event.HashGetSerializer;
+import se.sics.nstream.torrent.event.PieceGet;
+import se.sics.nstream.torrent.event.PieceGetSerializer;
+import se.sics.nstream.torrent.event.TorrentGet;
+import se.sics.nstream.torrent.event.TorrentGetSerializer;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockDetailsSerializer;
 import se.sics.nstream.util.FileBaseDetails;
@@ -35,14 +41,19 @@ import se.sics.nstream.util.FileBaseDetailsSerializer;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class GVoDSerializerSetup {
-    public static int serializerIds = 5;
+    public static int serializerIds = 10;
     
     public static enum GVoDSerializers {
         BlockDetails(BlockDetails.class, "nstreamBlockDetails"),
         FileBaseDetails(FileBaseDetails.class, "nstreamFileBaseDetails"),
-        PLedbatStateImplSerializer(PLedbatState.Impl.class, "gvodPLedbatStateImplSerializer"),
-        TransferTorrentRequest(TransferTorrent.Request.class, "nstreamTransferTorrentRequest"),
-        TransferTorrentResponse(TransferTorrent.Response.class, "nstreamTransferTorrentResponse");
+        TorrentGetRequest(TorrentGet.Request.class, "nstreamTorrentGetRequest"),
+        TorrentGetResponse(TorrentGet.Response.class, "nstreamTorrentGetResponse"),
+        KHintSummary(KHint.Summary.class, "nStramKHintSummary"),
+        HashGetRequest(HashGet.Request.class, "nstreamHashGetRequest"),
+        HashGetResponse(HashGet.Response.class, "nstreamHashGetResopnse"),
+        PieceGetRequest(PieceGet.Request.class, "nstreamPieceGetRequest"),
+        PieceGetResponse(PieceGet.Response.class, "nstreamPieceGetResopnse"),
+        BlockGetRequest(BlockGet.Request.class, "nstreamBlockGetRequest");
         
         public final Class serializedClass;
         public final String serializerName;
@@ -79,17 +90,37 @@ public class GVoDSerializerSetup {
         Serializers.register(fileBaseDetailsSerializer, GVoDSerializers.FileBaseDetails.serializerName);
         Serializers.register(GVoDSerializers.FileBaseDetails.serializedClass, GVoDSerializers.FileBaseDetails.serializerName);
         
-        PLedbatStateImplSerializer pLedbatStateImplSerializer = new PLedbatStateImplSerializer(currentId++);
-        Serializers.register(pLedbatStateImplSerializer, GVoDSerializers.PLedbatStateImplSerializer.serializerName);
-        Serializers.register(GVoDSerializers.PLedbatStateImplSerializer.serializedClass, GVoDSerializers.PLedbatStateImplSerializer.serializerName);
+        TorrentGetSerializer.Request torrentGetRequestSerializer = new TorrentGetSerializer.Request(currentId++);
+        Serializers.register(torrentGetRequestSerializer, GVoDSerializers.TorrentGetRequest.serializerName);
+        Serializers.register(GVoDSerializers.TorrentGetRequest.serializedClass, GVoDSerializers.TorrentGetRequest.serializerName);
         
-        TransferTorrentSerializer.Request transferTorrentRequestSerializer = new TransferTorrentSerializer.Request(currentId++);
-        Serializers.register(transferTorrentRequestSerializer, GVoDSerializers.TransferTorrentRequest.serializerName);
-        Serializers.register(GVoDSerializers.TransferTorrentRequest.serializedClass, GVoDSerializers.TransferTorrentRequest.serializerName);
+        TorrentGetSerializer.Response torrentGetResponseSerializer = new TorrentGetSerializer.Response(currentId++);
+        Serializers.register(torrentGetResponseSerializer, GVoDSerializers.TorrentGetResponse.serializerName);
+        Serializers.register(GVoDSerializers.TorrentGetResponse.serializedClass, GVoDSerializers.TorrentGetResponse.serializerName);
         
-        TransferTorrentSerializer.Response transferTorrentResponseSerializer = new TransferTorrentSerializer.Response(currentId++);
-        Serializers.register(transferTorrentResponseSerializer, GVoDSerializers.TransferTorrentResponse.serializerName);
-        Serializers.register(GVoDSerializers.TransferTorrentResponse.serializedClass, GVoDSerializers.TransferTorrentResponse.serializerName);
+        KHintSummarySerializer kHintSummarySerializer = new KHintSummarySerializer(currentId++);
+        Serializers.register(kHintSummarySerializer, GVoDSerializers.KHintSummary.serializerName);
+        Serializers.register(GVoDSerializers.KHintSummary.serializedClass, GVoDSerializers.KHintSummary.serializerName);
+        
+        HashGetSerializer.Request hashGetRequestSerializer = new HashGetSerializer.Request(currentId++);
+        Serializers.register(hashGetRequestSerializer, GVoDSerializers.HashGetRequest.serializerName);
+        Serializers.register(GVoDSerializers.HashGetRequest.serializedClass, GVoDSerializers.HashGetRequest.serializerName);
+        
+        HashGetSerializer.Response hashGetResponseSerializer = new HashGetSerializer.Response(currentId++);
+        Serializers.register(hashGetResponseSerializer, GVoDSerializers.HashGetResponse.serializerName);
+        Serializers.register(GVoDSerializers.HashGetResponse.serializedClass, GVoDSerializers.HashGetResponse.serializerName);
+        
+        PieceGetSerializer.Request pieceGetRequestSerializer = new PieceGetSerializer.Request(currentId++);
+        Serializers.register(pieceGetRequestSerializer, GVoDSerializers.PieceGetRequest.serializerName);
+        Serializers.register(GVoDSerializers.PieceGetRequest.serializedClass, GVoDSerializers.PieceGetRequest.serializerName);
+        
+        PieceGetSerializer.Response pieceGetResponseSerializer = new PieceGetSerializer.Response(currentId++);
+        Serializers.register(pieceGetResponseSerializer, GVoDSerializers.PieceGetResponse.serializerName);
+        Serializers.register(GVoDSerializers.PieceGetResponse.serializedClass, GVoDSerializers.PieceGetResponse.serializerName);
+        
+        BlockGetSerializer.Request blockGetRequestSerializer = new BlockGetSerializer.Request(currentId++);
+        Serializers.register(blockGetRequestSerializer, GVoDSerializers.BlockGetRequest.serializerName);
+        Serializers.register(GVoDSerializers.BlockGetRequest.serializedClass, GVoDSerializers.BlockGetRequest.serializerName);
         
         assert startingId + serializerIds == currentId;
         return currentId;

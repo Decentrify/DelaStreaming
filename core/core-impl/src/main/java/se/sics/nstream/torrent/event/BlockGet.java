@@ -18,79 +18,45 @@
  */
 package se.sics.nstream.torrent.event;
 
+import java.util.Map;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
-import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.event.StreamMsg;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentGet {
+public class BlockGet {
 
     public static class Request implements StreamMsg.Request {
 
         public final Identifier eventId;
         public final Identifier overlayId;
+        public final Map<String, KHint.Summary> cacheHints;
+        public final String fileName;
+        public final int blockNr;
 
-        public Request(Identifier eventId, Identifier overlayId) {
+        protected Request(Identifier eventId, Identifier overlayId, Map<String, KHint.Summary> cacheHints, String fileName, int blockNr) {
             this.eventId = eventId;
             this.overlayId = overlayId;
+            this.cacheHints = cacheHints;
+            this.fileName = fileName;
+            this.blockNr = blockNr;
         }
 
-        public Request(Identifier overlayId) {
-            this(UUIDIdentifier.randomId(), overlayId);
+        public Request(Identifier overlayId, Map<String, KHint.Summary> cacheHints, String fileName, int blockNr) {
+            this(UUIDIdentifier.randomId(), overlayId, cacheHints, fileName, blockNr);
         }
 
         @Override
         public Identifier getId() {
             return eventId;
         }
-        
+
         @Override
         public Identifier overlayId() {
             return overlayId;
-        }
-
-        public Response success(byte[] torrent) {
-            return new Response(this, Result.Status.SUCCESS, torrent);
-        }
-        
-        public Response busy() {
-            return new Response(this, Result.Status.BUSY, null);
-        }
-    }
-
-    public static class Response implements StreamMsg.Response {
-
-        public final Identifier eventId;
-        public final Identifier overlayId;
-        public final Result.Status status;
-        public final byte[] torrent;
-        
-        Response(Identifier eventId, Identifier overlayId, Result.Status status, byte[] torrent) {
-            this.eventId = eventId;
-            this.overlayId = overlayId;
-            this.status = status;
-            this.torrent = torrent;
-        }
-        public Response(Request req, Result.Status status, byte[] torrent) {
-            this(req.eventId, req.overlayId, status, torrent);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-         @Override
-        public Identifier overlayId() {
-            return overlayId;
-        }
-
-        @Override
-        public Result.Status getStatus() {
-            return status;
         }
     }
 }

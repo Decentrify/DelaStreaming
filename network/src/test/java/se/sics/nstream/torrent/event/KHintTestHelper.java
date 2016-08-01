@@ -16,13 +16,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream;
+package se.sics.nstream.torrent.event;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
+import se.sics.nstream.storage.cache.KHint;
+import se.sics.nstream.storage.cache.KHint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StreamEvent extends KompicsEvent, Identifiable {
+public class KHintTestHelper {
+    public static Map<String, KHint.Summary> getCacheHints1() {
+        Map<String, KHint.Summary> files = new TreeMap<>();
+        Set<Integer> file1Blocks = new TreeSet<>();
+        file1Blocks.add(1);
+        file1Blocks.add(2);
+        file1Blocks.add(3);
+        files.put("file1", new KHint.Summary(1l, file1Blocks));
+        return files;
+    }
 }

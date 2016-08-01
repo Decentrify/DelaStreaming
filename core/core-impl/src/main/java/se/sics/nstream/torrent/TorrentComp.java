@@ -42,7 +42,7 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.nstream.report.ReportTimeout;
 import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngrPort;
-import se.sics.nstream.transfer.event.TransferTorrent;
+import se.sics.nstream.torrent.event.TorrentGet;
 import se.sics.nstream.util.TransferDetails;
 
 /**
@@ -130,19 +130,19 @@ public class TorrentComp extends ComponentDefinition {
     };
     
     ClassMatchedHandler handleTorrentReq
-            = new ClassMatchedHandler<TransferTorrent.Request, KContentMsg<KAddress, KHeader<KAddress>, TransferTorrent.Request>>() {
+            = new ClassMatchedHandler<TorrentGet.Request, KContentMsg<KAddress, KHeader<KAddress>, TorrentGet.Request>>() {
                 @Override
-                public void handle(TransferTorrent.Request content, KContentMsg<KAddress, KHeader<KAddress>, TransferTorrent.Request> container) {
+                public void handle(TorrentGet.Request content, KContentMsg<KAddress, KHeader<KAddress>, TorrentGet.Request> container) {
                     transfer.handleTorrentReq(container, content);
                     transfer = transfer.next();
                 }
             };
 
     ClassMatchedHandler handleTorrentResp
-            = new ClassMatchedHandler<TransferTorrent.Response, KContentMsg<KAddress, KHeader<KAddress>, TransferTorrent.Response>>() {
+            = new ClassMatchedHandler<TorrentGet.Response, KContentMsg<KAddress, KHeader<KAddress>, TorrentGet.Response>>() {
 
                 @Override
-                public void handle(TransferTorrent.Response content, KContentMsg<KAddress, KHeader<KAddress>, TransferTorrent.Response> container) {
+                public void handle(TorrentGet.Response content, KContentMsg<KAddress, KHeader<KAddress>, TorrentGet.Response> container) {
                     transfer.handleTorrentResp(container, content);
                     transfer = transfer.next();
                 }

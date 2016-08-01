@@ -16,26 +16,31 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.transfer.event;
+package se.sics.nstream.torrent.event;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
+import java.nio.ByteBuffer;
+import java.util.Map;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.SerializerHelper;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.storage.cache.KHint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TransferTorrentSerializer {
-    public static class Request implements Serializer {
+public class PieceGetSerializer {
+    public static final class Request implements Serializer {
+
         private final int id;
-        
+
         public Request(int id) {
             this.id = id;
         }
-        
+
         @Override
         public int identifier() {
             return id;
@@ -43,26 +48,33 @@ public class TransferTorrentSerializer {
 
         @Override
         public void toBinary(Object o, ByteBuf buf) {
-            TransferTorrent.Request obj = (TransferTorrent.Request)o;
+            PieceGet.Request obj = (PieceGet.Request) o;
             Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
+            SerializerHelper.stringToBinary(obj.fileName, buf);
+            buf.writeInt(obj.pieceNr);
+            SerializerHelper.sKMtoBinary(obj.cacheHints, KHint.Summary.class, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
-            Identifier overlayId = (Identifier)Serializers.fromBinary(buf, hint);
-            return new TransferTorrent.Request(eventId, overlayId);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
+            String fileName = SerializerHelper.stringFromBinary(buf);
+            int pieceNr = buf.readInt();
+            Map<String, KHint.Summary> cacheHints = SerializerHelper.sKMFromBinary(KHint.Summary.class, buf);
+            return new PieceGet.Request(eventId, overlayId, cacheHints, fileName, pieceNr);
         }
     }
-    
-    public static class Response implements Serializer {
+
+    public static final class Response implements Serializer {
+
         private final int id;
-        
+
         public Response(int id) {
             this.id = id;
         }
-        
+
         @Override
         public int identifier() {
             return id;
@@ -70,23 +82,29 @@ public class TransferTorrentSerializer {
 
         @Override
         public void toBinary(Object o, ByteBuf buf) {
-            TransferTorrent.Response obj = (TransferTorrent.Response)o;
+            PieceGet.Response obj = (PieceGet.Response) o;
             Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(Result.Status.class).toBinary(obj.status, buf);
-            buf.writeInt((obj.torrent == null ? 0 : obj.torrent.length));
-            buf.writeBytes(obj.torrent);
+            SerializerHelper.stringToBinary(obj.fileName, buf);
+            buf.writeInt(obj.pieceNr);
+            byte[] piece = obj.piece.array();
+            buf.writeInt(piece.length);
+            buf.writeBytes(piece);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
-            Identifier overlayId = (Identifier)Serializers.fromBinary(buf, hint);
-            Result.Status status = (Result.Status)Serializers.lookupSerializer(Result.Status.class).fromBinary(buf, hint);
-            int torrentLength = buf.readInt();
-            byte[] torrent = new byte[torrentLength];
-            buf.readBytes(torrent);
-            return new TransferTorrent.Response(eventId, overlayId, status, torrent);
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
+            Result.Status status = (Result.Status) Serializers.lookupSerializer(Result.Status.class).fromBinary(buf, hint);
+            String fileName = SerializerHelper.stringFromBinary(buf);
+            
+            int pieceNr = buf.readInt();
+            int pieceSize = buf.readInt();
+            byte[] piece = new byte[pieceSize];
+            buf.readBytes(piece);
+            return new PieceGet.Response(eventId, overlayId, status, fileName, pieceNr, ByteBuffer.wrap(piece));
         }
     }
 }
