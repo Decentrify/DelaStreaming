@@ -109,11 +109,10 @@ public class HopsLibraryMngr {
     }
 
     public void cleanAndDestroy(Identifier torrentId) {
+        components.destroy(torrentId);
         library.destroyed(torrentId);
-        //TODO Alex - destory and clean;
     }
     //**************************************************************************
-    
 
     //**********************************UPLOAD**********************************
     Handler handleHopsTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
@@ -138,6 +137,7 @@ public class HopsLibraryMngr {
                     LOG.trace("{}answering:{}", logPrefix, resp);
                     proxy.answer(req, resp);
                     break;
+                case DESTROYED:
                 case NONE:
                     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.hdfsEndpoint.user);
                     Result<ManifestJSON> manifest = HDFSHelper.readManifest(ugi, req.hdfsEndpoint, req.manifestResource);
@@ -148,7 +148,7 @@ public class HopsLibraryMngr {
                         TransferDetails transferDetails = new TransferDetails(torrentDetails, extendedDetails);
                         library.upload(req.torrentId, Pair.with(req.hdfsEndpoint, req.manifestResource), transferDetails);
                         components.startUpload(transferMngrPort.getPair(), req.torrentId, req.hdfsEndpoint, Pair.with(torrentByte, transferDetails));
-                        
+
                         HopsTorrentUploadEvent.Response hopsResp = req.uploading(Result.success(true));
                         LOG.trace("{}sending:{}", logPrefix, hopsResp);
                         proxy.answer(req, hopsResp);
@@ -189,6 +189,7 @@ public class HopsLibraryMngr {
             HopsTorrentDownloadEvent.StartResponse hopsResp;
             TorrentStatus status = library.getStatus(req.torrentId);
             switch (status) {
+                case DESTROYED:
                 case NONE:
                     library.startingDownload(req.torrentId, req.manifest);
                     components.startDownload(transferMngrPort.getPair(), req.torrentId, req.partners);
@@ -276,6 +277,7 @@ public class HopsLibraryMngr {
                     Transfer.DownloadResponse nstreamResp = nstreamReq.answer(transferDetails);
                     LOG.trace("{}sending:{}", logPrefix, nstreamResp);
                     proxy.answer(nstreamReq, nstreamResp);
+                    proxy.answer(req, req.answer(Result.success(true)));
                 }
             } else {
                 cleanAndDestroy(req.torrentId);
@@ -318,7 +320,6 @@ public class HopsLibraryMngr {
 //            LOG.trace("{}received:{}", logPrefix, req);
 //        }
 //    };
-
 //    Handler handleTorrentStatusResponse = new Handler<StatusSummaryEvent.Response>() {
 //        @Override
 //        public void handle(StatusSummaryEvent.Response resp) {
@@ -327,5 +328,4 @@ public class HopsLibraryMngr {
 //            proxy.answer(req, req.succes(resp.value));
 //        }
 //    };
-
 }

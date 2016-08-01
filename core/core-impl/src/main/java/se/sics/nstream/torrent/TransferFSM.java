@@ -18,6 +18,12 @@
  */
 package se.sics.nstream.torrent;
 
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -37,13 +43,22 @@ import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.storage.buffer.WriteResult;
+import se.sics.nstream.storage.cache.KHint;
+import se.sics.nstream.torrent.event.HashGet;
+import se.sics.nstream.torrent.event.TorrentGet;
+import se.sics.nstream.torrent.event.timeout.TorrentTimeout;
 import se.sics.nstream.transfer.MultiFileTransfer;
 import se.sics.nstream.transfer.Transfer;
+import se.sics.nstream.transfer.TransferMngr;
 import se.sics.nstream.transfer.TransferMngrPort;
-import se.sics.nstream.torrent.event.TorrentGet;
+import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.TransferDetails;
+import se.sics.nstream.util.result.HashReadCallback;
+import se.sics.nstream.util.result.HashWriteCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -80,12 +95,22 @@ public abstract class TransferFSM {
     public void handleExtendedTorrentResp(Transfer.DownloadResponse resp) {
     }
 
+    public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> msg, HashGet.Request req) {
+    }
+
+    public void handleHashResp(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Response> msg, HashGet.Response resp) {
+    }
+
     protected void request(KAddress partner, KompicsEvent content, ScheduleTimeout timeout) {
         KHeader header = new BasicHeader(cs.selfAdr, partner, Transport.UDP);
         KContentMsg msg = new BasicContentMsg(header, content);
         LOG.trace("{}sending:{}", cs.logPrefix, msg);
         cs.proxy.trigger(msg, cs.networkPort);
         cs.proxy.trigger(timeout, cs.timerPort);
+    }
+
+    protected void answer(Pair content) {
+        answer((KContentMsg) content.getValue0(), (KompicsEvent) content.getValue1());
     }
 
     protected void answer(KContentMsg msg, KompicsEvent content) {
@@ -135,7 +160,7 @@ public abstract class TransferFSM {
 
         @Override
         public void handleTorrentTimeout(TorrentTimeout.Metadata timeout) {
-             LOG.trace("{}received:{}", cs.logPrefix, timeout);
+            LOG.trace("{}received:{}", cs.logPrefix, timeout);
             if (tid.getValue0().equals(timeout.getTimeoutId())) {
                 requestTorrentDetails();
             }
@@ -143,7 +168,7 @@ public abstract class TransferFSM {
 
         @Override
         public void handleTorrentResp(KContentMsg msg, TorrentGet.Response resp) {
-             LOG.trace("{}received:{}", cs.logPrefix, msg);
+            LOG.trace("{}received:{}", cs.logPrefix, msg);
             if (tid.getValue1().equals(resp.getId())) {
                 cancelTimeout(tid.getValue0());
                 if (Result.Status.isSuccess(resp.status)) {
@@ -163,10 +188,9 @@ public abstract class TransferFSM {
         private void requestTorrentDetails() {
             KAddress target = cs.router.randomPartner();
             TorrentGet.Request req = new TorrentGet.Request(cs.overlayId);
-            ScheduleTimeout timeout = scheduleTorrentTimeout(req.eventId, target);
-            request(target, req, timeout);
+            request(target, req, scheduleTorrentTimeout(req.eventId, target));
         }
-        
+
         private ScheduleTimeout scheduleTorrentTimeout(Identifier eventId, KAddress target) {
             ScheduleTimeout st = new ScheduleTimeout(cs.torrentConfig.netDelay);
             TorrentTimeout.Metadata tt = new TorrentTimeout.Metadata(st, target);
@@ -181,6 +205,7 @@ public abstract class TransferFSM {
         protected final byte[] torrentByte;
         protected final TransferDetails transferDetails;
         protected final MultiFileTransfer transferMngr;
+        protected final Map<Identifier, PendingHashReq> pendingHashes = new HashMap<>();
 
         public TransferState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails, MultiFileTransfer transferMngr) {
             super(cs);
@@ -203,12 +228,84 @@ public abstract class TransferFSM {
         public void handleTorrentReq(KContentMsg msg, TorrentGet.Request req) {
             answer(msg, req.success(torrentByte));
         }
+
+        @Override
+        public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> msg, HashGet.Request req) {
+            for (Map.Entry<String, KHint.Summary> e : req.cacheHints.entrySet()) {
+                TransferMngr.Reader reader = transferMngr.readFrom(e.getKey());
+                FileBaseDetails baseDetails = transferDetails.base.baseDetails.get(e.getKey());
+                reader.setFutureReads(msg.getHeader().getSource().getId(), e.getValue().expand(baseDetails));
+            }
+            TransferMngr.Reader hashReader = transferMngr.readFrom(req.fileName);
+            final PendingHashReq phr = new PendingHashReq(msg);
+            pendingHashes.put(req.eventId, phr);
+            for (final Integer hash : req.hashes) {
+                if (hashReader.hasHash(hash)) {
+                    hashReader.readHash(hash, new HashReadCallback() {
+                        @Override
+                        public boolean fail(Result<KReference<byte[]>> result) {
+                            //TODO Alex - exception
+                            throw new RuntimeException("ups...");
+                        }
+
+                        @Override
+                        public boolean success(Result<KReference<byte[]>> result) {
+                            phr.hash(hash, result.getValue());
+                            if (phr.canAnswer()) {
+                                answer(phr.answer());
+                            }
+                            return true;
+                        }
+                    });
+                } else {
+                    phr.missingHash(hash);
+                    if (phr.canAnswer()) {
+                        answer(phr.answer());
+                    }
+                }
+            }
+        }
+
+        public static class PendingHashReq {
+
+            private final KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> req;
+            private final Map<Integer, ByteBuffer> hashes = new TreeMap<>();
+            private final Set<Integer> missingHashes = new TreeSet<>();
+
+            public PendingHashReq(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> req) {
+                this.req = req;
+            }
+
+            public void hash(int hashNr, KReference<byte[]> hash) {
+                hashes.put(hashNr, ByteBuffer.wrap(hash.getValue().get()));
+            }
+
+            public void missingHash(int hashNr) {
+                missingHashes.add(hashNr);
+            }
+
+            public boolean canAnswer() {
+                return req.getContent().hashes.size() == hashes.size() + missingHashes.size();
+            }
+
+            public Pair answer() {
+                HashGet.Response resp = req.getContent().success(hashes, missingHashes);
+                return Pair.with(req, resp);
+            }
+        }
     }
 
     public static class DownloadState extends TransferState {
+        private final Map<Identifier, UUID> pendingHashes = new HashMap<>();
 
         public DownloadState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails) {
             super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, transferDetails, false));
+        }
+
+        @Override
+        public void start() {
+            super.start();
+            download();
         }
 
         @Override
@@ -217,8 +314,62 @@ public abstract class TransferFSM {
         }
 
         @Override
+        public void handleHashResp(KContentMsg msg, HashGet.Response resp) {
+            if (resp.status.isSuccess()) {
+                TransferMngr.Writer hashWriter = transferMngr.writeTo(resp.fileName);
+                for (Map.Entry<Integer, ByteBuffer> hash : resp.hashes.entrySet()) {
+                    LOG.debug("{}received hash:{}", cs.logPrefix, hash.getKey());
+                    hashWriter.writeHash(hash.getKey(), hash.getValue().array(), new HashWriteCallback() {
+                        @Override
+                        public boolean fail(Result<WriteResult> result) {
+                            //TODO Alex - exception
+                            throw new RuntimeException("ups...");
+                        }
+
+                        @Override
+                        public boolean success(Result<WriteResult> result) {
+                            return true;
+                        }
+                    });
+                }
+                for (Integer missingHash : resp.missingHashes) {
+                    //TODO Alex - exception
+                    throw new RuntimeException("ups...");
+                }
+            } else {
+                //TODO Alex - exception
+                throw new RuntimeException("ups...");
+            }
+        }
+
+        @Override
         public void report() {
             LOG.info("{}downloading/uploading", cs.logPrefix);
+        }
+
+        private void download() {
+            LOG.trace("{}downloading...");
+            Map<String, KHint.Summary> cacheHints = new HashMap<>();
+
+            Pair<String, TransferMngr.Writer> file = transferMngr.nextOngoing();
+            KHint.Summary hint = file.getValue1().getFutureReads(TransferConfig.hintCacheSize);
+            cacheHints.put(file.getValue0(), hint);
+
+            KAddress partner = cs.router.randomPartner();
+
+            Set<Integer> hashes = file.getValue1().nextHashes();
+            if (hashes.isEmpty()) {
+                throw new RuntimeException("ups");
+            }
+            request(partner, new HashGet.Request(cs.overlayId, cacheHints, file.getValue0(), 0, hashes), scheduleHashTimeout(partner));
+        }
+
+        private ScheduleTimeout scheduleHashTimeout(KAddress target) {
+            ScheduleTimeout st = new ScheduleTimeout(TransferConfig.hashTimeout);
+            TorrentTimeout.Hash tt = new TorrentTimeout.Hash(st, target);
+            st.setTimeoutEvent(tt);
+            pendingHashes.put(tt.getId(), tt.getTimeoutId());
+            return st;
         }
     }
 
@@ -227,7 +378,7 @@ public abstract class TransferFSM {
         public UploadState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails) {
             super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, transferDetails, true));
         }
-        
+
         @Override
         public void start() {
         }
@@ -242,7 +393,6 @@ public abstract class TransferFSM {
             LOG.info("{}uploading", cs.logPrefix);
         }
     }
-
 
     public static class CommonState {
 
