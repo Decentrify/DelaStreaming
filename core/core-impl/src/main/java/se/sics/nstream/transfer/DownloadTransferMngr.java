@@ -29,7 +29,6 @@ import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.buffer.WriteResult;
-import se.sics.nstream.storage.cache.DelayedRead;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.FileBWC;
@@ -38,8 +37,10 @@ import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
 import se.sics.nstream.util.result.BlockWriteCallback;
+import se.sics.nstream.util.result.HashReadCallback;
 import se.sics.nstream.util.result.HashWriteCallback;
 import se.sics.nstream.util.result.PieceWriteCallback;
+import se.sics.nstream.util.result.ReadCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -48,7 +49,11 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
 
     private final FileBaseDetails fileDetails;
     private final AppendFileMngr file;
+    
+    private final TransferMngrConfig tmConfig;
 
+    private final Set<Integer> pendingHashes = new TreeSet<>();
+    private final Set<Integer> nextHashes = new TreeSet<Integer>();
     private final Map<Integer, BlockMngr> pendingBlocks = new HashMap<>();
     private final TreeSet<Long> nextPieces = new TreeSet<>();
     private final TreeSet<Integer> nextBlocks = new TreeSet<>();
@@ -57,6 +62,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     public DownloadTransferMngr(FileBaseDetails fileDetails, AppendFileMngr file) {
         this.fileDetails = fileDetails;
         this.file = file;
+        this.tmConfig = new TransferMngrConfig();
         oldHint = new KHint.Summary(0, new TreeSet<Integer>());
     }
 
@@ -85,12 +91,16 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     public KHint.Summary getFutureReads(int hintedBlockSpeed) {
         int newNext = hintedBlockSpeed - nextBlocks.size();
         if (newNext > 0) {
-            Set<Integer> hintSet = new TreeSet<>();
-            hintSet.addAll(pendingBlocks.keySet());
-            hintSet.addAll(nextBlocks);
-            Set<Integer> newBlocks = file.nextBlocksMissing(0, newNext, hintSet);
-            newBlocks.addAll(file.nextHashesMissing(0, newNext, hintSet));
-            if (!newBlocks.isEmpty()) {
+            Set<Integer> newBlocks = nextBlocks(newNext);
+            Set<Integer> newHashes = nextHashes(tmConfig.hashesAhead, tmConfig.hashBatchSize);
+            nextBlocks.addAll(newBlocks);
+            nextHashes.addAll(newHashes);
+            if (!newBlocks.isEmpty() || !newHashes.isEmpty()) {
+                Set<Integer> hintSet = new TreeSet<>();
+                hintSet.addAll(pendingBlocks.keySet());
+                hintSet.addAll(nextBlocks);
+                hintSet.addAll(pendingHashes);
+                hintSet.addAll(nextHashes);
                 nextBlocks.addAll(newBlocks);
                 hintSet.addAll(newBlocks);
                 oldHint = new KHint.Summary(oldHint.lStamp + 1, hintSet);
@@ -105,6 +115,26 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
             }
         }
         return oldHint;
+    }
+
+    private Set<Integer> nextBlocks(int nrBlocks) {
+        Set<Integer> except = new TreeSet<>();
+        except.addAll(pendingBlocks.keySet());
+        except.addAll(nextBlocks);
+        return file.nextBlocksMissing(0, nrBlocks, except);
+    }
+
+    private Set<Integer> nextHashes(int hashesAhead, int nrHashes) {
+        Set<Integer> hashes = new TreeSet<>();
+        int filePos = file.filePos();
+        int hashPos = file.hashPos();
+        if(filePos + pendingHashes.size() + hashesAhead > hashPos) {
+            Set<Integer> except = new TreeSet<>();
+            except.addAll(pendingHashes);
+            except.addAll(nextHashes);
+            hashes = file.nextHashesMissing(0, nrHashes, except);
+        }
+        return hashes;
     }
 
     //*************************TRANSFER_HINT_READ*******************************
@@ -224,6 +254,14 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
         return next;
     }
 
+    @Override
+    public Set<Integer> nextHashes() {
+        Set<Integer> hashes = new TreeSet<>(nextHashes);
+        pendingHashes.addAll(nextHashes);
+        nextHashes.clear();
+        return hashes;
+    }
+
     //*********************************READER***********************************
     @Override
     public boolean hasBlock(int blockNr) {
@@ -236,13 +274,13 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     }
 
     @Override
-    public void readHash(int blockNr, DelayedRead delayedResult) {
+    public void readHash(int blockNr, HashReadCallback delayedResult) {
         KBlock hashRange = BlockHelper.getHashRange(blockNr, fileDetails);
         file.readHash(hashRange, delayedResult);
     }
 
     @Override
-    public void readBlock(int blockNr, DelayedRead delayedResult) {
+    public void readBlock(int blockNr, ReadCallback delayedResult) {
         KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
         file.read(blockRange, delayedResult);
     }

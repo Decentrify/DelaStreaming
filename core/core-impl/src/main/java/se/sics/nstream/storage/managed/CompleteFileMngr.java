@@ -21,14 +21,15 @@ package se.sics.nstream.storage.managed;
 import java.util.HashSet;
 import java.util.Set;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.storage.AsyncCompleteStorage;
 import se.sics.nstream.storage.AsyncOnDemandHashStorage;
-import se.sics.nstream.storage.cache.DelayedRead;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.FileBaseDetails;
+import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
+import se.sics.nstream.util.result.HashReadCallback;
+import se.sics.nstream.util.result.ReadCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -65,7 +66,7 @@ public class CompleteFileMngr implements StreamControl, FileMngr.Reader {
 
     //*****************************BASIC_READ***********************************
     @Override
-    public void read(KRange readRange, DelayedRead delayedResult) {
+    public void read(KRange readRange, ReadCallback delayedResult) {
         file.read(readRange, delayedResult);
     }
 
@@ -94,7 +95,7 @@ public class CompleteFileMngr implements StreamControl, FileMngr.Reader {
     }
 
     @Override
-    public void readHash(KBlock readRange, DelayedRead delayedResult) {
+    public void readHash(KBlock readRange, HashReadCallback delayedResult) {
         hash.read(readRange, delayedResult);
     }
 

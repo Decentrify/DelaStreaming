@@ -28,12 +28,12 @@ import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.buffer.WriteResult;
-import se.sics.nstream.storage.cache.DelayedRead;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.FileBaseDetails;
-import se.sics.nstream.util.result.WriteCallback;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
+import se.sics.nstream.util.result.ReadCallback;
+import se.sics.nstream.util.result.WriteCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -85,12 +85,12 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
 
     //**************************************************************************
     @Override
-    public void read(final KRange readRange, final DelayedRead delayedResult) {
+    public void read(final KRange readRange, final ReadCallback delayedResult) {
         KReference<byte[]> hash = hashes.get(readRange.parentBlock());
         if (hash != null) {
             delayedResult.success(Result.success(hash));
         } else {
-            DelayedRead blockResult = new DelayedRead() {
+            ReadCallback blockResult = new ReadCallback() {
 
                 @Override
                 public boolean fail(Result<KReference<byte[]>> result) {

@@ -20,23 +20,38 @@ package se.sics.nstream.storage.cache;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import se.sics.nstream.transfer.BlockHelper;
+import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class KHint {
+
     public static class Summary {
+
         public final long lStamp;
         public final Set<Integer> blocks;
-        
+
         public Summary(long lStamp, Set<Integer> blocks) {
             this.lStamp = lStamp;
             this.blocks = blocks;
         }
+
+        public Expanded expand(FileBaseDetails baseDetails) {
+            Map<Long, KBlock> futureReads = new TreeMap<>();
+            for (Integer blockNr : blocks) {
+                KBlock blockRange = BlockHelper.getBlockRange(blockNr, baseDetails);
+                futureReads.put(blockRange.lowerAbsEndpoint(), blockRange);
+            }
+            return new Expanded(lStamp, futureReads);
+        }
     }
-    
+
     public static class Expanded {
+
         public final long lStamp;
         public final Map<Long, KBlock> futureReads;
 

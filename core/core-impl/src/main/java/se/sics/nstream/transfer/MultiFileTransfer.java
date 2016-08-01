@@ -127,7 +127,7 @@ public class MultiFileTransfer implements StreamControl {
         completed.put(file, completedFileMngr);
     }
 
-    public TransferMngr.Reader readFrom(int file) {
+    public TransferMngr.Reader readFrom(String file) {
         TransferMngr.Reader transferMngr = completed.get(file);
         if (transferMngr == null) {
             transferMngr = pendingComplete.get(file);
@@ -138,7 +138,7 @@ public class MultiFileTransfer implements StreamControl {
         return transferMngr;
     }
 
-    public TransferMngr.Writer writeTo(int file) {
+    public TransferMngr.Writer writeTo(String file) {
         TransferMngr.Writer transferMngr = ongoing.get(file);
         if (transferMngr == null) {
             transferMngr = pendingComplete.get(file);

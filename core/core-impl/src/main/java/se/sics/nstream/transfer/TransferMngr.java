@@ -20,9 +20,10 @@ package se.sics.nstream.transfer;
 
 import java.util.Set;
 import se.sics.nstream.storage.cache.CacheHint;
-import se.sics.nstream.storage.cache.DelayedRead;
+import se.sics.nstream.util.result.HashReadCallback;
 import se.sics.nstream.util.result.HashWriteCallback;
 import se.sics.nstream.util.result.PieceWriteCallback;
+import se.sics.nstream.util.result.ReadCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -35,9 +36,9 @@ public class TransferMngr {
 
         public boolean hasHash(int blockNr);
 
-        public void readHash(int blockNr, DelayedRead delayedResult);
+        public void readHash(int blockNr, HashReadCallback delayedResult);
         
-        public void readBlock(int blockNr, DelayedRead delayedResult);
+        public void readBlock(int blockNr, ReadCallback delayedResult);
     }
 
     public static interface Writer extends CacheHint.Write {
@@ -57,5 +58,7 @@ public class TransferMngr {
         public int nextBlock();
         
         public Set<Long> nextPieces(int nrPieces);
+        
+        public Set<Integer> nextHashes();
     }
 }

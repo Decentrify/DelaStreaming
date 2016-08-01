@@ -22,7 +22,7 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.util.result.WriteCallback;
 import se.sics.nstream.storage.buffer.KBuffer;
-import se.sics.nstream.storage.cache.DelayedRead;
+import se.sics.nstream.util.result.ReadCallback;
 import se.sics.nstream.storage.cache.KCache;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.range.KBlock;
@@ -76,7 +76,7 @@ public class AsyncIncompleteStorage implements AsyncStorage {
 
     //**************************************************************************
     @Override
-    public void read(KRange readRange, DelayedRead readResult) {
+    public void read(KRange readRange, ReadCallback readResult) {
         cache.read(readRange, readResult);
     }
 

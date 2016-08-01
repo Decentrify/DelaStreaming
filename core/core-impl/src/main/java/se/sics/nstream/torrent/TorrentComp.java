@@ -40,9 +40,11 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.nstream.report.ReportTimeout;
+import se.sics.nstream.torrent.event.HashGet;
+import se.sics.nstream.torrent.event.TorrentGet;
+import se.sics.nstream.torrent.event.timeout.TorrentTimeout;
 import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngrPort;
-import se.sics.nstream.torrent.event.TorrentGet;
 import se.sics.nstream.util.TransferDetails;
 
 /**
@@ -72,12 +74,17 @@ public class TorrentComp extends ComponentDefinition {
         router = new RoundRobinRouter(init.partners);
         storageProvider(init.storageProvider);
         transferState(init);
-        
+
         subscribe(handleStart, control);
+        subscribe(handleReportTimeout, timerPort);
+
         subscribe(handleTorrentReq, networkPort);
         subscribe(handleTorrentResp, networkPort);
-        subscribe(handleReportTimeout, timerPort);
         subscribe(handleTorrentTimeout, timerPort);
+        subscribe(handleHashReq, networkPort);
+        subscribe(handleHashResp, networkPort);
+//        subscribe(handleHashTimeout, timerPort);
+
         subscribe(handleExtendedTorrentResp, transferMngrPort);
     }
 
@@ -91,7 +98,7 @@ public class TorrentComp extends ComponentDefinition {
             transfer = new TransferFSM.InitState(cs);
         }
     }
-    
+
     private void storageProvider(StorageProvider storageProvider) {
         for (Class<PortType> r : storageProvider.requiresPorts()) {
             requiredPorts.add(requires(r));
@@ -105,14 +112,14 @@ public class TorrentComp extends ComponentDefinition {
             transfer.start();
         }
     };
-    
-     private void scheduleReportTimeout() {
-         SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(torrentConfig.reportDelay, torrentConfig.reportDelay);
-            ReportTimeout rt = new ReportTimeout(spt);
-            periodicReport = rt.getTimeoutId();
-            trigger(rt, timerPort);
-            spt.setTimeoutEvent(rt);
-        }
+
+    private void scheduleReportTimeout() {
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(torrentConfig.reportDelay, torrentConfig.reportDelay);
+        ReportTimeout rt = new ReportTimeout(spt);
+        periodicReport = rt.getTimeoutId();
+        trigger(rt, timerPort);
+        spt.setTimeoutEvent(rt);
+    }
 
     @Override
     public void tearDown() {
@@ -128,7 +135,7 @@ public class TorrentComp extends ComponentDefinition {
             transfer.report();
         }
     };
-    
+
     ClassMatchedHandler handleTorrentReq
             = new ClassMatchedHandler<TorrentGet.Request, KContentMsg<KAddress, KHeader<KAddress>, TorrentGet.Request>>() {
                 @Override
@@ -164,6 +171,33 @@ public class TorrentComp extends ComponentDefinition {
         }
     };
 
+    ClassMatchedHandler handleHashReq
+            = new ClassMatchedHandler<HashGet.Request, KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request>>() {
+                @Override
+                public void handle(HashGet.Request content, KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> container) {
+                    transfer.handleHashReq(container, content);
+                    transfer = transfer.next();
+                }
+            };
+
+    ClassMatchedHandler handleHashResp
+            = new ClassMatchedHandler<HashGet.Response, KContentMsg<KAddress, KHeader<KAddress>, HashGet.Response>>() {
+
+                @Override
+                public void handle(HashGet.Response content, KContentMsg<KAddress, KHeader<KAddress>, HashGet.Response> container) {
+                    transfer.handleHashResp(container, content);
+                    transfer = transfer.next();
+                }
+            };
+
+//    Handler handleHashTimeout = new Handler<TorrentTimeout.Hash>() {
+//        @Override
+//        public void handle(TorrentTimeout.Hash timeout) {
+//            transfer.handleHashTimeout(timeout);
+//            transfer = transfer.next();
+//        }
+//    };
+
     public static class Init extends se.sics.kompics.Init<TorrentComp> {
 
         public final KAddress selfAdr;
@@ -173,7 +207,7 @@ public class TorrentComp extends ComponentDefinition {
         public final boolean upload;
         public final Optional<Pair<byte[], TransferDetails>> transferDetails;
 
-        public Init(KAddress selfAdr, Identifier overlayId, StorageProvider storageProvider, List<KAddress> partners, 
+        public Init(KAddress selfAdr, Identifier overlayId, StorageProvider storageProvider, List<KAddress> partners,
                 boolean upload, Optional<Pair<byte[], TransferDetails>> transferDetails) {
             this.selfAdr = selfAdr;
             this.overlayId = overlayId;

@@ -63,6 +63,10 @@ public class HashGet {
         public Identifier overlayId() {
             return overlayId;
         }
+        
+        public Response success(Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+            return new Response(this, Result.Status.SUCCESS, hashes, missingHashes);
+        }
     }
 
     public static class Response implements StreamMsg.Response {

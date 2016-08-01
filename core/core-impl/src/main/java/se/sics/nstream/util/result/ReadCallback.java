@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage.cache;
+package se.sics.nstream.util.result;
 
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.result.ResultCallback;
@@ -24,5 +24,5 @@ import se.sics.ktoolbox.util.result.ResultCallback;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface DelayedRead extends ResultCallback<KReference<byte[]>> {
+public interface ReadCallback extends ResultCallback<KReference<byte[]>> {
 }

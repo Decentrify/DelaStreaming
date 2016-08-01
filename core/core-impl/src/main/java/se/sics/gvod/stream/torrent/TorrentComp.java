@@ -18,7 +18,6 @@
 // */
 //package se.sics.gvod.stream.torrent;
 //
-//import se.sics.nstream.torrent.event.Download;
 //import com.google.common.base.Optional;
 //import java.nio.ByteBuffer;
 //import java.util.Collections;
@@ -33,13 +32,11 @@
 //import org.slf4j.LoggerFactory;
 //import se.sics.gvod.common.util.VodDescriptor;
 //import se.sics.gvod.core.util.TorrentDetails;
-//import se.sics.nstream.StreamEvent;
 //import se.sics.gvod.stream.congestion.PLedbatPort;
 //import se.sics.gvod.stream.congestion.event.external.PLedbatConnection;
 //import se.sics.gvod.stream.connection.ConnMngrPort;
 //import se.sics.gvod.stream.connection.event.Connection;
 //import se.sics.gvod.stream.torrent.event.DownloadStatus;
-//import se.sics.nstream.torrent.event.TorrentGet;
 //import se.sics.gvod.stream.torrent.util.ConnectionParam;
 //import se.sics.gvod.stream.torrent.util.DwnlConnMngrV2;
 //import se.sics.gvod.stream.torrent.util.HostParam;
@@ -74,6 +71,9 @@
 //import se.sics.ktoolbox.util.network.basic.DecoratedHeader;
 //import se.sics.ktoolbox.util.profiling.KProfiler;
 //import se.sics.ktoolbox.util.profiling.KProfilerKConfig;
+//import se.sics.nstream.StreamEvent;
+//import se.sics.nstream.torrent.event.Download;
+//import se.sics.nstream.torrent.event.TorrentGet;
 //
 ///**
 // * @author Alex Ormenisan <aaor@kth.se>

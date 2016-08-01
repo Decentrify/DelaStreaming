@@ -23,19 +23,20 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.storage.AsyncIncompleteStorage;
 import se.sics.nstream.storage.AsyncOnDemandHashStorage;
 import se.sics.nstream.storage.buffer.WriteResult;
-import se.sics.nstream.storage.cache.DelayedRead;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.tracker.ComponentTracker;
 import se.sics.nstream.tracker.IncompleteTracker;
 import se.sics.nstream.transfer.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
-import se.sics.nstream.util.result.WriteCallback;
+import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
+import se.sics.nstream.util.result.HashReadCallback;
+import se.sics.nstream.util.result.ReadCallback;
+import se.sics.nstream.util.result.WriteCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -79,7 +80,7 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
 
     //*******************************BASIC_READ*********************************
     @Override
-    public void read(KRange readRange, DelayedRead delayedResult) {
+    public void read(KRange readRange, ReadCallback delayedResult) {
         file.read(readRange, delayedResult);
     }
 
@@ -119,7 +120,7 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
     }
 
     @Override
-    public void readHash(KBlock readRange, DelayedRead delayedResult) {
+    public void readHash(KBlock readRange, HashReadCallback delayedResult) {
         hash.read(readRange, delayedResult);
     }
 
@@ -145,7 +146,7 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
     @Override
     public void writeBlock(final KBlock writeRange, final KReference<byte[]> val, final FileBWC blockWC) {
         final int blockNr = writeRange.parentBlock();
-        DelayedRead hashRead = new DelayedRead() {
+        ReadCallback hashRead = new ReadCallback() {
 
             @Override
             public boolean fail(Result<KReference<byte[]>> result) {
@@ -186,8 +187,19 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
         }
     }
     
+    //TODO Alex - pos 0
     @Override
     public boolean isComplete() {
         return hashTracker.isComplete(0) && fileTracker.isComplete(0);
+    }
+
+    @Override
+    public int filePos() {
+        return fileTracker.nextComponentMissing(0);
+    }
+
+    @Override
+    public int hashPos() {
+        return hashTracker.nextComponentMissing(0);
     }
 }

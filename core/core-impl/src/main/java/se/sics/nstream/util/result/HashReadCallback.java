@@ -16,14 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage;
-
-import se.sics.nstream.util.result.ReadCallback;
-import se.sics.nstream.util.range.KRange;
+package se.sics.nstream.util.result;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface AsyncReadOp<R extends KRange> {
-    public void read(KRange readRange, ReadCallback delayedResult);
+public interface HashReadCallback extends ReadCallback {
 }

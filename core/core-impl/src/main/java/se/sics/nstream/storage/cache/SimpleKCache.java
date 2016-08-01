@@ -47,14 +47,15 @@ import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.util.StreamEndpoint;
 import se.sics.nstream.storage.StoragePort;
-import se.sics.nstream.util.StreamResource;
 import se.sics.nstream.storage.StorageRead;
+import se.sics.nstream.util.StreamEndpoint;
+import se.sics.nstream.util.StreamResource;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
 import se.sics.nstream.util.range.KRange;
 import se.sics.nstream.util.range.RangeKReference;
+import se.sics.nstream.util.result.ReadCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -81,11 +82,11 @@ public class SimpleKCache implements KCache {
     //**************************************************************************
     //<readPos, <readRange, list<readerHeads>>
     final TreeMap<Long, Pair<KBlock, List<Identifier>>> pendingCacheFetch = new TreeMap<>();
-    final Map<Long, List<Pair<KRange, DelayedRead>>> delayedReads = new HashMap<>();
+    final Map<Long, List<Pair<KRange, ReadCallback>>> delayedReads = new HashMap<>();
     //**************************************************************************
     private UUID extendedCacheCleanTid;
 
-    public SimpleKCache(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExHandling, 
+    public SimpleKCache(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExHandling,
             StreamEndpoint readEndpoint, StreamResource readResource) {
         this.cacheConfig = new KCacheConfig(config);
         this.readResource = readResource;
@@ -100,10 +101,15 @@ public class SimpleKCache implements KCache {
     //********************************CONTROL***********************************
     @Override
     public void start() {
+        proxy.trigger(scheduleExtendedCacheClean(), timerPort);
+    }
+
+    private SchedulePeriodicTimeout scheduleExtendedCacheClean() {
         SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(cacheConfig.extendedCacheCleanPeriod, cacheConfig.extendedCacheCleanPeriod);
         ExtendedCacheClean ecc = new ExtendedCacheClean(spt);
-        proxy.trigger(ecc, timerPort);
+        spt.setTimeoutEvent(ecc);
         extendedCacheCleanTid = ecc.getTimeoutId();
+        return spt;
     }
 
     @Override
@@ -162,7 +168,7 @@ public class SimpleKCache implements KCache {
             addToPendingFetch(reader, f.getValue());
         }
     }
-    
+
     private boolean checkCache(ReaderHead rh, long blockPos) {
         Pair<KBlock, CacheKReference> cached = cacheRef.get(blockPos);
         if (cached != null) {
@@ -203,7 +209,7 @@ public class SimpleKCache implements KCache {
         }
         cacheFetch.getValue1().add(reader);
     }
-    
+
     @Override
     public void clean(Identifier reader) {
         ReaderHead rh = readerHeads.remove(reader);
@@ -218,6 +224,7 @@ public class SimpleKCache implements KCache {
         }
         //the pendingCacheFetches are cleaned when the answers return - no need to clean that here
     }
+
     //**************************************************************************
     @Override
     public void buffered(KBlock writeRange, KReference<byte[]> ref) {
@@ -230,7 +237,7 @@ public class SimpleKCache implements KCache {
      *
      */
     @Override
-    public void read(KRange readRange, DelayedRead delayedResult) {
+    public void read(KRange readRange, ReadCallback delayedResult) {
         if (!(readRange instanceof KBlock || readRange instanceof KPiece)) {
             RuntimeException crashingException = new IllegalArgumentException("only blocks or pieces are allowed");
             fail(Result.internalFailure(crashingException));
@@ -280,7 +287,7 @@ public class SimpleKCache implements KCache {
         }
         long blockPos = blockRange.lowerAbsEndpoint();
         //add read to pending until external resource read completes
-        List<Pair<KRange, DelayedRead>> pendingReads = delayedReads.get(blockPos);
+        List<Pair<KRange, ReadCallback>> pendingReads = delayedReads.get(blockPos);
         if (pendingReads == null) {
             pendingReads = new LinkedList<>();
             delayedReads.put(blockPos, pendingReads);
@@ -327,9 +334,9 @@ public class SimpleKCache implements KCache {
                 }
 
                 //checking waiting reads
-                List<Pair<KRange, DelayedRead>> waitingReads = delayedReads.remove(blockPos);
+                List<Pair<KRange, ReadCallback>> waitingReads = delayedReads.remove(blockPos);
                 if (waitingReads != null) {
-                    for (Pair<KRange, DelayedRead> wR : waitingReads) {
+                    for (Pair<KRange, ReadCallback> wR : waitingReads) {
                         //we check correct range enclosing when we add to waiting reads
                         readFromBlock(blockPos, wR.getValue0(), base, wR.getValue1());
                     }
@@ -409,8 +416,8 @@ public class SimpleKCache implements KCache {
         systemRef.clear();
         return Result.success(true);
     }
-    
-    private void readFromBlock(long blockPos, KRange readRange, KReference<byte[]> base, DelayedRead delayedResult) {
+
+    private void readFromBlock(long blockPos, KRange readRange, KReference<byte[]> base, ReadCallback delayedResult) {
         if (readRange instanceof KBlock) {
             //base is enclosed by a cRef - so it is valid
             delayedResult.success(Result.success(base));

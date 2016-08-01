@@ -20,7 +20,7 @@ package se.sics.nstream.storage.cache;
 
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.cache.KCache;
-import se.sics.nstream.storage.cache.DelayedRead;
+import se.sics.nstream.util.result.ReadCallback;
 import se.sics.nstream.storage.cache.SimpleKCache;
 import java.util.Map;
 import java.util.TreeMap;
@@ -390,7 +390,7 @@ public class TestSimpleKCache {
         dr.returned.release();
     }
 
-    public static class MockDelayedRead implements DelayedRead {
+    public static class MockDelayedRead implements ReadCallback {
 
         public final KRange range;
         public boolean done = false;

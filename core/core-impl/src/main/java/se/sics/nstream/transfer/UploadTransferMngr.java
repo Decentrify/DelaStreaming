@@ -19,12 +19,13 @@
 package se.sics.nstream.transfer;
 
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.util.StreamControl;
-import se.sics.nstream.storage.cache.DelayedRead;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.managed.CompleteFileMngr;
 import se.sics.nstream.util.FileBaseDetails;
+import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
+import se.sics.nstream.util.result.HashReadCallback;
+import se.sics.nstream.util.result.ReadCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -78,13 +79,13 @@ public class UploadTransferMngr implements StreamControl, TransferMngr.Reader {
     }
 
     @Override
-    public void readHash(int blockNr, DelayedRead delayedResult) {
+    public void readHash(int blockNr, HashReadCallback delayedResult) {
         KBlock hashRange = BlockHelper.getHashRange(blockNr, fileDetails);
         file.readHash(hashRange, delayedResult);
     }
 
     @Override
-    public void readBlock(int blockNr, DelayedRead delayedResult) {
+    public void readBlock(int blockNr, ReadCallback delayedResult) {
         KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
         file.read(blockRange, delayedResult);
     }

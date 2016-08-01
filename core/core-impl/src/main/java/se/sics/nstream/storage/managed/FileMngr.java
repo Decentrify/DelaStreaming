@@ -18,14 +18,13 @@
  */
 package se.sics.nstream.storage.managed;
 
-import se.sics.nstream.storage.AsyncReadOp;
 import java.util.Set;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.nstream.storage.AsyncReadOp;
 import se.sics.nstream.storage.cache.CacheHint;
-import se.sics.nstream.storage.cache.DelayedRead;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
-import se.sics.nstream.storage.managed.FileBWC;
+import se.sics.nstream.util.result.HashReadCallback;
 import se.sics.nstream.util.result.WriteCallback;
 
 /**
@@ -37,12 +36,14 @@ public class FileMngr {
         public boolean hasHash(int blockNr);
         public Set<Integer> nextBlocksMissing(int fromBlock, int nrBlocks, Set<Integer> except);
         public Set<Integer> nextHashesMissing(int fromBlock, int nrBlocks, Set<Integer> except);
-        public void readHash(KBlock readRange, DelayedRead delayedResult);
+        public void readHash(KBlock readRange, HashReadCallback delayedResult);
     }
     
     public static interface Writer {
         public void writeHash(KBlock writeRange, KReference<byte[]> val, WriteCallback delayedResult);
         public void writeBlock(KBlock writeRange, KReference<byte[]> val, FileBWC blockWC);
         public boolean isComplete();
+        public int filePos();
+        public int hashPos();
     }
 }
