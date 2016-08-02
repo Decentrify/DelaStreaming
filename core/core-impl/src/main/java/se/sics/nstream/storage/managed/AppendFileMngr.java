@@ -190,7 +190,7 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
     //TODO Alex - pos 0
     @Override
     public boolean isComplete() {
-        return hashTracker.isComplete(0) && fileTracker.isComplete(0);
+        return hashTracker.isComplete() && fileTracker.isComplete();
     }
 
     @Override

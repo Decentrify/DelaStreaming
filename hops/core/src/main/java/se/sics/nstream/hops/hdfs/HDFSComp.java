@@ -78,6 +78,9 @@ public class HDFSComp extends ComponentDefinition {
         @Override
         public void handle(StorageWrite.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
+            if(req.pos == 0) {
+                HDFSHelper.simpleCreate(ugi, hdfsEndpoint, (HDFSResource)req.resource);
+            }
             Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, (HDFSResource)req.resource, req.value);
             StorageWrite.Response resp = req.respond(writeResult);
             LOG.trace("{}answering:{}", logPrefix, resp);

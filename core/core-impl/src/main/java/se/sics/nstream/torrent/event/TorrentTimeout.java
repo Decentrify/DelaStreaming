@@ -16,13 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.event.timeout;
+package se.sics.nstream.torrent.event;
 
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.StreamEvent;
 import se.sics.nstream.util.event.StreamMsg;
 
 /**
@@ -49,13 +51,49 @@ public class TorrentTimeout {
             return target;
         }
     }
+    
+    public static class AdvanceDownload extends Timeout implements StreamEvent {
+
+        public AdvanceDownload(SchedulePeriodicTimeout st) {
+            super(st);
+        }
+        
+        @Override
+        public Identifier getId() {
+            return new UUIDIdentifier(getTimeoutId());
+        }
+    }
 
     public static class Hash extends Timeout implements StreamMsg.Timeout {
 
-        private final KAddress target;
+        public final HashGet.Request req;
+        public final KAddress target;
 
-        public Hash(ScheduleTimeout st, KAddress target) {
+        public Hash(ScheduleTimeout st, HashGet.Request req, KAddress target) {
             super(st);
+            this.req = req;
+            this.target = target;
+        }
+
+        @Override
+        public KAddress getTarget() {
+            return target;
+        }
+
+        @Override
+        public Identifier getId() {
+            return new UUIDIdentifier(getTimeoutId());
+        }
+    }
+    
+    public static class Piece extends Timeout implements StreamMsg.Timeout {
+
+        public final PieceGet.Request req;
+        public final KAddress target;
+
+        public Piece(ScheduleTimeout st, PieceGet.Request req, KAddress target) {
+            super(st);
+            this.req = req;
             this.target = target;
         }
 

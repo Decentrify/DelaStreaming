@@ -19,6 +19,8 @@
 
 package se.sics.nstream.transfer;
 
+import java.util.HashSet;
+import java.util.Set;
 import se.sics.nstream.tracker.ComponentTracker;
 import se.sics.nstream.tracker.IncompleteTracker;
 import se.sics.nstream.util.BlockDetails;
@@ -52,7 +54,7 @@ public class InMemoryBlockMngr implements BlockMngr {
 
     @Override
     public boolean isComplete() {
-        return tracker.isComplete(0);
+        return tracker.isComplete();
     }
 
     @Override
@@ -63,5 +65,10 @@ public class InMemoryBlockMngr implements BlockMngr {
     @Override
     public int nrPieces() {
         return blockDetails.nrPieces;
+    }
+
+    @Override
+    public Set<Integer> pendingPieces() {
+        return tracker.nextComponentMissing(0, blockDetails.nrPieces, new HashSet<Integer>());
     }
 }

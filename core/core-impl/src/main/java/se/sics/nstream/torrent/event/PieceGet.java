@@ -20,8 +20,10 @@ package se.sics.nstream.torrent.event;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
+import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.event.StreamMsg;
@@ -36,9 +38,9 @@ public class PieceGet {
         public final Identifier overlayId;
         public final Map<String, KHint.Summary> cacheHints;
         public final String fileName;
-        public final int pieceNr;
+        public final Pair<Integer, Integer> pieceNr;
         
-        protected Request(Identifier eventId, Identifier overlayId, Map<String, KHint.Summary> cacheHints, String fileName, int pieceNr) {
+        protected Request(Identifier eventId, Identifier overlayId, Map<String, KHint.Summary> cacheHints, String fileName, Pair<Integer, Integer> pieceNr) {
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.cacheHints = cacheHints;
@@ -46,7 +48,7 @@ public class PieceGet {
             this.pieceNr = pieceNr;
         }
 
-        public Request(Identifier overlayId, Map<String, KHint.Summary> cacheHints, String fileName, int pieceNr) {
+        public Request(Identifier overlayId, Map<String, KHint.Summary> cacheHints, String fileName, Pair<Integer, Integer> pieceNr) {
             this(UUIDIdentifier.randomId(), overlayId, cacheHints, fileName, pieceNr);
         }
 
@@ -59,18 +61,64 @@ public class PieceGet {
         public Identifier overlayId() {
             return overlayId;
         }
+        
+        public Response success(KReference<byte[]> piece) {
+            return new Response(eventId, eventId, overlayId, Result.Status.SUCCESS, fileName, pieceNr, ByteBuffer.wrap(piece.getValue().get()));
+        }
+        
+        public Response missingBlock() {
+            return new Response(eventId, eventId, overlayId, Result.Status.BAD_REQUEST, fileName, pieceNr, null);
+        }
     }
+    
+    public static class RangeRequest implements StreamMsg.Request {
 
+        public final Identifier eventId;
+        public final Identifier overlayId;
+        public final Map<String, KHint.Summary> cacheHints;
+        public final String fileName;
+        public final int blockNr;
+        public final int from;
+        public final int to;
+        
+        protected RangeRequest(Identifier eventId, Identifier overlayId, Map<String, KHint.Summary> cacheHints, String fileName, int blockNr, int from, int to) {
+            this.eventId = eventId;
+            this.overlayId = overlayId;
+            this.cacheHints = cacheHints;
+            this.fileName = fileName;
+            this.blockNr = blockNr;
+            this.from = from;
+            this.to = to;
+        }
+
+        public RangeRequest(Identifier overlayId, Map<String, KHint.Summary> cacheHints, String fileName, int blockNr, int from, int to) {
+            this(UUIDIdentifier.randomId(), overlayId, cacheHints, fileName, blockNr, from, to);
+        }
+
+        @Override
+        public Identifier getId() {
+            return eventId;
+        }
+
+        @Override
+        public Identifier overlayId() {
+            return overlayId;
+        }
+    }
+    
     public static class Response implements StreamMsg.Response {
         public final Identifier eventId;
+        public final Identifier reqId;
         public final Identifier overlayId;
         public final Result.Status status;
         public final String fileName;
-        public final int pieceNr;
+        public final Pair<Integer, Integer> pieceNr;
         public final ByteBuffer piece;
         
-        protected Response(Identifier eventId, Identifier overlayId, Result.Status status, String fileName, int pieceNr, ByteBuffer piece) {
+        protected Response(Identifier eventId, Identifier reqId, Identifier overlayId, Result.Status status, String fileName, 
+                Pair<Integer, Integer> pieceNr, ByteBuffer piece) {
             this.eventId = eventId;
+            this.reqId = reqId;
             this.overlayId = overlayId;
             this.status = status;
             this.fileName = fileName;
@@ -78,10 +126,6 @@ public class PieceGet {
             this.piece = piece;
         }
         
-        public Response(HashGet.Request req, Result.Status status, String fileName, int pieceNr, ByteBuffer piece) {
-           this(req.eventId, req.overlayId, status, fileName, pieceNr, piece);
-        }
-
         @Override
         public Identifier getId() {
             return eventId;

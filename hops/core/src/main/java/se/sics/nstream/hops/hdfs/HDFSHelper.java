@@ -194,7 +194,7 @@ public class HDFSHelper {
                 public Result<byte[]> run() {
                     try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig);
                             FSDataInputStream in = fs.open(new Path(filePath))) {
-                        int readLength = (int) (readRange.upperAbsEndpoint() - readRange.lowerAbsEndpoint());
+                        int readLength = (int) (readRange.upperAbsEndpoint() - readRange.lowerAbsEndpoint() + 1);
                         byte[] byte_read = new byte[readLength];
                         in.readFully(readRange.lowerAbsEndpoint(), byte_read);
                         return Result.success(byte_read);

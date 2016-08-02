@@ -57,7 +57,7 @@ public class RangeKReference implements KReference<byte[]> {
         try {
             byte[] baseVal = base.getValue().get();
             //i know they are int
-            byte[] val = Arrays.copyOfRange(baseVal, (int)(long)range.lowerEndpoint(), (int)(long)range.upperEndpoint());
+            byte[] val = Arrays.copyOfRange(baseVal, (int)(long)range.lowerEndpoint(), (int)(long)range.upperEndpoint() + 1);
             return Optional.of(val);
         } catch (IllegalStateException ex) {
             return Optional.absent();

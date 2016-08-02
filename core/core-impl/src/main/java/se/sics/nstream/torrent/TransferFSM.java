@@ -35,6 +35,7 @@ import se.sics.kompics.config.Config;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.CancelTimeout;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -46,11 +47,11 @@ import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.storage.buffer.WriteResult;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.torrent.event.HashGet;
+import se.sics.nstream.torrent.event.PieceGet;
 import se.sics.nstream.torrent.event.TorrentGet;
-import se.sics.nstream.torrent.event.timeout.TorrentTimeout;
+import se.sics.nstream.torrent.event.TorrentTimeout;
 import se.sics.nstream.transfer.MultiFileTransfer;
 import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngr;
@@ -58,7 +59,9 @@ import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.TransferDetails;
 import se.sics.nstream.util.result.HashReadCallback;
-import se.sics.nstream.util.result.HashWriteCallback;
+import se.sics.nstream.util.result.NopHashWC;
+import se.sics.nstream.util.result.NopPieceWC;
+import se.sics.nstream.util.result.PieceReadCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -95,10 +98,25 @@ public abstract class TransferFSM {
     public void handleExtendedTorrentResp(Transfer.DownloadResponse resp) {
     }
 
+    public void handleAdvanceDownload(TorrentTimeout.AdvanceDownload timeout) {
+    }
+
     public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> msg, HashGet.Request req) {
     }
 
     public void handleHashResp(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Response> msg, HashGet.Response resp) {
+    }
+
+    public void handleHashTimeout(TorrentTimeout.Hash timeout) {
+    }
+
+    public void handlePieceReq(KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request> msg, PieceGet.Request req) {
+    }
+
+    public void handlePieceResp(KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Response> msg, PieceGet.Response resp) {
+    }
+
+    public void handlePieceTimeout(TorrentTimeout.Piece timeout) {
     }
 
     protected void request(KAddress partner, KompicsEvent content, ScheduleTimeout timeout) {
@@ -206,6 +224,7 @@ public abstract class TransferFSM {
         protected final TransferDetails transferDetails;
         protected final MultiFileTransfer transferMngr;
         protected final Map<Identifier, PendingHashReq> pendingHashes = new HashMap<>();
+        protected final Map<Identifier, PieceGet.Request> pendingPieces = new HashMap<>();
 
         public TransferState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails, MultiFileTransfer transferMngr) {
             super(cs);
@@ -229,19 +248,23 @@ public abstract class TransferFSM {
             answer(msg, req.success(torrentByte));
         }
 
-        @Override
-        public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> msg, HashGet.Request req) {
-            for (Map.Entry<String, KHint.Summary> e : req.cacheHints.entrySet()) {
+        private void updateCacheHint(Identifier readerId, Map<String, KHint.Summary> cacheHints) {
+            for (Map.Entry<String, KHint.Summary> e : cacheHints.entrySet()) {
                 TransferMngr.Reader reader = transferMngr.readFrom(e.getKey());
                 FileBaseDetails baseDetails = transferDetails.base.baseDetails.get(e.getKey());
-                reader.setFutureReads(msg.getHeader().getSource().getId(), e.getValue().expand(baseDetails));
+                reader.setFutureReads(readerId, e.getValue().expand(baseDetails));
             }
-            TransferMngr.Reader hashReader = transferMngr.readFrom(req.fileName);
+        }
+
+        @Override
+        public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> msg, final HashGet.Request req) {
+            updateCacheHint(msg.getHeader().getSource().getId(), req.cacheHints);
+            TransferMngr.Reader reader = transferMngr.readFrom(req.fileName);
             final PendingHashReq phr = new PendingHashReq(msg);
             pendingHashes.put(req.eventId, phr);
             for (final Integer hash : req.hashes) {
-                if (hashReader.hasHash(hash)) {
-                    hashReader.readHash(hash, new HashReadCallback() {
+                if (reader.hasHash(hash)) {
+                    HashReadCallback hashRC = new HashReadCallback() {
                         @Override
                         public boolean fail(Result<KReference<byte[]>> result) {
                             //TODO Alex - exception
@@ -252,17 +275,50 @@ public abstract class TransferFSM {
                         public boolean success(Result<KReference<byte[]>> result) {
                             phr.hash(hash, result.getValue());
                             if (phr.canAnswer()) {
+                                pendingHashes.remove(req.eventId);
                                 answer(phr.answer());
                             }
                             return true;
                         }
-                    });
+                    };
+                    reader.readHash(hash, hashRC);
                 } else {
                     phr.missingHash(hash);
                     if (phr.canAnswer()) {
+                        pendingHashes.remove(req.eventId);
                         answer(phr.answer());
                     }
                 }
+            }
+        }
+
+        @Override
+        public void handlePieceReq(final KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request> msg, final PieceGet.Request req) {
+            if(req.pieceNr.getValue1() == 1023) {
+                int x = 1;
+            }
+            LOG.trace("{}received req for b:{},pb:{}", new Object[]{cs.logPrefix, req.pieceNr.getValue0(), req.pieceNr.getValue1()});
+            updateCacheHint(msg.getHeader().getSource().getId(), req.cacheHints);
+            TransferMngr.Reader reader = transferMngr.readFrom(req.fileName);
+            if (reader.hasBlock(req.pieceNr.getValue0())) {
+                pendingPieces.put(req.eventId, req);
+                PieceReadCallback pieceRC = new PieceReadCallback() {
+
+                    @Override
+                    public boolean fail(Result<KReference<byte[]>> result) {
+                        throw new RuntimeException(result.getException());
+                    }
+
+                    @Override
+                    public boolean success(Result<KReference<byte[]>> result) {
+                        pendingPieces.remove(req.eventId);
+                        answer(msg, req.success(result.getValue()));
+                        return true;
+                    }
+                };
+                reader.readPiece(req.pieceNr, pieceRC);
+            } else {
+                answer(msg, req.missingBlock());
             }
         }
 
@@ -296,7 +352,10 @@ public abstract class TransferFSM {
     }
 
     public static class DownloadState extends TransferState {
+
         private final Map<Identifier, UUID> pendingHashes = new HashMap<>();
+        private final Map<Identifier, UUID> pendingPieces = new HashMap<>();
+        private UUID advanceDownload;
 
         public DownloadState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails) {
             super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, transferDetails, false));
@@ -305,7 +364,14 @@ public abstract class TransferFSM {
         @Override
         public void start() {
             super.start();
-            download();
+            tryDownload();
+            cs.proxy.trigger(scheduleAdvanceDownload(), cs.timerPort);
+        }
+
+        @Override
+        public void close() {
+            super.close();
+            cancelTimeout(advanceDownload);
         }
 
         @Override
@@ -314,62 +380,146 @@ public abstract class TransferFSM {
         }
 
         @Override
+        public void handleAdvanceDownload(TorrentTimeout.AdvanceDownload timeout) {
+            tryDownload();
+        }
+
+        @Override
         public void handleHashResp(KContentMsg msg, HashGet.Response resp) {
+            UUID tId = pendingHashes.remove(resp.eventId);
+            if (tId == null) {
+                LOG.trace("{}late response:{}", cs.logPrefix, resp);
+                return;
+            }
+            cancelTimeout(tId);
+            cs.router.releaseSlot();
+            TransferMngr.Writer writer = transferMngr.writeTo(resp.fileName);
             if (resp.status.isSuccess()) {
-                TransferMngr.Writer hashWriter = transferMngr.writeTo(resp.fileName);
                 for (Map.Entry<Integer, ByteBuffer> hash : resp.hashes.entrySet()) {
                     LOG.debug("{}received hash:{}", cs.logPrefix, hash.getKey());
-                    hashWriter.writeHash(hash.getKey(), hash.getValue().array(), new HashWriteCallback() {
-                        @Override
-                        public boolean fail(Result<WriteResult> result) {
-                            //TODO Alex - exception
-                            throw new RuntimeException("ups...");
-                        }
-
-                        @Override
-                        public boolean success(Result<WriteResult> result) {
-                            return true;
-                        }
-                    });
+                    writer.writeHash(hash.getKey(), hash.getValue().array(), new NopHashWC());
                 }
-                for (Integer missingHash : resp.missingHashes) {
-                    //TODO Alex - exception
-                    throw new RuntimeException("ups...");
-                }
+                writer.resetHashes(resp.missingHashes);
             } else {
-                //TODO Alex - exception
-                throw new RuntimeException("ups...");
+                writer.resetHashes(resp.missingHashes);
             }
+            tryDownload();
+        }
+
+        @Override
+        public void handleHashTimeout(TorrentTimeout.Hash timeout) {
+            LOG.trace("{}timeout:{}", cs.logPrefix, timeout);
+            UUID tId = pendingHashes.remove(timeout.req.getId());
+            if (tId == null) {
+                LOG.trace("{}late timeout:{}", cs.logPrefix, timeout);
+                return;
+            }
+            cs.router.timeoutSlot(timeout.target);
+            TransferMngr.Writer writer = transferMngr.writeTo(timeout.req.fileName);
+            writer.resetHashes(timeout.req.hashes);
+        }
+
+        @Override
+        public void handlePieceResp(KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Response> msg, final PieceGet.Response resp) {
+            if(resp.pieceNr.getValue1() == 1023) {
+                int x= 1;
+            }
+            UUID tId = pendingPieces.remove(resp.eventId);
+            if (tId == null) {
+                LOG.trace("{}late response:{}", cs.logPrefix, resp);
+                return;
+            }
+            cancelTimeout(tId);
+            cs.router.releaseSlot();
+            TransferMngr.Writer writer = transferMngr.writeTo(resp.fileName);
+
+            LOG.trace("{}received resp for b:{},pb:{}", new Object[]{cs.logPrefix, resp.pieceNr.getValue0(), resp.pieceNr.getValue1()});
+            writer.writePiece(resp.pieceNr, resp.piece.array(), new NopPieceWC());
+            tryDownload();
+        }
+
+        @Override
+        public void handlePieceTimeout(TorrentTimeout.Piece timeout) {
+            UUID tId = pendingPieces.remove(timeout.req.eventId);
+            if (tId == null) {
+                LOG.trace("{}late timeout:{}", cs.logPrefix, timeout);
+                return;
+            }
+            cs.router.timeoutSlot(timeout.target);
+            TransferMngr.Writer writer = transferMngr.writeTo(timeout.req.fileName);
+            writer.resetPiece(timeout.req.pieceNr);
         }
 
         @Override
         public void report() {
-            LOG.info("{}downloading/uploading", cs.logPrefix);
+            Pair<String, TransferMngr.Writer> file = transferMngr.nextOngoing();
+            LOG.info("{}downloading file:{} - completed:{}%", new Object[]{cs.logPrefix, file.getValue0(), file.getValue1().percentageComplete()});
         }
 
-        private void download() {
-            LOG.trace("{}downloading...");
+        private void tryDownload() {
+            LOG.trace("{}downloading...", cs.logPrefix);
             Map<String, KHint.Summary> cacheHints = new HashMap<>();
 
-            Pair<String, TransferMngr.Writer> file = transferMngr.nextOngoing();
-            KHint.Summary hint = file.getValue1().getFutureReads(TransferConfig.hintCacheSize);
-            cacheHints.put(file.getValue0(), hint);
-
-            KAddress partner = cs.router.randomPartner();
-
-            Set<Integer> hashes = file.getValue1().nextHashes();
-            if (hashes.isEmpty()) {
-                throw new RuntimeException("ups");
+            if (!transferMngr.hasOngoing()) {
+                LOG.info("{}waiting to complete...", cs.logPrefix);
+                LOG.info("{}completed", cs.logPrefix);
+                return;
             }
-            request(partner, new HashGet.Request(cs.overlayId, cacheHints, file.getValue0(), 0, hashes), scheduleHashTimeout(partner));
+            Pair<String, TransferMngr.Writer> file = transferMngr.nextOngoing();
+            TransferMngr.Writer writer = file.getValue1();
+            if (writer.workAvailable()) {
+                if (!cs.router.hasSlot()) {
+                    return;
+                }
+                KHint.Summary hint = file.getValue1().getFutureReads();
+                cacheHints.put(file.getValue0(), hint);
+                if (writer.hashesAvailable()) {
+                    Pair<Integer, Set<Integer>> hashes = writer.nextHashes();
+                    LOG.debug("{}download hashes:{}", cs.logPrefix, hashes.getValue1());
+                    KAddress partner = cs.router.randomPartner();
+                    cs.router.retainSlot();
+                    HashGet.Request hashReq = new HashGet.Request(cs.overlayId, cacheHints, file.getValue0(), hashes.getValue0(), hashes.getValue1());
+                    request(partner, hashReq, scheduleHashTimeout(hashReq, partner));
+                    return;
+                }
+                Pair<Integer, Integer> nextPiece = writer.nextPiece();
+                LOG.debug("{}download block:{} pieceBlock:{}", new Object[]{cs.logPrefix, nextPiece.getValue0(), nextPiece.getValue1()});
+                KAddress partner = cs.router.randomPartner();
+                cs.router.retainSlot();
+                PieceGet.Request pieceReq = new PieceGet.Request(cs.overlayId, cacheHints, file.getValue0(), nextPiece);
+                request(partner, pieceReq, schedulePieceTimeout(pieceReq, partner));
+            } else if (writer.pendingBlocks()) {
+                //wait
+            } else if (writer.isComplete()) {
+                LOG.info("{}completed", cs.logPrefix);
+            } else {
+                throw new RuntimeException("if no workAvailable and no pendingBlocks and is not complete - logic error");
+            }
         }
 
-        private ScheduleTimeout scheduleHashTimeout(KAddress target) {
+        private SchedulePeriodicTimeout scheduleAdvanceDownload() {
+            SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(TransferConfig.advanceDownloadPeriod, TransferConfig.advanceDownloadPeriod);
+            TorrentTimeout.AdvanceDownload tt = new TorrentTimeout.AdvanceDownload(spt);
+            spt.setTimeoutEvent(tt);
+            advanceDownload = tt.getTimeoutId();
+            return spt;
+        }
+
+        private ScheduleTimeout scheduleHashTimeout(HashGet.Request req, KAddress target) {
             ScheduleTimeout st = new ScheduleTimeout(TransferConfig.hashTimeout);
-            TorrentTimeout.Hash tt = new TorrentTimeout.Hash(st, target);
+            TorrentTimeout.Hash tt = new TorrentTimeout.Hash(st, req, target);
             st.setTimeoutEvent(tt);
-            pendingHashes.put(tt.getId(), tt.getTimeoutId());
+            pendingHashes.put(req.getId(), tt.getTimeoutId());
             return st;
+        }
+
+        private ScheduleTimeout schedulePieceTimeout(PieceGet.Request req, KAddress target) {
+            ScheduleTimeout st = new ScheduleTimeout(TransferConfig.pieceTimeout);
+            TorrentTimeout.Piece tt = new TorrentTimeout.Piece(st, req, target);
+            st.setTimeoutEvent(tt);
+            pendingPieces.put(req.getId(), tt.getTimeoutId());
+            return st;
+
         }
     }
 
@@ -396,7 +546,7 @@ public abstract class TransferFSM {
 
     public static class CommonState {
 
-        private String logPrefix = "";
+        public String logPrefix = "";
 
         public final ComponentProxy proxy;
         public final DelayedExceptionSyncHandler exSyncHandler = null; //TODO 

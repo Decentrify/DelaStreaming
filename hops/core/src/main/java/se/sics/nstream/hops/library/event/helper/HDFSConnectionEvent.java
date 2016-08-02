@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.hops.library.event.helper;
 
-import se.sics.gvod.mngr.util.HDFSConnection;
+import se.sics.nstream.hops.hdfs.HDFSConnection;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;

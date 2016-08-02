@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.hops.library.event.core;
 
+import com.google.common.base.Optional;
 import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
@@ -30,6 +31,7 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
+import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.util.FileExtendedDetails;
 
 /**
@@ -63,7 +65,7 @@ public class HopsTorrentDownloadEvent {
         public Identifier getId() {
             return eventId;
         }
-        
+
         public StartResponse alreadyExists(Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result) {
             return new AlreadyExists(this, result);
         }
@@ -91,7 +93,7 @@ public class HopsTorrentDownloadEvent {
             return req.eventId;
         }
     }
-    
+
     public static class AlreadyExists implements StartResponse {
 
         public final StartRequest req;
@@ -112,16 +114,22 @@ public class HopsTorrentDownloadEvent {
 
         public final Identifier eventId;
         public final Identifier torrentId;
+        public final HDFSEndpoint hdfsEndpoint;
+        public final Optional<KafkaEndpoint> kafkaEndpoint;
         public final Result<Map<String, FileExtendedDetails>> extendedDetails;
 
-        public AdvanceRequest(Identifier eventId, Identifier torrentId, Result<Map<String, FileExtendedDetails>> extendedDetails) {
+        public AdvanceRequest(Identifier eventId, Identifier torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
+                Result<Map<String, FileExtendedDetails>> extendedDetails) {
             this.eventId = eventId;
             this.torrentId = torrentId;
+            this.hdfsEndpoint = hdfsEndpoint;
+            this.kafkaEndpoint = kafkaEndpoint;
             this.extendedDetails = extendedDetails;
         }
 
-        public AdvanceRequest(Identifier torrentId, Result<Map<String, FileExtendedDetails>> extendedDetails) {
-            this(UUIDIdentifier.randomId(), torrentId, extendedDetails);
+        public AdvanceRequest(Identifier torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint, 
+                Result<Map<String, FileExtendedDetails>> extendedDetails) {
+            this(UUIDIdentifier.randomId(), torrentId, hdfsEndpoint, kafkaEndpoint, extendedDetails);
         }
 
         @Override

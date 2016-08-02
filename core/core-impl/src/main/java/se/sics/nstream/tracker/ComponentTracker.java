@@ -25,7 +25,7 @@ import java.util.Set;
  */
 public interface ComponentTracker {
 
-    public boolean isComplete(int fromComponentNr);
+    public boolean isComplete();
     
     public int completedComponents();
     

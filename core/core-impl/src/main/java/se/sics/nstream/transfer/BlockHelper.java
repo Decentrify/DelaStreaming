@@ -57,36 +57,39 @@ public class BlockHelper {
     }
 
     public static int getBlockNr(long pieceNr, FileBaseDetails fileDetails) {
-        int blockNr = (int) pieceNr / fileDetails.defaultBlock.nrPieces;
+        int blockNr = (int) (pieceNr / fileDetails.defaultBlock.nrPieces);
         return blockNr;
     }
 
     public static int getBlockPieceNr(long pieceNr, FileBaseDetails fileDetails) {
-        int bpNr = (int) pieceNr % fileDetails.defaultBlock.nrPieces;
+        int bpNr = (int) (pieceNr % fileDetails.defaultBlock.nrPieces);
         return bpNr;
     }
 
     public static KBlock getBlockRange(int blockNr, FileBaseDetails fileDetails) {
         BlockDetails blockDetails = fileDetails.getBlockDetails(blockNr);
         long lower = blockNr * fileDetails.defaultBlock.blockSize;
-        long higher = lower + blockDetails.blockSize;
+        long higher = lower + blockDetails.blockSize - 1;
         return new KBlockImpl(blockNr, lower, higher);
     }
 
-    public static KPiece getPieceRange(long pieceNr, FileBaseDetails fileDetails) {
-        int blockNr = getBlockNr(pieceNr, fileDetails);
-        int bpNr = getBlockPieceNr(pieceNr, fileDetails);
+    public static KPiece getPieceRange(Pair<Integer, Integer> pieceNr, FileBaseDetails fileDetails) {
+        return getPieceRange(pieceNr.getValue0(), pieceNr.getValue1(), fileDetails);
+    }
+    
+    public static KPiece getPieceRange(int blockNr, int pieceBlockNr, FileBaseDetails fileDetails) {
         BlockDetails blockDetails = fileDetails.getBlockDetails(blockNr);
-        int pieceSize = blockDetails.getPieceSize(bpNr);
-        long lower = blockNr * fileDetails.defaultBlock.blockSize + bpNr * blockDetails.defaultPieceSize;
-        long higher = lower + pieceSize;
-        return new KPieceImpl(blockNr, pieceNr, bpNr, lower, higher);
+        int pieceSize = blockDetails.getPieceSize(pieceBlockNr);
+        long lower = blockNr * fileDetails.defaultBlock.blockSize + pieceBlockNr * blockDetails.defaultPieceSize;
+        long higher = lower + pieceSize - 1;
+        
+        return new KPieceImpl(blockNr, pieceBlockNr, lower, higher);
     }
 
     public static KBlock getHashRange(int blockNr, FileBaseDetails fileDetails) {
         int hashSize = HashUtil.getHashSize(fileDetails.hashAlg);
         long lower = blockNr * hashSize;
-        long higher = lower + hashSize;
+        long higher = lower + hashSize - 1;
         return new KBlockImpl(blockNr, lower, higher);
     }
 }

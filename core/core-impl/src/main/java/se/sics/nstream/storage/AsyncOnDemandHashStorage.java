@@ -29,6 +29,7 @@ import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.buffer.WriteResult;
 import se.sics.nstream.storage.cache.KHint;
+import se.sics.nstream.transfer.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
@@ -80,7 +81,7 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
 
     @Override
     public void setFutureReads(Identifier reader, KHint.Expanded hint) {
-        storage.setFutureReads(reader, hint);
+//        storage.setFutureReads(reader, hint);
     }
 
     //**************************************************************************
@@ -105,7 +106,8 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
                     return delayedResult.success(Result.success(hash));
                 }
             };
-            storage.read(readRange, blockResult);
+            KBlock blockRange = BlockHelper.getBlockRange(readRange.parentBlock(), fileDetails);
+            storage.read(blockRange, blockResult);
         }
     }
 

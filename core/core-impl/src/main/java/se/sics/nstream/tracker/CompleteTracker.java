@@ -33,7 +33,7 @@ public class CompleteTracker implements ComponentTracker {
     }
 
     @Override
-    public boolean isComplete(int fromComponentNr) {
+    public boolean isComplete() {
         return true;
     }
 

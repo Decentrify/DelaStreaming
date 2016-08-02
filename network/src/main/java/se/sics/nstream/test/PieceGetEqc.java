@@ -43,7 +43,41 @@ public class PieceGetEqc {
             if (!o1.fileName.equals(o2.fileName)) {
                 return false;
             }
-            if(o1.pieceNr != o2.pieceNr) {
+            if(!o1.pieceNr.equals(o2.pieceNr)) {
+                return false;
+            }
+            if(!auxEqc.isEqual(o1.cacheHints, o2.cacheHints)) {
+                return false;
+            }
+            return true;
+        }
+    }
+    
+    public static class RangeRequest implements EqualComparator<PieceGet.RangeRequest> {
+        private final StringKeyMapEqc auxEqc;
+        
+        public RangeRequest(StringKeyMapEqc auxEqc) {
+            this.auxEqc = auxEqc;
+        }
+        
+        @Override
+        public boolean isEqual(PieceGet.RangeRequest o1, PieceGet.RangeRequest o2) {
+            if(!o1.eventId.equals(o2.eventId)) {
+                return false;
+            }
+            if(!o1.overlayId.equals(o2.overlayId)) {
+                return false;
+            }
+            if (!o1.fileName.equals(o2.fileName)) {
+                return false;
+            }
+            if(o1.blockNr != o2.blockNr) {
+                return false;
+            }
+            if(o1.from != o2.from) {
+                return false;
+            }
+            if(o1.to != o2.to) {
                 return false;
             }
             if(!auxEqc.isEqual(o1.cacheHints, o2.cacheHints)) {
@@ -68,7 +102,7 @@ public class PieceGetEqc {
             if (!o1.fileName.equals(o2.fileName)) {
                 return false;
             }
-            if(o1.pieceNr != o2.pieceNr) {
+            if(!o1.pieceNr.equals(o2.pieceNr)) {
                 return false;
             }
             if(!o1.piece.equals(o2.piece)) {

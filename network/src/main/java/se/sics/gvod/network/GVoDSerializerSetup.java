@@ -24,8 +24,6 @@ import se.sics.ktoolbox.croupier.CroupierSerializerSetup;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.cache.KHintSummarySerializer;
-import se.sics.nstream.torrent.event.BlockGet;
-import se.sics.nstream.torrent.event.BlockGetSerializer;
 import se.sics.nstream.torrent.event.HashGet;
 import se.sics.nstream.torrent.event.HashGetSerializer;
 import se.sics.nstream.torrent.event.PieceGet;
@@ -52,8 +50,8 @@ public class GVoDSerializerSetup {
         HashGetRequest(HashGet.Request.class, "nstreamHashGetRequest"),
         HashGetResponse(HashGet.Response.class, "nstreamHashGetResopnse"),
         PieceGetRequest(PieceGet.Request.class, "nstreamPieceGetRequest"),
-        PieceGetResponse(PieceGet.Response.class, "nstreamPieceGetResopnse"),
-        BlockGetRequest(BlockGet.Request.class, "nstreamBlockGetRequest");
+        PieceGetRangeRequest(PieceGet.RangeRequest.class, "nstreamPieceGetRangeRequest"),
+        PieceGetResponse(PieceGet.Response.class, "nstreamPieceGetResopnse");
         
         public final Class serializedClass;
         public final String serializerName;
@@ -113,14 +111,14 @@ public class GVoDSerializerSetup {
         PieceGetSerializer.Request pieceGetRequestSerializer = new PieceGetSerializer.Request(currentId++);
         Serializers.register(pieceGetRequestSerializer, GVoDSerializers.PieceGetRequest.serializerName);
         Serializers.register(GVoDSerializers.PieceGetRequest.serializedClass, GVoDSerializers.PieceGetRequest.serializerName);
+         
+        PieceGetSerializer.RangeRequest pieceGetRangeRequestSerializer = new PieceGetSerializer.RangeRequest(currentId++);
+        Serializers.register(pieceGetRangeRequestSerializer, GVoDSerializers.PieceGetRangeRequest.serializerName);
+        Serializers.register(GVoDSerializers.PieceGetRangeRequest.serializedClass, GVoDSerializers.PieceGetRangeRequest.serializerName);
         
         PieceGetSerializer.Response pieceGetResponseSerializer = new PieceGetSerializer.Response(currentId++);
         Serializers.register(pieceGetResponseSerializer, GVoDSerializers.PieceGetResponse.serializerName);
         Serializers.register(GVoDSerializers.PieceGetResponse.serializedClass, GVoDSerializers.PieceGetResponse.serializerName);
-        
-        BlockGetSerializer.Request blockGetRequestSerializer = new BlockGetSerializer.Request(currentId++);
-        Serializers.register(blockGetRequestSerializer, GVoDSerializers.BlockGetRequest.serializerName);
-        Serializers.register(GVoDSerializers.BlockGetRequest.serializedClass, GVoDSerializers.BlockGetRequest.serializerName);
         
         assert startingId + serializerIds == currentId;
         return currentId;

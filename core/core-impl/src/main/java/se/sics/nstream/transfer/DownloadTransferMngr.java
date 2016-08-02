@@ -19,10 +19,14 @@
 package se.sics.nstream.transfer;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
@@ -32,13 +36,14 @@ import se.sics.nstream.storage.buffer.WriteResult;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.FileBWC;
+import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
-import se.sics.nstream.util.result.BlockWriteCallback;
 import se.sics.nstream.util.result.HashReadCallback;
 import se.sics.nstream.util.result.HashWriteCallback;
+import se.sics.nstream.util.result.PieceReadCallback;
 import se.sics.nstream.util.result.PieceWriteCallback;
 import se.sics.nstream.util.result.ReadCallback;
 
@@ -47,17 +52,23 @@ import se.sics.nstream.util.result.ReadCallback;
  */
 public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer, TransferMngr.Reader {
 
-    private final FileBaseDetails fileDetails;
-    private final AppendFileMngr file;
-    
     private final TransferMngrConfig tmConfig;
-
-    private final Set<Integer> pendingHashes = new TreeSet<>();
-    private final Set<Integer> nextHashes = new TreeSet<Integer>();
-    private final Map<Integer, BlockMngr> pendingBlocks = new HashMap<>();
-    private final TreeSet<Long> nextPieces = new TreeSet<>();
-    private final TreeSet<Integer> nextBlocks = new TreeSet<>();
+    private final FileBaseDetails fileDetails;
+    //**************************************************************************
+    private final AppendFileMngr file;
+    //**************************************************************************
     private KHint.Summary oldHint;
+    private final TreeMap<Integer, LinkedList<Integer>> workPieces = new TreeMap<>();
+    private final Map<Integer, BlockMngr> pendingBlocks = new HashMap<>();
+    private final Set<Integer> workHashes = new TreeSet<>();
+    private final Set<Integer> nextHashes = new TreeSet<>();
+    private final LinkedList<Integer> workBlocks = new LinkedList<>();
+    private final LinkedList<Integer> cacheBlocks = new LinkedList<>();
+    private final LinkedList<Integer> nextBlocks = new LinkedList<>();
+    private int workPos = 0;
+    private int hashPos = 0;
+    //**************************************************************************
+    private final Map<Integer, FileBWC> pendingStorageWrites = new HashMap<>();
 
     public DownloadTransferMngr(FileBaseDetails fileDetails, AppendFileMngr file) {
         this.fileDetails = fileDetails;
@@ -70,6 +81,8 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     @Override
     public void start() {
         file.start();
+        startNextBlocks();
+        startWorkBlocks();
     }
 
     @Override
@@ -86,55 +99,196 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
         return new UploadTransferMngr(fileDetails, file.complete());
     }
 
+    //**************************************************************************
+    private void rebuildCacheHint() {
+        Set<Integer> hint = new TreeSet<>();
+        hint.addAll(pendingBlocks.keySet());
+        hint.addAll(workBlocks);
+        hint.addAll(cacheBlocks);
+        oldHint = new KHint.Summary(oldHint.lStamp + 1, hint);
+    }
+
+    private void newWorkPieces() {
+        if (workBlocks.isEmpty()) {
+            newWorkBlocks();
+        }
+        if (!workBlocks.isEmpty()) {
+            newPendingBlock(workBlocks.removeFirst());
+        }
+    }
+
+    private void newPendingBlock(int blockNr) {
+        BlockDetails blockDetails = fileDetails.getBlockDetails(blockNr);
+        BlockMngr blockMngr = new InMemoryBlockMngr(blockDetails);
+        pendingBlocks.put(blockNr, blockMngr);
+        LinkedList<Integer> pieceList = new LinkedList<>();
+        for (int i = 0; i < blockDetails.nrPieces; i++) {
+            pieceList.add(i);
+        }
+        workPieces.put(blockNr, pieceList);
+    }
+
+    private void newWorkHashes() {
+        assert workHashes.isEmpty();
+        if (!nextHashes.isEmpty()) {
+            Iterator<Integer> aux = nextHashes.iterator();
+            int auxCounter = tmConfig.batchSize;
+            while (aux.hasNext() && auxCounter > 0) {
+                Integer nB = aux.next();
+                aux.remove();
+                workHashes.add(nB);
+                auxCounter--;
+            }
+        }
+    }
+
+    private void startWorkBlocks() {
+        Iterator<Integer> aux;
+        int auxCounter;
+
+        aux = nextBlocks.iterator();
+        auxCounter = tmConfig.workBatch;
+        workPos += tmConfig.workBatch;
+        hashPos += tmConfig.workBatch;
+        while (aux.hasNext() && auxCounter > 0) {
+            Integer nB = aux.next();
+            aux.remove();
+            workBlocks.add(nB);
+            nextHashes.add(nB);
+            auxCounter--;
+        }
+
+        aux = nextBlocks.iterator();
+        auxCounter = tmConfig.hashesAhead;
+        hashPos += tmConfig.hashesAhead;
+        while (aux.hasNext() && auxCounter > 0) {
+            Integer nB = aux.next();
+            aux.remove();
+            nextHashes.add(nB);
+            cacheBlocks.add(nB);
+            auxCounter--;
+        }
+
+        aux = nextBlocks.iterator();
+        auxCounter = tmConfig.cacheAhead;
+        while (aux.hasNext() && auxCounter > 0) {
+            Integer nB = aux.next();
+            aux.remove();
+            cacheBlocks.add(nB);
+            auxCounter--;
+        }
+        rebuildCacheHint();
+    }
+
+    private void newWorkBlocks() {
+        assert workBlocks.isEmpty();
+
+        if (nextBlocks.isEmpty()) {
+            newNextBlocks();
+        }
+
+        Iterator<Integer> aux;
+        int auxCounter;
+
+        aux = cacheBlocks.iterator();
+        auxCounter = tmConfig.workBatch;
+        workPos += tmConfig.workBatch;
+        while (aux.hasNext() && auxCounter > 0) {
+            Integer nB = aux.next();
+            aux.remove();
+            workBlocks.add(nB);
+            auxCounter--;
+        }
+        if (workPos + tmConfig.hashesAhead >= hashPos) {
+            auxCounter = tmConfig.hashBatch;
+            hashPos += tmConfig.hashBatch;
+            while (aux.hasNext() && auxCounter > 0) {
+                Integer nb = aux.next();
+                nextHashes.add(nb);
+                auxCounter--;
+            }
+        }
+        //replenish cash ahead by the amount the work queue took
+        aux = nextBlocks.iterator();
+        auxCounter = tmConfig.workBatch;
+        while (aux.hasNext() && auxCounter > 0) {
+            Integer nb = aux.next();
+            aux.remove();
+            cacheBlocks.add(nb);
+            auxCounter--;
+        }
+
+        rebuildCacheHint();
+    }
+
+    private void startNextBlocks() {
+        int nextBlocksSize = tmConfig.workBatch + tmConfig.hashesAhead + tmConfig.cacheAhead + tmConfig.nextBatch;
+        nextBlocks.addAll(file.nextBlocksMissing(0, nextBlocksSize, new HashSet<Integer>()));
+    }
+
+    private void newNextBlocks() {
+        assert nextBlocks.isEmpty();
+
+        Set<Integer> exclude = new TreeSet<>();
+        exclude.addAll(pendingBlocks.keySet());
+        exclude.addAll(workBlocks);
+        exclude.addAll(cacheBlocks);
+
+        nextBlocks.addAll(file.nextBlocksMissing(0, tmConfig.nextBatch, exclude));
+    }
+
+    private void writeBlock(final int blockNr, BlockMngr block) {
+        if (blockNr == 1) {
+            int x = 1;
+        }
+        final KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
+        final byte[] blockBytes = block.getBlock();
+        final KReference<byte[]> blockRef = KReferenceFactory.getReference(blockBytes);
+        FileBWC fileBWC = new FileBWC() {
+            @Override
+            public void hashResult(Result<Boolean> result) {
+                if (result.isSuccess()) {
+                    if (result.getValue()) {
+                        pendingBlocks.remove(blockRange.parentBlock());
+                    } else {
+                        pendingStorageWrites.remove(blockNr);
+                        silentRelease(blockRef);
+                        pendingBlocks.remove(blockNr);
+                        newPendingBlock(blockNr);
+                    }
+                }
+            }
+
+            @Override
+            public boolean fail(Result<WriteResult> result) {
+                throw new RuntimeException("failed to write into storage - " + result.getException().getMessage());
+            }
+
+            @Override
+            public boolean success(Result<WriteResult> result) {
+                pendingStorageWrites.remove(blockNr);
+                silentRelease(blockRef);
+                pendingBlocks.remove(blockNr);
+                rebuildCacheHint();
+                return true;
+            }
+        };
+        pendingStorageWrites.put(blockNr, fileBWC);
+        file.writeBlock(blockRange, blockRef, fileBWC);
+    }
+
+    private void silentRelease(KReference<byte[]> ref) {
+        try {
+            ref.release();
+        } catch (KReferenceException ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
     //****************************TRANSFER_HINT_WRITE***************************
     @Override
-    public KHint.Summary getFutureReads(int hintedBlockSpeed) {
-        int newNext = hintedBlockSpeed - nextBlocks.size();
-        if (newNext > 0) {
-            Set<Integer> newBlocks = nextBlocks(newNext);
-            Set<Integer> newHashes = nextHashes(tmConfig.hashesAhead, tmConfig.hashBatchSize);
-            nextBlocks.addAll(newBlocks);
-            nextHashes.addAll(newHashes);
-            if (!newBlocks.isEmpty() || !newHashes.isEmpty()) {
-                Set<Integer> hintSet = new TreeSet<>();
-                hintSet.addAll(pendingBlocks.keySet());
-                hintSet.addAll(nextBlocks);
-                hintSet.addAll(pendingHashes);
-                hintSet.addAll(nextHashes);
-                nextBlocks.addAll(newBlocks);
-                hintSet.addAll(newBlocks);
-                oldHint = new KHint.Summary(oldHint.lStamp + 1, hintSet);
-            }
-        } else {
-            //maybe i finished something
-            Set<Integer> hintSet = new TreeSet<>();
-            hintSet.addAll(pendingBlocks.keySet());
-            hintSet.addAll(nextBlocks);
-            if (oldHint.blocks.size() > nextBlocks.size() + pendingBlocks.size()) {
-                oldHint = new KHint.Summary(oldHint.lStamp + 1, hintSet);
-            }
-        }
+    public KHint.Summary getFutureReads() {
         return oldHint;
-    }
-
-    private Set<Integer> nextBlocks(int nrBlocks) {
-        Set<Integer> except = new TreeSet<>();
-        except.addAll(pendingBlocks.keySet());
-        except.addAll(nextBlocks);
-        return file.nextBlocksMissing(0, nrBlocks, except);
-    }
-
-    private Set<Integer> nextHashes(int hashesAhead, int nrHashes) {
-        Set<Integer> hashes = new TreeSet<>();
-        int filePos = file.filePos();
-        int hashPos = file.hashPos();
-        if(filePos + pendingHashes.size() + hashesAhead > hashPos) {
-            Set<Integer> except = new TreeSet<>();
-            except.addAll(pendingHashes);
-            except.addAll(nextHashes);
-            hashes = file.nextHashesMissing(0, nrHashes, except);
-        }
-        return hashes;
     }
 
     //*************************TRANSFER_HINT_READ*******************************
@@ -150,12 +304,23 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
 
     //*********************************WRITER***********************************
     @Override
-    public boolean moreWork() {
-        return !nextPieces.isEmpty() || !nextBlocks.isEmpty();
+    public boolean workAvailable() {
+        if (workPieces.isEmpty()) {
+            newWorkPieces();
+        }
+        if (workHashes.isEmpty()) {
+            newWorkHashes();
+        }
+        return !(workPieces.isEmpty() && workHashes.isEmpty());
     }
 
     @Override
-    public boolean pendingWork() {
+    public boolean hashesAvailable() {
+        return !workHashes.isEmpty();
+    }
+
+    @Override
+    public boolean pendingBlocks() {
         return !pendingBlocks.isEmpty();
     }
 
@@ -170,96 +335,81 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
      * @return true if block is complete, false otherwise
      */
     @Override
-    public void writePiece(long pieceNr, byte[] value, final PieceWriteCallback delayedResult) {
+    public void writePiece(Pair<Integer, Integer> pieceNr, byte[] value, final PieceWriteCallback pieceWC) {
+        WriteResult pieceResult;
         KPiece piece = BlockHelper.getPieceRange(pieceNr, fileDetails);
         BlockMngr block = pendingBlocks.get(piece.parentBlock());
-        block.writePiece(piece.blockPieceNr(), value);
-        if (block.isComplete()) {
-            final KBlock blockRange = BlockHelper.getBlockRange(piece.parentBlock(), fileDetails);
-            byte[] blockBytes = block.getBlock();
-            final KReference<byte[]> blockRef = KReferenceFactory.getReference(blockBytes);
-            final BlockWriteCallback blockWC = delayedResult.getBlockCallback();
-            FileBWC fileBWC = new FileBWC() {
-                @Override
-                public void hashResult(Result<Boolean> result) {
-                    if (result.isSuccess()) {
-                        if (result.getValue()) {
-                            pendingBlocks.remove(blockRange.parentBlock());
-                        } else {
-                            BlockMngr blockMngr = new InMemoryBlockMngr(fileDetails.getBlockDetails(blockRange.parentBlock()));
-                            pendingBlocks.put(blockRange.parentBlock(), blockMngr);
-                            nextBlocks.add(blockRange.parentBlock());
-                            blockWC.success(Result.success(new WriteResult(blockRange.lowerAbsEndpoint(), 0, "downloadTransferMngr")));
-                            silentRelease(blockRef);
-                        }
-                    }
-                }
-
-                @Override
-                public boolean fail(Result<WriteResult> result) {
-                    silentRelease(blockRef);
-                    return blockWC.fail(result);
-                }
-
-                @Override
-                public boolean success(Result<WriteResult> result) {
-                    silentRelease(blockRef);
-                    return blockWC.success(result);
-                }
-            };
-            file.writeBlock(blockRange, blockRef, fileBWC);
+        if (block != null) {
+            block.writePiece(piece.blockPieceNr(), value);
+            if (block.isComplete()) {
+                writeBlock(piece.parentBlock(), block);
+            }
+            pieceResult = new WriteResult(piece.lowerAbsEndpoint(), value.length, "downloadTransferMngr");
+        } else {
+            pieceResult = new WriteResult(piece.lowerAbsEndpoint(), 0, "downloadTransferMngr");
         }
-        WriteResult pieceResult = new WriteResult(piece.lowerAbsEndpoint(), 0, "transfer");
-        delayedResult.success(Result.success(pieceResult));
-    }
-
-    private void silentRelease(KReference<byte[]> ref) {
-        try {
-            ref.release();
-        } catch (KReferenceException ex) {
-            throw new RuntimeException(ex);
-        }
+        pieceWC.success(Result.success(pieceResult));
     }
 
     @Override
-    public void writeHash(int blockNr, byte[] value, HashWriteCallback delayedResult) {
+    public void writeHash(int blockNr, byte[] value, HashWriteCallback hashWC) {
         KBlock hashRange = BlockHelper.getHashRange(blockNr, fileDetails);
         KReference<byte[]> hashVal = KReferenceFactory.getReference(value);
-        file.writeHash(hashRange, hashVal, delayedResult);
-    }
-
-    @Override
-    public void resetPiece(long pieceId) {
-        nextPieces.add(pieceId);
-    }
-
-    @Override
-    public int nextBlock() {
-        int next = nextBlocks.first();
-        nextBlocks.remove(next);
-        BlockMngr blockMngr = new InMemoryBlockMngr(fileDetails.getBlockDetails(next));
-        pendingBlocks.put(next, blockMngr);
-        return next;
-    }
-
-    @Override
-    public Set<Long> nextPieces(int nrPieces) {
-        Set<Long> next = new TreeSet<>();
-        Iterator<Long> it = nextPieces.iterator();
-        while (it.hasNext() && nrPieces > 0) {
-            next.add(it.next());
-            it.remove();
-            nrPieces--;
+        file.writeHash(hashRange, hashVal, hashWC);
+        //maybe late hash?
+        BlockMngr block = pendingBlocks.get(blockNr);
+        if (block != null && block.isComplete()) {
+            writeBlock(blockNr, block);
         }
-        return next;
+        WriteResult hashResult = new WriteResult(hashRange.lowerAbsEndpoint(), value.length, "downloadTransferMngr");
+        hashWC.success(Result.success(hashResult));
     }
 
     @Override
-    public Set<Integer> nextHashes() {
-        Set<Integer> hashes = new TreeSet<>(nextHashes);
-        pendingHashes.addAll(nextHashes);
-        nextHashes.clear();
-        return hashes;
+    public void resetPiece(Pair<Integer, Integer> pieceNr) {
+        LinkedList<Integer> aux = workPieces.get(pieceNr.getValue0());
+        if (aux == null) {
+            aux = new LinkedList<>();
+            workPieces.put(pieceNr.getValue0(), aux);
+        }
+        aux.add(pieceNr.getValue1());
+    }
+
+    @Override
+    public void resetHashes(Set<Integer> missingHashes) {
+        nextHashes.addAll(missingHashes);
+    }
+
+    @Override
+    public Pair<Integer, Integer> nextPiece() {
+        Map.Entry<Integer, LinkedList<Integer>> aux = workPieces.firstEntry();
+        Pair<Integer, Integer> piece = Pair.with(aux.getKey(), aux.getValue().removeFirst());
+        if (aux.getValue().isEmpty()) {
+            workPieces.remove(aux.getKey());
+        }
+        return piece;
+    }
+
+    @Override
+    public Pair<Integer, Set<Integer>> nextHashes() {
+        TreeSet<Integer> hashes = new TreeSet<>(workHashes);
+        workHashes.clear();
+        int nextHashPos = hashes.first();
+        return Pair.with(nextHashPos, (Set<Integer>) hashes);
+    }
+
+    @Override
+    public double percentageComplete() {
+        int currentBlock = file.filePos();
+        int totalBlocks = fileDetails.nrBlocks;
+        double percentage;
+        if (currentBlock == -1) {
+            percentage = 100;
+        } else {
+            percentage = currentBlock;
+            percentage = percentage * 100 / totalBlocks;
+        }
+        return percentage;
     }
 
     //*********************************READER***********************************
@@ -283,5 +433,11 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     public void readBlock(int blockNr, ReadCallback delayedResult) {
         KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
         file.read(blockRange, delayedResult);
+    }
+
+    @Override
+    public void readPiece(Pair<Integer, Integer> pieceNr, PieceReadCallback pieceRC) {
+        KPiece pieceRange = BlockHelper.getPieceRange(pieceNr, fileDetails);
+        file.read(pieceRange, pieceRC);
     }
 }

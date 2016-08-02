@@ -16,26 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent;
-
-import java.util.LinkedList;
-import java.util.List;
-import se.sics.ktoolbox.util.network.KAddress;
+package se.sics.nstream.util.result;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class RoundRobinRouter implements Router {
-    private final LinkedList<KAddress> partners = new LinkedList<>();
-    
-    public RoundRobinRouter(List<KAddress> partners) {
-        this.partners.addAll(partners);
-    }
-    @Override
-    public KAddress randomPartner() {
-        KAddress first = partners.removeFirst();
-        partners.add(first);
-        return first;
-    }
+public interface PieceReadCallback extends ReadCallback {
 }

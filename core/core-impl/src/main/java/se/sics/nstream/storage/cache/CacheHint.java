@@ -19,7 +19,6 @@
 package se.sics.nstream.storage.cache;
 
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.storage.cache.KHint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -33,6 +32,6 @@ public class CacheHint {
     }
 
     public static interface Write {
-        public KHint.Summary getFutureReads(int hintedBlockSpeed);
+        public KHint.Summary getFutureReads();
     }
 }

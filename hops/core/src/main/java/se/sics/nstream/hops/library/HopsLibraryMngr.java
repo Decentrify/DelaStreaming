@@ -275,10 +275,13 @@ public class HopsLibraryMngr {
             if (req.extendedDetails.isSuccess()) {
                 TransferDetails transferDetails = library.download(req.torrentId, req.extendedDetails.getValue());
                 if (nstreamReq != null) {
+                    components.advanceDownload(req.torrentId, req.hdfsEndpoint, req.kafkaEndpoint);
                     Transfer.DownloadResponse nstreamResp = nstreamReq.answer(transferDetails);
                     LOG.trace("{}sending:{}", logPrefix, nstreamResp);
                     proxy.answer(nstreamReq, nstreamResp);
                     proxy.answer(req, req.answer(Result.success(true)));
+                } else {
+                    throw new RuntimeException("unexpected");
                 }
             } else {
                 cleanAndDestroy(req.torrentId);

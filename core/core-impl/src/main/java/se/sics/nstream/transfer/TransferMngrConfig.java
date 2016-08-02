@@ -22,6 +22,17 @@ package se.sics.nstream.transfer;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TransferMngrConfig {
-    public final int hashesAhead = 10;
-    public final int hashBatchSize = 20;
+    public final int batchSize = 10;
+    public final int workBatch = batchSize;
+    public final int hashesAhead = batchSize;
+    public final int hashBatch = batchSize;
+    public final int cacheAhead = batchSize;
+    public final int nextBatch = 2 * batchSize;
+    
+    {
+        assert workBatch <= hashesAhead;
+        assert workBatch <= hashBatch;
+        assert hashBatch <= cacheAhead;
+        assert cacheAhead <= nextBatch;
+    }
 }

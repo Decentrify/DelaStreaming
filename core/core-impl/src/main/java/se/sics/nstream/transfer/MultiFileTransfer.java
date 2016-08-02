@@ -150,6 +150,10 @@ public class MultiFileTransfer implements StreamControl {
         pendingComplete.put(file, ongoing.remove(file));
     }
 
+    public boolean hasOngoing() {
+        return !ongoing.isEmpty();
+    }
+    
     public Pair<String, TransferMngr.Writer> nextOngoing() {
         Pair<String, TransferMngr.Writer> next = Pair.with(ongoing.firstEntry().getKey(), (TransferMngr.Writer) ongoing.firstEntry().getValue());
         return next;

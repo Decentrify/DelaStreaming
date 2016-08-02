@@ -18,10 +18,6 @@
  */
 package se.sics.nstream.storage.cache;
 
-import se.sics.nstream.storage.cache.KHint;
-import se.sics.nstream.storage.cache.KCache;
-import se.sics.nstream.util.result.ReadCallback;
-import se.sics.nstream.storage.cache.SimpleKCache;
 import java.util.Map;
 import java.util.TreeMap;
 import org.junit.Assert;
@@ -54,6 +50,7 @@ import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KBlockImpl;
 import se.sics.nstream.util.range.KPieceImpl;
 import se.sics.nstream.util.range.KRange;
+import se.sics.nstream.util.result.ReadCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -136,7 +133,7 @@ public class TestSimpleKCache {
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
 
-        MockDelayedRead read = new MockDelayedRead(new KPieceImpl(0, -1, -1, 0l, 3l));
+        MockDelayedRead read = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
         Validator validator;
         //**********************************************************************
         int hintStamp = 1;
@@ -218,7 +215,7 @@ public class TestSimpleKCache {
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
         
         Validator validator;
-        MockDelayedRead read = new MockDelayedRead(new KPieceImpl(0, -1, -1, 0l, 3l));
+        MockDelayedRead read = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
         
         //**********************************************************************
         int hintStamp = 1;
@@ -262,8 +259,8 @@ public class TestSimpleKCache {
         MockStreamResource readResource = new MockStreamResource("mock1");
         
         Validator validator;
-        MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, -1, 0l, 3l));
-        MockDelayedRead read2 = new MockDelayedRead(new KPieceImpl(0, -1, -1, 1l, 7l));
+        MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
+        MockDelayedRead read2 = new MockDelayedRead(new KPieceImpl(0, -1, 1l, 7l));
         
         //**********************************************************************
         int hintStamp = 1;
@@ -311,8 +308,8 @@ public class TestSimpleKCache {
         MockStreamResource readResource = new MockStreamResource("mock1");
         
         Validator validator;
-        MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, -1, 0l, 3l));
-        MockDelayedRead read2 = new MockDelayedRead(new KPieceImpl(1, -1, -1, 0l, 17l));
+        MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
+        MockDelayedRead read2 = new MockDelayedRead(new KPieceImpl(1, -1, 0l, 17l));
         
         //**********************************************************************
         int hintStamp = 1;

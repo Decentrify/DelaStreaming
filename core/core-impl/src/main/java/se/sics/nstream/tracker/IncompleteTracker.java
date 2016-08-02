@@ -39,7 +39,7 @@ public class IncompleteTracker implements ComponentTracker {
     }
 
     @Override
-    public boolean isComplete(int fromComponentNr) {
+    public boolean isComplete() {
         return completedComponents == nrComponents;
     }
 

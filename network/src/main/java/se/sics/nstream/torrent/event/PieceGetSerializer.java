@@ -22,6 +22,7 @@ import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import org.javatuples.Pair;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.SerializerHelper;
@@ -33,6 +34,7 @@ import se.sics.nstream.storage.cache.KHint;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class PieceGetSerializer {
+
     public static final class Request implements Serializer {
 
         private final int id;
@@ -51,19 +53,59 @@ public class PieceGetSerializer {
             PieceGet.Request obj = (PieceGet.Request) o;
             Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.overlayId, buf);
-            SerializerHelper.stringToBinary(obj.fileName, buf);
-            buf.writeInt(obj.pieceNr);
             SerializerHelper.sKMtoBinary(obj.cacheHints, KHint.Summary.class, buf);
+            SerializerHelper.stringToBinary(obj.fileName, buf);
+            buf.writeInt(obj.pieceNr.getValue0());
+            buf.writeInt(obj.pieceNr.getValue1());
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
             Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
-            String fileName = SerializerHelper.stringFromBinary(buf);
-            int pieceNr = buf.readInt();
             Map<String, KHint.Summary> cacheHints = SerializerHelper.sKMFromBinary(KHint.Summary.class, buf);
-            return new PieceGet.Request(eventId, overlayId, cacheHints, fileName, pieceNr);
+            String fileName = SerializerHelper.stringFromBinary(buf);
+            int blockNr = buf.readInt();
+            int pieceBlockNr = buf.readInt();
+            return new PieceGet.Request(eventId, overlayId, cacheHints, fileName, Pair.with(blockNr, pieceBlockNr));
+        }
+    }
+
+    public static final class RangeRequest implements Serializer {
+
+        private final int id;
+
+        public RangeRequest(int id) {
+            this.id = id;
+        }
+
+        @Override
+        public int identifier() {
+            return id;
+        }
+
+        @Override
+        public void toBinary(Object o, ByteBuf buf) {
+            PieceGet.RangeRequest obj = (PieceGet.RangeRequest) o;
+            Serializers.toBinary(obj.eventId, buf);
+            Serializers.toBinary(obj.overlayId, buf);
+            SerializerHelper.sKMtoBinary(obj.cacheHints, KHint.Summary.class, buf);
+            SerializerHelper.stringToBinary(obj.fileName, buf);
+            buf.writeInt(obj.blockNr);
+            buf.writeInt(obj.from);
+            buf.writeInt(obj.to);
+        }
+
+        @Override
+        public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
+            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
+            Map<String, KHint.Summary> cacheHints = SerializerHelper.sKMFromBinary(KHint.Summary.class, buf);
+            String fileName = SerializerHelper.stringFromBinary(buf);
+            int blockNr = buf.readInt();
+            int from = buf.readInt();
+            int to = buf.readInt();
+            return new PieceGet.RangeRequest(eventId, overlayId, cacheHints, fileName, blockNr, from, to);
         }
     }
 
@@ -84,27 +126,40 @@ public class PieceGetSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             PieceGet.Response obj = (PieceGet.Response) o;
             Serializers.toBinary(obj.eventId, buf);
+            Serializers.toBinary(obj.reqId, buf);
             Serializers.toBinary(obj.overlayId, buf);
             Serializers.lookupSerializer(Result.Status.class).toBinary(obj.status, buf);
             SerializerHelper.stringToBinary(obj.fileName, buf);
-            buf.writeInt(obj.pieceNr);
-            byte[] piece = obj.piece.array();
-            buf.writeInt(piece.length);
-            buf.writeBytes(piece);
+            
+            buf.writeInt(obj.pieceNr.getValue0());
+            buf.writeInt(obj.pieceNr.getValue1());
+            if (obj.status.isSuccess()) {
+                byte[] piece = obj.piece.array();
+                buf.writeInt(piece.length);
+                buf.writeBytes(piece);
+            }
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier reqId = (Identifier) Serializers.fromBinary(buf, hint);
             Identifier overlayId = (Identifier) Serializers.fromBinary(buf, hint);
             Result.Status status = (Result.Status) Serializers.lookupSerializer(Result.Status.class).fromBinary(buf, hint);
             String fileName = SerializerHelper.stringFromBinary(buf);
-            
-            int pieceNr = buf.readInt();
-            int pieceSize = buf.readInt();
-            byte[] piece = new byte[pieceSize];
-            buf.readBytes(piece);
-            return new PieceGet.Response(eventId, overlayId, status, fileName, pieceNr, ByteBuffer.wrap(piece));
+
+            int blockNr = buf.readInt();
+            int pieceBlockNr = buf.readInt();
+            ByteBuffer piece;
+            if (status.isSuccess()) {
+                int pieceSize = buf.readInt();
+                byte[] pieceB = new byte[pieceSize];
+                buf.readBytes(pieceB);
+                piece = ByteBuffer.wrap(pieceB);
+            } else {
+                piece = null;
+            }
+            return new PieceGet.Response(eventId, reqId, overlayId, status, fileName, Pair.with(blockNr, pieceBlockNr), piece);
         }
     }
 }

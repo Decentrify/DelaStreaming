@@ -25,6 +25,5 @@ import com.google.common.collect.Range;
  */
 public interface KPiece extends KRange {
     public Range<Long> translate(long by);
-    public long absPieceNr();
     public int blockPieceNr();
 }

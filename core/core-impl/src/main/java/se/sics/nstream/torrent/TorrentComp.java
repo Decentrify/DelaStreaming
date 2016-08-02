@@ -41,8 +41,9 @@ import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.nstream.report.ReportTimeout;
 import se.sics.nstream.torrent.event.HashGet;
+import se.sics.nstream.torrent.event.PieceGet;
 import se.sics.nstream.torrent.event.TorrentGet;
-import se.sics.nstream.torrent.event.timeout.TorrentTimeout;
+import se.sics.nstream.torrent.event.TorrentTimeout;
 import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.TransferDetails;
@@ -65,13 +66,13 @@ public class TorrentComp extends ComponentDefinition {
     private final TorrentConfig torrentConfig;
     //**************************************************************************
     private TransferFSM transfer;
-    private Router router;
+    private RoundRobinConnMngr router;
     //**************************************************************************
     private UUID periodicReport;
 
     public TorrentComp(Init init) {
         torrentConfig = new TorrentConfig();
-        router = new RoundRobinRouter(init.partners);
+        router = new RoundRobinConnMngr(init.partners);
         storageProvider(init.storageProvider);
         transferState(init);
 
@@ -81,9 +82,13 @@ public class TorrentComp extends ComponentDefinition {
         subscribe(handleTorrentReq, networkPort);
         subscribe(handleTorrentResp, networkPort);
         subscribe(handleTorrentTimeout, timerPort);
+        subscribe(handleAdvanceDownload, timerPort);
         subscribe(handleHashReq, networkPort);
         subscribe(handleHashResp, networkPort);
-//        subscribe(handleHashTimeout, timerPort);
+        subscribe(handleHashTimeout, timerPort);
+        subscribe(handlePieceReq, networkPort);
+        subscribe(handlePieceResp, networkPort);
+        subscribe(handlePieceTimeout, timerPort);
 
         subscribe(handleExtendedTorrentResp, transferMngrPort);
     }
@@ -110,6 +115,7 @@ public class TorrentComp extends ComponentDefinition {
         @Override
         public void handle(Start event) {
             transfer.start();
+            scheduleReportTimeout();
         }
     };
 
@@ -117,8 +123,8 @@ public class TorrentComp extends ComponentDefinition {
         SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(torrentConfig.reportDelay, torrentConfig.reportDelay);
         ReportTimeout rt = new ReportTimeout(spt);
         periodicReport = rt.getTimeoutId();
-        trigger(rt, timerPort);
         spt.setTimeoutEvent(rt);
+        trigger(spt, timerPort);
     }
 
     @Override
@@ -162,6 +168,14 @@ public class TorrentComp extends ComponentDefinition {
             transfer = transfer.next();
         }
     };
+    
+    Handler handleAdvanceDownload = new Handler<TorrentTimeout.AdvanceDownload>() {
+        @Override
+        public void handle(TorrentTimeout.AdvanceDownload timeout) {
+            transfer.handleAdvanceDownload(timeout);
+            transfer = transfer.next();
+        }
+    };
 
     Handler handleExtendedTorrentResp = new Handler<Transfer.DownloadResponse>() {
         @Override
@@ -190,13 +204,40 @@ public class TorrentComp extends ComponentDefinition {
                 }
             };
 
-//    Handler handleHashTimeout = new Handler<TorrentTimeout.Hash>() {
-//        @Override
-//        public void handle(TorrentTimeout.Hash timeout) {
-//            transfer.handleHashTimeout(timeout);
-//            transfer = transfer.next();
-//        }
-//    };
+    Handler handleHashTimeout = new Handler<TorrentTimeout.Hash>() {
+        @Override
+        public void handle(TorrentTimeout.Hash timeout) {
+            transfer.handleHashTimeout(timeout);
+            transfer = transfer.next();
+        }
+    };
+    
+    ClassMatchedHandler handlePieceReq
+            = new ClassMatchedHandler<PieceGet.Request, KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request>>() {
+                @Override
+                public void handle(PieceGet.Request content, KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request> container) {
+                    transfer.handlePieceReq(container, content);
+                    transfer = transfer.next();
+                }
+            };
+
+    ClassMatchedHandler handlePieceResp
+            = new ClassMatchedHandler<PieceGet.Response, KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Response>>() {
+
+                @Override
+                public void handle(PieceGet.Response content, KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Response> container) {
+                    transfer.handlePieceResp(container, content);
+                    transfer = transfer.next();
+                }
+            };
+
+    Handler handlePieceTimeout = new Handler<TorrentTimeout.Piece>() {
+        @Override
+        public void handle(TorrentTimeout.Piece timeout) {
+            transfer.handlePieceTimeout(timeout);
+            transfer = transfer.next();
+        }
+    };
 
     public static class Init extends se.sics.kompics.Init<TorrentComp> {
 

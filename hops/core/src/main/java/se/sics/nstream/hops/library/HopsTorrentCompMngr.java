@@ -41,6 +41,9 @@ import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.hops.hdfs.HDFSComp;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSPort;
+import se.sics.nstream.hops.kafka.KafkaComp;
+import se.sics.nstream.hops.kafka.KafkaEndpoint;
+import se.sics.nstream.hops.kafka.KafkaPort;
 import se.sics.nstream.library.LibraryMngrComp;
 import se.sics.nstream.torrent.TorrentComp;
 import se.sics.nstream.transfer.TransferMngrPort;
@@ -76,6 +79,18 @@ public class HopsTorrentCompMngr {
         proxy.trigger(Start.event, torrentComp.control());
     }
 
+    public void advanceDownload(Identifier torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint) {
+        Component torrentComp = torrent.get(torrentId);
+        LOG.info("{}setting up hdfs {}", logPrefix, torrentId);
+        Component hdfsComp = setupHDFS(torrentId, hdfsEndpoint, torrentComp);
+        proxy.trigger(Start.event, hdfsComp.control());
+        if (kafkaEndpoint.isPresent()) {
+            LOG.info("{}setting up kafka {}", logPrefix, torrentId);
+            Component kafkaComp = setupKafka(torrentId, kafkaEndpoint.get(), torrentComp);
+            proxy.trigger(Start.event, kafkaComp.control());
+        }
+    }
+
     public void startUpload(Positive<TransferMngrPort> transferMngrPort, Identifier torrentId, HDFSEndpoint hdfsEndpoint, Pair<byte[], TransferDetails> extendedDetails) {
         LOG.info("{}setting up torrent upload {}", logPrefix, torrentId);
         Component torrentComp = setupTorrent(transferMngrPort, true, torrentId, Optional.of(extendedDetails), new ArrayList<KAddress>());
@@ -100,6 +115,13 @@ public class HopsTorrentCompMngr {
         proxy.connect(hdfsComp.getPositive(HDFSPort.class), torrentComp.getNegative(HDFSPort.class), Channel.TWO_WAY);
         hdfs.put(torrentId, hdfsComp);
         return hdfsComp;
+    }
+
+    private Component setupKafka(Identifier torrentId, KafkaEndpoint kafkaEndpoint, Component torrentComp) {
+        Component kafkaComp = proxy.create(KafkaComp.class, new KafkaComp.Init(kafkaEndpoint));
+        proxy.connect(kafkaComp.getPositive(KafkaPort.class), torrentComp.getNegative(KafkaPort.class), Channel.TWO_WAY);
+        kafka.put(torrentId, kafkaComp);
+        return kafkaComp;
     }
 
     public void destroy(Identifier torrentId) {

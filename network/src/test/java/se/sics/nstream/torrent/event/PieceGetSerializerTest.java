@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.nio.ByteBuffer;
 import java.util.Map;
+import org.javatuples.Pair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -58,13 +59,33 @@ public class PieceGetSerializerTest {
         ByteBuf serializedOriginal, serializedCopy;
 
         Map<String, KHint.Summary> cacheHints = KHintTestHelper.getCacheHints1();
-        original = new PieceGet.Request(new IntIdentifier(10), cacheHints, "file1", 1);
+        original = new PieceGet.Request(new IntIdentifier(10), cacheHints, "file1", Pair.with(1, 2));
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
         copy = (PieceGet.Request) serializer.fromBinary(serializedCopy, Optional.absent());
+
+        Assert.assertTrue(eqc.isEqual(original, copy));
+        Assert.assertEquals(0, serializedCopy.readableBytes());
+    }
+    
+    @Test
+    public void simpleRangeReqTest() {
+        Serializer serializer = Serializers.lookupSerializer(PieceGet.RangeRequest.class);
+        PieceGetEqc.RangeRequest eqc = new PieceGetEqc.RangeRequest(new StringKeyMapEqc(new KHintSummaryEqc()));
+        PieceGet.RangeRequest original, copy;
+        ByteBuf serializedOriginal, serializedCopy;
+
+        Map<String, KHint.Summary> cacheHints = KHintTestHelper.getCacheHints1();
+        original = new PieceGet.RangeRequest(new IntIdentifier(10), cacheHints, "file1", 1, 2, 3);
+        serializedOriginal = Unpooled.buffer();
+        serializer.toBinary(original, serializedOriginal);
+
+        serializedCopy = Unpooled.buffer();
+        serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
+        copy = (PieceGet.RangeRequest) serializer.fromBinary(serializedCopy, Optional.absent());
 
         Assert.assertTrue(eqc.isEqual(original, copy));
         Assert.assertEquals(0, serializedCopy.readableBytes());
@@ -77,7 +98,8 @@ public class PieceGetSerializerTest {
         PieceGet.Response original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        original = new PieceGet.Response(UUIDIdentifier.randomId(), new IntIdentifier(10), Result.Status.SUCCESS, "file1", 1, ByteBuffer.wrap(new byte[]{1,2,3,4}));
+        original = new PieceGet.Response(UUIDIdentifier.randomId(), UUIDIdentifier.randomId(), new IntIdentifier(10), Result.Status.SUCCESS, 
+                "file1", Pair.with(1, 2), ByteBuffer.wrap(new byte[]{1,2,3,4}));
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 

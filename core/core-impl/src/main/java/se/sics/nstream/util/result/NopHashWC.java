@@ -2,7 +2,7 @@
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
  *
- * KompicsToolbox is free software; you can redistribute it and/or
+ * GVoD is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
@@ -16,29 +16,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.util.range;
+package se.sics.nstream.util.result;
 
-import com.google.common.collect.Range;
+import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.storage.buffer.WriteResult;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class KPieceImpl extends KRangeImpl implements KPiece {
-    private final int blockPieceNr;
-
-    public KPieceImpl(int parentBlock, int blockPieceNr, long lower, long higher) {
-        super(parentBlock, lower, higher);
-        this.blockPieceNr = blockPieceNr;
+public class NopHashWC implements HashWriteCallback {
+    @Override
+    public boolean fail(Result<WriteResult> result) {
+        throw new RuntimeException(result.getException());
     }
 
     @Override
-    public Range<Long> translate(long by) {
-        return Range.closed(base.lowerEndpoint() + by, base.upperEndpoint() + by);
-    }
-
-    @Override
-    public int blockPieceNr() {
-        return blockPieceNr;
+    public boolean success(Result<WriteResult> result) {
+        return true;
     }
 }

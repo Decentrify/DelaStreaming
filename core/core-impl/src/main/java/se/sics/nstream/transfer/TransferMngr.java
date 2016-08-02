@@ -19,9 +19,11 @@
 package se.sics.nstream.transfer;
 
 import java.util.Set;
+import org.javatuples.Pair;
 import se.sics.nstream.storage.cache.CacheHint;
 import se.sics.nstream.util.result.HashReadCallback;
 import se.sics.nstream.util.result.HashWriteCallback;
+import se.sics.nstream.util.result.PieceReadCallback;
 import se.sics.nstream.util.result.PieceWriteCallback;
 import se.sics.nstream.util.result.ReadCallback;
 
@@ -38,27 +40,33 @@ public class TransferMngr {
 
         public void readHash(int blockNr, HashReadCallback delayedResult);
         
+        public void readPiece(Pair<Integer, Integer> pieceNr, PieceReadCallback pieceRC);
+        
         public void readBlock(int blockNr, ReadCallback delayedResult);
     }
 
     public static interface Writer extends CacheHint.Write {
 
-        public boolean moreWork();
+        public boolean workAvailable();
+        
+        public boolean hashesAvailable();
 
-        public boolean pendingWork();
+        public boolean pendingBlocks();
         
         public boolean isComplete();
 
         public void writeHash(int blockNr, byte[] hash, HashWriteCallback delayedResult);
         
-        public void writePiece(long pieceId, byte[] val, PieceWriteCallback delayedResult);
+        public void writePiece(Pair<Integer, Integer> pieceNr, byte[] val, PieceWriteCallback delayedResult);
         
-        public void resetPiece(long pieceId);
+        public void resetHashes(Set<Integer> missingHashes);
         
-        public int nextBlock();
+        public void resetPiece(Pair<Integer, Integer> pieceNr);
         
-        public Set<Long> nextPieces(int nrPieces);
+        public Pair<Integer, Integer> nextPiece();
         
-        public Set<Integer> nextHashes();
+        public Pair<Integer, Set<Integer>> nextHashes();
+        
+        public double percentageComplete();
     }
 }

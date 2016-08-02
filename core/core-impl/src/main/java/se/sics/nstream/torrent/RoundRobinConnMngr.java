@@ -18,16 +18,52 @@
  */
 package se.sics.nstream.torrent;
 
+import java.util.LinkedList;
+import java.util.List;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface Router {
-    public KAddress randomPartner();
-    public boolean hasSlot();
-    public void retainSlot();
-    public void retainSlots(int n);
-    public void releaseSlot();
-    public void timeoutSlot(KAddress target);
+public class RoundRobinConnMngr implements Router {
+
+    private int slots = 100;
+    private final LinkedList<KAddress> partners = new LinkedList<>();
+
+    public RoundRobinConnMngr(List<KAddress> partners) {
+        this.partners.addAll(partners);
+    }
+
+    @Override
+    public KAddress randomPartner() {
+        KAddress first = partners.removeFirst();
+        partners.add(first);
+        return first;
+    }
+    
+    @Override
+    public boolean hasSlot() {
+        return slots > 0;
+    }
+
+    @Override
+    public void retainSlot() {
+        slots--;
+    }
+    
+    @Override
+    public void retainSlots(int n) {
+        slots = slots - n;
+    }
+
+    @Override
+    public void releaseSlot() {
+        slots++;
+    }
+
+    @Override
+    public void timeoutSlot(KAddress target) {
+        slots--;
+    }
 }

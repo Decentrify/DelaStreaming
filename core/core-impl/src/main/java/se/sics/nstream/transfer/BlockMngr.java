@@ -19,6 +19,8 @@
 
 package se.sics.nstream.transfer;
 
+import java.util.Set;
+
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
@@ -28,4 +30,5 @@ public interface BlockMngr {
     public boolean isComplete();
     public byte[] getBlock();
     public int nrPieces();
+    public Set<Integer> pendingPieces();
 }
