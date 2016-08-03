@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.torrent;
 
+import com.google.common.base.Optional;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
@@ -294,7 +295,7 @@ public abstract class TransferFSM {
 
         @Override
         public void handlePieceReq(final KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request> msg, final PieceGet.Request req) {
-            if(req.pieceNr.getValue1() == 1023) {
+            if (req.pieceNr.getValue1() == 1023) {
                 int x = 1;
             }
             LOG.trace("{}received req for b:{},pb:{}", new Object[]{cs.logPrefix, req.pieceNr.getValue0(), req.pieceNr.getValue1()});
@@ -421,8 +422,8 @@ public abstract class TransferFSM {
 
         @Override
         public void handlePieceResp(KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Response> msg, final PieceGet.Response resp) {
-            if(resp.pieceNr.getValue1() == 1023) {
-                int x= 1;
+            if (resp.pieceNr.getValue1() == 1023) {
+                int x = 1;
             }
             UUID tId = pendingPieces.remove(resp.eventId);
             if (tId == null) {
@@ -452,8 +453,7 @@ public abstract class TransferFSM {
 
         @Override
         public void report() {
-            Pair<String, TransferMngr.Writer> file = transferMngr.nextOngoing();
-            LOG.info("{}downloading file:{} - completed:{}%", new Object[]{cs.logPrefix, file.getValue0(), file.getValue1().percentageComplete()});
+            LOG.info("{}transfer report:\n{}", new Object[]{cs.logPrefix, transferMngr.report()});
         }
 
         private void tryDownload() {
@@ -465,36 +465,37 @@ public abstract class TransferFSM {
                 LOG.info("{}completed", cs.logPrefix);
                 return;
             }
-            Pair<String, TransferMngr.Writer> file = transferMngr.nextOngoing();
-            TransferMngr.Writer writer = file.getValue1();
-            if (writer.workAvailable()) {
-                if (!cs.router.hasSlot()) {
-                    return;
+            Optional<Pair<String, TransferMngr.Writer>> file = transferMngr.nextOngoing();
+            if (!file.isPresent()) {
+                if (transferMngr.complete()) {
+                    LOG.info("{}transfer complete", cs.logPrefix);
+                } else {
+                    LOG.info("{}waiting to complete...", cs.logPrefix);
                 }
-                KHint.Summary hint = file.getValue1().getFutureReads();
-                cacheHints.put(file.getValue0(), hint);
-                if (writer.hashesAvailable()) {
-                    Pair<Integer, Set<Integer>> hashes = writer.nextHashes();
-                    LOG.debug("{}download hashes:{}", cs.logPrefix, hashes.getValue1());
-                    KAddress partner = cs.router.randomPartner();
-                    cs.router.retainSlot();
-                    HashGet.Request hashReq = new HashGet.Request(cs.overlayId, cacheHints, file.getValue0(), hashes.getValue0(), hashes.getValue1());
-                    request(partner, hashReq, scheduleHashTimeout(hashReq, partner));
-                    return;
-                }
-                Pair<Integer, Integer> nextPiece = writer.nextPiece();
-                LOG.debug("{}download block:{} pieceBlock:{}", new Object[]{cs.logPrefix, nextPiece.getValue0(), nextPiece.getValue1()});
+                return;
+            }
+            String fileName = file.get().getValue0();
+            TransferMngr.Writer writer = file.get().getValue1();
+            if (!cs.router.hasSlot()) {
+                return;
+            }
+            KHint.Summary hint = writer.getFutureReads();
+            cacheHints.put(fileName, hint);
+            if (writer.hashesAvailable()) {
+                Pair<Integer, Set<Integer>> hashes = writer.nextHashes();
+                LOG.trace("{}download hashes:{}", cs.logPrefix, hashes.getValue1());
                 KAddress partner = cs.router.randomPartner();
                 cs.router.retainSlot();
-                PieceGet.Request pieceReq = new PieceGet.Request(cs.overlayId, cacheHints, file.getValue0(), nextPiece);
-                request(partner, pieceReq, schedulePieceTimeout(pieceReq, partner));
-            } else if (writer.pendingBlocks()) {
-                //wait
-            } else if (writer.isComplete()) {
-                LOG.info("{}completed", cs.logPrefix);
-            } else {
-                throw new RuntimeException("if no workAvailable and no pendingBlocks and is not complete - logic error");
+                HashGet.Request hashReq = new HashGet.Request(cs.overlayId, cacheHints, fileName, hashes.getValue0(), hashes.getValue1());
+                request(partner, hashReq, scheduleHashTimeout(hashReq, partner));
+                return;
             }
+            Pair<Integer, Integer> nextPiece = writer.nextPiece();
+            LOG.trace("{}download block:{} pieceBlock:{}", new Object[]{cs.logPrefix, nextPiece.getValue0(), nextPiece.getValue1()});
+            KAddress partner = cs.router.randomPartner();
+            cs.router.retainSlot();
+            PieceGet.Request pieceReq = new PieceGet.Request(cs.overlayId, cacheHints, fileName, nextPiece);
+            request(partner, pieceReq, schedulePieceTimeout(pieceReq, partner));
         }
 
         private SchedulePeriodicTimeout scheduleAdvanceDownload() {

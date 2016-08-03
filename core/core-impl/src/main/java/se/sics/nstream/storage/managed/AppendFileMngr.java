@@ -202,4 +202,9 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
     public int hashPos() {
         return hashTracker.nextComponentMissing(0);
     }
+    
+    //**************************************************************************
+    public String report() {
+        return "fp:" + fileTracker.nextComponentMissing(0) + "hp:" + hashTracker.nextComponentMissing(0);
+    }
 }

@@ -67,6 +67,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     private final LinkedList<Integer> nextBlocks = new LinkedList<>();
     private int workPos = 0;
     private int hashPos = 0;
+    private int cachePos = 0;
     //**************************************************************************
     private final Map<Integer, FileBWC> pendingStorageWrites = new HashMap<>();
 
@@ -148,11 +149,11 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
 
         aux = nextBlocks.iterator();
         auxCounter = tmConfig.workBatch;
-        workPos += tmConfig.workBatch;
-        hashPos += tmConfig.workBatch;
         while (aux.hasNext() && auxCounter > 0) {
             Integer nB = aux.next();
             aux.remove();
+            workPos++;
+            hashPos++;
             workBlocks.add(nB);
             nextHashes.add(nB);
             auxCounter--;
@@ -160,10 +161,10 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
 
         aux = nextBlocks.iterator();
         auxCounter = tmConfig.hashesAhead;
-        hashPos += tmConfig.hashesAhead;
         while (aux.hasNext() && auxCounter > 0) {
             Integer nB = aux.next();
             aux.remove();
+            hashPos++;
             nextHashes.add(nB);
             cacheBlocks.add(nB);
             auxCounter--;
@@ -171,10 +172,12 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
 
         aux = nextBlocks.iterator();
         auxCounter = tmConfig.cacheAhead;
+        cachePos = hashPos;
         while (aux.hasNext() && auxCounter > 0) {
             Integer nB = aux.next();
             aux.remove();
             cacheBlocks.add(nB);
+            cachePos++;
             auxCounter--;
         }
         rebuildCacheHint();
@@ -192,19 +195,19 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
 
         aux = cacheBlocks.iterator();
         auxCounter = tmConfig.workBatch;
-        workPos += tmConfig.workBatch;
         while (aux.hasNext() && auxCounter > 0) {
             Integer nB = aux.next();
             aux.remove();
             workBlocks.add(nB);
+            workPos++;
             auxCounter--;
         }
         if (workPos + tmConfig.hashesAhead >= hashPos) {
             auxCounter = tmConfig.hashBatch;
-            hashPos += tmConfig.hashBatch;
             while (aux.hasNext() && auxCounter > 0) {
                 Integer nb = aux.next();
                 nextHashes.add(nb);
+                hashPos++;
                 auxCounter--;
             }
         }
@@ -215,6 +218,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
             Integer nb = aux.next();
             aux.remove();
             cacheBlocks.add(nb);
+            cachePos++;
             auxCounter--;
         }
 
@@ -341,7 +345,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
         BlockMngr block = pendingBlocks.get(piece.parentBlock());
         if (block != null) {
             block.writePiece(piece.blockPieceNr(), value);
-            if (block.isComplete()) {
+            if (block.isComplete() && file.hasHash(piece.parentBlock())) {
                 writeBlock(piece.parentBlock(), block);
             }
             pieceResult = new WriteResult(piece.lowerAbsEndpoint(), value.length, "downloadTransferMngr");
@@ -439,5 +443,11 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     public void readPiece(Pair<Integer, Integer> pieceNr, PieceReadCallback pieceRC) {
         KPiece pieceRange = BlockHelper.getPieceRange(pieceNr, fileDetails);
         file.read(pieceRange, pieceRC);
+    }
+
+    //**************************************************************************
+
+    public String report() {
+        return "wp:" + workPos + " hp:" + hashPos + " cp:" + cachePos + " " + file.report();
     }
 }

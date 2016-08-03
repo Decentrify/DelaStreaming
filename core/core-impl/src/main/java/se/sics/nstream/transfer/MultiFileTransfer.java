@@ -18,8 +18,10 @@
  */
 package se.sics.nstream.transfer;
 
+import com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -49,7 +51,6 @@ import se.sics.nstream.util.TransferDetails;
 public class MultiFileTransfer implements StreamControl {
 
     private final Map<String, UploadTransferMngr> completed = new HashMap<>();
-    private final Map<String, DownloadTransferMngr> pendingComplete = new HashMap<>();
     private final TreeMap<String, DownloadTransferMngr> ongoing = new TreeMap<>();
 
     public MultiFileTransfer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
@@ -61,7 +62,7 @@ public class MultiFileTransfer implements StreamControl {
             if (complete) {
                 SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, mainResource.getValue0(), mainResource.getValue1());
                 AsyncCompleteStorage file = new AsyncCompleteStorage(cache);
-                AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file);
+                AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, true);
                 CompleteFileMngr fileMngr = new CompleteFileMngr(fileDetails, file, hash);
                 completed.put(entry.getKey(), new UploadTransferMngr(fileDetails, fileMngr));
             } else {
@@ -73,7 +74,7 @@ public class MultiFileTransfer implements StreamControl {
                 }
                 KBuffer buffer = new MultiKBuffer(bufs);
                 AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);
-                AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file);
+                AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, false);
                 AppendFileMngr fileMngr = new AppendFileMngr(fileDetails, file, hash);
                 ongoing.put(entry.getKey(), new DownloadTransferMngr(fileDetails, fileMngr));
             }
@@ -99,9 +100,6 @@ public class MultiFileTransfer implements StreamControl {
         for (DownloadTransferMngr e : ongoing.values()) {
             idle = idle && e.isIdle();
         }
-        for (DownloadTransferMngr e : pendingComplete.values()) {
-            idle = idle && e.isIdle();
-        }
         return idle;
     }
 
@@ -113,25 +111,10 @@ public class MultiFileTransfer implements StreamControl {
         for (DownloadTransferMngr e : ongoing.values()) {
             e.close();
         }
-        for (DownloadTransferMngr e : pendingComplete.values()) {
-            e.close();
-        }
-    }
-
-    public void complete(String file) {
-        DownloadTransferMngr ongoingFileMngr = pendingComplete.remove(file);
-        if (ongoingFileMngr == null) {
-            ongoingFileMngr = ongoing.remove(file);
-        }
-        UploadTransferMngr completedFileMngr = ongoingFileMngr.complete();
-        completed.put(file, completedFileMngr);
     }
 
     public TransferMngr.Reader readFrom(String file) {
         TransferMngr.Reader transferMngr = completed.get(file);
-        if (transferMngr == null) {
-            transferMngr = pendingComplete.get(file);
-        }
         if (transferMngr == null) {
             transferMngr = ongoing.get(file);
         }
@@ -139,23 +122,44 @@ public class MultiFileTransfer implements StreamControl {
     }
 
     public TransferMngr.Writer writeTo(String file) {
-        TransferMngr.Writer transferMngr = ongoing.get(file);
-        if (transferMngr == null) {
-            transferMngr = pendingComplete.get(file);
-        }
-        return transferMngr;
-    }
-
-    public void pendingComplete(String file) {
-        pendingComplete.put(file, ongoing.remove(file));
+        return ongoing.get(file);
     }
 
     public boolean hasOngoing() {
         return !ongoing.isEmpty();
     }
+
+    public Optional<Pair<String, TransferMngr.Writer>> nextOngoing() {
+        Iterator<Map.Entry<String, DownloadTransferMngr>> it = ongoing.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, DownloadTransferMngr> next = it.next();
+            if (next.getValue().workAvailable()) {
+                return Optional.of(Pair.with(next.getKey(), (TransferMngr.Writer) next.getValue()));
+            }
+            if (next.getValue().pendingBlocks()) {
+                continue;
+            }
+            it.remove();
+            UploadTransferMngr completedFileMngr = next.getValue().complete();
+            completed.put(next.getKey(), completedFileMngr);
+        }
+        return Optional.absent();
+    }
     
-    public Pair<String, TransferMngr.Writer> nextOngoing() {
-        Pair<String, TransferMngr.Writer> next = Pair.with(ongoing.firstEntry().getKey(), (TransferMngr.Writer) ongoing.firstEntry().getValue());
-        return next;
+    public boolean complete() {
+        return ongoing.isEmpty();
+    }
+    
+    public String report() {
+        StringBuilder sb = new StringBuilder();
+        for(String f : completed.keySet()) {
+            sb.append(f).append(" - completed\n");
+        }
+        for(Map.Entry<String, DownloadTransferMngr> f : ongoing.entrySet()) {
+            sb.append(f.getKey()).append(" - ").append(f.getValue().percentageComplete());
+            sb.append(f.getValue().report());
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 }
