@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import org.javatuples.Pair;
 import se.sics.kompics.ComponentProxy;
@@ -35,6 +36,7 @@ import se.sics.nstream.storage.AsyncOnDemandHashStorage;
 import se.sics.nstream.storage.buffer.KBuffer;
 import se.sics.nstream.storage.buffer.MultiKBuffer;
 import se.sics.nstream.storage.buffer.SimpleAppendKBuffer;
+import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.cache.SimpleKCache;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.CompleteFileMngr;
@@ -129,14 +131,27 @@ public class MultiFileTransfer implements StreamControl {
         return !ongoing.isEmpty();
     }
 
-    public Optional<Pair<String, TransferMngr.Writer>> nextOngoing() {
+    public Optional<NextDownload> nextDownload() {
+        Map<String, KHint.Summary> cacheHints = new HashMap<>();
         Iterator<Map.Entry<String, DownloadTransferMngr>> it = ongoing.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<String, DownloadTransferMngr> next = it.next();
-            if (next.getValue().workAvailable()) {
-                return Optional.of(Pair.with(next.getKey(), (TransferMngr.Writer) next.getValue()));
+            String fileName = next.getKey();
+            DownloadTransferMngr writer = next.getValue();
+            KHint.Summary hint = writer.getFutureReads();
+            cacheHints.put(fileName, hint);
+            if (writer.workAvailable()) {
+                NextDownload nextDownload;
+                if (writer.hashesAvailable()) {
+                    Pair<Integer, Set<Integer>> hashes = writer.nextHashes();
+                    nextDownload = new NextHash(cacheHints, fileName, hashes);
+                } else {
+                    Pair<Integer, Integer> nextPiece = writer.nextPiece();
+                    nextDownload = new NextPiece(cacheHints, fileName, nextPiece);
+                }
+                return Optional.of(nextDownload);
             }
-            if (next.getValue().pendingBlocks()) {
+            if (writer.pendingBlocks()) {
                 continue;
             }
             it.remove();
@@ -145,21 +160,52 @@ public class MultiFileTransfer implements StreamControl {
         }
         return Optional.absent();
     }
-    
+
     public boolean complete() {
         return ongoing.isEmpty();
     }
-    
+
     public String report() {
         StringBuilder sb = new StringBuilder();
-        for(String f : completed.keySet()) {
+        for (String f : completed.keySet()) {
             sb.append(f).append(" - completed\n");
         }
-        for(Map.Entry<String, DownloadTransferMngr> f : ongoing.entrySet()) {
+        for (Map.Entry<String, DownloadTransferMngr> f : ongoing.entrySet()) {
             sb.append(f.getKey()).append(" - ").append(f.getValue().percentageComplete());
             sb.append(f.getValue().report());
             sb.append("\n");
         }
         return sb.toString();
+    }
+
+    public static abstract class NextDownload {
+
+        public final Map<String, KHint.Summary> cacheHints;
+        public final String fileName;
+
+        public NextDownload(Map<String, KHint.Summary> cacheHints, String fileName) {
+            this.cacheHints = cacheHints;
+            this.fileName = fileName;
+        }
+    }
+
+    public static class NextHash extends NextDownload {
+
+        public final Pair<Integer, Set<Integer>> hashes;
+
+        public NextHash(Map<String, KHint.Summary> cacheHints, String fileName, Pair<Integer, Set<Integer>> hashes) {
+            super(cacheHints, fileName);
+            this.hashes = hashes;
+        }
+    }
+
+    public static class NextPiece extends NextDownload {
+
+        public final Pair<Integer, Integer> piece;
+
+        public NextPiece(Map<String, KHint.Summary> cacheHints, String fileName, Pair<Integer, Integer> piece) {
+            super(cacheHints, fileName);
+            this.piece = piece;
+        }
     }
 }

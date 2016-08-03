@@ -458,15 +458,18 @@ public abstract class TransferFSM {
 
         private void tryDownload() {
             LOG.trace("{}downloading...", cs.logPrefix);
-            Map<String, KHint.Summary> cacheHints = new HashMap<>();
 
+            if (!cs.router.hasSlot()) {
+                return;
+            }
             if (!transferMngr.hasOngoing()) {
                 LOG.info("{}waiting to complete...", cs.logPrefix);
                 LOG.info("{}completed", cs.logPrefix);
                 return;
             }
-            Optional<Pair<String, TransferMngr.Writer>> file = transferMngr.nextOngoing();
-            if (!file.isPresent()) {
+
+            Optional<MultiFileTransfer.NextDownload> nextDownload = transferMngr.nextDownload();
+            if (!nextDownload.isPresent()) {
                 if (transferMngr.complete()) {
                     LOG.info("{}transfer complete", cs.logPrefix);
                 } else {
@@ -474,28 +477,21 @@ public abstract class TransferFSM {
                 }
                 return;
             }
-            String fileName = file.get().getValue0();
-            TransferMngr.Writer writer = file.get().getValue1();
-            if (!cs.router.hasSlot()) {
-                return;
-            }
-            KHint.Summary hint = writer.getFutureReads();
-            cacheHints.put(fileName, hint);
-            if (writer.hashesAvailable()) {
-                Pair<Integer, Set<Integer>> hashes = writer.nextHashes();
-                LOG.trace("{}download hashes:{}", cs.logPrefix, hashes.getValue1());
+            if (nextDownload.get() instanceof MultiFileTransfer.NextHash) {
+                MultiFileTransfer.NextHash nextHash = (MultiFileTransfer.NextHash) nextDownload.get();
+                HashGet.Request hashReq = new HashGet.Request(cs.overlayId, nextHash.cacheHints, nextHash.fileName, nextHash.hashes.getValue0(), nextHash.hashes.getValue1());
+                LOG.trace("{}download hashes:{}", cs.logPrefix, hashReq.hashes);
                 KAddress partner = cs.router.randomPartner();
                 cs.router.retainSlot();
-                HashGet.Request hashReq = new HashGet.Request(cs.overlayId, cacheHints, fileName, hashes.getValue0(), hashes.getValue1());
                 request(partner, hashReq, scheduleHashTimeout(hashReq, partner));
-                return;
+            } else if (nextDownload.get() instanceof MultiFileTransfer.NextPiece) {
+                MultiFileTransfer.NextPiece nextPiece = (MultiFileTransfer.NextPiece) nextDownload.get();
+                PieceGet.Request pieceReq = new PieceGet.Request(cs.overlayId, nextPiece.cacheHints, nextPiece.fileName, nextPiece.piece);
+                LOG.trace("{}download block:{} pieceBlock:{}", new Object[]{cs.logPrefix, pieceReq.pieceNr.getValue0(), pieceReq.pieceNr.getValue1()});
+                KAddress partner = cs.router.randomPartner();
+                cs.router.retainSlot();
+                request(partner, pieceReq, schedulePieceTimeout(pieceReq, partner));
             }
-            Pair<Integer, Integer> nextPiece = writer.nextPiece();
-            LOG.trace("{}download block:{} pieceBlock:{}", new Object[]{cs.logPrefix, nextPiece.getValue0(), nextPiece.getValue1()});
-            KAddress partner = cs.router.randomPartner();
-            cs.router.retainSlot();
-            PieceGet.Request pieceReq = new PieceGet.Request(cs.overlayId, cacheHints, fileName, nextPiece);
-            request(partner, pieceReq, schedulePieceTimeout(pieceReq, partner));
         }
 
         private SchedulePeriodicTimeout scheduleAdvanceDownload() {
