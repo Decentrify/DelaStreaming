@@ -39,6 +39,7 @@ import se.sics.nstream.storage.managed.FileBWC;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.StreamControl;
+import se.sics.nstream.util.actuator.DownloadStates;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
 import se.sics.nstream.util.result.HashReadCallback;
@@ -317,6 +318,14 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
         }
         return !(workPieces.isEmpty() && workHashes.isEmpty());
     }
+    
+    @Override
+    public DownloadStates state() {
+        if(pendingBlocks.size() >= tmConfig.maxPending) {
+            return DownloadStates.SLOW_DOWN;
+        } 
+        return DownloadStates.MAINTAIN;
+    }
 
     @Override
     public boolean hashesAvailable() {
@@ -325,13 +334,14 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
 
     @Override
     public boolean pendingBlocks() {
-        return !pendingBlocks.isEmpty();
+        return !pendingBlocks.isEmpty() || !file.pendingBlocks();
     }
 
     @Override
     public boolean isComplete() {
         return file.isComplete();
     }
+    
 
     /**
      * @param writeRange
@@ -446,8 +456,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     }
 
     //**************************************************************************
-
-    public String report() {
-        return "wp:" + workPos + " hp:" + hashPos + " cp:" + cachePos + " " + file.report();
+    public DownloadTMReport report() {
+        return new DownloadTMReport(file.report(), workPos, hashPos, cachePos, pendingBlocks.size());
     }
 }

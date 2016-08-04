@@ -20,7 +20,10 @@ package se.sics.nstream.torrent;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.util.actuator.FuzzyDownload;
+import se.sics.nstream.util.actuator.FuzzyDownloadConfig;
 
 /**
  *
@@ -28,11 +31,13 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public class RoundRobinConnMngr implements Router {
 
-    private int slots = 100;
+    private final FuzzyDownload loadTracker;
     private final LinkedList<KAddress> partners = new LinkedList<>();
 
     public RoundRobinConnMngr(List<KAddress> partners) {
         this.partners.addAll(partners);
+        this.loadTracker = FuzzyDownload.getInstance(new Random(FuzzyDownloadConfig.seed), FuzzyDownloadConfig.acceptedTimeoutsPercentage, 
+                FuzzyDownloadConfig.minSpeed, FuzzyDownloadConfig.maxSpeed, FuzzyDownloadConfig.baseChange, FuzzyDownloadConfig.resetChance);
     }
 
     @Override
@@ -43,27 +48,30 @@ public class RoundRobinConnMngr implements Router {
     }
     
     @Override
-    public boolean hasSlot() {
-        return slots > 0;
+    public boolean availableSlot() {
+        return loadTracker.availableSlot();
     }
 
     @Override
-    public void retainSlot() {
-        slots--;
+    public void useSlot() {
+        loadTracker.useSlot();
     }
     
     @Override
-    public void retainSlots(int n) {
-        slots = slots - n;
+    public void success() {
+        loadTracker.success();
     }
 
     @Override
-    public void releaseSlot() {
-        slots++;
+    public void timeout(KAddress target) {
+        loadTracker.timeout();
     }
-
-    @Override
-    public void timeoutSlot(KAddress target) {
-        slots--;
+    
+    public boolean changed() {
+        return loadTracker.changed();
+    }
+    
+    public String report() {
+        return loadTracker.report();
     }
 }

@@ -67,7 +67,7 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
     public boolean isIdle() {
         return file.isIdle() && hash.isIdle();
     }
-
+    
     @Override
     public void close() {
         file.close();
@@ -125,6 +125,11 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
     }
 
     //*******************************WRITER*************************************
+    @Override
+    public boolean pendingBlocks() {
+        return file.pendingBlocks();
+    }
+    
     @Override
     public void writeHash(final KBlock writeRange, KReference<byte[]> val, final WriteCallback delayedResult) {
         WriteCallback hashResult = new WriteCallback() {
@@ -204,7 +209,7 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
     }
     
     //**************************************************************************
-    public String report() {
-        return "fp:" + fileTracker.nextComponentMissing(0) + "hp:" + hashTracker.nextComponentMissing(0);
+    public AppendFMReport report() {
+        return new AppendFMReport(fileTracker.nextComponentMissing(0), hashTracker.nextComponentMissing(0), file.report());
     }
 }

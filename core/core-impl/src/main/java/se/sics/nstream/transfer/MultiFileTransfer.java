@@ -54,6 +54,7 @@ public class MultiFileTransfer implements StreamControl {
 
     private final Map<String, UploadTransferMngr> completed = new HashMap<>();
     private final TreeMap<String, DownloadTransferMngr> ongoing = new TreeMap<>();
+    private final Map<String, DownloadTMReport> completedReports = new HashMap<>();
 
     public MultiFileTransfer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
             TransferDetails transferDetails, boolean complete) {
@@ -142,7 +143,10 @@ public class MultiFileTransfer implements StreamControl {
             cacheHints.put(fileName, hint);
             if (writer.workAvailable()) {
                 NextDownload nextDownload;
-                if (writer.hashesAvailable()) {
+//                if(writer.state().equals(DownloadStates.SLOW_DOWN)) {
+//                    nextDownload = new SlowDownload(fileName);
+//                } else 
+                    if (writer.hashesAvailable()) {
                     Pair<Integer, Set<Integer>> hashes = writer.nextHashes();
                     nextDownload = new NextHash(cacheHints, fileName, hashes);
                 } else {
@@ -155,8 +159,10 @@ public class MultiFileTransfer implements StreamControl {
                 continue;
             }
             it.remove();
+            DownloadTMReport cR = next.getValue().report();
             UploadTransferMngr completedFileMngr = next.getValue().complete();
             completed.put(next.getKey(), completedFileMngr);
+            completedReports.put(next.getKey(), cR);
         }
         return Optional.absent();
     }
@@ -167,12 +173,14 @@ public class MultiFileTransfer implements StreamControl {
 
     public String report() {
         StringBuilder sb = new StringBuilder();
-        for (String f : completed.keySet()) {
+        for (Map.Entry<String, DownloadTMReport> f : completedReports.entrySet()) {
             sb.append(f).append(" - completed\n");
+            sb.append(f.getValue().toString());
+            sb.append("\n");
         }
         for (Map.Entry<String, DownloadTransferMngr> f : ongoing.entrySet()) {
-            sb.append(f.getKey()).append(" - ").append(f.getValue().percentageComplete());
-            sb.append(f.getValue().report());
+            sb.append(f.getKey()).append(" - ").append(f.getValue().percentageComplete()).append("\n");
+            sb.append(f.getValue().report().toString());
             sb.append("\n");
         }
         return sb.toString();
@@ -187,6 +195,14 @@ public class MultiFileTransfer implements StreamControl {
             this.cacheHints = cacheHints;
             this.fileName = fileName;
         }
+    }
+    
+    public static class SlowDownload extends NextDownload {
+
+        public SlowDownload(String fileName) {
+            super(null, fileName);
+        }
+        
     }
 
     public static class NextHash extends NextDownload {

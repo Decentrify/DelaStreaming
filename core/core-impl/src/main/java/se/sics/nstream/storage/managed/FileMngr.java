@@ -45,5 +45,6 @@ public class FileMngr {
         public boolean isComplete();
         public int filePos();
         public int hashPos();
+        public boolean pendingBlocks();
     }
 }

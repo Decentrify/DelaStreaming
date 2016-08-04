@@ -34,14 +34,15 @@ public class ComponentStateTest {
 
     @Test
     public void simpleTest() {
-        ComponentState cs = new ComponentState(new Random(1234), 50, 150);
+        ComponentLoad cs = new ComponentLoad(new Random(1234), 50, 150, 10000);
         int[] decisions;
         double percentage;
 
         //BELOW TARGET
         decisions = new int[3];
         for (int i = 0; i < 1000 * 1000; i++) {
-            decisions[cs.state(10).ordinal()]++;
+            cs.adjustState(10);
+            decisions[cs.state().ordinal()]++;
         }
         percentage = (double) decisions[0] / (decisions[0] + decisions[2]);
         LOG.info("percentage:{} maintain:{} slow_down:{} speed_up:{}", new Object[]{percentage, decisions[0], decisions[1], decisions[2]});
@@ -50,7 +51,8 @@ public class ComponentStateTest {
 
         decisions = new int[3];
         for (int i = 0; i < 1000 * 1000; i++) {
-            decisions[cs.state(40).ordinal()]++;
+            cs.adjustState(40);
+            decisions[cs.state().ordinal()]++;
         }
         percentage = (double) decisions[0] / (decisions[0] + decisions[2]);
         LOG.info("percentage:{} maintain:{} slow_down:{} speed_up:{}", new Object[]{percentage, decisions[0], decisions[1], decisions[2]});
@@ -60,7 +62,8 @@ public class ComponentStateTest {
         //ABOVE TARGET
         decisions = new int[3];
         for (int i = 0; i < 1000 * 1000; i++) {
-            decisions[cs.state(60).ordinal()]++;
+            cs.adjustState(60);
+            decisions[cs.state().ordinal()]++;
         }
         percentage = (double) decisions[0] / (decisions[0] + decisions[1]);
         LOG.info("percentage:{} maintain:{} slow_down:{} speed_up:{}", new Object[]{percentage, decisions[0], decisions[1], decisions[2]});
@@ -69,7 +72,8 @@ public class ComponentStateTest {
 
         decisions = new int[3];
         for (int i = 0; i < 1000 * 1000; i++) {
-            decisions[cs.state(100).ordinal()]++;
+            cs.adjustState(100);
+            decisions[cs.state().ordinal()]++;
         }
         percentage = (double) decisions[0] / (decisions[0] + decisions[1]);
         LOG.info("percentage:{} maintain:{} slow_down:{} speed_up:{}", new Object[]{percentage, decisions[0], decisions[1], decisions[2]});
@@ -79,7 +83,8 @@ public class ComponentStateTest {
         //ABOVE MAX
         decisions = new int[3];
         for (int i = 0; i < 1000; i++) {
-            decisions[cs.state(200).ordinal()]++;
+            cs.adjustState(200);
+            decisions[cs.state().ordinal()]++;
         }
         LOG.info("percentage:{} maintain:{} slow_down:{} speed_up:{}", new Object[]{percentage, decisions[0], decisions[1], decisions[2]});
         Assert.assertEquals(0, decisions[0]);

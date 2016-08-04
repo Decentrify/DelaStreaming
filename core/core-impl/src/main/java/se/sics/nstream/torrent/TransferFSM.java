@@ -33,6 +33,8 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
+import se.sics.kompics.network.MessageNotify;
+import se.sics.kompics.network.Msg;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.CancelTimeout;
@@ -59,6 +61,7 @@ import se.sics.nstream.transfer.TransferMngr;
 import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.TransferDetails;
+import se.sics.nstream.util.actuator.ComponentLoad;
 import se.sics.nstream.util.result.HashReadCallback;
 import se.sics.nstream.util.result.NopHashWC;
 import se.sics.nstream.util.result.NopPieceWC;
@@ -72,6 +75,7 @@ public abstract class TransferFSM {
     private final static Logger LOG = LoggerFactory.getLogger(TransferFSM.class);
 
     protected final CommonState cs;
+    private final Map<UUID, Long> nettyTracking = new HashMap<>();
 
     public TransferFSM(CommonState cs) {
         this.cs = cs;
@@ -120,6 +124,12 @@ public abstract class TransferFSM {
     public void handlePieceTimeout(TorrentTimeout.Piece timeout) {
     }
 
+    public void handleNotify(MessageNotify.Resp resp) {
+        long now = System.currentTimeMillis();
+        long localSent = nettyTracking.remove(resp.msgId);
+        LOG.info("{}netty tracking local:{} netty:{}", new Object[]{(now - localSent) / 1000, (resp.getTime() - localSent) / 1000});
+    }
+
     protected void request(KAddress partner, KompicsEvent content, ScheduleTimeout timeout) {
         KHeader header = new BasicHeader(cs.selfAdr, partner, Transport.UDP);
         KContentMsg msg = new BasicContentMsg(header, content);
@@ -135,6 +145,14 @@ public abstract class TransferFSM {
     protected void answer(KContentMsg msg, KompicsEvent content) {
         LOG.trace("{}answering:{}", cs.logPrefix, msg);
         cs.proxy.trigger(msg.answer(content), cs.networkPort);
+    }
+
+    protected void answerWithNotify(KContentMsg msg, KompicsEvent content) {
+        LOG.trace("{}answering:{}", cs.logPrefix, msg);
+        Msg resp = msg.answer(content);
+        MessageNotify.Req notify = new MessageNotify.Req(resp);
+        nettyTracking.put(notify.getMsgId(), System.currentTimeMillis());
+        cs.proxy.trigger(notify, cs.networkPort);
     }
 
     protected void cancelTimeout(UUID tid) {
@@ -295,9 +313,6 @@ public abstract class TransferFSM {
 
         @Override
         public void handlePieceReq(final KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request> msg, final PieceGet.Request req) {
-            if (req.pieceNr.getValue1() == 1023) {
-                int x = 1;
-            }
             LOG.trace("{}received req for b:{},pb:{}", new Object[]{cs.logPrefix, req.pieceNr.getValue0(), req.pieceNr.getValue1()});
             updateCacheHint(msg.getHeader().getSource().getId(), req.cacheHints);
             TransferMngr.Reader reader = transferMngr.readFrom(req.fileName);
@@ -357,6 +372,9 @@ public abstract class TransferFSM {
         private final Map<Identifier, UUID> pendingHashes = new HashMap<>();
         private final Map<Identifier, UUID> pendingPieces = new HashMap<>();
         private UUID advanceDownload;
+        private long periodSuccess = 0;
+        private long periodTimeouts = 0;
+        private long startTransfer;
 
         public DownloadState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails) {
             super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, transferDetails, false));
@@ -365,6 +383,8 @@ public abstract class TransferFSM {
         @Override
         public void start() {
             super.start();
+            LOG.info("{}download start transfer", cs.logPrefix);
+            startTransfer = System.currentTimeMillis();
             tryDownload();
             cs.proxy.trigger(scheduleAdvanceDownload(), cs.timerPort);
         }
@@ -393,7 +413,8 @@ public abstract class TransferFSM {
                 return;
             }
             cancelTimeout(tId);
-            cs.router.releaseSlot();
+            periodSuccess++;
+            cs.router.success();
             TransferMngr.Writer writer = transferMngr.writeTo(resp.fileName);
             if (resp.status.isSuccess()) {
                 for (Map.Entry<Integer, ByteBuffer> hash : resp.hashes.entrySet()) {
@@ -415,9 +436,11 @@ public abstract class TransferFSM {
                 LOG.trace("{}late timeout:{}", cs.logPrefix, timeout);
                 return;
             }
-            cs.router.timeoutSlot(timeout.target);
+            periodTimeouts++;
+            cs.router.timeout(timeout.target);
             TransferMngr.Writer writer = transferMngr.writeTo(timeout.req.fileName);
             writer.resetHashes(timeout.req.hashes);
+            tryDownload();
         }
 
         @Override
@@ -431,7 +454,8 @@ public abstract class TransferFSM {
                 return;
             }
             cancelTimeout(tId);
-            cs.router.releaseSlot();
+            periodSuccess++;
+            cs.router.success();
             TransferMngr.Writer writer = transferMngr.writeTo(resp.fileName);
 
             LOG.trace("{}received resp for b:{},pb:{}", new Object[]{cs.logPrefix, resp.pieceNr.getValue0(), resp.pieceNr.getValue1()});
@@ -446,51 +470,66 @@ public abstract class TransferFSM {
                 LOG.trace("{}late timeout:{}", cs.logPrefix, timeout);
                 return;
             }
-            cs.router.timeoutSlot(timeout.target);
+            periodTimeouts++;
+            cs.router.timeout(timeout.target);
             TransferMngr.Writer writer = transferMngr.writeTo(timeout.req.fileName);
             writer.resetPiece(timeout.req.pieceNr);
+            tryDownload();
         }
 
         @Override
         public void report() {
-            LOG.info("{}transfer report:\n{}", new Object[]{cs.logPrefix, transferMngr.report()});
+            LOG.info("{}transfer report: success:{} timeouts:{}\n{}", new Object[]{cs.logPrefix, periodSuccess, periodTimeouts, transferMngr.report()});
+            periodSuccess = 0;
+            periodTimeouts = 0;
         }
 
         private void tryDownload() {
             LOG.trace("{}downloading...", cs.logPrefix);
 
-            if (!cs.router.hasSlot()) {
+            if (!cs.componentLoad.canDownload()) {
+                LOG.debug("{}download slow down - component load");
                 return;
             }
             if (!transferMngr.hasOngoing()) {
-                LOG.info("{}waiting to complete...", cs.logPrefix);
-                LOG.info("{}completed", cs.logPrefix);
+                LOG.info("{}download completed write to storage", cs.logPrefix);
                 return;
             }
 
-            Optional<MultiFileTransfer.NextDownload> nextDownload = transferMngr.nextDownload();
-            if (!nextDownload.isPresent()) {
-                if (transferMngr.complete()) {
-                    LOG.info("{}transfer complete", cs.logPrefix);
-                } else {
-                    LOG.info("{}waiting to complete...", cs.logPrefix);
+            int speedUPBatch = 2;
+            while (cs.router.availableSlot() && speedUPBatch > 0) {
+                speedUPBatch--;
+                Optional<MultiFileTransfer.NextDownload> nextDownload = transferMngr.nextDownload();
+                if (!nextDownload.isPresent()) {
+                    if (transferMngr.complete()) {
+                        LOG.info("{}download completed transfer", cs.logPrefix);
+                    } else {
+                        if (startTransfer != 0) {
+                            long end = System.currentTimeMillis();
+                            LOG.info("{}waiting to complete... transfer time:{}", cs.logPrefix, (end - startTransfer) / 1000);
+                            startTransfer = 0;
+                        }
+                        LOG.trace("{}waiting to complete...", cs.logPrefix);
+                    }
+                    return;
                 }
-                return;
-            }
-            if (nextDownload.get() instanceof MultiFileTransfer.NextHash) {
-                MultiFileTransfer.NextHash nextHash = (MultiFileTransfer.NextHash) nextDownload.get();
-                HashGet.Request hashReq = new HashGet.Request(cs.overlayId, nextHash.cacheHints, nextHash.fileName, nextHash.hashes.getValue0(), nextHash.hashes.getValue1());
-                LOG.trace("{}download hashes:{}", cs.logPrefix, hashReq.hashes);
-                KAddress partner = cs.router.randomPartner();
-                cs.router.retainSlot();
-                request(partner, hashReq, scheduleHashTimeout(hashReq, partner));
-            } else if (nextDownload.get() instanceof MultiFileTransfer.NextPiece) {
-                MultiFileTransfer.NextPiece nextPiece = (MultiFileTransfer.NextPiece) nextDownload.get();
-                PieceGet.Request pieceReq = new PieceGet.Request(cs.overlayId, nextPiece.cacheHints, nextPiece.fileName, nextPiece.piece);
-                LOG.trace("{}download block:{} pieceBlock:{}", new Object[]{cs.logPrefix, pieceReq.pieceNr.getValue0(), pieceReq.pieceNr.getValue1()});
-                KAddress partner = cs.router.randomPartner();
-                cs.router.retainSlot();
-                request(partner, pieceReq, schedulePieceTimeout(pieceReq, partner));
+                if (nextDownload.get() instanceof MultiFileTransfer.SlowDownload) {
+                    return;
+                } else if (nextDownload.get() instanceof MultiFileTransfer.NextHash) {
+                    MultiFileTransfer.NextHash nextHash = (MultiFileTransfer.NextHash) nextDownload.get();
+                    HashGet.Request hashReq = new HashGet.Request(cs.overlayId, nextHash.cacheHints, nextHash.fileName, nextHash.hashes.getValue0(), nextHash.hashes.getValue1());
+                    LOG.trace("{}download hashes:{}", cs.logPrefix, hashReq.hashes);
+                    KAddress partner = cs.router.randomPartner();
+                    cs.router.useSlot();
+                    request(partner, hashReq, scheduleHashTimeout(hashReq, partner));
+                } else if (nextDownload.get() instanceof MultiFileTransfer.NextPiece) {
+                    MultiFileTransfer.NextPiece nextPiece = (MultiFileTransfer.NextPiece) nextDownload.get();
+                    PieceGet.Request pieceReq = new PieceGet.Request(cs.overlayId, nextPiece.cacheHints, nextPiece.fileName, nextPiece.piece);
+                    LOG.trace("{}download block:{} pieceBlock:{}", new Object[]{cs.logPrefix, pieceReq.pieceNr.getValue0(), pieceReq.pieceNr.getValue1()});
+                    KAddress partner = cs.router.randomPartner();
+                    cs.router.useSlot();
+                    request(partner, pieceReq, schedulePieceTimeout(pieceReq, partner));
+                }
             }
         }
 
@@ -556,9 +595,12 @@ public abstract class TransferFSM {
         public final TorrentConfig torrentConfig;
         public final KAddress selfAdr;
         public final Identifier overlayId;
+        //**********************************************************************
         public final Router router;
+        public final ComponentLoad componentLoad;
 
-        public CommonState(Config config, TorrentConfig torrentConfig, ComponentProxy proxy, KAddress selfAdr, Identifier overlayId, Router router) {
+        public CommonState(Config config, TorrentConfig torrentConfig, ComponentProxy proxy, KAddress selfAdr, Identifier overlayId,
+                Router router, ComponentLoad componentLoad) {
             this.proxy = proxy;
             this.config = config;
             this.torrentConfig = new TorrentConfig();
@@ -566,6 +608,7 @@ public abstract class TransferFSM {
             this.overlayId = overlayId;
             this.logPrefix = "<nid:" + selfAdr.getId() + ",oid:" + overlayId + ">";
             this.router = router;
+            this.componentLoad = componentLoad;
 
             networkPort = proxy.getNegative(Network.class).getPair();
             timerPort = proxy.getNegative(Timer.class).getPair();

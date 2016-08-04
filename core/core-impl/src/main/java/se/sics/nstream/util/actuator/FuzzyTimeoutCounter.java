@@ -19,35 +19,51 @@
 package se.sics.nstream.util.actuator;
 
 import java.util.Random;
+import org.javatuples.Triplet;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class FuzzyTimeoutCounter {
+
     private final FuzzyState ta;
+    private final double minAcceptable;
+    private final double maxAcceptable;
     private int success = 0;
     private int timeout = 0;
-    
-    private FuzzyTimeoutCounter(FuzzyState ta) {
+
+    private FuzzyTimeoutCounter(FuzzyState ta, double minAcceptable, double maxAcceptable) {
         this.ta = ta;
+        this.minAcceptable = minAcceptable;
+        this.maxAcceptable = maxAcceptable;
     }
-    
+
     public void success() {
         success++;
     }
-    
+
     public void timeout() {
         timeout++;
     }
     
+    public int getTimeouts() {
+        return timeout;
+    }
+
     public DownloadStates state() {
-        double timeoutPercentage = (double)timeout / (timeout+success);
+        double timeoutPercentage = (double) timeout / (timeout + success);
+        if (timeoutPercentage < minAcceptable) {
+            return DownloadStates.SPEED_UP;
+        }
+        if (maxAcceptable < timeoutPercentage) {
+            return DownloadStates.SLOW_DOWN;
+        }
         success = 0;
         timeout = 0;
         return ta.state(timeoutPercentage);
     }
-    
-    public static FuzzyTimeoutCounter getInstance(double acceptableTimeouts, Random rand) {
-        return new FuzzyTimeoutCounter(new FuzzyState(acceptableTimeouts, rand));
+
+    public static FuzzyTimeoutCounter getInstance(Triplet<Double, Double, Double> targetedTimeouts, Random rand) {
+        return new FuzzyTimeoutCounter(new FuzzyState(targetedTimeouts.getValue0(), rand), targetedTimeouts.getValue1(), targetedTimeouts.getValue2());
     }
 }

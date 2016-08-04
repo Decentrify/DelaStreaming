@@ -2,7 +2,7 @@
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
  *
- * KompicsToolbox is free software; you can redistribute it and/or
+ * GVoD is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
@@ -18,38 +18,22 @@
  */
 package se.sics.nstream.storage.buffer;
 
-import se.sics.ktoolbox.util.reference.KReference;
-import se.sics.nstream.util.range.KBlock;
-import se.sics.nstream.util.result.WriteCallback;
-
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NoKBuffer implements KBuffer {
-
-    public NoKBuffer() {}
+public class SimpleKBufferReport implements KBufferReport {
+    public final long blockPos;
+    public final long bufferPos;
+    public final int bufferLength;
+    
+    public SimpleKBufferReport(int blockPos, long bufferPos, int bufferLength) {
+        this.blockPos = blockPos;
+        this.bufferPos = bufferPos;
+        this.bufferLength = bufferLength;
+    }
     
     @Override
-    public void start() {
-    }
-
-    @Override
-    public boolean isIdle() {
-        return true;
-    }
-
-    @Override
-    public void close() {
-    }
-
-    @Override
-    public void write(KBlock writeRange, KReference<byte[]> val, WriteCallback delayedWrite) {
-        throw new UnsupportedOperationException("Not supported");
-    }
-
-    @Override
-    public KBufferReport report() {
-        return new SimpleKBufferReport(0, 0, 0);
+    public String toString() {
+        return "report buffer bpos:" + blockPos + " abspos:" + bufferPos + " length:" + bufferLength;
     }
 }

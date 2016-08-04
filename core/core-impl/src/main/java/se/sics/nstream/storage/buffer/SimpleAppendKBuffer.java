@@ -31,10 +31,10 @@ import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.util.StreamEndpoint;
 import se.sics.nstream.storage.StoragePort;
-import se.sics.nstream.util.StreamResource;
 import se.sics.nstream.storage.StorageWrite;
+import se.sics.nstream.util.StreamEndpoint;
+import se.sics.nstream.util.StreamResource;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.WriteCallback;
 
@@ -57,6 +57,8 @@ public class SimpleAppendKBuffer implements KBuffer {
     private final ComponentProxy proxy;
     private final DelayedExceptionSyncHandler syncExHandling;
     //**************************************************************************
+    private int blockPos;
+    private int answeredBlockPos;
     private long appendPos;
     private final Map<Long, Pair<KReference<byte[]>, WriteCallback>> buffer = new HashMap<>();
     //**************************************************************************
@@ -69,6 +71,8 @@ public class SimpleAppendKBuffer implements KBuffer {
         this.syncExHandling = syncExceptionHandling;
         this.writePort = proxy.getNegative(writeEndpoint.resourcePort()).getPair();
         this.appendPos = appendPos;
+        this.blockPos = 0;
+        this.answeredBlockPos = 0;
         proxy.subscribe(handleWriteResp, writePort);
     }
 
@@ -112,6 +116,7 @@ public class SimpleAppendKBuffer implements KBuffer {
             }
             proxy.trigger(new StorageWrite.Request(writeResource, appendPos, next.getValue0().getValue().get()), writePort);
             appendPos += next.getValue0().getValue().get().length;
+            blockPos++;
         }
     }
 
@@ -119,7 +124,14 @@ public class SimpleAppendKBuffer implements KBuffer {
         @Override
         public void handle(StorageWrite.Response resp) {
             LOG.debug("{}received:{}", logPrefix, resp);
+            if(blockPos == 96) {
+                int x = 1;
+            }
+            if(answeredBlockPos == 96) {
+                int y = 1;
+            }
             if (resp.result.isSuccess()) {
+                answeredBlockPos++;
                 Pair<KReference<byte[]>, WriteCallback> ref = buffer.remove(resp.req.pos);
                 try {
                     ref.getValue0().release();
@@ -128,6 +140,7 @@ public class SimpleAppendKBuffer implements KBuffer {
                 }
                 WriteResult result = new WriteResult(resp.req.pos, resp.req.value.length, writeResource.getResourceName());
                 ref.getValue1().success(Result.success(result));
+                addNewTasks();
             } else {
                 fail(resp.result);
             }
@@ -152,5 +165,10 @@ public class SimpleAppendKBuffer implements KBuffer {
             ref.getValue0().release();
         }
         buffer.clear();
+    }
+
+    @Override
+    public KBufferReport report() {
+        return new SimpleKBufferReport(blockPos, appendPos, buffer.size());
     }
 }

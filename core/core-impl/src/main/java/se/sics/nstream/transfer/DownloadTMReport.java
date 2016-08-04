@@ -18,22 +18,33 @@
  */
 package se.sics.nstream.transfer;
 
+import se.sics.nstream.storage.managed.AppendFMReport;
+
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TransferMngrConfig {
-    public final int batchSize = 10;
-    public final int workBatch = batchSize;
-    public final int maxPending = 3*workBatch;
-    public final int hashesAhead = batchSize;
-    public final int hashBatch = batchSize;
-    public final int cacheAhead = batchSize;
-    public final int nextBatch = 2 * batchSize;
-    
-    {
-        assert workBatch <= hashesAhead;
-        assert workBatch <= hashBatch;
-        assert hashBatch <= cacheAhead;
-        assert cacheAhead <= nextBatch;
+public class DownloadTMReport {
+
+    public final AppendFMReport file;
+    public final int workPos;
+    public final int hashPos;
+    public final int cachePos;
+    public final int pendingSize;
+
+    public DownloadTMReport(AppendFMReport file, int workPos, int hashPos, int cachePos, int pendingSize) {
+        this.file = file;
+        this.workPos = workPos;
+        this.hashPos = hashPos;
+        this.cachePos = cachePos;
+        this.pendingSize = pendingSize;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("report download wp:").append(workPos).append(" hp:").append(hashPos).append(" cp:").append(cachePos).append(" pending:").append(pendingSize).append("\n");
+        sb.append(file.toString());
+        return sb.toString();
     }
 }

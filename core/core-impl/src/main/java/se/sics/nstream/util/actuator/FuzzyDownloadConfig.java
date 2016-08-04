@@ -18,25 +18,16 @@
  */
 package se.sics.nstream.util.actuator;
 
-import java.util.Random;
+import org.javatuples.Triplet;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ComponentState {
-    public FuzzyState fuzzyState;
-    public final long maxQueueDelay;
-    
-    public ComponentState(Random rand, long targetQueueDelay, long maxQueueDelay) {
-        this.fuzzyState = new FuzzyState((double)targetQueueDelay/maxQueueDelay, rand);
-        this.maxQueueDelay = maxQueueDelay;
-    }
-    
-    public DownloadStates state(long current) {
-        if(current > maxQueueDelay) {
-            return DownloadStates.SLOW_DOWN;
-        }
-        return fuzzyState.state((double)current/maxQueueDelay);
-    }
+public class FuzzyDownloadConfig {
+    public static final int seed = 1234;
+    public static final Triplet<Double, Double, Double> acceptedTimeoutsPercentage = Triplet.with(0.01, 0.005, 0.05);
+    public static final int minSpeed = 10;
+    public static final int maxSpeed = 20000;
+    public static final int baseChange = 1;
+    public static final double resetChance = 0.1;
 }

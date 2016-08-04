@@ -25,9 +25,8 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public interface Router {
     public KAddress randomPartner();
-    public boolean hasSlot();
-    public void retainSlot();
-    public void retainSlots(int n);
-    public void releaseSlot();
-    public void timeoutSlot(KAddress target);
+    public boolean availableSlot();
+    public void useSlot();
+    public void success();
+    public void timeout(KAddress target);
 }

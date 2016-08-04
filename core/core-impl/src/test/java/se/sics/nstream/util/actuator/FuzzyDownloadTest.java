@@ -21,6 +21,7 @@ package se.sics.nstream.util.actuator;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
+import org.javatuples.Triplet;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,11 +47,14 @@ public class FuzzyDownloadTest {
         linkBehaviour.put(6000, 0.9);
         linkBehaviour.put(100*1000, 1.0);
 
-        FuzzyDownload fd = FuzzyDownload.getInstance(new Random(1234), 0.1, 10, 100 * 1000, 2, 0.1);
+        FuzzyDownload fd = FuzzyDownload.getInstance(new Random(1234), Triplet.with(0.1, 0.01, 0.2), 10, 100 * 1000, 2, 0.1);
         Random rand = new Random(2345);
         for (int i = 0; i < bigSteps; i++) {
             for (int j = 0; j < smallSteps; j++) {
-                Integer speed = fd.speed();
+                Integer speed = fd.windowSize();
+                while(fd.availableSlot()) {
+                    fd.useSlot();
+                }
                 Map.Entry<Integer, Double> behaviour = linkBehaviour.ceilingEntry(speed);
                 if (rand.nextDouble() < behaviour.getValue()) {
                     fd.timeout();
@@ -58,7 +62,44 @@ public class FuzzyDownloadTest {
                     fd.success();
                 }
             }
-            LOG.info("speed:{}", fd.speed());
+            LOG.info("speed:{}", fd.windowSize());
+        }
+        int release = 2000;
+        while(release > 0) {
+            fd.success();
+            release--;
+        }
+        
+        //load is less the max possible
+        for (int i = 0; i < bigSteps; i++) {
+            for (int j = 0; j < smallSteps; j++) {
+                Integer speed = fd.windowSize();
+                fd.useSlot();
+                Map.Entry<Integer, Double> behaviour = linkBehaviour.ceilingEntry(speed);
+                if (rand.nextDouble() < behaviour.getValue()) {
+                    fd.timeout();
+                } else {
+                    fd.success();
+                }
+            }
+            LOG.info("speed:{}", fd.windowSize());
+        }
+        
+        //back to max load
+         for (int i = 0; i < bigSteps; i++) {
+            for (int j = 0; j < smallSteps; j++) {
+                Integer speed = fd.windowSize();
+                while(fd.availableSlot()) {
+                    fd.useSlot();
+                }
+                Map.Entry<Integer, Double> behaviour = linkBehaviour.ceilingEntry(speed);
+                if (rand.nextDouble() < behaviour.getValue()) {
+                    fd.timeout();
+                } else {
+                    fd.success();
+                }
+            }
+            LOG.info("speed:{}", fd.windowSize());
         }
     }
 }

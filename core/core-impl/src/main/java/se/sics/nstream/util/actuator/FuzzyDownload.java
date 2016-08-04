@@ -19,6 +19,7 @@
 package se.sics.nstream.util.actuator;
 
 import java.util.Random;
+import org.javatuples.Triplet;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -30,6 +31,10 @@ public class FuzzyDownload {
     private int currentWindowSize;
     private int lastWindowSize;
     private int waitingTime;
+    private int usedSlots;
+    private DownloadStates current;
+    private DownloadStates old;
+    private boolean changed;
 
     private FuzzyDownload(FuzzyTimeoutCounter window, ExpRandomSpeedActuator speedActuator) {
         this.window = window;
@@ -37,50 +42,116 @@ public class FuzzyDownload {
         this.currentWindowSize = speedActuator.speed();
         this.lastWindowSize = currentWindowSize;
         this.waitingTime = currentWindowSize;
+        this.usedSlots = 0;
+        this.current = DownloadStates.MAINTAIN;
+        this.old = DownloadStates.MAINTAIN;
+        this.changed = false;
+    }
+
+    public boolean changed() {
+        boolean aux = changed;
+        changed = false;
+        return aux;
     }
 
     public void success() {
         adjust();
         window.success();
         waitingTime--;
+        releaseSlot();
     }
 
     public void timeout() {
         adjust();
         window.timeout();
         waitingTime--;
+        releaseSlot();
     }
 
-    public int speed() {
+    private void releaseSlot() {
+        if (usedSlots > 0) {
+            usedSlots--;
+        }
+    }
+
+    public boolean availableSlot() {
+        return usedSlots < currentWindowSize;
+    }
+
+    public void useSlot() {
+        usedSlots++;
+    }
+
+    public int windowSize() {
         return currentWindowSize;
     }
 
     private void adjust() {
         if (waitingTime == 0) {
+            double load = usedSlots / currentWindowSize;
             switch (window.state()) {
                 case MAINTAIN:
-                    lastWindowSize = currentWindowSize;
-                    waitingTime = currentWindowSize;
+                    if (load < 0.5) {
+                        slowDown();
+                    } else {
+                        maintain();
+                    }
                     break;
                 case SLOW_DOWN:
-                    speedActuator.down();
-                    lastWindowSize = currentWindowSize;
-                    currentWindowSize = speedActuator.speed();
-                    waitingTime = currentWindowSize + lastWindowSize;
+                    slowDown();
                     break;
                 case SPEED_UP:
-                    speedActuator.up();
-                    lastWindowSize = currentWindowSize;
-                    currentWindowSize = speedActuator.speed();
-                    waitingTime = currentWindowSize + lastWindowSize;
+                    if (load < 0.9) {
+                        maintain();
+                    } else {
+                        speedUp();
+                    }
                     break;
             }
         }
     }
-    
-    public static FuzzyDownload getInstance(Random rand, double acceptedTimeoutsPercentage, int minSpeed, int maxSpeed, int baseChange, double resetChange) {
-        FuzzyTimeoutCounter ftc = FuzzyTimeoutCounter.getInstance(acceptedTimeoutsPercentage, rand);
-        ExpRandomSpeedActuator ersa = new ExpRandomSpeedActuator(minSpeed, maxSpeed, baseChange, rand, resetChange);
+
+    private void maintain() {
+        old = current;
+        current = DownloadStates.MAINTAIN;
+        lastWindowSize = currentWindowSize;
+        waitingTime = currentWindowSize;
+    }
+
+    private void slowDown() {
+        old = current;
+        current = DownloadStates.SLOW_DOWN;
+        speedActuator.down();
+        lastWindowSize = currentWindowSize;
+        currentWindowSize = speedActuator.speed();
+        waitingTime = currentWindowSize + lastWindowSize;
+        if (usedSlots > currentWindowSize) {
+            usedSlots = currentWindowSize;
+        }
+        if (!old.equals(DownloadStates.SLOW_DOWN)) {
+            changed = true;
+        }
+    }
+
+    private void speedUp() {
+        old = current;
+        current = DownloadStates.SPEED_UP;
+        speedActuator.up();
+        lastWindowSize = currentWindowSize;
+        currentWindowSize = speedActuator.speed();
+        waitingTime = currentWindowSize + lastWindowSize;
+        if (!old.equals(DownloadStates.SLOW_DOWN)) {
+            changed = true;
+        }
+    }
+
+    public String report() {
+        return "cw:" + currentWindowSize + " used:" + usedSlots;
+    }
+
+    public static FuzzyDownload getInstance(Random rand, Triplet<Double, Double, Double> targetedTimeout, int minSpeed, int maxSpeed, int baseChange, double resetChance) {
+        FuzzyTimeoutCounter ftc = FuzzyTimeoutCounter.getInstance(targetedTimeout, rand);
+        ExpRandomSpeedActuator ersa = new ExpRandomSpeedActuator(minSpeed, maxSpeed, baseChange, rand, resetChance);
         return new FuzzyDownload(ftc, ersa);
     }
 }

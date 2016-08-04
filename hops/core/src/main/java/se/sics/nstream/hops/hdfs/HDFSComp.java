@@ -84,7 +84,7 @@ public class HDFSComp extends ComponentDefinition {
             Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, (HDFSResource)req.resource, req.value);
             StorageWrite.Response resp = req.respond(writeResult);
             LOG.trace("{}answering:{}", logPrefix, resp);
-            
+            answer(req, resp);
         }
     };
     

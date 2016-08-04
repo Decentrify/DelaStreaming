@@ -18,12 +18,13 @@
  */
 package se.sics.nstream.storage.buffer;
 
-import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.storage.AsyncWriteOp;
+import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface KBuffer extends StreamControl, AsyncWriteOp<KBlock> {
+    public KBufferReport report();
 }

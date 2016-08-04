@@ -20,13 +20,13 @@ package se.sics.nstream.storage;
 
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
-import se.sics.nstream.util.result.WriteCallback;
 import se.sics.nstream.storage.buffer.KBuffer;
-import se.sics.nstream.util.result.ReadCallback;
 import se.sics.nstream.storage.cache.KCache;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
+import se.sics.nstream.util.result.ReadCallback;
+import se.sics.nstream.util.result.WriteCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -84,5 +84,14 @@ public class AsyncIncompleteStorage implements AsyncStorage {
     public void write(KBlock writeRange, KReference<byte[]> val, WriteCallback writeResult) {
         cache.buffered(writeRange, val);
         buffer.write(writeRange, val, writeResult);
+    }
+    
+    public KStorageReport report() {
+        KStorageReport report = new KStorageReport(buffer.report());
+        return report;
+    }
+    
+    public boolean pendingBlocks() {
+        return buffer.isIdle();
     }
 }

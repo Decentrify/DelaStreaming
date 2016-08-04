@@ -51,7 +51,7 @@ public class ExpRandomSpeedActuator {
             changeRate = changeRate * 2;
         } else {
             accelerate = true;
-            changeRate = changeRate / 2;
+            changeRate = changeRate / 4;
         }
         if (baseChange > Integer.MAX_VALUE / changeRate) {
             speed = max;
@@ -65,7 +65,7 @@ public class ExpRandomSpeedActuator {
         reset();
         if (accelerate) {
             accelerate = false;
-            changeRate = changeRate / 2;
+            changeRate = changeRate / 4;
         } else {
             changeRate = changeRate * 2;
         }

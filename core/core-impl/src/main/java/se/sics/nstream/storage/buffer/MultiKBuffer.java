@@ -18,10 +18,11 @@
  */
 package se.sics.nstream.storage.buffer;
 
-import se.sics.nstream.util.result.WriteCallback;
+import java.util.ArrayList;
 import java.util.List;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.util.range.KBlock;
+import se.sics.nstream.util.result.WriteCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -62,5 +63,14 @@ public class MultiKBuffer implements KBuffer {
         for (KBuffer buffer : buffers) {
             buffer.write(writeRange, val, delayedResult);
         }
+    }
+
+    @Override
+    public KBufferReport report() {
+        List<KBufferReport> report = new ArrayList<>();
+        for (KBuffer buffer : buffers) {
+            report.add(buffer.report());
+        }
+        return new MultiKBufferReport(report);
     }
 }

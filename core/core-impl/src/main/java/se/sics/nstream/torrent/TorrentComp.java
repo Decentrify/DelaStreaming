@@ -21,6 +21,7 @@ package se.sics.nstream.torrent;
 import com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -31,14 +32,21 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.PortType;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.network.MessageNotify;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.ScheduleTimeout;
+import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.nstream.StreamEvent;
 import se.sics.nstream.report.ReportTimeout;
 import se.sics.nstream.torrent.event.HashGet;
 import se.sics.nstream.torrent.event.PieceGet;
@@ -47,6 +55,8 @@ import se.sics.nstream.torrent.event.TorrentTimeout;
 import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.TransferDetails;
+import se.sics.nstream.util.actuator.ComponentLoad;
+import se.sics.nstream.util.actuator.ComponentLoadConfig;
 
 /**
  *
@@ -65,14 +75,19 @@ public class TorrentComp extends ComponentDefinition {
     //**************************************************************************
     private final TorrentConfig torrentConfig;
     //**************************************************************************
+    private ComponentLoad componentLoad;
     private TransferFSM transfer;
     private RoundRobinConnMngr router;
     //**************************************************************************
     private UUID periodicReport;
+    private UUID loadCheck;
 
     public TorrentComp(Init init) {
+        logPrefix = "<" + init.selfAdr.getId() +">";
         torrentConfig = new TorrentConfig();
         router = new RoundRobinConnMngr(init.partners);
+        componentLoad = new ComponentLoad(new Random(ComponentLoadConfig.seed), ComponentLoadConfig.targetQueueDelay,
+                ComponentLoadConfig.maxQueueDelay, ComponentLoadConfig.maxCheckPeriod);
         storageProvider(init.storageProvider);
         transferState(init);
 
@@ -89,12 +104,15 @@ public class TorrentComp extends ComponentDefinition {
         subscribe(handlePieceReq, networkPort);
         subscribe(handlePieceResp, networkPort);
         subscribe(handlePieceTimeout, timerPort);
-
+        
+        subscribe(handleLoadCheck, timerPort);
+        subscribe(handleNetworkLoadCheck, networkPort);
+        subscribe(handleNettyCheck, networkPort);
         subscribe(handleExtendedTorrentResp, transferMngrPort);
     }
 
     private void transferState(Init init) {
-        TransferFSM.CommonState cs = new TransferFSM.CommonState(config(), torrentConfig, this.proxy, init.selfAdr, init.overlayId, router);
+        TransferFSM.CommonState cs = new TransferFSM.CommonState(config(), torrentConfig, this.proxy, init.selfAdr, init.overlayId, router, componentLoad);
         if (init.upload) {
             byte[] torrentByte = init.transferDetails.get().getValue0();
             TransferDetails transferDetails = init.transferDetails.get().getValue1();
@@ -115,17 +133,10 @@ public class TorrentComp extends ComponentDefinition {
         @Override
         public void handle(Start event) {
             transfer.start();
-            scheduleReportTimeout();
+            scheduleReport();
+            scheduleLoadCheck();
         }
     };
-
-    private void scheduleReportTimeout() {
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(torrentConfig.reportDelay, torrentConfig.reportDelay);
-        ReportTimeout rt = new ReportTimeout(spt);
-        periodicReport = rt.getTimeoutId();
-        spt.setTimeoutEvent(rt);
-        trigger(spt, timerPort);
-    }
 
     @Override
     public void tearDown() {
@@ -139,8 +150,52 @@ public class TorrentComp extends ComponentDefinition {
         @Override
         public void handle(ReportTimeout event) {
             transfer.report();
+            LOG.info("{}report router:{}", logPrefix, router.report());
+            LOG.info("{}report comp load:{}", logPrefix, componentLoad.report());
         }
     };
+
+    Handler handleLoadCheck = new Handler<LoadCheckTimeout>() {
+        @Override
+        public void handle(LoadCheckTimeout timeout) {
+            long now = System.currentTimeMillis();
+            long queueDelay = now - timeout.createdAt - timeout.delay;
+            componentLoad.adjustState(queueDelay);
+            LOG.info("{}component state timer:{}", logPrefix, componentLoad.state());
+            if (router.changed()) {
+                componentLoad.outsideChange();
+            }
+            sendNetworkCheck();
+        }
+    };
+
+    private void sendNetworkCheck() {
+        KHeader header = new BasicHeader(null, null, null);
+        KContentMsg msg = new BasicContentMsg(header, new LoadCheck());
+        trigger(msg, networkPort.getPair());
+    }
+
+    Handler handleNettyCheck = new Handler<MessageNotify.Resp>() {
+        @Override
+        public void handle(MessageNotify.Resp resp) {
+            transfer.handleNotify(resp);
+        }
+    };
+    
+    ClassMatchedHandler handleNetworkLoadCheck
+            = new ClassMatchedHandler<LoadCheck, KContentMsg<KAddress, KHeader<KAddress>, LoadCheck>>() {
+                @Override
+                public void handle(LoadCheck content, KContentMsg<KAddress, KHeader<KAddress>, LoadCheck> container) {
+                    long now = System.currentTimeMillis();
+                    long queueDelay = now - content.createdAt;
+                    componentLoad.adjustState(queueDelay);
+                    LOG.info("{}component state network:{}", logPrefix, componentLoad.state());
+                    if (router.changed()) {
+                        componentLoad.outsideChange();
+                    }
+                    scheduleLoadCheck();
+                }
+            };
 
     ClassMatchedHandler handleTorrentReq
             = new ClassMatchedHandler<TorrentGet.Request, KContentMsg<KAddress, KHeader<KAddress>, TorrentGet.Request>>() {
@@ -168,7 +223,7 @@ public class TorrentComp extends ComponentDefinition {
             transfer = transfer.next();
         }
     };
-    
+
     Handler handleAdvanceDownload = new Handler<TorrentTimeout.AdvanceDownload>() {
         @Override
         public void handle(TorrentTimeout.AdvanceDownload timeout) {
@@ -211,7 +266,7 @@ public class TorrentComp extends ComponentDefinition {
             transfer = transfer.next();
         }
     };
-    
+
     ClassMatchedHandler handlePieceReq
             = new ClassMatchedHandler<PieceGet.Request, KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request>>() {
                 @Override
@@ -257,5 +312,54 @@ public class TorrentComp extends ComponentDefinition {
             this.upload = upload;
             this.transferDetails = transferDetails;
         }
+    }
+
+    private void scheduleReport() {
+        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(torrentConfig.reportDelay, torrentConfig.reportDelay);
+        ReportTimeout rt = new ReportTimeout(spt);
+        periodicReport = rt.getTimeoutId();
+        spt.setTimeoutEvent(rt);
+        trigger(spt, timerPort);
+    }
+
+    private void scheduleLoadCheck() {
+        ScheduleTimeout st = new ScheduleTimeout(componentLoad.checkPeriod());
+        LoadCheckTimeout lct = new LoadCheckTimeout(st, componentLoad.checkPeriod());
+        st.setTimeoutEvent(lct);
+        trigger(st, timerPort);
+    }
+
+    public static class LoadCheckTimeout extends Timeout implements StreamEvent {
+
+        public final long createdAt;
+        public final long delay;
+
+        public LoadCheckTimeout(ScheduleTimeout st, long delay) {
+            super(st);
+            this.createdAt = System.currentTimeMillis();
+            this.delay = delay;
+        }
+
+        @Override
+        public Identifier getId() {
+            return new UUIDIdentifier(getTimeoutId());
+        }
+    }
+
+    public static class LoadCheck implements StreamEvent {
+
+        public final Identifier eventId;
+        public final long createdAt;
+
+        public LoadCheck() {
+            this.eventId = UUIDIdentifier.randomId();
+            this.createdAt = System.currentTimeMillis();
+        }
+
+        @Override
+        public Identifier getId() {
+            return eventId;
+        }
+
     }
 }
