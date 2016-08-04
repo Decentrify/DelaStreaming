@@ -32,6 +32,12 @@
             <groupId>io.hops</groupId>
             <artifactId>kafka-util</artifactId>
             <version>${kafkautil.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpcore</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.avro</groupId>
@@ -39,10 +45,10 @@
             <version>${avro.version}</version>
         </dependency>
         <dependency>
-           <groupId>org.json</groupId>
-           <artifactId>json</artifactId>
-           <version>20140107</version>
-       </dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20140107</version>
+        </dependency>
         
         <dependency>
             <groupId>org.slf4j</groupId>
