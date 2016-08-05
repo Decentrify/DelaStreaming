@@ -27,17 +27,17 @@
             <groupId>io.hops</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${hops.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.hops</groupId>
-            <artifactId>kafka-util</artifactId>
-            <version>${kafkautil.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.apache.httpcomponents</groupId>
                     <artifactId>httpcore</artifactId>
                 </exclusion>
             </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.hops</groupId>
+            <artifactId>kafka-util</artifactId>
+            <version>${kafkautil.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.avro</groupId>
