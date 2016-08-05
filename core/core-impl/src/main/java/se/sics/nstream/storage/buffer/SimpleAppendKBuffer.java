@@ -19,7 +19,9 @@
 package se.sics.nstream.storage.buffer;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +29,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
@@ -63,6 +66,7 @@ public class SimpleAppendKBuffer implements KBuffer {
     private int answeredBlockPos;
     private long appendPos;
     private final Map<Long, Pair<KReference<byte[]>, WriteCallback>> buffer = new HashMap<>();
+    private final Set<Identifier> pendingWriteReqs = new HashSet<>(); 
     //**************************************************************************
 
     public SimpleAppendKBuffer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExceptionHandling, ComponentLoad loadTracker,
@@ -118,7 +122,9 @@ public class SimpleAppendKBuffer implements KBuffer {
             if (next == null) {
                 break;
             }
-            proxy.trigger(new StorageWrite.Request(writeResource, appendPos, next.getValue0().getValue().get()), writePort);
+            StorageWrite.Request req = new StorageWrite.Request(writeResource, appendPos, next.getValue0().getValue().get());
+            pendingWriteReqs.add(req.eventId);
+            proxy.trigger(req, writePort);
             appendPos += next.getValue0().getValue().get().length;
             blockPos++;
         }
@@ -127,6 +133,10 @@ public class SimpleAppendKBuffer implements KBuffer {
     Handler handleWriteResp = new Handler<StorageWrite.Response>() {
         @Override
         public void handle(StorageWrite.Response resp) {
+            if(!pendingWriteReqs.remove(resp.getId())) {
+                //not mine
+                return;
+            }
             LOG.debug("{}received:{}", logPrefix, resp);
             if (resp.result.isSuccess()) {
                 answeredBlockPos++;
