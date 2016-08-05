@@ -36,13 +36,14 @@ import se.sics.nstream.storage.StorageWrite;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class KafkaProducerMngr {
+
     private final static Logger LOG = LoggerFactory.getLogger(KafkaComp.class);
     private String logPrefix = "";
-    
+
     private final ComponentProxy proxy;
-    
+
     private final AvroMsgProducer producer;
-    private int producedMsgs = 0;
+    public int producedMsgs = 0;
     private final List<StorageWrite.Request> waitingOnLeftover = new LinkedList<>();
     private ByteBuf leftover;
 
@@ -58,14 +59,13 @@ public class KafkaProducerMngr {
         getRidOfLeftovers(schema);
         parseWithLeftovers(schema, req);
     }
-    
+
     private void getRidOfLeftovers(Schema schema) {
         if (!waitingOnLeftover.isEmpty()) {
             GenericRecord record = AvroParser.blobToAvro(schema, leftover);
             if (record != null) {
                 producedMsgs++;
                 producer.append(record);
-                LOG.info("{}produced:{}", logPrefix, producedMsgs);
                 for (StorageWrite.Request req : waitingOnLeftover) {
                     StorageWrite.Response resp = req.respond(Result.success(true));
                     LOG.trace("{}answering:{}", logPrefix, resp);
@@ -82,7 +82,6 @@ public class KafkaProducerMngr {
             if (record != null) {
                 producedMsgs++;
                 producer.append(record);
-                LOG.info("{}produced:{}", logPrefix, producedMsgs);
             } else {
                 int leftoverSize = leftover.writerIndex() - leftover.readerIndex();
                 if (leftoverSize > 0) {
@@ -104,7 +103,7 @@ public class KafkaProducerMngr {
             }
         }
     }
-    
+
     public void start() {
     }
 

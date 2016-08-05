@@ -67,14 +67,15 @@ public class KafkaProxy {
         @Override
         public void handle(StorageWrite.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            KafkaResource kafkaResource = (KafkaResource)req.resource;
+            KafkaResource kafkaResource = (KafkaResource) req.resource;
             KafkaProducerMngr mngr = producers.get(kafkaResource.topicName);
-            if(mngr == null) {
+            if (mngr == null) {
                 mngr = new KafkaProducerMngr(proxy, kafkaEndpoint, kafkaResource);
                 mngr.start();
                 producers.put(kafkaResource.topicName, mngr);
             }
             mngr.write(req);
+            LOG.debug("{}produced:{}", logPrefix, mngr.producedMsgs);
         }
     };
 
@@ -82,7 +83,7 @@ public class KafkaProxy {
     }
 
     public void close() {
-        for(KafkaProducerMngr mngr : producers.values()) {
+        for (KafkaProducerMngr mngr : producers.values()) {
             mngr.close();
         }
         producers.clear();

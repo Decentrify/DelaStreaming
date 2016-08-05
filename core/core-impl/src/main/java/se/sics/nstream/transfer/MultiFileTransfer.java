@@ -153,7 +153,7 @@ public class MultiFileTransfer implements StreamControl {
                 }
                 return Optional.of(nextDownload);
             }
-            if(writer.pendingWork()) {
+            if (writer.pendingWork()) {
                 break;
             }
             if (writer.finishingWork()) {
@@ -170,6 +170,19 @@ public class MultiFileTransfer implements StreamControl {
 
     public boolean complete() {
         return ongoing.isEmpty();
+    }
+
+    public String shortReport() {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, DownloadTMReport> f : completedReports.entrySet()) {
+            sb.append(f.getKey()).append(" - completed\n");
+            sb.append("\n");
+        }
+        for (Map.Entry<String, DownloadTransferMngr> f : ongoing.entrySet()) {
+            sb.append(f.getKey()).append(" - ").append(f.getValue().percentageComplete()).append("\n");
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 
     public String report() {

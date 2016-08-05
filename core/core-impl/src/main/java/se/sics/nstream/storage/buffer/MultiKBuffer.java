@@ -21,6 +21,7 @@ package se.sics.nstream.storage.buffer;
 import java.util.ArrayList;
 import java.util.List;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.WriteCallback;
 
@@ -34,14 +35,14 @@ public class MultiKBuffer implements KBuffer {
     public MultiKBuffer(List<KBuffer> buffers) {
         this.buffers = buffers;
     }
-    
-    @Override 
+
+    @Override
     public void start() {
         for (KBuffer buffer : buffers) {
             buffer.start();
         }
     }
-    
+
     @Override
     public boolean isIdle() {
         boolean isEmpty = true;
@@ -60,9 +61,34 @@ public class MultiKBuffer implements KBuffer {
 
     @Override
     public void write(KBlock writeRange, KReference<byte[]> val, WriteCallback delayedResult) {
+        final boolean[] done = new boolean[buffers.size()];
+        int i = 0;
         for (KBuffer buffer : buffers) {
-            buffer.write(writeRange, val, delayedResult);
+            buffer.write(writeRange, val, waitForAll(delayedResult, done, i));
+            i++;
         }
+    }
+
+    private WriteCallback waitForAll(final WriteCallback delayedResult, final boolean[] done, final int index) {
+        return new WriteCallback() {
+
+            @Override
+            public boolean fail(Result<WriteResult> result) {
+                throw new RuntimeException(result.getException());
+            }
+
+            @Override
+            public boolean success(Result<WriteResult> result) {
+                done[index] = true;
+                for(int i = 0; i < done.length; i++) {
+                    if(!done[i]) {
+                        return true;
+                    }
+                }
+                delayedResult.success(result);
+                return true;
+            }
+        };
     }
 
     @Override

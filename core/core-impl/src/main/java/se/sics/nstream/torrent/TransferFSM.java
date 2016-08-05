@@ -479,7 +479,8 @@ public abstract class TransferFSM {
 
         @Override
         public void report() {
-            LOG.info("{}transfer report: success:{} timeouts:{}\n{}", new Object[]{cs.logPrefix, periodSuccess, periodTimeouts, transferMngr.report()});
+            LOG.info("{}transfer report:\n{}", cs.logPrefix, transferMngr.shortReport());
+            LOG.debug("{}transfer report details: success:{} timeouts:{}\n{}", new Object[]{cs.logPrefix, periodSuccess, periodTimeouts, transferMngr.report()});
             periodSuccess = 0;
             periodTimeouts = 0;
         }
