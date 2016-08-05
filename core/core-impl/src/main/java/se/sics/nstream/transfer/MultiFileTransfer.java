@@ -154,10 +154,10 @@ public class MultiFileTransfer implements StreamControl {
                 return Optional.of(nextDownload);
             }
             if(writer.pendingWork()) {
-                continue;
+                break;
             }
             if (writer.finishingWork()) {
-                continue;
+                break;
             }
             it.remove();
             DownloadTMReport cR = next.getValue().report();
