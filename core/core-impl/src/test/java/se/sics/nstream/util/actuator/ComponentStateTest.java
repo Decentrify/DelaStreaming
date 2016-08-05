@@ -18,7 +18,6 @@
  */
 package se.sics.nstream.util.actuator;
 
-import java.util.Random;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -34,7 +33,7 @@ public class ComponentStateTest {
 
     @Test
     public void simpleTest() {
-        ComponentLoad cs = new ComponentLoad(new Random(1234), 50, 150, 10000);
+        ComponentLoad cs = new ComponentLoad();
         int[] decisions;
         double percentage;
 

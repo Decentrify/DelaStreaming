@@ -39,6 +39,7 @@ import se.sics.nstream.test.MockStreamPort;
 import se.sics.nstream.test.MockStreamResource;
 import se.sics.nstream.test.MockWC;
 import se.sics.nstream.test.StreamWriteReqEC;
+import se.sics.nstream.util.actuator.ComponentLoad;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KBlockImpl;
 
@@ -84,7 +85,7 @@ public class TestSimpleAppendKBuffer {
         proxy.expect(new EventContentValidator(new StreamWriteReqEC(), swr2));
 
         //actual run
-        SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, writeEndpoint, writeResource, 0);
+        SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, new ComponentLoad(), writeEndpoint, writeResource, 0);
 
         //write1
         sakBuf.write(b1, ref1, allWriteResult);
@@ -156,7 +157,7 @@ public class TestSimpleAppendKBuffer {
         proxy.expect(new EventContentValidator(new StreamWriteReqEC(), swr2));
 
         //actual run
-        SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, writeEndpoint, writeResource, 0);
+        SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, new ComponentLoad(), writeEndpoint, writeResource, 0);
 
         //write1
         sakBuf.write(b1, ref1, allWriteResult);
@@ -225,7 +226,7 @@ public class TestSimpleAppendKBuffer {
         proxy.expect(new EventContentValidator(new StreamWriteReqEC(), swr2));
 
         //actual run
-        SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, writeEndpoint, writeResource, 0);
+        SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, new ComponentLoad(), writeEndpoint, writeResource, 0);
 
         //write1
         sakBuf.write(b1, ref1, allWriteResult);

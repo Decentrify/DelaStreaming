@@ -39,7 +39,8 @@ import se.sics.nstream.storage.managed.FileBWC;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.StreamControl;
-import se.sics.nstream.util.actuator.DownloadStates;
+import se.sics.nstream.util.actuator.ComponentLoad;
+import se.sics.nstream.util.actuator.ComponentLoadConfig;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
 import se.sics.nstream.util.result.HashReadCallback;
@@ -55,6 +56,8 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
 
     private final TransferMngrConfig tmConfig;
     private final FileBaseDetails fileDetails;
+    private final ComponentLoad loadTracker;
+    private final String fileName;
     //**************************************************************************
     private final AppendFileMngr file;
     //**************************************************************************
@@ -72,7 +75,9 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     //**************************************************************************
     private final Map<Integer, FileBWC> pendingStorageWrites = new HashMap<>();
 
-    public DownloadTransferMngr(FileBaseDetails fileDetails, AppendFileMngr file) {
+    public DownloadTransferMngr(String fileName, ComponentLoad loadTracker, FileBaseDetails fileDetails, AppendFileMngr file) {
+        this.fileName = fileName;
+        this.loadTracker = loadTracker;
         this.fileDetails = fileDetails;
         this.file = file;
         this.tmConfig = new TransferMngrConfig();
@@ -123,6 +128,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
         BlockDetails blockDetails = fileDetails.getBlockDetails(blockNr);
         BlockMngr blockMngr = new InMemoryBlockMngr(blockDetails);
         pendingBlocks.put(blockNr, blockMngr);
+        loadTracker.setTransferSize(fileName, pendingBlocks.size());
         LinkedList<Integer> pieceList = new LinkedList<>();
         for (int i = 0; i < blockDetails.nrPieces; i++) {
             pieceList.add(i);
@@ -254,7 +260,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
             public void hashResult(Result<Boolean> result) {
                 if (result.isSuccess()) {
                     if (result.getValue()) {
-                        pendingBlocks.remove(blockRange.parentBlock());
+//                        finishingWork.remove(blockRange.parentBlock());
                     } else {
                         pendingStorageWrites.remove(blockNr);
                         silentRelease(blockRef);
@@ -274,6 +280,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
                 pendingStorageWrites.remove(blockNr);
                 silentRelease(blockRef);
                 pendingBlocks.remove(blockNr);
+                loadTracker.setTransferSize(fileName, pendingBlocks.size());
                 rebuildCacheHint();
                 return true;
             }
@@ -310,21 +317,15 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     //*********************************WRITER***********************************
     @Override
     public boolean workAvailable() {
-        if (workPieces.isEmpty()) {
-            newWorkPieces();
+        if (!workPieces.isEmpty() || !workHashes.isEmpty()) {
+            return true;
         }
-        if (workHashes.isEmpty()) {
-            newWorkHashes();
+        if (pendingBlocks.size() > ComponentLoadConfig.maxTransfer) {
+            return false;
         }
+        newWorkPieces();
+        newWorkHashes();
         return !(workPieces.isEmpty() && workHashes.isEmpty());
-    }
-    
-    @Override
-    public DownloadStates state() {
-        if(pendingBlocks.size() >= tmConfig.maxPending) {
-            return DownloadStates.SLOW_DOWN;
-        } 
-        return DownloadStates.MAINTAIN;
     }
 
     @Override
@@ -333,7 +334,13 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     }
 
     @Override
-    public boolean pendingBlocks() {
+    public boolean pendingWork() {
+        return !workHashes.isEmpty() || !nextHashes.isEmpty() || !workPieces.isEmpty() 
+                || !pendingBlocks.isEmpty() || !workBlocks.isEmpty() || !cacheBlocks.isEmpty() || !nextBlocks.isEmpty();
+    }
+    
+    @Override
+    public boolean finishingWork() {
         return !pendingBlocks.isEmpty() || !file.pendingBlocks();
     }
 
@@ -341,7 +348,6 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     public boolean isComplete() {
         return file.isComplete();
     }
-    
 
     /**
      * @param writeRange

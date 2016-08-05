@@ -29,4 +29,5 @@ public interface Router {
     public void useSlot();
     public void success();
     public void timeout(KAddress target);
+    public int totalSlots();
 }

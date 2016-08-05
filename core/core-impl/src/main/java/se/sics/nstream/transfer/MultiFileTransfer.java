@@ -46,6 +46,7 @@ import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.StreamEndpoint;
 import se.sics.nstream.util.StreamResource;
 import se.sics.nstream.util.TransferDetails;
+import se.sics.nstream.util.actuator.ComponentLoad;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -56,7 +57,7 @@ public class MultiFileTransfer implements StreamControl {
     private final TreeMap<String, DownloadTransferMngr> ongoing = new TreeMap<>();
     private final Map<String, DownloadTMReport> completedReports = new HashMap<>();
 
-    public MultiFileTransfer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
+    public MultiFileTransfer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler, ComponentLoad loadTracker,
             TransferDetails transferDetails, boolean complete) {
         for (Map.Entry<String, FileExtendedDetails> entry : transferDetails.extended.entrySet()) {
             FileBaseDetails fileDetails = transferDetails.base.baseDetails.get(entry.getKey());
@@ -71,15 +72,15 @@ public class MultiFileTransfer implements StreamControl {
             } else {
                 SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, mainResource.getValue0(), mainResource.getValue1());
                 List<KBuffer> bufs = new ArrayList<>();
-                bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, mainResource.getValue0(), mainResource.getValue1(), 0));
+                bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainResource.getValue0(), mainResource.getValue1(), 0));
                 for (Pair<StreamEndpoint, StreamResource> writeResource : secondaryResources) {
-                    bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, writeResource.getValue0(), writeResource.getValue1(), 0));
+                    bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, writeResource.getValue0(), writeResource.getValue1(), 0));
                 }
                 KBuffer buffer = new MultiKBuffer(bufs);
                 AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);
                 AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, false);
                 AppendFileMngr fileMngr = new AppendFileMngr(fileDetails, file, hash);
-                ongoing.put(entry.getKey(), new DownloadTransferMngr(fileDetails, fileMngr));
+                ongoing.put(entry.getKey(), new DownloadTransferMngr(entry.getKey(), loadTracker, fileDetails, fileMngr));
             }
         }
     }
@@ -143,10 +144,7 @@ public class MultiFileTransfer implements StreamControl {
             cacheHints.put(fileName, hint);
             if (writer.workAvailable()) {
                 NextDownload nextDownload;
-//                if(writer.state().equals(DownloadStates.SLOW_DOWN)) {
-//                    nextDownload = new SlowDownload(fileName);
-//                } else 
-                    if (writer.hashesAvailable()) {
+                if (writer.hashesAvailable()) {
                     Pair<Integer, Set<Integer>> hashes = writer.nextHashes();
                     nextDownload = new NextHash(cacheHints, fileName, hashes);
                 } else {
@@ -155,7 +153,10 @@ public class MultiFileTransfer implements StreamControl {
                 }
                 return Optional.of(nextDownload);
             }
-            if (writer.pendingBlocks()) {
+            if(writer.pendingWork()) {
+                continue;
+            }
+            if (writer.finishingWork()) {
                 continue;
             }
             it.remove();
@@ -196,13 +197,13 @@ public class MultiFileTransfer implements StreamControl {
             this.fileName = fileName;
         }
     }
-    
+
     public static class SlowDownload extends NextDownload {
 
         public SlowDownload(String fileName) {
             super(null, fileName);
         }
-        
+
     }
 
     public static class NextHash extends NextDownload {

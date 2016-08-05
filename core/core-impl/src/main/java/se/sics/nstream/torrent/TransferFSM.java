@@ -377,7 +377,7 @@ public abstract class TransferFSM {
         private long startTransfer;
 
         public DownloadState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails) {
-            super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, transferDetails, false));
+            super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, cs.componentLoad, transferDetails, false));
         }
 
         @Override
@@ -487,10 +487,6 @@ public abstract class TransferFSM {
         private void tryDownload() {
             LOG.trace("{}downloading...", cs.logPrefix);
 
-            if (!cs.componentLoad.canDownload()) {
-                LOG.debug("{}download slow down - component load");
-                return;
-            }
             if (!transferMngr.hasOngoing()) {
                 LOG.info("{}download completed write to storage", cs.logPrefix);
                 return;
@@ -502,15 +498,13 @@ public abstract class TransferFSM {
                 Optional<MultiFileTransfer.NextDownload> nextDownload = transferMngr.nextDownload();
                 if (!nextDownload.isPresent()) {
                     if (transferMngr.complete()) {
-                        LOG.info("{}download completed transfer", cs.logPrefix);
-                    } else {
                         if (startTransfer != 0) {
                             long end = System.currentTimeMillis();
-                            LOG.info("{}waiting to complete... transfer time:{}", cs.logPrefix, (end - startTransfer) / 1000);
+                            LOG.info("{}complete time:{}", cs.logPrefix, (end - startTransfer) / 1000);
                             startTransfer = 0;
                         }
-                        LOG.trace("{}waiting to complete...", cs.logPrefix);
-                    }
+                        LOG.info("{}download completed transfer", cs.logPrefix);
+                    } 
                     return;
                 }
                 if (nextDownload.get() instanceof MultiFileTransfer.SlowDownload) {
@@ -562,7 +556,7 @@ public abstract class TransferFSM {
     public static class UploadState extends TransferState {
 
         public UploadState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails) {
-            super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, transferDetails, true));
+            super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, cs.componentLoad, transferDetails, true));
         }
 
         @Override

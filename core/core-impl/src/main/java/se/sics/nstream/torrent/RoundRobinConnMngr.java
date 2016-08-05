@@ -48,6 +48,10 @@ public class RoundRobinConnMngr implements Router {
     }
     
     @Override
+    public int totalSlots() {
+        return loadTracker.windowSize();
+    }
+    @Override
     public boolean availableSlot() {
         return loadTracker.availableSlot();
     }
@@ -73,5 +77,9 @@ public class RoundRobinConnMngr implements Router {
     
     public String report() {
         return loadTracker.report();
+    }
+    
+    public void slowDown() {
+        loadTracker.externalSlowDown();
     }
 }

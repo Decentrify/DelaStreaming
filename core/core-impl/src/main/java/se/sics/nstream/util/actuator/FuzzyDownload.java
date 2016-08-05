@@ -148,6 +148,10 @@ public class FuzzyDownload {
     public String report() {
         return "cw:" + currentWindowSize + " used:" + usedSlots;
     }
+    
+    public void externalSlowDown() {
+        slowDown();
+    }
 
     public static FuzzyDownload getInstance(Random rand, Triplet<Double, Double, Double> targetedTimeout, int minSpeed, int maxSpeed, int baseChange, double resetChance) {
         FuzzyTimeoutCounter ftc = FuzzyTimeoutCounter.getInstance(targetedTimeout, rand);

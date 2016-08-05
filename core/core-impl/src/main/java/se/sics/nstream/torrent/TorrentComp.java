@@ -21,7 +21,6 @@ package se.sics.nstream.torrent;
 import com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -56,7 +55,7 @@ import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.TransferDetails;
 import se.sics.nstream.util.actuator.ComponentLoad;
-import se.sics.nstream.util.actuator.ComponentLoadConfig;
+import se.sics.nstream.util.actuator.DownloadStates;
 
 /**
  *
@@ -83,11 +82,10 @@ public class TorrentComp extends ComponentDefinition {
     private UUID loadCheck;
 
     public TorrentComp(Init init) {
-        logPrefix = "<" + init.selfAdr.getId() +">";
+        logPrefix = "<" + init.selfAdr.getId() + ">";
         torrentConfig = new TorrentConfig();
         router = new RoundRobinConnMngr(init.partners);
-        componentLoad = new ComponentLoad(new Random(ComponentLoadConfig.seed), ComponentLoadConfig.targetQueueDelay,
-                ComponentLoadConfig.maxQueueDelay, ComponentLoadConfig.maxCheckPeriod);
+        componentLoad = new ComponentLoad();
         storageProvider(init.storageProvider);
         transferState(init);
 
@@ -104,7 +102,7 @@ public class TorrentComp extends ComponentDefinition {
         subscribe(handlePieceReq, networkPort);
         subscribe(handlePieceResp, networkPort);
         subscribe(handlePieceTimeout, timerPort);
-        
+
         subscribe(handleLoadCheck, timerPort);
         subscribe(handleNetworkLoadCheck, networkPort);
         subscribe(handleNettyCheck, networkPort);
@@ -151,20 +149,20 @@ public class TorrentComp extends ComponentDefinition {
         public void handle(ReportTimeout event) {
             transfer.report();
             LOG.info("{}report router:{}", logPrefix, router.report());
-            LOG.info("{}report comp load:{}", logPrefix, componentLoad.report());
+            LOG.info("{}report comp load:{}", logPrefix, componentLoad.report().toString());
         }
     };
 
     Handler handleLoadCheck = new Handler<LoadCheckTimeout>() {
         @Override
         public void handle(LoadCheckTimeout timeout) {
-            long now = System.currentTimeMillis();
-            long queueDelay = now - timeout.createdAt - timeout.delay;
-            componentLoad.adjustState(queueDelay);
-            LOG.info("{}component state timer:{}", logPrefix, componentLoad.state());
-            if (router.changed()) {
-                componentLoad.outsideChange();
-            }
+//            long now = System.currentTimeMillis();
+//            long queueDelay = now - timeout.createdAt - timeout.delay;
+//            componentLoad.adjustState(queueDelay);
+//            LOG.info("{}component state timer:{}", logPrefix, componentLoad.state());
+//            if (router.changed()) {
+//                componentLoad.outsideChange();
+//            }
             sendNetworkCheck();
         }
     };
@@ -181,7 +179,7 @@ public class TorrentComp extends ComponentDefinition {
             transfer.handleNotify(resp);
         }
     };
-    
+
     ClassMatchedHandler handleNetworkLoadCheck
             = new ClassMatchedHandler<LoadCheck, KContentMsg<KAddress, KHeader<KAddress>, LoadCheck>>() {
                 @Override
@@ -189,10 +187,13 @@ public class TorrentComp extends ComponentDefinition {
                     long now = System.currentTimeMillis();
                     long queueDelay = now - content.createdAt;
                     componentLoad.adjustState(queueDelay);
-                    LOG.info("{}component state network:{}", logPrefix, componentLoad.state());
                     if (router.changed()) {
                         componentLoad.outsideChange();
                     }
+                    if (componentLoad.state().equals(DownloadStates.SLOW_DOWN)) {
+                        router.slowDown();
+                    }
+                    LOG.info("{}component state:{} router:{}", new Object[]{logPrefix, componentLoad.state(), router.totalSlots()});
                     scheduleLoadCheck();
                 }
             };
