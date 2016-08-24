@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.stream.congestion.PLedbatState;
-import se.sics.gvod.stream.report.ReportComp;
+import se.sics.nstream.report.ReportComp;
 import se.sics.gvod.stream.util.ConnectionStatus;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;

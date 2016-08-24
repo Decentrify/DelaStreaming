@@ -16,15 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.torrent;
+package se.sics.nstream.report;
 
-import se.sics.gvod.stream.torrent.event.DownloadStatus;
+import se.sics.nstream.report.event.DownloadStatus;
 import se.sics.kompics.PortType;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentStatusPort extends PortType {
+public class TransferStatusPort extends PortType {
     {
         indication(DownloadStatus.Starting.class);
         indication(DownloadStatus.Done.class);

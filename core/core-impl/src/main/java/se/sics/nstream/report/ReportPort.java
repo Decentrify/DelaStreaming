@@ -16,24 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.util;
+package se.sics.nstream.report;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.library.util.TorrentStatus;
+import se.sics.nstream.report.event.DownloadSummaryEvent;
+import se.sics.nstream.report.event.StatusSummaryEvent;
+import se.sics.kompics.PortType;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentExtendedStatus {
-    public final Identifier torrentId;
-    public final TorrentStatus torrentStatus;
-    public final int downloadSpeed;
-    public final double percentageComplete;
-    
-    public TorrentExtendedStatus(Identifier torrentId, TorrentStatus torrentStatus, int downloadSpeed, double percentageComplete) {
-        this.torrentStatus = torrentStatus;
-        this.torrentId = torrentId;
-        this.downloadSpeed = downloadSpeed;
-        this.percentageComplete = percentageComplete;
+public class ReportPort extends PortType {
+    {
+        request(StatusSummaryEvent.Request.class);
+        indication(StatusSummaryEvent.Response.class);
+        indication(DownloadSummaryEvent.class);
     }
 }

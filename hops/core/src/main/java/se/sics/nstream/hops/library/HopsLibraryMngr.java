@@ -28,10 +28,10 @@ import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.mngr.util.ElementSummary;
-import se.sics.gvod.stream.report.event.DownloadSummaryEvent;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
+import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -48,6 +48,9 @@ import se.sics.nstream.library.LibraryMngrComp;
 import se.sics.nstream.library.event.torrent.HopsContentsEvent;
 import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 import se.sics.nstream.library.util.TorrentStatus;
+import se.sics.nstream.report.ReportPort;
+import se.sics.nstream.report.event.DownloadSummaryEvent;
+import se.sics.nstream.report.event.StatusSummaryEvent;
 import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.CoreExtPorts;
@@ -71,8 +74,7 @@ public class HopsLibraryMngr {
     private final Negative<HopsTorrentPort> torrentPort;
     //**********************INTERNAL_DO_NOT_CONNECT_TO**************************
     private final Negative<TransferMngrPort> transferMngrPort;
-//    private final Positive<ReportPort> reportPort;
-//    private final One2NChannel reportChannel;
+    private final Positive<ReportPort> reportPort;
     //**************************************************************************
     private Library library = new Library();
     private HopsTorrentCompMngr components;
@@ -90,17 +92,17 @@ public class HopsLibraryMngr {
         components = new HopsTorrentCompMngr(selfAdr, proxy, extPorts, logPrefix);
         torrentPort = proxy.getPositive(HopsTorrentPort.class).getPair();
         transferMngrPort = proxy.getPositive(TransferMngrPort.class).getPair();
-//        reportPort = proxy.getNegative(ReportPort.class).getPair();
-//        reportChannel = One2NChannel.getChannel("vodMngrReportChannel", (Negative<ReportPort>) reportPort.getPair(), new EventOverlayIdExtractor());
-
+        reportPort = proxy.getNegative(ReportPort.class).getPair();
+        
         proxy.subscribe(handleHopsTorrentUpload, torrentPort);
         proxy.subscribe(handleHopsTorrentDownload, torrentPort);
         proxy.subscribe(handleTransferDetailsReq, transferMngrPort);
         proxy.subscribe(handleTransferDetailsResp, torrentPort);
         proxy.subscribe(handleHopsTorrentStop, torrentPort);
         proxy.subscribe(handleContentsRequest, torrentPort);
-//        proxy.subscribe(handleTorrentStatusResponse, reportPort);
-//        proxy.subscribe(handleDownloadCompleted, reportPort);
+        proxy.subscribe(handleTorrentStatusRequest, torrentPort);
+        proxy.subscribe(handleTorrentStatusResponse, reportPort);
+        proxy.subscribe(handleDownloadCompleted, reportPort);
     }
 
     public void start() {
@@ -318,18 +320,20 @@ public class HopsLibraryMngr {
         }
     };
 
-//    Handler handleTorrentStatusRequest = new Handler<TorrentExtendedStatusEvent.Request>() {
-//        @Override
-//        public void handle(TorrentExtendedStatusEvent.Request req) {
-//            LOG.trace("{}received:{}", logPrefix, req);
-//        }
-//    };
-//    Handler handleTorrentStatusResponse = new Handler<StatusSummaryEvent.Response>() {
-//        @Override
-//        public void handle(StatusSummaryEvent.Response resp) {
-//            LOG.trace("{}received:{}", logPrefix, resp);
-//            TorrentExtendedStatusEvent.Request req = pendingRequests.remove(resp.getId());
-//            proxy.answer(req, req.succes(resp.value));
-//        }
-//    };
+    Handler handleTorrentStatusRequest = new Handler<TorrentExtendedStatusEvent.Request>() {
+        @Override
+        public void handle(TorrentExtendedStatusEvent.Request req) {
+            LOG.trace("{}received:{}", logPrefix, req);
+            pendingRequests.put(req.eventId, req);
+            proxy.trigger(new StatusSummaryEvent.Request(req.eventId, req.torrentId), reportPort);
+        }
+    };
+    Handler handleTorrentStatusResponse = new Handler<StatusSummaryEvent.Response>() {
+        @Override
+        public void handle(StatusSummaryEvent.Response resp) {
+            LOG.trace("{}received:{}", logPrefix, resp);
+            TorrentExtendedStatusEvent.Request req = pendingRequests.remove(resp.getId());
+            proxy.answer(req, req.succes(resp.result));
+        }
+    };
 }

@@ -16,14 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.report.event;
+package se.sics.nstream.report.event;
 
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
-import se.sics.nstream.StreamEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
+import se.sics.nstream.StreamEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -59,11 +59,11 @@ public class StatusSummaryEvent {
     
     public static class Response implements Direct.Response, StreamEvent, OverlayEvent {
         public final Request req;
-        public final TorrentExtendedStatus value;
+        public final TorrentExtendedStatus result;
 
-        public Response(Request req, TorrentExtendedStatus value) {
+        public Response(Request req, TorrentExtendedStatus result) {
             this.req = req;
-            this.value = value;
+            this.result = result;
         }
         
         @Override

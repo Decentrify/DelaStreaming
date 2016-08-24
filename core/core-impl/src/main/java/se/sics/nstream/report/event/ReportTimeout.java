@@ -16,20 +16,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.report;
+package se.sics.nstream.report.event;
 
-import se.sics.gvod.stream.report.event.DownloadSummaryEvent;
-import se.sics.gvod.stream.report.event.StatusSummaryEvent;
-import se.sics.kompics.PortType;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.Timeout;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.nstream.StreamEvent;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ReportPort extends PortType {
-    {
-        request(StatusSummaryEvent.Request.class);
-        indication(StatusSummaryEvent.Response.class);
-        indication(DownloadSummaryEvent.class);
+public class ReportTimeout extends Timeout implements StreamEvent {
+    public ReportTimeout(SchedulePeriodicTimeout spt) {
+        super(spt);
+    }
+    
+    @Override
+    public Identifier getId() {
+        return new UUIDIdentifier(getTimeoutId());
     }
 }

@@ -16,20 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.report;
+package se.sics.nstream.report;
 
-import se.sics.gvod.stream.report.event.DownloadSummaryEvent;
-import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
-import se.sics.nstream.StreamEvent;
-import se.sics.gvod.stream.report.event.StatusSummaryEvent;
-import se.sics.nstream.library.util.TorrentStatus;
-import se.sics.gvod.stream.torrent.TorrentStatusPort;
-import se.sics.gvod.stream.torrent.event.DownloadStatus;
-import se.sics.gvod.stream.util.ConnectionStatus;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -41,6 +33,11 @@ import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.nstream.StreamEvent;
+import se.sics.nstream.library.util.TorrentStatus;
+import se.sics.nstream.report.event.DownloadStatus;
+import se.sics.nstream.report.event.DownloadSummaryEvent;
+import se.sics.nstream.report.event.StatusSummaryEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -51,7 +48,7 @@ public class ReportComp extends ComponentDefinition {
     private String logPrefix = "";
 
     Positive<Timer> timerPort = requires(Timer.class);
-    Positive<TorrentStatusPort> torrentPort = requires(TorrentStatusPort.class);
+    Positive<TransferStatusPort> torrentPort = requires(TransferStatusPort.class);
     Negative<ReportPort> reportPort = provides(ReportPort.class);
 
     private final Identifier torrentId;
@@ -62,7 +59,7 @@ public class ReportComp extends ComponentDefinition {
     private long startingTime;
     private long transferSize = 0;
     private int downloadSpeed = 0;
-    private int percentageCompleted = 100;
+    private double percentageCompleted = 100;
 
     private UUID reportTId;
 
@@ -108,10 +105,9 @@ public class ReportComp extends ComponentDefinition {
         @Override
         public void handle(DownloadStatus.Done event) {
             LOG.info("{}download:{} done", logPrefix, event.overlayId);
-            report(event.overlayId, event.connectionStatus);
             cancelReport();
             long transferTime = System.currentTimeMillis() - startingTime;
-            LOG.info("{}downoad completed in:{} avg dwnl speed:{} KB/s", new Object[]{logPrefix, transferTime, (double)transferSize/transferTime});
+            LOG.info("{}download completed in:{} avg dwnl speed:{} KB/s", new Object[]{logPrefix, transferTime, (double)transferSize/transferTime});
             trigger(new DownloadSummaryEvent(torrentId, transferSize, transferTime), reportPort);
             downloadSpeed = 0;
             status = TorrentStatus.UPLOADING;
@@ -122,46 +118,14 @@ public class ReportComp extends ComponentDefinition {
     Handler handleDownloadResponse = new Handler<DownloadStatus.Response>() {
         @Override
         public void handle(DownloadStatus.Response resp) {
-            report(resp.overlayId, resp.connectionStatus);
             percentageCompleted = resp.percentageCompleted;
+            LOG.info("{}report:{}", logPrefix, percentageCompleted);
         }
     };
     
-    private void report(Identifier overlayId, Map<Identifier, ConnectionStatus> conn) {
-        StringBuilder sb = new StringBuilder();
-            sb.append("o:").append(overlayId).append("***********\n");
-            int maxSlots = 0;
-            int usedSlots = 0;
-            int successSlots = 0;
-            int failedSlots = 0;
-            for (Map.Entry<Identifier, ConnectionStatus> cs : conn.entrySet()) {
-                sb.append("o:").append(overlayId).append("n:").append(cs.getKey());
-                maxSlots += cs.getValue().maxSlots;
-                sb.append(" ms:").append(cs.getValue().maxSlots);
-                usedSlots += cs.getValue().usedSlots;
-                sb.append(" us:").append(cs.getValue().usedSlots);
-                successSlots += cs.getValue().successSlots;
-                sb.append(" s:").append(cs.getValue().successSlots);
-                failedSlots += cs.getValue().failedSlots;
-                sb.append(" f:").append(cs.getValue().failedSlots);
-                sb.append("\n");
-            }
-            sb.append("o:").append(overlayId);
-            sb.append(" tms:").append(maxSlots);
-            sb.append(" tus:").append(usedSlots);
-            sb.append(" ts:").append(successSlots);
-            sb.append(" tf:").append(failedSlots);
-            
-            LOG.debug("{}", sb);
-            
-            transferSize += pieceSize * successSlots;
-            downloadSpeed = (int)(successSlots / (reportDelay/1000));
-    }
-
     Handler handleReport = new Handler<ReportTimeout>() {
         @Override
         public void handle(ReportTimeout event) {
-            LOG.debug("{}report", logPrefix);
             trigger(new DownloadStatus.Request(event.overlayId), torrentPort);
         }
     };

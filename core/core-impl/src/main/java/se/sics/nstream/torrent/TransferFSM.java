@@ -31,12 +31,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
 import se.sics.kompics.network.MessageNotify;
 import se.sics.kompics.network.Msg;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
+import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.CancelTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
@@ -50,6 +52,8 @@ import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.report.TransferStatusPort;
+import se.sics.nstream.report.event.DownloadStatus;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.torrent.event.HashGet;
 import se.sics.nstream.torrent.event.PieceGet;
@@ -122,6 +126,10 @@ public abstract class TransferFSM {
     }
 
     public void handlePieceTimeout(TorrentTimeout.Piece timeout) {
+    }
+
+    public void handleTransferStatusReq(DownloadStatus.Request req) {
+
     }
 
     public void handleNotify(MessageNotify.Resp resp) {
@@ -242,14 +250,21 @@ public abstract class TransferFSM {
         protected final byte[] torrentByte;
         protected final TransferDetails transferDetails;
         protected final MultiFileTransfer transferMngr;
-        protected final Map<Identifier, PendingHashReq> pendingHashes = new HashMap<>();
-        protected final Map<Identifier, PieceGet.Request> pendingPieces = new HashMap<>();
+        protected final Map<Identifier, PendingHashReq> pendingOutHashes;
+        protected final Map<Identifier, PieceGet.Request> pendingOutPieces;
 
-        public TransferState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails, MultiFileTransfer transferMngr) {
+        public TransferState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails, MultiFileTransfer transferMngr, 
+                Map<Identifier, PendingHashReq> pendingOutHashes, Map<Identifier, PieceGet.Request> pendingOutPieces) {
             super(cs);
             this.torrentByte = torrentByte;
             this.transferDetails = transferDetails;
             this.transferMngr = transferMngr;
+            this.pendingOutHashes = pendingOutHashes;
+            this.pendingOutPieces = pendingOutPieces;
+        }
+        
+        public TransferState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails, MultiFileTransfer transferMngr) {
+            this(cs, torrentByte, transferDetails, transferMngr, new HashMap<Identifier, PendingHashReq>(), new HashMap<Identifier, PieceGet.Request>());
         }
 
         @Override
@@ -280,7 +295,7 @@ public abstract class TransferFSM {
             updateCacheHint(msg.getHeader().getSource().getId(), req.cacheHints);
             TransferMngr.Reader reader = transferMngr.readFrom(req.fileName);
             final PendingHashReq phr = new PendingHashReq(msg);
-            pendingHashes.put(req.eventId, phr);
+            pendingOutHashes.put(req.eventId, phr);
             for (final Integer hash : req.hashes) {
                 if (reader.hasHash(hash)) {
                     HashReadCallback hashRC = new HashReadCallback() {
@@ -294,7 +309,7 @@ public abstract class TransferFSM {
                         public boolean success(Result<KReference<byte[]>> result) {
                             phr.hash(hash, result.getValue());
                             if (phr.canAnswer()) {
-                                pendingHashes.remove(req.eventId);
+                                pendingOutHashes.remove(req.eventId);
                                 answer(phr.answer());
                             }
                             return true;
@@ -304,7 +319,7 @@ public abstract class TransferFSM {
                 } else {
                     phr.missingHash(hash);
                     if (phr.canAnswer()) {
-                        pendingHashes.remove(req.eventId);
+                        pendingOutHashes.remove(req.eventId);
                         answer(phr.answer());
                     }
                 }
@@ -317,7 +332,7 @@ public abstract class TransferFSM {
             updateCacheHint(msg.getHeader().getSource().getId(), req.cacheHints);
             TransferMngr.Reader reader = transferMngr.readFrom(req.fileName);
             if (reader.hasBlock(req.pieceNr.getValue0())) {
-                pendingPieces.put(req.eventId, req);
+                pendingOutPieces.put(req.eventId, req);
                 PieceReadCallback pieceRC = new PieceReadCallback() {
 
                     @Override
@@ -327,7 +342,7 @@ public abstract class TransferFSM {
 
                     @Override
                     public boolean success(Result<KReference<byte[]>> result) {
-                        pendingPieces.remove(req.eventId);
+                        pendingOutPieces.remove(req.eventId);
                         answer(msg, req.success(result.getValue()));
                         return true;
                     }
@@ -369,12 +384,12 @@ public abstract class TransferFSM {
 
     public static class DownloadState extends TransferState {
 
-        private final Map<Identifier, UUID> pendingHashes = new HashMap<>();
-        private final Map<Identifier, UUID> pendingPieces = new HashMap<>();
+        private final Map<Identifier, UUID> pendingInHashes = new HashMap<>();
+        private final Map<Identifier, UUID> pendingInPieces = new HashMap<>();
         private UUID advanceDownload;
         private long periodSuccess = 0;
         private long periodTimeouts = 0;
-        private long startTransfer;
+        private boolean completed = false;
 
         public DownloadState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails) {
             super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, cs.componentLoad, transferDetails, false));
@@ -384,9 +399,9 @@ public abstract class TransferFSM {
         public void start() {
             super.start();
             LOG.info("{}download start transfer", cs.logPrefix);
-            startTransfer = System.currentTimeMillis();
             tryDownload();
             cs.proxy.trigger(scheduleAdvanceDownload(), cs.timerPort);
+            cs.proxy.trigger(new DownloadStatus.Starting(cs.overlayId), cs.transferStatusPort);
         }
 
         @Override
@@ -397,7 +412,17 @@ public abstract class TransferFSM {
 
         @Override
         public TransferFSM next() {
-            return this;
+            if (!completed) {
+                return this;
+            } else {
+                return new UploadState(cs, torrentByte, transferDetails, transferMngr, pendingOutHashes, pendingOutPieces);
+            }
+        }
+
+        private void completeDownload() {
+            LOG.info("{}download finished transfer");
+            cancelAdvanceDownload();
+            completed = true;
         }
 
         @Override
@@ -407,7 +432,7 @@ public abstract class TransferFSM {
 
         @Override
         public void handleHashResp(KContentMsg msg, HashGet.Response resp) {
-            UUID tId = pendingHashes.remove(resp.eventId);
+            UUID tId = pendingInHashes.remove(resp.eventId);
             if (tId == null) {
                 LOG.trace("{}late response:{}", cs.logPrefix, resp);
                 return;
@@ -431,7 +456,7 @@ public abstract class TransferFSM {
         @Override
         public void handleHashTimeout(TorrentTimeout.Hash timeout) {
             LOG.trace("{}timeout:{}", cs.logPrefix, timeout);
-            UUID tId = pendingHashes.remove(timeout.req.getId());
+            UUID tId = pendingInHashes.remove(timeout.req.getId());
             if (tId == null) {
                 LOG.trace("{}late timeout:{}", cs.logPrefix, timeout);
                 return;
@@ -448,7 +473,7 @@ public abstract class TransferFSM {
             if (resp.pieceNr.getValue1() == 1023) {
                 int x = 1;
             }
-            UUID tId = pendingPieces.remove(resp.eventId);
+            UUID tId = pendingInPieces.remove(resp.eventId);
             if (tId == null) {
                 LOG.trace("{}late response:{}", cs.logPrefix, resp);
                 return;
@@ -465,7 +490,7 @@ public abstract class TransferFSM {
 
         @Override
         public void handlePieceTimeout(TorrentTimeout.Piece timeout) {
-            UUID tId = pendingPieces.remove(timeout.req.eventId);
+            UUID tId = pendingInPieces.remove(timeout.req.eventId);
             if (tId == null) {
                 LOG.trace("{}late timeout:{}", cs.logPrefix, timeout);
                 return;
@@ -485,6 +510,11 @@ public abstract class TransferFSM {
             periodTimeouts = 0;
         }
 
+        @Override
+        public void handleTransferStatusReq(DownloadStatus.Request req) {
+            cs.proxy.answer(req, req.answer(transferMngr.percentageComplete()));
+        }
+
         private void tryDownload() {
             LOG.trace("{}downloading...", cs.logPrefix);
 
@@ -499,13 +529,10 @@ public abstract class TransferFSM {
                 Optional<MultiFileTransfer.NextDownload> nextDownload = transferMngr.nextDownload();
                 if (!nextDownload.isPresent()) {
                     if (transferMngr.complete()) {
-                        if (startTransfer != 0) {
-                            long end = System.currentTimeMillis();
-                            LOG.info("{}complete time:{}", cs.logPrefix, (end - startTransfer) / 1000);
-                            startTransfer = 0;
-                        }
                         LOG.info("{}download completed transfer", cs.logPrefix);
-                    } 
+                        cs.proxy.trigger(new DownloadStatus.Done(cs.overlayId), cs.transferStatusPort);
+                        completeDownload();
+                    }
                     return;
                 }
                 if (nextDownload.get() instanceof MultiFileTransfer.SlowDownload) {
@@ -528,6 +555,12 @@ public abstract class TransferFSM {
             }
         }
 
+        private void cancelAdvanceDownload() {
+            CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(advanceDownload);
+            cs.proxy.trigger(cpd, cs.timerPort);
+            advanceDownload = null;
+        }
+
         private SchedulePeriodicTimeout scheduleAdvanceDownload() {
             SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(TransferConfig.advanceDownloadPeriod, TransferConfig.advanceDownloadPeriod);
             TorrentTimeout.AdvanceDownload tt = new TorrentTimeout.AdvanceDownload(spt);
@@ -540,7 +573,7 @@ public abstract class TransferFSM {
             ScheduleTimeout st = new ScheduleTimeout(TransferConfig.hashTimeout);
             TorrentTimeout.Hash tt = new TorrentTimeout.Hash(st, req, target);
             st.setTimeoutEvent(tt);
-            pendingHashes.put(req.getId(), tt.getTimeoutId());
+            pendingInHashes.put(req.getId(), tt.getTimeoutId());
             return st;
         }
 
@@ -548,7 +581,7 @@ public abstract class TransferFSM {
             ScheduleTimeout st = new ScheduleTimeout(TransferConfig.pieceTimeout);
             TorrentTimeout.Piece tt = new TorrentTimeout.Piece(st, req, target);
             st.setTimeoutEvent(tt);
-            pendingPieces.put(req.getId(), tt.getTimeoutId());
+            pendingInPieces.put(req.getId(), tt.getTimeoutId());
             return st;
 
         }
@@ -556,8 +589,14 @@ public abstract class TransferFSM {
 
     public static class UploadState extends TransferState {
 
+        public UploadState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails, MultiFileTransfer mft, 
+                Map<Identifier, PendingHashReq> pendingOutHashes, Map<Identifier, PieceGet.Request> pendingOutPieces) {
+            super(cs, torrentByte, transferDetails, mft, pendingOutHashes, pendingOutPieces);
+        }
+        
         public UploadState(CommonState cs, byte[] torrentByte, TransferDetails transferDetails) {
-            super(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, cs.componentLoad, transferDetails, true));
+            this(cs, torrentByte, transferDetails, new MultiFileTransfer(cs.config, cs.proxy, cs.exSyncHandler, cs.componentLoad, transferDetails, true), 
+                    new HashMap<Identifier, PendingHashReq>(), new HashMap<Identifier, PieceGet.Request>());
         }
 
         @Override
@@ -585,6 +624,7 @@ public abstract class TransferFSM {
         Positive<Timer> timerPort;
         Positive<Network> networkPort;
         Positive<TransferMngrPort> transferMngrPort;
+        Negative<TransferStatusPort> transferStatusPort;
         //**********************************************************************
         public final Config config;
         public final TorrentConfig torrentConfig;
@@ -608,6 +648,7 @@ public abstract class TransferFSM {
             networkPort = proxy.getNegative(Network.class).getPair();
             timerPort = proxy.getNegative(Timer.class).getPair();
             transferMngrPort = proxy.getNegative(TransferMngrPort.class).getPair();
+            transferStatusPort = proxy.getPositive(TransferStatusPort.class).getPair();
         }
     }
 }

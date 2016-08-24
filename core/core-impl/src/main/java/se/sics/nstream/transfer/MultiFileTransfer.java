@@ -167,6 +167,21 @@ public class MultiFileTransfer implements StreamControl {
         }
         return Optional.absent();
     }
+    
+    public double percentageComplete() {
+        long totalSize = 0;
+        long completedSize = 0;
+        
+        for(UploadTransferMngr c: completed.values()) {
+            totalSize += c.fileLength();
+            completedSize += c.fileLength();
+        }
+        for(DownloadTransferMngr o: ongoing.values()) {
+            totalSize += o.fileLength();
+            completedSize += (long)(o.percentageComplete() * o.fileLength() / 100);
+        }
+        return (double)(100 * completedSize) / totalSize; 
+    }
 
     public boolean complete() {
         return ongoing.isEmpty();

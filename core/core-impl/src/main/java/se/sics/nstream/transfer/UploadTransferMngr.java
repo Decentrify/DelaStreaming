@@ -98,4 +98,8 @@ public class UploadTransferMngr implements StreamControl, TransferMngr.Reader {
         KPiece pieceRange = BlockHelper.getPieceRange(pieceNr, fileDetails);
         file.read(pieceRange, pieceRC);
     }
+    //**************************************************************************
+    public long fileLength() {
+        return fileDetails.length;
+    }
 }

@@ -16,14 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.stream.torrent.event;
+package se.sics.nstream.report.event;
 
-import java.util.Map;
-import se.sics.nstream.StreamEvent;
-import se.sics.gvod.stream.util.ConnectionStatus;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.nstream.StreamEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -58,16 +56,14 @@ public class DownloadStatus {
 
         public final Identifier eventId;
         public final Identifier overlayId;
-        public final Map<Identifier, ConnectionStatus> connectionStatus;
 
-        public Done(Identifier eventId, Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus) {
+        public Done(Identifier eventId, Identifier overlayId) {
             this.eventId = eventId;
             this.overlayId = overlayId;
-            this.connectionStatus = connectionStatus;
         }
 
-        public Done(Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus) {
-            this(UUIDIdentifier.randomId(), overlayId, connectionStatus);
+        public Done(Identifier overlayId) {
+            this(UUIDIdentifier.randomId(), overlayId);
         }
 
         @Override
@@ -94,8 +90,8 @@ public class DownloadStatus {
             this(UUIDIdentifier.randomId(), overlayId);
         }
         
-        public Response answer(Map<Identifier, ConnectionStatus> connectionStatus, int percentageCompleted) {
-            return new Response(eventId, overlayId, connectionStatus, percentageCompleted);
+        public Response answer(double percentageCompleted) {
+            return new Response(eventId, overlayId, percentageCompleted);
         }
 
         @Override
@@ -112,19 +108,16 @@ public class DownloadStatus {
     public static class Response implements Direct.Response, StreamEvent {
         public final Identifier eventId;
         public final Identifier overlayId;
-        public final Map<Identifier, ConnectionStatus> connectionStatus;
-        public final int percentageCompleted;
+        public final double percentageCompleted;
 
-        Response(Identifier eventId, Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus,
-                int percentageCompleted) {
+        Response(Identifier eventId, Identifier overlayId, double percentageCompleted) {
             this.eventId = eventId;
             this.overlayId = overlayId;
-            this.connectionStatus = connectionStatus;
             this.percentageCompleted = percentageCompleted;
         }
 
-        Response(Identifier overlayId, Map<Identifier, ConnectionStatus> connectionStatus, int percentageCompleted) {
-            this(UUIDIdentifier.randomId(), overlayId, connectionStatus, percentageCompleted);
+        Response(Identifier overlayId, double percentageCompleted) {
+            this(UUIDIdentifier.randomId(), overlayId, percentageCompleted);
         }
 
         @Override

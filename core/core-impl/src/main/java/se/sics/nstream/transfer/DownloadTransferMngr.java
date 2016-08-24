@@ -465,4 +465,8 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     public DownloadTMReport report() {
         return new DownloadTMReport(file.report(), workPos, hashPos, cachePos, pendingBlocks.size());
     }
+    
+    public long fileLength() {
+        return fileDetails.length;
+    }
 }

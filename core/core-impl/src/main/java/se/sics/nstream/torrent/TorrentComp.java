@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
+import se.sics.kompics.Negative;
 import se.sics.kompics.PortType;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
@@ -46,7 +47,9 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nstream.StreamEvent;
-import se.sics.nstream.report.ReportTimeout;
+import se.sics.nstream.report.TransferStatusPort;
+import se.sics.nstream.report.event.DownloadStatus;
+import se.sics.nstream.report.event.ReportTimeout;
 import se.sics.nstream.torrent.event.HashGet;
 import se.sics.nstream.torrent.event.PieceGet;
 import se.sics.nstream.torrent.event.TorrentGet;
@@ -70,6 +73,7 @@ public class TorrentComp extends ComponentDefinition {
     Positive<TransferMngrPort> transferMngrPort = requires(TransferMngrPort.class);
     Positive<Network> networkPort = requires(Network.class);
     Positive<Timer> timerPort = requires(Timer.class);
+    Negative<TransferStatusPort> transferStatusPort = provides(TransferStatusPort.class);
     List<Positive> requiredPorts = new ArrayList<>();
     //**************************************************************************
     private final TorrentConfig torrentConfig;
@@ -107,6 +111,7 @@ public class TorrentComp extends ComponentDefinition {
         subscribe(handleNetworkLoadCheck, networkPort);
         subscribe(handleNettyCheck, networkPort);
         subscribe(handleExtendedTorrentResp, transferMngrPort);
+        subscribe(handleTransferStatusReq, transferStatusPort);
     }
 
     private void transferState(Init init) {
@@ -153,16 +158,16 @@ public class TorrentComp extends ComponentDefinition {
         }
     };
 
+    Handler handleTransferStatusReq  = new Handler<DownloadStatus.Request>() {
+        @Override
+        public void handle(DownloadStatus.Request event) {
+            transfer.handleTransferStatusReq(event);
+        }
+    };
+
     Handler handleLoadCheck = new Handler<LoadCheckTimeout>() {
         @Override
         public void handle(LoadCheckTimeout timeout) {
-//            long now = System.currentTimeMillis();
-//            long queueDelay = now - timeout.createdAt - timeout.delay;
-//            componentLoad.adjustState(queueDelay);
-//            LOG.info("{}component state timer:{}", logPrefix, componentLoad.state());
-//            if (router.changed()) {
-//                componentLoad.outsideChange();
-//            }
             sendNetworkCheck();
         }
     };
