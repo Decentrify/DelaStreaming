@@ -94,9 +94,9 @@
             <url>http://kompics.sics.se/maven/repository</url>
             <releases>
             </releases>
-            <snapshots>
+<!--            <snapshots>
                 <enabled>false</enabled>
-            </snapshots>
+            </snapshots>-->
         </repository>
         <repository>
             <id>sics-snapshot</id>
