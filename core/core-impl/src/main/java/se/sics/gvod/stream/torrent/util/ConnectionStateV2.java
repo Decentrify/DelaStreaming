@@ -22,7 +22,7 @@ import java.util.LinkedList;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.stream.report.ReportComp;
+import se.sics.nstream.report.ReportComp;
 import se.sics.gvod.stream.util.ConnectionStatus;
 
 /**

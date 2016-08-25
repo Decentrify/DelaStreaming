@@ -20,7 +20,7 @@ package se.sics.gvod.stream.connection.event;
 
 import java.util.Map;
 import se.sics.gvod.common.util.VodDescriptor;
-import se.sics.gvod.stream.StreamEvent;
+import se.sics.nstream.StreamEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;

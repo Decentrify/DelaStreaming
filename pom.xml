@@ -9,13 +9,14 @@
     
     <modules>
         <module>common</module>
-        <module>caracal-client</module>
+        <!--<module>caracal-client</module>-->
         <module>core</module>
-        <module>manager</module>
+        <!--<module>manager</module>-->
         <module>network</module>
         <!--<module>system</module>-->
         <!--        <module>simulation</module>-->
-        <module>simulator</module>
+        <!--<module>simulator</module>-->
+        <module>hops</module>
     </modules>
     
     <properties>
@@ -93,9 +94,9 @@
             <url>http://kompics.sics.se/maven/repository</url>
             <releases>
             </releases>
-            <snapshots>
+<!--            <snapshots>
                 <enabled>false</enabled>
-            </snapshots>
+            </snapshots>-->
         </repository>
         <repository>
             <id>sics-snapshot</id>

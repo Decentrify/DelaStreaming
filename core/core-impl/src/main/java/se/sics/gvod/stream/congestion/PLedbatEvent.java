@@ -18,7 +18,7 @@
  */
 package se.sics.gvod.stream.congestion;
 
-import se.sics.gvod.stream.StreamEvent;
+import se.sics.nstream.StreamEvent;
 
 /**
  *
