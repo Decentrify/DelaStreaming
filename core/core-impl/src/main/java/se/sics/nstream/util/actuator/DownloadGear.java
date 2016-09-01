@@ -27,52 +27,94 @@ import se.sics.kompics.KompicsEvent;
  */
 public class DownloadGear {
 
-    private static abstract class Cog {
+    private static class OngoingGear implements ReqMngr {
+        private final int gearSize;
         private int ongoing;
-        private List<Req> requests;
+        private OngoingCog current;
+        private final List<OngoingCog> cogs;
         
-        private Cog() {
+        public OngoingGear(int gearSize) {
+            this.gearSize = gearSize;
+            this.cogs = new LinkedList<>();
+        }
+
+        public int ongoing() {
+            return ongoing;
+        }
+        //*******************************ReqMngr********************************
+        @Override
+        public void success(Req req) {
+            ongoing--;
+        }
+    }
+
+    private static interface ReqMngr {
+
+        public void success(Req req);
+    }
+
+    private static class OngoingCog implements ReqMngr {
+        private final ReqMngr reqMngr;
+        private int ongoing;
+        private final List<Req> requests;
+
+        private OngoingCog(ReqMngr reqMngr) {
+            this.reqMngr = reqMngr;
             this.ongoing = 0;
             this.requests = new LinkedList<>();
         }
-        
-        private void completeReq() {
-            ongoing--;
-        }
-        
-        public void scheduleReq(KompicsEvent event);
-    }
-    
-    private static class OngoingCog extends Cog {
-        @Override
+
         public void scheduleReq(KompicsEvent event) {
-            requests.add(new Req(this, event));
+            requests.add(new Req(this, State.ONGOING, event));
             ongoing++;
         }
+
+        public List<Req> tick() {
+            List<Req> suspected = new LinkedList<>();
+
+            for (Req req : requests) {
+                if (!State.SUCCESS.equals(req.state)) {
+                    req.suspect();
+                    suspected.add(req);
+                }
+            }
+            requests.clear();
+            return suspected;
+        }
+
+        //*******************************ReqMngr********************************
+        @Override
+        public void success(Req req) {
+            ongoing--;
+            //we don't clean the req now, we clean successfull requests on tick
+            reqMngr.success(req);
+        }
     }
-    
+
     private static class Req {
+
         private State state;
-        private final Cog cog;
+        private final ReqMngr cog;
         private final KompicsEvent payload;
-        
-        public Req(Cog cog, State state, KompicsEvent payload) {
+
+        public Req(ReqMngr cog, State state, KompicsEvent payload) {
             this.state = state;
             this.cog = cog;
             this.payload = payload;
         }
-        
+
         public void success() {
             this.state = State.SUCCESS;
-            cog.completeReq();
+            cog.success(this);
         }
-        
+
         public void suspect() {
             this.state = State.SUSPECTED;
         }
     }
-    
+
     private static enum State {
+
         ONGOING, SUCCESS, SUSPECTED
     }
 }
