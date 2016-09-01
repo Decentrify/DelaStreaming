@@ -24,6 +24,12 @@
             <version>${ktoolbox.version}</version>
         </dependency>
         
+        <dependency> 
+            <groupId>se.sics.ledbat</groupId>
+            <artifactId>core</artifactId>
+            <version>${ktoolbox.version}</version>
+        </dependency>
+        
         <dependency>
             <groupId>se.sics.ktoolbox.croupier</groupId>
             <artifactId>api</artifactId>

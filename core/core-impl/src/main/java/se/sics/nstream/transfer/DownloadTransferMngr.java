@@ -39,7 +39,7 @@ import se.sics.nstream.storage.managed.FileBWC;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.StreamControl;
-import se.sics.nstream.util.actuator.ComponentLoad;
+import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.actuator.ComponentLoadConfig;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
@@ -56,7 +56,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
 
     private final TransferMngrConfig tmConfig;
     private final FileBaseDetails fileDetails;
-    private final ComponentLoad loadTracker;
+    private final ComponentLoadTracking loadTracker;
     private final String fileName;
     //**************************************************************************
     private final AppendFileMngr file;
@@ -75,7 +75,7 @@ public class DownloadTransferMngr implements StreamControl, TransferMngr.Writer,
     //**************************************************************************
     private final Map<Integer, FileBWC> pendingStorageWrites = new HashMap<>();
 
-    public DownloadTransferMngr(String fileName, ComponentLoad loadTracker, FileBaseDetails fileDetails, AppendFileMngr file) {
+    public DownloadTransferMngr(String fileName, ComponentLoadTracking loadTracker, FileBaseDetails fileDetails, AppendFileMngr file) {
         this.fileName = fileName;
         this.loadTracker = loadTracker;
         this.fileDetails = fileDetails;

@@ -38,7 +38,7 @@ import se.sics.nstream.storage.StoragePort;
 import se.sics.nstream.storage.StorageWrite;
 import se.sics.nstream.util.StreamEndpoint;
 import se.sics.nstream.util.StreamResource;
-import se.sics.nstream.util.actuator.ComponentLoad;
+import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.WriteCallback;
 
@@ -60,7 +60,7 @@ public class SimpleAppendKBuffer implements KBuffer {
     private final Positive<StoragePort> writePort;
     private final ComponentProxy proxy;
     private final DelayedExceptionSyncHandler syncExHandling;
-    private final ComponentLoad loadTracker;
+    private final ComponentLoadTracking loadTracker;
     //**************************************************************************
     private int blockPos;
     private int answeredBlockPos;
@@ -69,7 +69,7 @@ public class SimpleAppendKBuffer implements KBuffer {
     private final Set<Identifier> pendingWriteReqs = new HashSet<>(); 
     //**************************************************************************
 
-    public SimpleAppendKBuffer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExceptionHandling, ComponentLoad loadTracker,
+    public SimpleAppendKBuffer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExceptionHandling, ComponentLoadTracking loadTracker,
             StreamEndpoint writeEndpoint, StreamResource writeResource, long appendPos) {
         this.bufferConfig = new KBufferConfig(config);
         this.writeResource = writeResource;

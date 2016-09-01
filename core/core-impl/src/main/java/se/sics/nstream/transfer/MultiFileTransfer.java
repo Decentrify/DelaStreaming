@@ -46,7 +46,7 @@ import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.StreamEndpoint;
 import se.sics.nstream.util.StreamResource;
 import se.sics.nstream.util.TransferDetails;
-import se.sics.nstream.util.actuator.ComponentLoad;
+import se.sics.nstream.util.actuator.ComponentLoadTracking;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -57,7 +57,7 @@ public class MultiFileTransfer implements StreamControl {
     private final TreeMap<String, DownloadTransferMngr> ongoing = new TreeMap<>();
     private final Map<String, DownloadTMReport> completedReports = new HashMap<>();
 
-    public MultiFileTransfer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler, ComponentLoad loadTracker,
+    public MultiFileTransfer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler, ComponentLoadTracking loadTracker,
             TransferDetails transferDetails, boolean complete) {
         for (Map.Entry<String, FileExtendedDetails> entry : transferDetails.extended.entrySet()) {
             FileBaseDetails fileDetails = transferDetails.base.baseDetails.get(entry.getKey());

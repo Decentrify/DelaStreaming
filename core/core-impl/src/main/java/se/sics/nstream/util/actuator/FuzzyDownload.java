@@ -20,6 +20,8 @@ package se.sics.nstream.util.actuator;
 
 import java.util.Random;
 import org.javatuples.Triplet;
+import se.sics.ktoolbox.util.tracking.load.util.FuzzyTimeoutCounter;
+import se.sics.ktoolbox.util.tracking.load.util.StatusState;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -32,8 +34,8 @@ public class FuzzyDownload {
     private int lastWindowSize;
     private int waitingTime;
     private int usedSlots;
-    private DownloadStates current;
-    private DownloadStates old;
+    private StatusState current;
+    private StatusState old;
     private boolean changed;
 
     private FuzzyDownload(FuzzyTimeoutCounter window, ExpRandomSpeedActuator speedActuator) {
@@ -43,8 +45,8 @@ public class FuzzyDownload {
         this.lastWindowSize = currentWindowSize;
         this.waitingTime = currentWindowSize;
         this.usedSlots = 0;
-        this.current = DownloadStates.MAINTAIN;
-        this.old = DownloadStates.MAINTAIN;
+        this.current = StatusState.MAINTAIN;
+        this.old = StatusState.MAINTAIN;
         this.changed = false;
     }
 
@@ -113,14 +115,14 @@ public class FuzzyDownload {
 
     private void maintain() {
         old = current;
-        current = DownloadStates.MAINTAIN;
+        current = StatusState.MAINTAIN;
         lastWindowSize = currentWindowSize;
         waitingTime = currentWindowSize;
     }
 
     private void slowDown() {
         old = current;
-        current = DownloadStates.SLOW_DOWN;
+        current = StatusState.SLOW_DOWN;
         speedActuator.down();
         lastWindowSize = currentWindowSize;
         currentWindowSize = speedActuator.speed();
@@ -128,19 +130,19 @@ public class FuzzyDownload {
         if (usedSlots > currentWindowSize) {
             usedSlots = currentWindowSize;
         }
-        if (!old.equals(DownloadStates.SLOW_DOWN)) {
+        if (!old.equals(StatusState.SLOW_DOWN)) {
             changed = true;
         }
     }
 
     private void speedUp() {
         old = current;
-        current = DownloadStates.SPEED_UP;
+        current = StatusState.SPEED_UP;
         speedActuator.up();
         lastWindowSize = currentWindowSize;
         currentWindowSize = speedActuator.speed();
         waitingTime = currentWindowSize + lastWindowSize;
-        if (!old.equals(DownloadStates.SLOW_DOWN)) {
+        if (!old.equals(StatusState.SLOW_DOWN)) {
             changed = true;
         }
     }

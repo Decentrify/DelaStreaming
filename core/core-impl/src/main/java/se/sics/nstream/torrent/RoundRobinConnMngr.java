@@ -18,12 +18,16 @@
  */
 package se.sics.nstream.torrent;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
+import org.javatuples.Pair;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.util.actuator.FuzzyDownload;
-import se.sics.nstream.util.actuator.FuzzyDownloadConfig;
+import se.sics.ledbat.core.LedbatConfig;
+import se.sics.ledbat.ncore.PullConnection;
+import se.sics.ledbat.ncore.msg.LedbatMsg;
 
 /**
  *
@@ -31,13 +35,16 @@ import se.sics.nstream.util.actuator.FuzzyDownloadConfig;
  */
 public class RoundRobinConnMngr implements Router {
 
-    private final FuzzyDownload loadTracker;
+    private final LedbatConfig ledbatConfig;
+    private final Map<Identifier, PullConnection> loadTracker = new HashMap<>();
     private final LinkedList<KAddress> partners = new LinkedList<>();
 
-    public RoundRobinConnMngr(List<KAddress> partners) {
+    public RoundRobinConnMngr(LedbatConfig ledbatConfig, List<KAddress> partners) {
+        this.ledbatConfig = ledbatConfig;
         this.partners.addAll(partners);
-        this.loadTracker = FuzzyDownload.getInstance(new Random(FuzzyDownloadConfig.seed), FuzzyDownloadConfig.acceptedTimeoutsPercentage, 
-                FuzzyDownloadConfig.minSpeed, FuzzyDownloadConfig.maxSpeed, FuzzyDownloadConfig.baseChange, FuzzyDownloadConfig.resetChance);
+        for (KAddress partner : partners) {
+            loadTracker.put(partner.getId(), new PullConnection(ledbatConfig, partner.getId()));
+        }
     }
 
     @Override
@@ -46,40 +53,60 @@ public class RoundRobinConnMngr implements Router {
         partners.add(first);
         return first;
     }
-    
+
+//    @Override
+//    public int totalSlots() {
+//        return loadTracker.windowSize();
+//    }
+//
     @Override
-    public int totalSlots() {
-        return loadTracker.windowSize();
-    }
-    @Override
-    public boolean availableSlot() {
-        return loadTracker.availableSlot();
+    public Pair<KAddress, Long> availableSlot() {
+        int n = partners.size();
+        while(n > 0) {
+            n--;
+            KAddress next = partners.removeFirst();
+            partners.add(next);
+            PullConnection pc = loadTracker.get(next.getId());
+            if(pc.canSend() > 0) {
+                return Pair.with(next, pc.getRTO());
+            }
+        }
+        return null;
     }
 
     @Override
-    public void useSlot() {
-        loadTracker.useSlot();
+    public void useSlot(KAddress target) {
+        PullConnection pc = loadTracker.get(target.getId());
+        if (pc == null) {
+            return;
+        }
+        pc.request(ledbatConfig.mss);
     }
-    
+
     @Override
-    public void success() {
-        loadTracker.success();
+    public void success(KAddress target, LedbatMsg.Response resp) {
+        PullConnection pc = loadTracker.get(target.getId());
+        if (pc == null) {
+            return;
+        }
+        pc.success(ledbatConfig.mss, resp);
     }
 
     @Override
     public void timeout(KAddress target) {
-        loadTracker.timeout();
+        PullConnection pc = loadTracker.get(target.getId());
+        if (pc == null) {
+            return;
+        }
+        pc.timeout(ledbatConfig.mss);
     }
-    
-    public boolean changed() {
-        return loadTracker.changed();
-    }
-    
+//
+//    public boolean changed() {
+//        return loadTracker.changed();
+//    }
+
     public String report() {
-        return loadTracker.report();
-    }
-    
-    public void slowDown() {
-        loadTracker.externalSlowDown();
+        return "report-dissabled";
+//        return loadTracker.report();
     }
 }

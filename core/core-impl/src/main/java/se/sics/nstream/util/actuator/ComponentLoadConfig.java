@@ -23,9 +23,7 @@ package se.sics.nstream.util.actuator;
  */
 public class ComponentLoadConfig {
     public static final int seed = 1234;
-    public static final long targetQueueDelay = 200;
-    public static final long maxQueueDelay = 500;
     public static final long maxCheckPeriod = 10000;
-    public static final int maxBuffer = 10;
-    public static final int maxTransfer = 10;
+    public static final int maxBuffer = 50;
+    public static final int maxTransfer = 50;
 }

@@ -24,6 +24,4 @@ package se.sics.nstream.torrent;
 public class TransferConfig {
     public static long notifyCheckPeriod = 1000;
     public static long advanceDownloadPeriod = 1000;
-    public static long hashTimeout = 2000;
-    public static long pieceTimeout = 2000;
 }

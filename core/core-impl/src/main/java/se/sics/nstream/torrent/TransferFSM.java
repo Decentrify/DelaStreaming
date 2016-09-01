@@ -52,6 +52,7 @@ import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.ledbat.ncore.msg.LedbatMsg;
 import se.sics.nstream.report.TransferStatusPort;
 import se.sics.nstream.report.event.DownloadStatus;
 import se.sics.nstream.storage.cache.KHint;
@@ -65,7 +66,7 @@ import se.sics.nstream.transfer.TransferMngr;
 import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.TransferDetails;
-import se.sics.nstream.util.actuator.ComponentLoad;
+import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.result.HashReadCallback;
 import se.sics.nstream.util.result.NopHashWC;
 import se.sics.nstream.util.result.NopPieceWC;
@@ -110,19 +111,19 @@ public abstract class TransferFSM {
     public void handleAdvanceDownload(TorrentTimeout.AdvanceDownload timeout) {
     }
 
-    public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> msg, HashGet.Request req) {
+    public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<HashGet.Request>> msg, LedbatMsg.Request<HashGet.Request> req) {
     }
 
-    public void handleHashResp(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Response> msg, HashGet.Response resp) {
+    public void handleHashResp(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response<HashGet.Response>> msg, LedbatMsg.Response<HashGet.Response> resp) {
     }
 
     public void handleHashTimeout(TorrentTimeout.Hash timeout) {
     }
 
-    public void handlePieceReq(KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request> msg, PieceGet.Request req) {
+    public void handlePieceReq(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<PieceGet.Request>> msg, LedbatMsg.Request<PieceGet.Request> req) {
     }
 
-    public void handlePieceResp(KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Response> msg, PieceGet.Response resp) {
+    public void handlePieceResp(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response<PieceGet.Response>> msg, LedbatMsg.Response<PieceGet.Response> resp) {
     }
 
     public void handlePieceTimeout(TorrentTimeout.Piece timeout) {
@@ -291,12 +292,12 @@ public abstract class TransferFSM {
         }
 
         @Override
-        public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> msg, final HashGet.Request req) {
-            updateCacheHint(msg.getHeader().getSource().getId(), req.cacheHints);
-            TransferMngr.Reader reader = transferMngr.readFrom(req.fileName);
+        public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<HashGet.Request>> msg, final LedbatMsg.Request<HashGet.Request> req) {
+            updateCacheHint(msg.getHeader().getSource().getId(), req.payload.cacheHints);
+            TransferMngr.Reader reader = transferMngr.readFrom(req.payload.fileName);
             final PendingHashReq phr = new PendingHashReq(msg);
-            pendingOutHashes.put(req.eventId, phr);
-            for (final Integer hash : req.hashes) {
+            pendingOutHashes.put(req.payload.eventId, phr);
+            for (final Integer hash : req.payload.hashes) {
                 if (reader.hasHash(hash)) {
                     HashReadCallback hashRC = new HashReadCallback() {
                         @Override
@@ -309,7 +310,7 @@ public abstract class TransferFSM {
                         public boolean success(Result<KReference<byte[]>> result) {
                             phr.hash(hash, result.getValue());
                             if (phr.canAnswer()) {
-                                pendingOutHashes.remove(req.eventId);
+                                pendingOutHashes.remove(req.payload.eventId);
                                 answer(phr.answer());
                             }
                             return true;
@@ -319,7 +320,7 @@ public abstract class TransferFSM {
                 } else {
                     phr.missingHash(hash);
                     if (phr.canAnswer()) {
-                        pendingOutHashes.remove(req.eventId);
+                        pendingOutHashes.remove(req.payload.eventId);
                         answer(phr.answer());
                     }
                 }
@@ -327,12 +328,12 @@ public abstract class TransferFSM {
         }
 
         @Override
-        public void handlePieceReq(final KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request> msg, final PieceGet.Request req) {
-            LOG.trace("{}received req for b:{},pb:{}", new Object[]{cs.logPrefix, req.pieceNr.getValue0(), req.pieceNr.getValue1()});
-            updateCacheHint(msg.getHeader().getSource().getId(), req.cacheHints);
-            TransferMngr.Reader reader = transferMngr.readFrom(req.fileName);
-            if (reader.hasBlock(req.pieceNr.getValue0())) {
-                pendingOutPieces.put(req.eventId, req);
+        public void handlePieceReq(final KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<PieceGet.Request>> msg, final LedbatMsg.Request<PieceGet.Request> req) {
+            LOG.trace("{}received req for b:{},pb:{}", new Object[]{cs.logPrefix, req.payload.pieceNr.getValue0(), req.payload.pieceNr.getValue1()});
+            updateCacheHint(msg.getHeader().getSource().getId(), req.payload.cacheHints);
+            TransferMngr.Reader reader = transferMngr.readFrom(req.payload.fileName);
+            if (reader.hasBlock(req.payload.pieceNr.getValue0())) {
+                pendingOutPieces.put(req.payload.eventId, req.payload);
                 PieceReadCallback pieceRC = new PieceReadCallback() {
 
                     @Override
@@ -342,24 +343,24 @@ public abstract class TransferFSM {
 
                     @Override
                     public boolean success(Result<KReference<byte[]>> result) {
-                        pendingOutPieces.remove(req.eventId);
-                        answer(msg, req.success(result.getValue()));
+                        pendingOutPieces.remove(req.payload.eventId);
+                        answer(msg, req.answer(req.payload.success(result.getValue())));
                         return true;
                     }
                 };
-                reader.readPiece(req.pieceNr, pieceRC);
+                reader.readPiece(req.payload.pieceNr, pieceRC);
             } else {
-                answer(msg, req.missingBlock());
+                answer(msg, req.payload.missingBlock());
             }
         }
 
         public static class PendingHashReq {
 
-            private final KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> req;
+            private final KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<HashGet.Request>> req;
             private final Map<Integer, ByteBuffer> hashes = new TreeMap<>();
             private final Set<Integer> missingHashes = new TreeSet<>();
 
-            public PendingHashReq(KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> req) {
+            public PendingHashReq(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<HashGet.Request>> req) {
                 this.req = req;
             }
 
@@ -372,11 +373,11 @@ public abstract class TransferFSM {
             }
 
             public boolean canAnswer() {
-                return req.getContent().hashes.size() == hashes.size() + missingHashes.size();
+                return req.getContent().payload.hashes.size() == hashes.size() + missingHashes.size();
             }
 
             public Pair answer() {
-                HashGet.Response resp = req.getContent().success(hashes, missingHashes);
+                LedbatMsg.Response<HashGet.Response> resp = req.getContent().answer(req.getContent().payload.success(hashes, missingHashes));
                 return Pair.with(req, resp);
             }
         }
@@ -431,24 +432,24 @@ public abstract class TransferFSM {
         }
 
         @Override
-        public void handleHashResp(KContentMsg msg, HashGet.Response resp) {
-            UUID tId = pendingInHashes.remove(resp.eventId);
+        public void handleHashResp(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response<HashGet.Response>> msg, LedbatMsg.Response<HashGet.Response> resp) {
+            UUID tId = pendingInHashes.remove(resp.payload.eventId);
             if (tId == null) {
                 LOG.trace("{}late response:{}", cs.logPrefix, resp);
                 return;
             }
             cancelTimeout(tId);
             periodSuccess++;
-            cs.router.success();
-            TransferMngr.Writer writer = transferMngr.writeTo(resp.fileName);
-            if (resp.status.isSuccess()) {
-                for (Map.Entry<Integer, ByteBuffer> hash : resp.hashes.entrySet()) {
+            cs.router.success(msg.getHeader().getSource(), resp);
+            TransferMngr.Writer writer = transferMngr.writeTo(resp.payload.fileName);
+            if (resp.payload.status.isSuccess()) {
+                for (Map.Entry<Integer, ByteBuffer> hash : resp.payload.hashes.entrySet()) {
                     LOG.debug("{}received hash:{}", cs.logPrefix, hash.getKey());
                     writer.writeHash(hash.getKey(), hash.getValue().array(), new NopHashWC());
                 }
-                writer.resetHashes(resp.missingHashes);
+                writer.resetHashes(resp.payload.missingHashes);
             } else {
-                writer.resetHashes(resp.missingHashes);
+                writer.resetHashes(resp.payload.missingHashes);
             }
             tryDownload();
         }
@@ -469,22 +470,19 @@ public abstract class TransferFSM {
         }
 
         @Override
-        public void handlePieceResp(KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Response> msg, final PieceGet.Response resp) {
-            if (resp.pieceNr.getValue1() == 1023) {
-                int x = 1;
-            }
-            UUID tId = pendingInPieces.remove(resp.eventId);
+        public void handlePieceResp(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response<PieceGet.Response>> msg, final LedbatMsg.Response<PieceGet.Response> resp) {
+            UUID tId = pendingInPieces.remove(resp.payload.eventId);
             if (tId == null) {
                 LOG.trace("{}late response:{}", cs.logPrefix, resp);
                 return;
             }
             cancelTimeout(tId);
             periodSuccess++;
-            cs.router.success();
-            TransferMngr.Writer writer = transferMngr.writeTo(resp.fileName);
+            cs.router.success(msg.getHeader().getSource(), resp);
+            TransferMngr.Writer writer = transferMngr.writeTo(resp.payload.fileName);
 
-            LOG.trace("{}received resp for b:{},pb:{}", new Object[]{cs.logPrefix, resp.pieceNr.getValue0(), resp.pieceNr.getValue1()});
-            writer.writePiece(resp.pieceNr, resp.piece.array(), new NopPieceWC());
+            LOG.trace("{}received resp for b:{},pb:{}", new Object[]{cs.logPrefix, resp.payload.pieceNr.getValue0(), resp.payload.pieceNr.getValue1()});
+            writer.writePiece(resp.payload.pieceNr, resp.payload.piece.array(), new NopPieceWC());
             tryDownload();
         }
 
@@ -523,9 +521,8 @@ public abstract class TransferFSM {
                 return;
             }
 
-            int speedUPBatch = 2;
-            while (cs.router.availableSlot() && speedUPBatch > 0) {
-                speedUPBatch--;
+            Pair<KAddress, Long> partner;
+            while ((partner = cs.router.availableSlot()) != null) {
                 Optional<MultiFileTransfer.NextDownload> nextDownload = transferMngr.nextDownload();
                 if (!nextDownload.isPresent()) {
                     if (transferMngr.complete()) {
@@ -541,16 +538,14 @@ public abstract class TransferFSM {
                     MultiFileTransfer.NextHash nextHash = (MultiFileTransfer.NextHash) nextDownload.get();
                     HashGet.Request hashReq = new HashGet.Request(cs.overlayId, nextHash.cacheHints, nextHash.fileName, nextHash.hashes.getValue0(), nextHash.hashes.getValue1());
                     LOG.trace("{}download hashes:{}", cs.logPrefix, hashReq.hashes);
-                    KAddress partner = cs.router.randomPartner();
-                    cs.router.useSlot();
-                    request(partner, hashReq, scheduleHashTimeout(hashReq, partner));
+                    cs.router.useSlot(partner.getValue0());
+                    request(partner.getValue0(), new LedbatMsg.Request(hashReq), scheduleHashTimeout(hashReq, partner.getValue0(), partner.getValue1()));
                 } else if (nextDownload.get() instanceof MultiFileTransfer.NextPiece) {
                     MultiFileTransfer.NextPiece nextPiece = (MultiFileTransfer.NextPiece) nextDownload.get();
                     PieceGet.Request pieceReq = new PieceGet.Request(cs.overlayId, nextPiece.cacheHints, nextPiece.fileName, nextPiece.piece);
                     LOG.trace("{}download block:{} pieceBlock:{}", new Object[]{cs.logPrefix, pieceReq.pieceNr.getValue0(), pieceReq.pieceNr.getValue1()});
-                    KAddress partner = cs.router.randomPartner();
-                    cs.router.useSlot();
-                    request(partner, pieceReq, schedulePieceTimeout(pieceReq, partner));
+                    cs.router.useSlot(partner.getValue0());
+                    request(partner.getValue0(), new LedbatMsg.Request(pieceReq), schedulePieceTimeout(pieceReq, partner.getValue0(), partner.getValue1()));
                 }
             }
         }
@@ -569,16 +564,16 @@ public abstract class TransferFSM {
             return spt;
         }
 
-        private ScheduleTimeout scheduleHashTimeout(HashGet.Request req, KAddress target) {
-            ScheduleTimeout st = new ScheduleTimeout(TransferConfig.hashTimeout);
+        private ScheduleTimeout scheduleHashTimeout(HashGet.Request req, KAddress target, long rto) {
+            ScheduleTimeout st = new ScheduleTimeout(rto);
             TorrentTimeout.Hash tt = new TorrentTimeout.Hash(st, req, target);
             st.setTimeoutEvent(tt);
             pendingInHashes.put(req.getId(), tt.getTimeoutId());
             return st;
         }
 
-        private ScheduleTimeout schedulePieceTimeout(PieceGet.Request req, KAddress target) {
-            ScheduleTimeout st = new ScheduleTimeout(TransferConfig.pieceTimeout);
+        private ScheduleTimeout schedulePieceTimeout(PieceGet.Request req, KAddress target, long rto) {
+            ScheduleTimeout st = new ScheduleTimeout(rto);
             TorrentTimeout.Piece tt = new TorrentTimeout.Piece(st, req, target);
             st.setTimeoutEvent(tt);
             pendingInPieces.put(req.getId(), tt.getTimeoutId());
@@ -632,10 +627,10 @@ public abstract class TransferFSM {
         public final Identifier overlayId;
         //**********************************************************************
         public final Router router;
-        public final ComponentLoad componentLoad;
+        public final ComponentLoadTracking componentLoad;
 
         public CommonState(Config config, TorrentConfig torrentConfig, ComponentProxy proxy, KAddress selfAdr, Identifier overlayId,
-                Router router, ComponentLoad componentLoad) {
+                Router router, ComponentLoadTracking componentLoad) {
             this.proxy = proxy;
             this.config = config;
             this.torrentConfig = new TorrentConfig();

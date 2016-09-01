@@ -18,16 +18,17 @@
  */
 package se.sics.nstream.torrent;
 
+import org.javatuples.Pair;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ledbat.ncore.msg.LedbatMsg;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface Router {
     public KAddress randomPartner();
-    public boolean availableSlot();
-    public void useSlot();
-    public void success();
+    public Pair<KAddress, Long> availableSlot();
+    public void useSlot(KAddress target);
+    public void success(KAddress target, LedbatMsg.Response resp);
     public void timeout(KAddress target);
-    public int totalSlots();
 }

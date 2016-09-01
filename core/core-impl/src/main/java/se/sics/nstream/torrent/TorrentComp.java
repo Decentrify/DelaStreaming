@@ -44,21 +44,20 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
-import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
-import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.ktoolbox.util.tracking.load.QueueLoadConfig;
+import se.sics.ledbat.core.LedbatConfig;
+import se.sics.ledbat.ncore.msg.LedbatMsg;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.report.TransferStatusPort;
 import se.sics.nstream.report.event.DownloadStatus;
 import se.sics.nstream.report.event.ReportTimeout;
 import se.sics.nstream.torrent.event.HashGet;
-import se.sics.nstream.torrent.event.PieceGet;
 import se.sics.nstream.torrent.event.TorrentGet;
 import se.sics.nstream.torrent.event.TorrentTimeout;
 import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.TransferDetails;
-import se.sics.nstream.util.actuator.ComponentLoad;
-import se.sics.nstream.util.actuator.DownloadStates;
+import se.sics.nstream.util.actuator.ComponentLoadTracking;
 
 /**
  *
@@ -78,7 +77,7 @@ public class TorrentComp extends ComponentDefinition {
     //**************************************************************************
     private final TorrentConfig torrentConfig;
     //**************************************************************************
-    private ComponentLoad componentLoad;
+    private ComponentLoadTracking componentTracking;
     private TransferFSM transfer;
     private RoundRobinConnMngr router;
     //**************************************************************************
@@ -88,8 +87,8 @@ public class TorrentComp extends ComponentDefinition {
     public TorrentComp(Init init) {
         logPrefix = "<" + init.selfAdr.getId() + ">";
         torrentConfig = new TorrentConfig();
-        router = new RoundRobinConnMngr(init.partners);
-        componentLoad = new ComponentLoad();
+        router = new RoundRobinConnMngr(new LedbatConfig(config()), init.partners);
+        componentTracking = new ComponentLoadTracking("torrent", this.proxy, new QueueLoadConfig(config()));
         storageProvider(init.storageProvider);
         transferState(init);
 
@@ -100,22 +99,18 @@ public class TorrentComp extends ComponentDefinition {
         subscribe(handleTorrentResp, networkPort);
         subscribe(handleTorrentTimeout, timerPort);
         subscribe(handleAdvanceDownload, timerPort);
-        subscribe(handleHashReq, networkPort);
-        subscribe(handleHashResp, networkPort);
         subscribe(handleHashTimeout, timerPort);
-        subscribe(handlePieceReq, networkPort);
-        subscribe(handlePieceResp, networkPort);
         subscribe(handlePieceTimeout, timerPort);
+        subscribe(handleLedbatReq, networkPort);
+        subscribe(handleLedbatResp, networkPort);
 
-        subscribe(handleLoadCheck, timerPort);
-        subscribe(handleNetworkLoadCheck, networkPort);
         subscribe(handleNettyCheck, networkPort);
         subscribe(handleExtendedTorrentResp, transferMngrPort);
         subscribe(handleTransferStatusReq, transferStatusPort);
     }
 
     private void transferState(Init init) {
-        TransferFSM.CommonState cs = new TransferFSM.CommonState(config(), torrentConfig, this.proxy, init.selfAdr, init.overlayId, router, componentLoad);
+        TransferFSM.CommonState cs = new TransferFSM.CommonState(config(), torrentConfig, this.proxy, init.selfAdr, init.overlayId, router, componentTracking);
         if (init.upload) {
             byte[] torrentByte = init.transferDetails.get().getValue0();
             TransferDetails transferDetails = init.transferDetails.get().getValue1();
@@ -135,9 +130,9 @@ public class TorrentComp extends ComponentDefinition {
 
         @Override
         public void handle(Start event) {
+            componentTracking.startTracking();
             transfer.start();
             scheduleReport();
-            scheduleLoadCheck();
         }
     };
 
@@ -154,29 +149,16 @@ public class TorrentComp extends ComponentDefinition {
         public void handle(ReportTimeout event) {
             transfer.report();
             LOG.info("{}report router:{}", logPrefix, router.report());
-            LOG.info("{}report comp load:{}", logPrefix, componentLoad.report().toString());
+            LOG.info("{}report comp load:{}", logPrefix, componentTracking.report().toString());
         }
     };
 
-    Handler handleTransferStatusReq  = new Handler<DownloadStatus.Request>() {
+    Handler handleTransferStatusReq = new Handler<DownloadStatus.Request>() {
         @Override
         public void handle(DownloadStatus.Request event) {
             transfer.handleTransferStatusReq(event);
         }
     };
-
-    Handler handleLoadCheck = new Handler<LoadCheckTimeout>() {
-        @Override
-        public void handle(LoadCheckTimeout timeout) {
-            sendNetworkCheck();
-        }
-    };
-
-    private void sendNetworkCheck() {
-        KHeader header = new BasicHeader(null, null, null);
-        KContentMsg msg = new BasicContentMsg(header, new LoadCheck());
-        trigger(msg, networkPort.getPair());
-    }
 
     Handler handleNettyCheck = new Handler<MessageNotify.Resp>() {
         @Override
@@ -184,24 +166,6 @@ public class TorrentComp extends ComponentDefinition {
             transfer.handleNotify(resp);
         }
     };
-
-    ClassMatchedHandler handleNetworkLoadCheck
-            = new ClassMatchedHandler<LoadCheck, KContentMsg<KAddress, KHeader<KAddress>, LoadCheck>>() {
-                @Override
-                public void handle(LoadCheck content, KContentMsg<KAddress, KHeader<KAddress>, LoadCheck> container) {
-                    long now = System.currentTimeMillis();
-                    long queueDelay = now - content.createdAt;
-                    componentLoad.adjustState(queueDelay);
-                    if (router.changed()) {
-                        componentLoad.outsideChange();
-                    }
-                    if (componentLoad.state().equals(DownloadStates.SLOW_DOWN)) {
-                        router.slowDown();
-                    }
-                    LOG.info("{}component state:{} router:{}", new Object[]{logPrefix, componentLoad.state(), router.totalSlots()});
-                    scheduleLoadCheck();
-                }
-            };
 
     ClassMatchedHandler handleTorrentReq
             = new ClassMatchedHandler<TorrentGet.Request, KContentMsg<KAddress, KHeader<KAddress>, TorrentGet.Request>>() {
@@ -246,22 +210,33 @@ public class TorrentComp extends ComponentDefinition {
         }
     };
 
-    ClassMatchedHandler handleHashReq
-            = new ClassMatchedHandler<HashGet.Request, KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request>>() {
+    ClassMatchedHandler handleLedbatReq
+            = new ClassMatchedHandler<LedbatMsg.Request, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request>>() {
                 @Override
-                public void handle(HashGet.Request content, KContentMsg<KAddress, KHeader<KAddress>, HashGet.Request> container) {
-                    transfer.handleHashReq(container, content);
-                    transfer = transfer.next();
+                public void handle(LedbatMsg.Request content, KContentMsg container) {
+                    if (content.payload instanceof HashGet.Request) {
+                        transfer.handleHashReq(container, content);
+                        transfer = transfer.next();
+                    } else {
+                        transfer.handlePieceReq(container, content);
+                        transfer = transfer.next();
+                    }
                 }
             };
 
-    ClassMatchedHandler handleHashResp
-            = new ClassMatchedHandler<HashGet.Response, KContentMsg<KAddress, KHeader<KAddress>, HashGet.Response>>() {
+    ClassMatchedHandler handleLedbatResp
+            = new ClassMatchedHandler<LedbatMsg.Response, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response>>() {
 
                 @Override
-                public void handle(HashGet.Response content, KContentMsg<KAddress, KHeader<KAddress>, HashGet.Response> container) {
-                    transfer.handleHashResp(container, content);
-                    transfer = transfer.next();
+                public void handle(LedbatMsg.Response content, KContentMsg container) {
+                    if (content.payload instanceof HashGet.Response) {
+                        transfer.handleHashResp(container, content);
+                        transfer = transfer.next();
+                    } else {
+                        transfer.handlePieceResp(container, content);
+                        transfer = transfer.next();
+                    }
+
                 }
             };
 
@@ -273,24 +248,24 @@ public class TorrentComp extends ComponentDefinition {
         }
     };
 
-    ClassMatchedHandler handlePieceReq
-            = new ClassMatchedHandler<PieceGet.Request, KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request>>() {
-                @Override
-                public void handle(PieceGet.Request content, KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Request> container) {
-                    transfer.handlePieceReq(container, content);
-                    transfer = transfer.next();
-                }
-            };
-
-    ClassMatchedHandler handlePieceResp
-            = new ClassMatchedHandler<PieceGet.Response, KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Response>>() {
-
-                @Override
-                public void handle(PieceGet.Response content, KContentMsg<KAddress, KHeader<KAddress>, PieceGet.Response> container) {
-                    transfer.handlePieceResp(container, content);
-                    transfer = transfer.next();
-                }
-            };
+//    ClassMatchedHandler handlePieceReq
+//            = new ClassMatchedHandler<LedbatMsg.Request<PieceGet.Request>, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<PieceGet.Request>>>() {
+//                @Override
+//                public void handle(LedbatMsg.Request<PieceGet.Request> content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<PieceGet.Request>> container) {
+//                    transfer.handlePieceReq(container, content);
+//                    transfer = transfer.next();
+//                }
+//            };
+//
+//    ClassMatchedHandler handlePieceResp
+//            = new ClassMatchedHandler<LedbatMsg.Response<PieceGet.Response>, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response<PieceGet.Response>>>() {
+//
+//                @Override
+//                public void handle(LedbatMsg.Response<PieceGet.Response> content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response<PieceGet.Response>> container) {
+//                    transfer.handlePieceResp(container, content);
+//                    transfer = transfer.next();
+//                }
+//            };
 
     Handler handlePieceTimeout = new Handler<TorrentTimeout.Piece>() {
         @Override
@@ -328,13 +303,6 @@ public class TorrentComp extends ComponentDefinition {
         trigger(spt, timerPort);
     }
 
-    private void scheduleLoadCheck() {
-        ScheduleTimeout st = new ScheduleTimeout(componentLoad.checkPeriod());
-        LoadCheckTimeout lct = new LoadCheckTimeout(st, componentLoad.checkPeriod());
-        st.setTimeoutEvent(lct);
-        trigger(st, timerPort);
-    }
-
     public static class LoadCheckTimeout extends Timeout implements StreamEvent {
 
         public final long createdAt;
@@ -350,22 +318,5 @@ public class TorrentComp extends ComponentDefinition {
         public Identifier getId() {
             return new UUIDIdentifier(getTimeoutId());
         }
-    }
-
-    public static class LoadCheck implements StreamEvent {
-
-        public final Identifier eventId;
-        public final long createdAt;
-
-        public LoadCheck() {
-            this.eventId = UUIDIdentifier.randomId();
-            this.createdAt = System.currentTimeMillis();
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
     }
 }
