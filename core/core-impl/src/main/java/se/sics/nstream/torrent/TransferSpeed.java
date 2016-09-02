@@ -16,25 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.util;
-
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.library.util.TorrentStatus;
-import se.sics.nstream.torrent.TransferSpeed;
+package se.sics.nstream.torrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentExtendedStatus {
-    public final Identifier torrentId;
-    public final TorrentStatus torrentStatus;
-    public final TransferSpeed transferSpeed;
-    public final double percentageComplete;
+public class TransferSpeed {
+    public final long totalDownloadSpeed;
     
-    public TorrentExtendedStatus(Identifier torrentId, TorrentStatus torrentStatus, TransferSpeed transferSpeed, double percentageComplete) {
-        this.torrentStatus = torrentStatus;
-        this.torrentId = torrentId;
-        this.transferSpeed = transferSpeed;
-        this.percentageComplete = percentageComplete;
+    public TransferSpeed(long totalDownloadSpeed) {
+        this.totalDownloadSpeed = totalDownloadSpeed;
+    }
+
+    public TransferSpeed resetDownloadSpeed() {
+        return new TransferSpeed(0);
     }
 }

@@ -54,11 +54,6 @@ public class RoundRobinConnMngr implements Router {
         return first;
     }
 
-//    @Override
-//    public int totalSlots() {
-//        return loadTracker.windowSize();
-//    }
-//
     @Override
     public Pair<KAddress, Long> availableSlot() {
         int n = partners.size();
@@ -100,13 +95,19 @@ public class RoundRobinConnMngr implements Router {
         }
         pc.timeout(ledbatConfig.mss);
     }
-//
-//    public boolean changed() {
-//        return loadTracker.changed();
-//    }
 
+    //*****************************REPORTING************************************
     public String report() {
         return "report-dissabled";
 //        return loadTracker.report();
+    }
+
+    @Override
+    public TransferSpeed speed() {
+        long totalDownloadSpeed = 0;
+        for(PullConnection pc : loadTracker.values()) {
+            totalDownloadSpeed += pc.downloadSpeed();
+        }
+        return new TransferSpeed(totalDownloadSpeed);
     }
 }

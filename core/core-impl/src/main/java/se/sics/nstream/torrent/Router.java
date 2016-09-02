@@ -31,4 +31,6 @@ public interface Router {
     public void useSlot(KAddress target);
     public void success(KAddress target, LedbatMsg.Response resp);
     public void timeout(KAddress target);
+    //*******************************REPORT*************************************
+    public TransferSpeed speed();
 }

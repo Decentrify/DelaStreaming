@@ -510,7 +510,7 @@ public abstract class TransferFSM {
 
         @Override
         public void handleTransferStatusReq(DownloadStatus.Request req) {
-            cs.proxy.answer(req, req.answer(transferMngr.percentageComplete()));
+            cs.proxy.answer(req, req.answer(transferMngr.percentageComplete(), cs.router.speed()));
         }
 
         private void tryDownload() {

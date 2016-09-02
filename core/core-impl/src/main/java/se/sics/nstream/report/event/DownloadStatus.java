@@ -22,6 +22,7 @@ import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.nstream.StreamEvent;
+import se.sics.nstream.torrent.TransferSpeed;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -90,8 +91,8 @@ public class DownloadStatus {
             this(UUIDIdentifier.randomId(), overlayId);
         }
         
-        public Response answer(double percentageCompleted) {
-            return new Response(eventId, overlayId, percentageCompleted);
+        public Response answer(double percentageCompleted, TransferSpeed transferSpeed) {
+            return new Response(eventId, overlayId, percentageCompleted, transferSpeed);
         }
 
         @Override
@@ -109,15 +110,17 @@ public class DownloadStatus {
         public final Identifier eventId;
         public final Identifier overlayId;
         public final double percentageCompleted;
+        public final TransferSpeed transferSpeed;
 
-        Response(Identifier eventId, Identifier overlayId, double percentageCompleted) {
+        Response(Identifier eventId, Identifier overlayId, double percentageCompleted, TransferSpeed transferSpeed) {
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.percentageCompleted = percentageCompleted;
+            this.transferSpeed = transferSpeed;
         }
 
-        Response(Identifier overlayId, double percentageCompleted) {
-            this(UUIDIdentifier.randomId(), overlayId, percentageCompleted);
+        Response(Identifier overlayId, double percentageCompleted, TransferSpeed transferSpeed) {
+            this(UUIDIdentifier.randomId(), overlayId, percentageCompleted, transferSpeed);
         }
 
         @Override
