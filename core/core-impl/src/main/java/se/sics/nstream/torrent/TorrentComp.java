@@ -49,7 +49,7 @@ import se.sics.ledbat.core.LedbatConfig;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.report.TransferStatusPort;
-import se.sics.nstream.report.event.DownloadStatus;
+import se.sics.nstream.report.event.TransferStatus;
 import se.sics.nstream.report.event.ReportTimeout;
 import se.sics.nstream.torrent.event.HashGet;
 import se.sics.nstream.torrent.event.TorrentGet;
@@ -79,7 +79,7 @@ public class TorrentComp extends ComponentDefinition {
     //**************************************************************************
     private ComponentLoadTracking componentTracking;
     private TransferFSM transfer;
-    private RoundRobinConnMngr router;
+    private SimpleConnMngr router;
     //**************************************************************************
     private UUID periodicReport;
     private UUID loadCheck;
@@ -87,7 +87,7 @@ public class TorrentComp extends ComponentDefinition {
     public TorrentComp(Init init) {
         logPrefix = "<" + init.selfAdr.getId() + ">";
         torrentConfig = new TorrentConfig();
-        router = new RoundRobinConnMngr(new LedbatConfig(config()), init.partners);
+        router = new SimpleConnMngr(new ConnMngrConfig(config()), new LedbatConfig(config()), init.partners);
         componentTracking = new ComponentLoadTracking("torrent", this.proxy, new QueueLoadConfig(config()));
         storageProvider(init.storageProvider);
         transferState(init);
@@ -148,14 +148,13 @@ public class TorrentComp extends ComponentDefinition {
         @Override
         public void handle(ReportTimeout event) {
             transfer.report();
-            LOG.info("{}report router:{}", logPrefix, router.report());
             LOG.info("{}report comp load:{}", logPrefix, componentTracking.report().toString());
         }
     };
 
-    Handler handleTransferStatusReq = new Handler<DownloadStatus.Request>() {
+    Handler handleTransferStatusReq = new Handler<TransferStatus.Request>() {
         @Override
-        public void handle(DownloadStatus.Request event) {
+        public void handle(TransferStatus.Request event) {
             transfer.handleTransferStatusReq(event);
         }
     };

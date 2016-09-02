@@ -26,6 +26,7 @@ import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ledbat.core.LedbatConfig;
+import se.sics.ledbat.core.util.ThroughputHandler;
 import se.sics.ledbat.ncore.PullConnection;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 
@@ -33,17 +34,20 @@ import se.sics.ledbat.ncore.msg.LedbatMsg;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class RoundRobinConnMngr implements Router {
+public class SimpleConnMngr implements Router {
 
     private final LedbatConfig ledbatConfig;
-    private final Map<Identifier, PullConnection> loadTracker = new HashMap<>();
+    private final ConnMngrConfig connConfig;
+    private final Map<Identifier, PullConnection> seederTracker = new HashMap<>();
+    private final Map<Identifier, ThroughputHandler> leecherTracker = new HashMap<>();
     private final LinkedList<KAddress> partners = new LinkedList<>();
 
-    public RoundRobinConnMngr(LedbatConfig ledbatConfig, List<KAddress> partners) {
+    public SimpleConnMngr(ConnMngrConfig connConfig, LedbatConfig ledbatConfig, List<KAddress> partners) {
+        this.connConfig = connConfig;
         this.ledbatConfig = ledbatConfig;
         this.partners.addAll(partners);
         for (KAddress partner : partners) {
-            loadTracker.put(partner.getId(), new PullConnection(ledbatConfig, partner.getId()));
+            seederTracker.put(partner.getId(), new PullConnection(ledbatConfig, partner.getId()));
         }
     }
 
@@ -54,20 +58,15 @@ public class RoundRobinConnMngr implements Router {
         return first;
     }
 
-//    @Override
-//    public int totalSlots() {
-//        return loadTracker.windowSize();
-//    }
-//
     @Override
-    public Pair<KAddress, Long> availableSlot() {
+    public Pair<KAddress, Long> availableDownloadSlot() {
         int n = partners.size();
-        while(n > 0) {
+        while (n > 0) {
             n--;
             KAddress next = partners.removeFirst();
             partners.add(next);
-            PullConnection pc = loadTracker.get(next.getId());
-            if(pc.canSend() > 0) {
+            PullConnection pc = seederTracker.get(next.getId());
+            if (pc.canSend() > 0) {
                 return Pair.with(next, pc.getRTO());
             }
         }
@@ -75,8 +74,8 @@ public class RoundRobinConnMngr implements Router {
     }
 
     @Override
-    public void useSlot(KAddress target) {
-        PullConnection pc = loadTracker.get(target.getId());
+    public void useDownloadSlot(KAddress target) {
+        PullConnection pc = seederTracker.get(target.getId());
         if (pc == null) {
             return;
         }
@@ -84,8 +83,8 @@ public class RoundRobinConnMngr implements Router {
     }
 
     @Override
-    public void success(KAddress target, LedbatMsg.Response resp) {
-        PullConnection pc = loadTracker.get(target.getId());
+    public void successDownloadSlot(KAddress target, LedbatMsg.Response resp) {
+        PullConnection pc = seederTracker.get(target.getId());
         if (pc == null) {
             return;
         }
@@ -93,20 +92,44 @@ public class RoundRobinConnMngr implements Router {
     }
 
     @Override
-    public void timeout(KAddress target) {
-        PullConnection pc = loadTracker.get(target.getId());
+    public void timeoutDownloadSlot(KAddress target) {
+        PullConnection pc = seederTracker.get(target.getId());
         if (pc == null) {
             return;
         }
         pc.timeout(ledbatConfig.mss);
     }
-//
-//    public boolean changed() {
-//        return loadTracker.changed();
-//    }
 
-    public String report() {
-        return "report-dissabled";
-//        return loadTracker.report();
+    //******************************UPLOAD**************************************
+    @Override
+    public boolean availableUploadSlot(KAddress target) {
+        ThroughputHandler leecherThroughput = leecherTracker.get(target.getId());
+        if(leecherThroughput == null) {
+            leecherTracker.put(target.getId(), new ThroughputHandler(target.getId().toString()));
+            return true;
+        }
+        if(connConfig.maxConnUploadSpeed == -1) {
+            return true;
+        }
+        if(leecherThroughput.currentSpeed() < connConfig.maxConnUploadSpeed) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public void useUploadSlot(KAddress target) {
+        ThroughputHandler leecherThroughput = leecherTracker.get(target.getId());
+        if(leecherThroughput == null) {
+            return;
+        }
+        leecherThroughput.packetReceived(ledbatConfig.mss);
+    }
+    //*****************************REPORTING************************************
+
+    @Override
+    public TransferSpeed speed() {
+        return TransferSpeed.transferReport(seederTracker, leecherTracker);
     }
 }

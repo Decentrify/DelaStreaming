@@ -54,7 +54,7 @@ import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 import se.sics.nstream.report.TransferStatusPort;
-import se.sics.nstream.report.event.DownloadStatus;
+import se.sics.nstream.report.event.TransferStatus;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.torrent.event.HashGet;
 import se.sics.nstream.torrent.event.PieceGet;
@@ -129,7 +129,7 @@ public abstract class TransferFSM {
     public void handlePieceTimeout(TorrentTimeout.Piece timeout) {
     }
 
-    public void handleTransferStatusReq(DownloadStatus.Request req) {
+    public void handleTransferStatusReq(TransferStatus.Request req) {
 
     }
 
@@ -279,6 +279,11 @@ public abstract class TransferFSM {
         }
 
         @Override
+        public void handleTransferStatusReq(TransferStatus.Request req) {
+            cs.proxy.answer(req, req.answer(transferMngr.percentageComplete(), cs.router.speed()));
+        }
+        
+        @Override
         public void handleTorrentReq(KContentMsg msg, TorrentGet.Request req) {
             answer(msg, req.success(torrentByte));
         }
@@ -293,6 +298,12 @@ public abstract class TransferFSM {
 
         @Override
         public void handleHashReq(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<HashGet.Request>> msg, final LedbatMsg.Request<HashGet.Request> req) {
+            KAddress target = msg.getHeader().getSource();
+            if(!cs.router.availableUploadSlot(target)) {
+                return;
+            }
+            cs.router.useUploadSlot(target);
+            
             updateCacheHint(msg.getHeader().getSource().getId(), req.payload.cacheHints);
             TransferMngr.Reader reader = transferMngr.readFrom(req.payload.fileName);
             final PendingHashReq phr = new PendingHashReq(msg);
@@ -329,6 +340,12 @@ public abstract class TransferFSM {
 
         @Override
         public void handlePieceReq(final KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<PieceGet.Request>> msg, final LedbatMsg.Request<PieceGet.Request> req) {
+            KAddress target = msg.getHeader().getSource();
+            if(!cs.router.availableUploadSlot(target)) {
+                return;
+            }
+            cs.router.useUploadSlot(target);
+            
             LOG.trace("{}received req for b:{},pb:{}", new Object[]{cs.logPrefix, req.payload.pieceNr.getValue0(), req.payload.pieceNr.getValue1()});
             updateCacheHint(msg.getHeader().getSource().getId(), req.payload.cacheHints);
             TransferMngr.Reader reader = transferMngr.readFrom(req.payload.fileName);
@@ -402,7 +419,7 @@ public abstract class TransferFSM {
             LOG.info("{}download start transfer", cs.logPrefix);
             tryDownload();
             cs.proxy.trigger(scheduleAdvanceDownload(), cs.timerPort);
-            cs.proxy.trigger(new DownloadStatus.Starting(cs.overlayId), cs.transferStatusPort);
+            cs.proxy.trigger(new TransferStatus.DownloadStarting(cs.overlayId), cs.transferStatusPort);
         }
 
         @Override
@@ -440,7 +457,7 @@ public abstract class TransferFSM {
             }
             cancelTimeout(tId);
             periodSuccess++;
-            cs.router.success(msg.getHeader().getSource(), resp);
+            cs.router.successDownloadSlot(msg.getHeader().getSource(), resp);
             TransferMngr.Writer writer = transferMngr.writeTo(resp.payload.fileName);
             if (resp.payload.status.isSuccess()) {
                 for (Map.Entry<Integer, ByteBuffer> hash : resp.payload.hashes.entrySet()) {
@@ -463,7 +480,7 @@ public abstract class TransferFSM {
                 return;
             }
             periodTimeouts++;
-            cs.router.timeout(timeout.target);
+            cs.router.timeoutDownloadSlot(timeout.target);
             TransferMngr.Writer writer = transferMngr.writeTo(timeout.req.fileName);
             writer.resetHashes(timeout.req.hashes);
             tryDownload();
@@ -478,7 +495,7 @@ public abstract class TransferFSM {
             }
             cancelTimeout(tId);
             periodSuccess++;
-            cs.router.success(msg.getHeader().getSource(), resp);
+            cs.router.successDownloadSlot(msg.getHeader().getSource(), resp);
             TransferMngr.Writer writer = transferMngr.writeTo(resp.payload.fileName);
 
             LOG.trace("{}received resp for b:{},pb:{}", new Object[]{cs.logPrefix, resp.payload.pieceNr.getValue0(), resp.payload.pieceNr.getValue1()});
@@ -494,7 +511,7 @@ public abstract class TransferFSM {
                 return;
             }
             periodTimeouts++;
-            cs.router.timeout(timeout.target);
+            cs.router.timeoutDownloadSlot(timeout.target);
             TransferMngr.Writer writer = transferMngr.writeTo(timeout.req.fileName);
             writer.resetPiece(timeout.req.pieceNr);
             tryDownload();
@@ -502,15 +519,11 @@ public abstract class TransferFSM {
 
         @Override
         public void report() {
-            LOG.info("{}transfer report:\n{}", cs.logPrefix, transferMngr.shortReport());
+            LOG.info("{}transfer report:\n{}", cs.logPrefix, transferMngr.report());
+//            LOG.info("{}state report:{}",cs.logPrefix, cs.router.report());
             LOG.debug("{}transfer report details: success:{} timeouts:{}\n{}", new Object[]{cs.logPrefix, periodSuccess, periodTimeouts, transferMngr.report()});
             periodSuccess = 0;
             periodTimeouts = 0;
-        }
-
-        @Override
-        public void handleTransferStatusReq(DownloadStatus.Request req) {
-            cs.proxy.answer(req, req.answer(transferMngr.percentageComplete()));
         }
 
         private void tryDownload() {
@@ -522,12 +535,12 @@ public abstract class TransferFSM {
             }
 
             Pair<KAddress, Long> partner;
-            while ((partner = cs.router.availableSlot()) != null) {
+            while ((partner = cs.router.availableDownloadSlot()) != null) {
                 Optional<MultiFileTransfer.NextDownload> nextDownload = transferMngr.nextDownload();
                 if (!nextDownload.isPresent()) {
                     if (transferMngr.complete()) {
                         LOG.info("{}download completed transfer", cs.logPrefix);
-                        cs.proxy.trigger(new DownloadStatus.Done(cs.overlayId), cs.transferStatusPort);
+                        cs.proxy.trigger(new TransferStatus.DownloadDone(cs.overlayId), cs.transferStatusPort);
                         completeDownload();
                     }
                     return;
@@ -538,13 +551,13 @@ public abstract class TransferFSM {
                     MultiFileTransfer.NextHash nextHash = (MultiFileTransfer.NextHash) nextDownload.get();
                     HashGet.Request hashReq = new HashGet.Request(cs.overlayId, nextHash.cacheHints, nextHash.fileName, nextHash.hashes.getValue0(), nextHash.hashes.getValue1());
                     LOG.trace("{}download hashes:{}", cs.logPrefix, hashReq.hashes);
-                    cs.router.useSlot(partner.getValue0());
+                    cs.router.useDownloadSlot(partner.getValue0());
                     request(partner.getValue0(), new LedbatMsg.Request(hashReq), scheduleHashTimeout(hashReq, partner.getValue0(), partner.getValue1()));
                 } else if (nextDownload.get() instanceof MultiFileTransfer.NextPiece) {
                     MultiFileTransfer.NextPiece nextPiece = (MultiFileTransfer.NextPiece) nextDownload.get();
                     PieceGet.Request pieceReq = new PieceGet.Request(cs.overlayId, nextPiece.cacheHints, nextPiece.fileName, nextPiece.piece);
                     LOG.trace("{}download block:{} pieceBlock:{}", new Object[]{cs.logPrefix, pieceReq.pieceNr.getValue0(), pieceReq.pieceNr.getValue1()});
-                    cs.router.useSlot(partner.getValue0());
+                    cs.router.useDownloadSlot(partner.getValue0());
                     request(partner.getValue0(), new LedbatMsg.Request(pieceReq), schedulePieceTimeout(pieceReq, partner.getValue0(), partner.getValue1()));
                 }
             }

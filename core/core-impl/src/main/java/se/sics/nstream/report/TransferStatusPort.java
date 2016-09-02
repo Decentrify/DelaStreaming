@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.report;
 
-import se.sics.nstream.report.event.DownloadStatus;
+import se.sics.nstream.report.event.TransferStatus;
 import se.sics.kompics.PortType;
 
 /**
@@ -26,9 +26,9 @@ import se.sics.kompics.PortType;
  */
 public class TransferStatusPort extends PortType {
     {
-        indication(DownloadStatus.Starting.class);
-        indication(DownloadStatus.Done.class);
-        request(DownloadStatus.Request.class);
-        indication(DownloadStatus.Response.class);
+        indication(TransferStatus.DownloadStarting.class);
+        indication(TransferStatus.DownloadDone.class);
+        request(TransferStatus.Request.class);
+        indication(TransferStatus.Response.class);
     }
 }

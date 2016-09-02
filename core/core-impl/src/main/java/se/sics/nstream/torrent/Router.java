@@ -27,8 +27,13 @@ import se.sics.ledbat.ncore.msg.LedbatMsg;
  */
 public interface Router {
     public KAddress randomPartner();
-    public Pair<KAddress, Long> availableSlot();
-    public void useSlot(KAddress target);
-    public void success(KAddress target, LedbatMsg.Response resp);
-    public void timeout(KAddress target);
+    public Pair<KAddress, Long> availableDownloadSlot();
+    public void useDownloadSlot(KAddress target);
+    public void successDownloadSlot(KAddress target, LedbatMsg.Response resp);
+    public void timeoutDownloadSlot(KAddress target);
+    
+    public boolean availableUploadSlot(KAddress target);
+    public void useUploadSlot(KAddress target);
+    //*******************************REPORT*************************************
+    public TransferSpeed speed();
 }

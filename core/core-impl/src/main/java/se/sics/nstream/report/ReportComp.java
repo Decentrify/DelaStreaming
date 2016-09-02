@@ -35,9 +35,10 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.library.util.TorrentStatus;
-import se.sics.nstream.report.event.DownloadStatus;
 import se.sics.nstream.report.event.DownloadSummaryEvent;
 import se.sics.nstream.report.event.StatusSummaryEvent;
+import se.sics.nstream.report.event.TransferStatus;
+import se.sics.nstream.torrent.TransferSpeed;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -58,7 +59,7 @@ public class ReportComp extends ComponentDefinition {
     private TorrentStatus status = TorrentStatus.UPLOADING;
     private long startingTime;
     private long transferSize = 0;
-    private int downloadSpeed = 0;
+    private TransferSpeed transferSpeed;
     private double percentageCompleted = 100;
 
     private UUID reportTId;
@@ -72,7 +73,8 @@ public class ReportComp extends ComponentDefinition {
         subscribe(handleStart, control);
         subscribe(handleDownloadStarting, torrentPort);
         subscribe(handleDownloadDone, torrentPort);
-        subscribe(handleDownloadResponse, torrentPort);
+        subscribe(handleTransferStatusResponse, torrentPort);
+        
         subscribe(handleReport, timerPort);
         
         subscribe(handleStatusSummaryRequest, reportPort);
@@ -82,6 +84,7 @@ public class ReportComp extends ComponentDefinition {
         @Override
         public void handle(Start event) {
             LOG.info("{}starting...", logPrefix);
+            scheduleReport(torrentId);
         }
     };
     
@@ -90,43 +93,42 @@ public class ReportComp extends ComponentDefinition {
         LOG.warn("{}tearing down", logPrefix);
     }
 
-    Handler handleDownloadStarting = new Handler<DownloadStatus.Starting>() {
+    Handler handleDownloadStarting = new Handler<TransferStatus.DownloadStarting>() {
         @Override
-        public void handle(DownloadStatus.Starting event) {
+        public void handle(TransferStatus.DownloadStarting event) {
             LOG.info("{}download:{} starting", logPrefix, event.overlayId);
-            scheduleReport(event.overlayId);
             startingTime = System.currentTimeMillis();
             status = TorrentStatus.DOWNLOADING;
             percentageCompleted = 0;
         }
     };
 
-    Handler handleDownloadDone = new Handler<DownloadStatus.Done>() {
+    Handler handleDownloadDone = new Handler<TransferStatus.DownloadDone>() {
         @Override
-        public void handle(DownloadStatus.Done event) {
+        public void handle(TransferStatus.DownloadDone event) {
             LOG.info("{}download:{} done", logPrefix, event.overlayId);
-            cancelReport();
             long transferTime = System.currentTimeMillis() - startingTime;
             LOG.info("{}download completed in:{} avg dwnl speed:{} KB/s", new Object[]{logPrefix, transferTime, (double)transferSize/transferTime});
             trigger(new DownloadSummaryEvent(torrentId, transferSize, transferTime), reportPort);
-            downloadSpeed = 0;
+            transferSpeed = transferSpeed.resetDownloadSpeed();
             status = TorrentStatus.UPLOADING;
             percentageCompleted = 100;
         }
     };
 
-    Handler handleDownloadResponse = new Handler<DownloadStatus.Response>() {
+    Handler handleTransferStatusResponse = new Handler<TransferStatus.Response>() {
         @Override
-        public void handle(DownloadStatus.Response resp) {
+        public void handle(TransferStatus.Response resp) {
+            transferSpeed = resp.transferSpeed;
             percentageCompleted = resp.percentageCompleted;
-            LOG.info("{}report:{}", logPrefix, percentageCompleted);
+            LOG.info("{}report pc:{} ds:{} us:{}", new Object[]{logPrefix, percentageCompleted, transferSpeed.totalDownloadSpeed, transferSpeed.totalUploadSpeed});
         }
     };
     
     Handler handleReport = new Handler<ReportTimeout>() {
         @Override
         public void handle(ReportTimeout event) {
-            trigger(new DownloadStatus.Request(event.overlayId), torrentPort);
+            trigger(new TransferStatus.Request(event.overlayId), torrentPort);
         }
     };
     
@@ -134,7 +136,7 @@ public class ReportComp extends ComponentDefinition {
         @Override
         public void handle(StatusSummaryEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            answer(req, req.success(new TorrentExtendedStatus(torrentId, status, downloadSpeed, percentageCompleted)));
+            answer(req, req.success(new TorrentExtendedStatus(torrentId, status, transferSpeed, percentageCompleted)));
         }
     };
 

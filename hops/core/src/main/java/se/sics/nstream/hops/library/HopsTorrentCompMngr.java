@@ -101,11 +101,11 @@ public class HopsTorrentCompMngr {
 
     public void startUpload(Positive<TransferMngrPort> transferMngrPort, Identifier torrentId, HDFSEndpoint hdfsEndpoint, Pair<byte[], TransferDetails> extendedDetails) {
         LOG.info("{}setting up torrent upload {}", logPrefix, torrentId);
-        Pair<Component, Component> comp = setupTorrent(transferMngrPort, true, torrentId, Optional.of(extendedDetails), new ArrayList<KAddress>());
+        Pair<Component, Component> torrentComp = setupTorrent(transferMngrPort, true, torrentId, Optional.of(extendedDetails), new ArrayList<KAddress>());
         LOG.info("{}setting up hdfs {}", logPrefix, torrentId);
-        Component hdfsComp = setupHDFS(torrentId, hdfsEndpoint, comp.getValue0());
-        proxy.trigger(Start.event, comp.getValue0().control());
-        proxy.trigger(Start.event, comp.getValue1().control());
+        Component hdfsComp = setupHDFS(torrentId, hdfsEndpoint, torrentComp.getValue0());
+        proxy.trigger(Start.event, torrentComp.getValue0().control());
+        proxy.trigger(Start.event, torrentComp.getValue1().control());
         proxy.trigger(Start.event, hdfsComp.control());
     }
 

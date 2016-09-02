@@ -10,22 +10,28 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more torrentDetails.
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.transfer;
+package se.sics.nstream.torrent;
 
-import se.sics.kompics.PortType;
+import com.google.common.base.Optional;
+import se.sics.kompics.config.Config;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TransferMngrPort extends PortType {
-    {
-        request(Transfer.DownloadRequest.class);
-        indication(Transfer.DownloadResponse.class);
+public class ConnMngrConfig {
+    public static class Names {
+        public static String MAX_CONN_UPLOAD_SPEED = "transfer.upload.maxConnSpeed";
+    }
+    public final int maxConnUploadSpeed;
+    
+    public ConnMngrConfig(Config config) {
+        Optional<Integer> mcus = config.readValue(Names.MAX_CONN_UPLOAD_SPEED, Integer.class);
+        maxConnUploadSpeed = mcus.isPresent() ? mcus.get() : -1;
     }
 }
