@@ -280,7 +280,7 @@ public abstract class TransferFSM {
 
         @Override
         public void handleTransferStatusReq(TransferStatus.Request req) {
-            cs.proxy.answer(req, req.answer(transferMngr.percentageComplete(), cs.router.speed()));
+            cs.proxy.answer(req, req.answer(transferMngr.percentageComplete(), cs.router.speed(), cs.componentLoad.report()));
         }
         
         @Override

@@ -20,11 +20,11 @@ package se.sics.nstream.storage;
 
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
-import se.sics.nstream.util.result.ReadCallback;
 import se.sics.nstream.storage.cache.KCache;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
+import se.sics.nstream.util.result.ReadCallback;
 import se.sics.nstream.util.result.WriteCallback;
 
 /**
@@ -74,5 +74,9 @@ public class AsyncCompleteStorage implements AsyncStorage {
     @Override
     public void write(KBlock writeRange, KReference<byte[]> val, WriteCallback delayedResult) {
         throw new UnsupportedOperationException("Not supported"); 
+    }
+    
+    public KStorageReport report() {
+        return new KStorageReport(null, cache.report());
     }
 }

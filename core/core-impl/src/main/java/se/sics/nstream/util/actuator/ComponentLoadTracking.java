@@ -21,6 +21,7 @@ package se.sics.nstream.util.actuator;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import org.javatuples.Pair;
 import se.sics.kompics.ComponentProxy;
 import se.sics.ktoolbox.util.tracking.load.NetworkQueueLoadProxy;
 import se.sics.ktoolbox.util.tracking.load.QueueLoadConfig;
@@ -35,6 +36,7 @@ public class ComponentLoadTracking {
     private final NetworkQueueLoadProxy networkQueueLoad;
     private final Map<String, Integer> transferSize = new HashMap<>();
     private final Map<String, Integer> bufferSize = new HashMap<>();
+    private final Map<String, Pair<Integer, Integer>> cacheSize = new HashMap<>();
 
     public ComponentLoadTracking(String componentName, ComponentProxy proxy, QueueLoadConfig queueLoadConfig) {
         this.networkQueueLoad = new NetworkQueueLoadProxy(componentName+"network", proxy, queueLoadConfig);
@@ -52,6 +54,10 @@ public class ComponentLoadTracking {
 
     public void setTransferSize(String fileName, int size) {
         transferSize.put(fileName, size);
+    }
+    
+    public void setCacheSize(String fileName, int normalCacheSize, int extendedCacheSize) {
+        cacheSize.put(fileName, Pair.with(normalCacheSize, extendedCacheSize));
     }
 
     public StatusState state() {
@@ -99,6 +105,6 @@ public class ComponentLoadTracking {
     }
 
     public ComponentLoadReport report() {
-        return new ComponentLoadReport(networkQueueLoad.queueDelay(), transferSize, bufferSize);
+        return new ComponentLoadReport(networkQueueLoad.queueDelay(), transferSize, bufferSize, cacheSize);
     }
 }

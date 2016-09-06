@@ -18,33 +18,43 @@
  */
 package se.sics.nstream.util.actuator;
 
-import java.util.HashMap;
 import java.util.Map;
+import org.javatuples.Pair;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ComponentLoadReport {
-    private final long lastQueueDelay;
-    private final Map<String, Integer> transferSize;
-    private final Map<String, Integer> bufferSize;
-    
-    public ComponentLoadReport(long lastQueueDelay, Map<String, Integer> transferSize, Map<String, Integer> bufferSize) {
-        this.lastQueueDelay = lastQueueDelay;
-        this.transferSize = new HashMap<>(transferSize);
-        this.bufferSize = new HashMap<>(bufferSize);
-    }
-    
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("report load qd:").append(lastQueueDelay).append("\n");
-        for(Map.Entry<String, Integer> e : transferSize.entrySet()) {
-             sb.append("report load file:").append(e.getKey()).append(" transfer:").append(e.getValue()).append("\n");
+
+    public final long queueDelay;
+    public final int totalTransferSize;
+    public final int totalBufferSize;
+    public final int totalCacheSize;
+    public final int totalExtendedCacheSize;
+
+    public ComponentLoadReport(long lastQueueDelay, Map<String, Integer> transferSize, Map<String, Integer> bufferSize, Map<String, Pair<Integer, Integer>> cacheSize) {
+        this.queueDelay = lastQueueDelay;
+
+        int tbs = 0;
+        for (Integer bs : bufferSize.values()) {
+            tbs += bs;
         }
-        for(Map.Entry<String, Integer> e : bufferSize.entrySet()) {
-             sb.append("report load buffer:").append(e.getKey()).append(" buffer:").append(e.getValue()).append("\n");
+        this.totalBufferSize = tbs;
+
+        int tts = 0;
+        for (Integer ts : transferSize.values()) {
+            tts += ts;
         }
-        return sb.toString();
+        this.totalTransferSize = tts;
+        
+        int tcs = 0;
+        int tecs = 0;
+        for (Pair<Integer, Integer> cs : cacheSize.values()) {
+            tcs += cs.getValue0();
+            tecs += cs.getValue1();
+        }
+        this.totalCacheSize = tcs;
+        this.totalExtendedCacheSize = tecs;
     }
+
 }

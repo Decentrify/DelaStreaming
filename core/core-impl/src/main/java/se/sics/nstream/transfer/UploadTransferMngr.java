@@ -58,6 +58,10 @@ public class UploadTransferMngr implements StreamControl, TransferMngr.Reader {
     public void close() {
         file.close();
     }
+    
+    public UploadTMReport report() {
+        return new UploadTMReport(file.report());
+    }
 
     //*****************************CACHE_HINT_READ******************************
     @Override

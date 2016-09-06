@@ -41,11 +41,13 @@ import se.sics.ktoolbox.util.test.MockComponentProxy;
 import se.sics.ktoolbox.util.test.MockExceptionHandler;
 import se.sics.ktoolbox.util.test.PortValidator;
 import se.sics.ktoolbox.util.test.Validator;
+import se.sics.ktoolbox.util.tracking.load.QueueLoadConfig;
 import se.sics.nstream.storage.StorageRead;
 import se.sics.nstream.test.MockStreamEndpoint;
 import se.sics.nstream.test.MockStreamPort;
 import se.sics.nstream.test.MockStreamResource;
 import se.sics.nstream.test.StreamReadReqEC;
+import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KBlockImpl;
 import se.sics.nstream.util.range.KPieceImpl;
@@ -351,7 +353,7 @@ public class TestSimpleKCache {
     private SimpleKCache buildCache(Config config, MockComponentProxy proxy, MockExceptionHandler syncExHandler) {
         proxy.expect(new PortValidator(MockStreamPort.class, false));
         proxy.expect(new PortValidator(Timer.class, false));
-        SimpleKCache skCache = new SimpleKCache(config, proxy, syncExHandler, readEndpoint, readResource);
+        SimpleKCache skCache = new SimpleKCache(config, proxy, syncExHandler, new ComponentLoadTracking("test", proxy, new QueueLoadConfig(config)), readEndpoint, readResource);
         Assert.assertTrue(proxy.validateNext().isValid());
         Assert.assertTrue(proxy.validateNext().isValid());
         Assert.assertEquals(0, syncExHandler.getExceptionCounter());

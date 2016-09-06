@@ -87,7 +87,7 @@ public class AsyncIncompleteStorage implements AsyncStorage {
     }
     
     public KStorageReport report() {
-        KStorageReport report = new KStorageReport(buffer.report());
+        KStorageReport report = new KStorageReport(buffer.report(), cache.report());
         return report;
     }
     

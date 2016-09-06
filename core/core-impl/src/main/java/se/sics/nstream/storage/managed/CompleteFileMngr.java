@@ -63,6 +63,10 @@ public class CompleteFileMngr implements StreamControl, FileMngr.Reader {
         file.close();
         hash.close();
     }
+    
+    public CompleteFMReport report() {
+        return new CompleteFMReport(file.report());
+    }
 
     //*****************************BASIC_READ***********************************
     @Override

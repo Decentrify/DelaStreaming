@@ -51,6 +51,7 @@ import se.sics.nstream.storage.StoragePort;
 import se.sics.nstream.storage.StorageRead;
 import se.sics.nstream.util.StreamEndpoint;
 import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
 import se.sics.nstream.util.range.KRange;
@@ -72,6 +73,7 @@ public class SimpleKCache implements KCache {
     private final Positive<Timer> timerPort;
     private final ComponentProxy proxy;
     private final DelayedExceptionSyncHandler syncExHandling;
+    private final ComponentLoadTracking loadTracker;
     //**************************************************************************
     //blocks maintained by actual cache reads
     final TreeMap<Long, Pair<KBlock, CacheKReference>> cacheRef = new TreeMap<>();
@@ -86,12 +88,13 @@ public class SimpleKCache implements KCache {
     //**************************************************************************
     private UUID extendedCacheCleanTid;
 
-    public SimpleKCache(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExHandling,
+    public SimpleKCache(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExHandling, ComponentLoadTracking loadTracker,
             StreamEndpoint readEndpoint, StreamResource readResource) {
         this.cacheConfig = new KCacheConfig(config);
         this.readResource = readResource;
         this.proxy = proxy;
         this.syncExHandling = syncExHandling;
+        this.loadTracker = loadTracker;
         this.readPort = proxy.getNegative(readEndpoint.resourcePort()).getPair();
         this.timerPort = proxy.getNegative(Timer.class).getPair();
         this.proxy.subscribe(handleExtendedCacheClean, timerPort);
@@ -245,6 +248,8 @@ public class SimpleKCache implements KCache {
             throw crashingException;
         }
 
+        loadTracker.setCacheSize(readResource.getResourceName(), cacheRef.size(), systemRef.size());
+
         //check cache
         Map.Entry<Long, Pair<KBlock, CacheKReference>> cached = cacheRef.floorEntry(readRange.lowerAbsEndpoint());
         if (cached != null) {
@@ -314,6 +319,7 @@ public class SimpleKCache implements KCache {
         @Override
         public void handle(StorageRead.Response resp) {
             LOG.debug("{}received:{}", logPrefix, resp);
+            loadTracker.setCacheSize(readResource.getResourceName(), cacheRef.size(), systemRef.size());
             if (resp.result.isSuccess()) {
                 KBlock blockRange = resp.req.readRange;
                 long blockPos = blockRange.lowerAbsEndpoint();
@@ -465,6 +471,11 @@ public class SimpleKCache implements KCache {
             //crash marker - things will already crash here, but this is hidden from java so...
             throw crashingException;
         }
+    }
+
+    @Override
+    public KCacheReport report() {
+        return new SimpleKCacheReport(cacheRef.size(), systemRef.size());
     }
 
     public static class ExtendedCacheClean extends Timeout implements Identifiable {

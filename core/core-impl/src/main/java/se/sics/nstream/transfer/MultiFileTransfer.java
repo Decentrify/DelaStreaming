@@ -64,13 +64,13 @@ public class MultiFileTransfer implements StreamControl {
             Pair<StreamEndpoint, StreamResource> mainResource = entry.getValue().getMainResource();
             List<Pair<StreamEndpoint, StreamResource>> secondaryResources = entry.getValue().getSecondaryResource();
             if (complete) {
-                SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, mainResource.getValue0(), mainResource.getValue1());
+                SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainResource.getValue0(), mainResource.getValue1());
                 AsyncCompleteStorage file = new AsyncCompleteStorage(cache);
                 AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, true);
                 CompleteFileMngr fileMngr = new CompleteFileMngr(fileDetails, file, hash);
                 completed.put(entry.getKey(), new UploadTransferMngr(fileDetails, fileMngr));
             } else {
-                SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, mainResource.getValue0(), mainResource.getValue1());
+                SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainResource.getValue0(), mainResource.getValue1());
                 List<KBuffer> bufs = new ArrayList<>();
                 bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainResource.getValue0(), mainResource.getValue1(), 0));
                 for (Pair<StreamEndpoint, StreamResource> writeResource : secondaryResources) {

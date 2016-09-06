@@ -49,8 +49,8 @@ import se.sics.ledbat.core.LedbatConfig;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.report.TransferStatusPort;
-import se.sics.nstream.report.event.TransferStatus;
 import se.sics.nstream.report.event.ReportTimeout;
+import se.sics.nstream.report.event.TransferStatus;
 import se.sics.nstream.torrent.event.HashGet;
 import se.sics.nstream.torrent.event.TorrentGet;
 import se.sics.nstream.torrent.event.TorrentTimeout;
@@ -148,7 +148,6 @@ public class TorrentComp extends ComponentDefinition {
         @Override
         public void handle(ReportTimeout event) {
             transfer.report();
-            LOG.info("{}report comp load:{}", logPrefix, componentTracking.report().toString());
         }
     };
 

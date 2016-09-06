@@ -16,25 +16,23 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage;
+package se.sics.nstream.report;
 
-import se.sics.nstream.storage.buffer.KBufferReport;
-import se.sics.nstream.storage.cache.KCacheReport;
+import com.google.common.base.Optional;
+import se.sics.kompics.config.Config;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class KStorageReport {
-    public final KBufferReport bufferReport;
-    public final KCacheReport cacheReport;
-    
-    public KStorageReport(KBufferReport bufferReport, KCacheReport cacheReport) {
-        this.bufferReport = bufferReport;
-        this.cacheReport = cacheReport;
+public class ReportConfig {
+    public static class Names {
+        public static String REPORT_DIR = "report.dir";
     }
     
-    @Override
-    public String toString() {
-        return bufferReport.toString() + "\n" + cacheReport.toString();
+    public final String reportDir;
+    
+    public ReportConfig(Config config) {
+        Optional<String> rd = config.readValue(Names.REPORT_DIR, String.class);
+        reportDir = rd.isPresent() ? rd.get() : null;
     }
 }

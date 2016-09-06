@@ -18,6 +18,12 @@
  */
 package se.sics.nstream.report;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,12 +69,42 @@ public class ReportComp extends ComponentDefinition {
     private double percentageCompleted = 100;
 
     private UUID reportTId;
+    //**************************************************************************
+    private final ReportConfig reportConfig;
+    private BufferedWriter transferFile;
+    private BufferedWriter loadFile;
+    private int fileCounter = 0;
 
     public ReportComp(Init init) {
         LOG.info("{}initiating...", logPrefix);
 
         torrentId = init.torrentId;
         reportDelay = init.reportDelay;
+        
+        reportConfig = new ReportConfig(config());
+        if(reportConfig.reportDir == null) {
+            fileCounter = -1;
+        } else {
+            try {
+                File tf = new File(reportConfig.reportDir + File.separator + "transfer.csv");
+                if(tf.exists()) {
+                    tf.delete();
+                    tf.createNewFile();
+                }
+                transferFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tf)));
+                File lf = new File(reportConfig.reportDir + File.separator + "load.csv");
+                if(lf.exists()) {
+                    lf.delete();
+                    lf.createNewFile();
+                }
+                loadFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(lf)));
+                fileCounter = 1000*1000;
+            } catch (FileNotFoundException ex) {
+                throw new RuntimeException("file report error");
+            } catch (IOException ex) {
+                throw new RuntimeException("file report error");
+            }
+        }
 
         subscribe(handleStart, control);
         subscribe(handleDownloadStarting, torrentPort);
@@ -91,6 +127,14 @@ public class ReportComp extends ComponentDefinition {
     @Override
     public void tearDown() {
         LOG.warn("{}tearing down", logPrefix);
+        if(reportConfig.reportDir != null) {
+            try {
+                transferFile.close();
+                loadFile.close();
+            } catch (IOException ex) {
+                throw new RuntimeException("file report error");
+            }
+        }
     }
 
     Handler handleDownloadStarting = new Handler<TransferStatus.DownloadStarting>() {
@@ -121,9 +165,34 @@ public class ReportComp extends ComponentDefinition {
         public void handle(TransferStatus.Response resp) {
             transferSpeed = resp.transferSpeed;
             percentageCompleted = resp.percentageCompleted;
-            LOG.info("{}report pc:{} ds:{} us:{}", new Object[]{logPrefix, percentageCompleted, transferSpeed.totalDownloadSpeed, transferSpeed.totalUploadSpeed});
+            LOG.info("{}report transfer pc:{} ds:{} us:{}", new Object[]{logPrefix, percentageCompleted, transferSpeed.totalDownloadSpeed, transferSpeed.totalUploadSpeed});
+            LOG.info("{}report comp qd:{} bs:{} ts:{} cs:{} ecs:{}", new Object[]{logPrefix, resp.compLoadReport.queueDelay, resp.compLoadReport.totalBufferSize, 
+                resp.compLoadReport.totalTransferSize, resp.compLoadReport.totalCacheSize, resp.compLoadReport.totalExtendedCacheSize});
+            fileReport(resp);
         }
     };
+    
+    private void fileReport(TransferStatus.Response resp) {
+        if(fileCounter > 0) {
+            try {
+                transferFile.write(resp.percentageCompleted + "," + resp.transferSpeed.totalDownloadSpeed + "," + resp.transferSpeed.totalUploadSpeed + "\n");
+                transferFile.flush();
+                loadFile.write(resp.compLoadReport.queueDelay + "," + resp.compLoadReport.totalTransferSize + "," + resp.compLoadReport.totalBufferSize + "\n");
+                loadFile.flush();
+            } catch (IOException ex) {
+                throw new RuntimeException("file report error");
+            }
+            fileCounter--;
+        } else if (fileCounter == 0) {
+            try {
+                transferFile.close();
+                loadFile.close();
+            } catch (IOException ex) {
+                throw new RuntimeException("file report error");
+            }
+            fileCounter--;
+        }
+    }
     
     Handler handleReport = new Handler<ReportTimeout>() {
         @Override
@@ -139,7 +208,7 @@ public class ReportComp extends ComponentDefinition {
             answer(req, req.success(new TorrentExtendedStatus(torrentId, status, transferSpeed, percentageCompleted)));
         }
     };
-
+    
     public static class Init extends se.sics.kompics.Init<ReportComp> {
         public final Identifier torrentId;
         public final long reportDelay;

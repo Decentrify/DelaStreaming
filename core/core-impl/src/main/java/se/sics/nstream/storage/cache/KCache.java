@@ -19,8 +19,8 @@
 package se.sics.nstream.storage.cache;
 
 import se.sics.ktoolbox.util.reference.KReference;
-import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.storage.AsyncReadOp;
+import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
 
@@ -29,4 +29,5 @@ import se.sics.nstream.util.range.KRange;
  */
 public interface KCache extends StreamControl, AsyncReadOp<KRange>, CacheHint.Read {
     public void buffered(KBlock writeRange, KReference<byte[]> ref);
+    public KCacheReport report();
 }

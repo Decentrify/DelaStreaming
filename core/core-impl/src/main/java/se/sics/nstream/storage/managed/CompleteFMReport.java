@@ -16,25 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage;
+package se.sics.nstream.storage.managed;
 
-import se.sics.nstream.storage.buffer.KBufferReport;
-import se.sics.nstream.storage.cache.KCacheReport;
+import se.sics.nstream.storage.KStorageReport;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class KStorageReport {
-    public final KBufferReport bufferReport;
-    public final KCacheReport cacheReport;
+public class CompleteFMReport {
+    public final KStorageReport storage;
     
-    public KStorageReport(KBufferReport bufferReport, KCacheReport cacheReport) {
-        this.bufferReport = bufferReport;
-        this.cacheReport = cacheReport;
-    }
-    
-    @Override
-    public String toString() {
-        return bufferReport.toString() + "\n" + cacheReport.toString();
+    public CompleteFMReport(KStorageReport storage) {
+        this.storage = storage;
     }
 }
