@@ -86,13 +86,13 @@ public class ReportComp extends ComponentDefinition {
             fileCounter = -1;
         } else {
             try {
-                File tf = new File(reportConfig.reportDir + File.separator + "transfer.csv");
+                File tf = new File(reportConfig.reportDir + File.separator + torrentId.toString() + ".transfer.csv");
                 if(tf.exists()) {
                     tf.delete();
                     tf.createNewFile();
                 }
                 transferFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tf)));
-                File lf = new File(reportConfig.reportDir + File.separator + "load.csv");
+                File lf = new File(reportConfig.reportDir + File.separator + torrentId.toString() + ".load.csv");
                 if(lf.exists()) {
                     lf.delete();
                     lf.createNewFile();
