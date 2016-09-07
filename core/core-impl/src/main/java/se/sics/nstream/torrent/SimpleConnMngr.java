@@ -25,9 +25,10 @@ import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.tracking.load.util.StatusState;
+import se.sics.ledbat.core.AppCongestionWindow;
 import se.sics.ledbat.core.LedbatConfig;
 import se.sics.ledbat.core.util.ThroughputHandler;
-import se.sics.ledbat.ncore.PullConnection;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 
 /**
@@ -38,7 +39,7 @@ public class SimpleConnMngr implements Router {
 
     private final LedbatConfig ledbatConfig;
     private final ConnMngrConfig connConfig;
-    private final Map<Identifier, PullConnection> seederTracker = new HashMap<>();
+    private final Map<Identifier, AppCongestionWindow> seederTracker = new HashMap<>();
     private final Map<Identifier, ThroughputHandler> leecherTracker = new HashMap<>();
     private final LinkedList<KAddress> partners = new LinkedList<>();
 
@@ -47,17 +48,24 @@ public class SimpleConnMngr implements Router {
         this.ledbatConfig = ledbatConfig;
         this.partners.addAll(partners);
         for (KAddress partner : partners) {
-            seederTracker.put(partner.getId(), new PullConnection(ledbatConfig, partner.getId()));
+            seederTracker.put(partner.getId(), new AppCongestionWindow(ledbatConfig, partner.getId()));
         }
     }
 
+    @Override
+    public void appState(StatusState state) {
+        long now = System.currentTimeMillis();
+        for(AppCongestionWindow acw : seederTracker.values()) {
+            acw.appState(now, state);
+        }
+    }
     @Override
     public KAddress randomPartner() {
         KAddress first = partners.removeFirst();
         partners.add(first);
         return first;
     }
-
+    
     @Override
     public Pair<KAddress, Long> availableDownloadSlot() {
         int n = partners.size();
@@ -65,8 +73,8 @@ public class SimpleConnMngr implements Router {
             n--;
             KAddress next = partners.removeFirst();
             partners.add(next);
-            PullConnection pc = seederTracker.get(next.getId());
-            if (pc.canSend() > 0) {
+            AppCongestionWindow pc = seederTracker.get(next.getId());
+            if (pc.canSend()) {
                 return Pair.with(next, pc.getRTO());
             }
         }
@@ -75,29 +83,29 @@ public class SimpleConnMngr implements Router {
 
     @Override
     public void useDownloadSlot(KAddress target) {
-        PullConnection pc = seederTracker.get(target.getId());
+        AppCongestionWindow pc = seederTracker.get(target.getId());
         if (pc == null) {
             return;
         }
-        pc.request(ledbatConfig.mss);
+        pc.request(System.currentTimeMillis(), ledbatConfig.mss);
     }
 
     @Override
     public void successDownloadSlot(KAddress target, LedbatMsg.Response resp) {
-        PullConnection pc = seederTracker.get(target.getId());
+        AppCongestionWindow pc = seederTracker.get(target.getId());
         if (pc == null) {
             return;
         }
-        pc.success(ledbatConfig.mss, resp);
+        pc.success(System.currentTimeMillis(), ledbatConfig.mss, resp);
     }
 
     @Override
     public void timeoutDownloadSlot(KAddress target) {
-        PullConnection pc = seederTracker.get(target.getId());
+        AppCongestionWindow pc = seederTracker.get(target.getId());
         if (pc == null) {
             return;
         }
-        pc.timeout(ledbatConfig.mss);
+        pc.timeout(System.currentTimeMillis(), ledbatConfig.mss);
     }
 
     //******************************UPLOAD**************************************
@@ -111,7 +119,7 @@ public class SimpleConnMngr implements Router {
         if(connConfig.maxConnUploadSpeed == -1) {
             return true;
         }
-        if(leecherThroughput.currentSpeed() < connConfig.maxConnUploadSpeed) {
+        if(leecherThroughput.currentSpeed(System.currentTimeMillis()) < connConfig.maxConnUploadSpeed) {
             return true;
         } else {
             return false;
@@ -124,7 +132,7 @@ public class SimpleConnMngr implements Router {
         if(leecherThroughput == null) {
             return;
         }
-        leecherThroughput.packetReceived(ledbatConfig.mss);
+        leecherThroughput.packetReceived(System.currentTimeMillis(), ledbatConfig.mss);
     }
     //*****************************REPORTING************************************
 

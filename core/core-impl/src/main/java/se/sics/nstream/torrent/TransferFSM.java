@@ -529,6 +529,7 @@ public abstract class TransferFSM {
         private void tryDownload() {
             LOG.trace("{}downloading...", cs.logPrefix);
 
+            cs.router.appState(cs.componentLoad.state());
             if (!transferMngr.hasOngoing()) {
                 LOG.info("{}download completed write to storage", cs.logPrefix);
                 return;
@@ -545,9 +546,7 @@ public abstract class TransferFSM {
                     }
                     return;
                 }
-                if (nextDownload.get() instanceof MultiFileTransfer.SlowDownload) {
-                    return;
-                } else if (nextDownload.get() instanceof MultiFileTransfer.NextHash) {
+                if (nextDownload.get() instanceof MultiFileTransfer.NextHash) {
                     MultiFileTransfer.NextHash nextHash = (MultiFileTransfer.NextHash) nextDownload.get();
                     HashGet.Request hashReq = new HashGet.Request(cs.overlayId, nextHash.cacheHints, nextHash.fileName, nextHash.hashes.getValue0(), nextHash.hashes.getValue1());
                     LOG.trace("{}download hashes:{}", cs.logPrefix, hashReq.hashes);

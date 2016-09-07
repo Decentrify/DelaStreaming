@@ -20,8 +20,8 @@ package se.sics.nstream.torrent;
 
 import java.util.Map;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ledbat.core.AppCongestionWindow;
 import se.sics.ledbat.core.util.ThroughputHandler;
-import se.sics.ledbat.ncore.PullConnection;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -39,14 +39,15 @@ public class TransferSpeed {
         return new TransferSpeed(0, totalUploadSpeed);
     }
     
-    public static TransferSpeed transferReport(Map<Identifier, PullConnection> seeders, Map<Identifier, ThroughputHandler> leechers) {
+    public static TransferSpeed transferReport(Map<Identifier, AppCongestionWindow> seeders, Map<Identifier, ThroughputHandler> leechers) {
+        long now = System.currentTimeMillis();
         int totalDownloadSpeed = 0;
-        for (PullConnection pc : seeders.values()) {
-            totalDownloadSpeed += pc.downloadSpeed();
+        for (AppCongestionWindow pc : seeders.values()) {
+            totalDownloadSpeed += pc.downloadSpeed(now);
         }
         int totalUploadSpeed = 0;
         for(ThroughputHandler th : leechers.values()) {
-            totalUploadSpeed += th.speed();
+            totalUploadSpeed += th.speed(now);
         }
         return new TransferSpeed(totalDownloadSpeed, totalUploadSpeed);
     }

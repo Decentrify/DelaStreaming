@@ -226,13 +226,7 @@ public class MultiFileTransfer implements StreamControl {
         }
     }
 
-    public static class SlowDownload extends NextDownload {
-
-        public SlowDownload(String fileName) {
-            super(null, fileName);
-        }
-
-    }
+   
 
     public static class NextHash extends NextDownload {
 

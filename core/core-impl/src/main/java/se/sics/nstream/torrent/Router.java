@@ -20,12 +20,15 @@ package se.sics.nstream.torrent;
 
 import org.javatuples.Pair;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.tracking.load.util.StatusState;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface Router {
+    
+    public void appState(StatusState state);
     public KAddress randomPartner();
     public Pair<KAddress, Long> availableDownloadSlot();
     public void useDownloadSlot(KAddress target);
