@@ -37,13 +37,14 @@ public class ComponentLoadTracking {
     private final Map<String, Integer> transferSize = new HashMap<>();
     private final Map<String, Integer> bufferSize = new HashMap<>();
     private final Map<String, Pair<Integer, Integer>> cacheSize = new HashMap<>();
-
+    private long previousTransferSize = 0;
+    
     public ComponentLoadTracking(String componentName, ComponentProxy proxy, QueueLoadConfig queueLoadConfig) {
-        this.networkQueueLoad = new NetworkQueueLoadProxy(componentName+"network", proxy, queueLoadConfig);
+        this.networkQueueLoad = new NetworkQueueLoadProxy(componentName + "network", proxy, queueLoadConfig);
         Random rand = new Random(ComponentLoadConfig.seed);
         this.state = StatusState.MAINTAIN;
     }
-    
+
     public void startTracking() {
         networkQueueLoad.startTracking();
     }
@@ -55,7 +56,7 @@ public class ComponentLoadTracking {
     public void setTransferSize(String fileName, int size) {
         transferSize.put(fileName, size);
     }
-    
+
     public void setCacheSize(String fileName, int normalCacheSize, int extendedCacheSize) {
         cacheSize.put(fileName, Pair.with(normalCacheSize, extendedCacheSize));
     }
@@ -63,45 +64,39 @@ public class ComponentLoadTracking {
     public StatusState state() {
         StatusState queue = networkQueueLoad.state();
         StatusState buffer = buffer();
-        StatusState transfer = transfer();
-        if(queue.equals(StatusState.SLOW_DOWN) || buffer.equals(StatusState.SLOW_DOWN) || transfer.equals(StatusState.SLOW_DOWN)) {
+        if (queue.equals(StatusState.SLOW_DOWN) || buffer.equals(StatusState.SLOW_DOWN)) {
             state = StatusState.SLOW_DOWN;
-        } else if(queue.equals(StatusState.MAINTAIN) || buffer.equals(StatusState.MAINTAIN) || transfer.equals(StatusState.MAINTAIN)) {
+        } else if (queue.equals(StatusState.MAINTAIN) || buffer.equals(StatusState.MAINTAIN)) {
             state = StatusState.MAINTAIN;
         } else {
             state = StatusState.SPEED_UP;
         }
         return state;
     }
-    
-    private StatusState buffer() {
-        int totalBuffer = 0;
-        for (Integer bS : bufferSize.values()) {
-            totalBuffer += bS;
-        }
-        double bufferUtilization = (double)totalBuffer / ComponentLoadConfig.maxBuffer;
-        if (bufferUtilization >= 1) {
-            return StatusState.SLOW_DOWN;
-        } else if (bufferUtilization > 0.5) {
-            return StatusState.MAINTAIN;
-        } else {
-            return StatusState.SPEED_UP;
-        }
-    }
 
-    private StatusState transfer() {
+    private StatusState buffer() {
         int totalTransfer = 0;
         for (Integer tS : transferSize.values()) {
             totalTransfer += tS;
         }
-        double transferUtilization = (double)totalTransfer / ComponentLoadConfig.maxTransfer;
-        if (transferUtilization >= 1) {
-            return StatusState.SLOW_DOWN;
-        } else if (transferUtilization > 0.5) {
-            return StatusState.MAINTAIN;
+        double transferUtilization = (double) totalTransfer / ComponentLoadConfig.maxTransfer;
+        
+        StatusState next;
+        if (transferUtilization < 0.4) {
+            next = StatusState.SPEED_UP;
+        } else if (transferUtilization < 0.8) {
+            if(transferUtilization < 0.8 * previousTransferSize) {
+                next = StatusState.SPEED_UP;
+            } else if(transferUtilization > 1.2 * previousTransferSize) {
+                next = StatusState.SLOW_DOWN;
+            } else {
+                next = StatusState.MAINTAIN;
+            }
         } else {
-            return StatusState.SPEED_UP;
+             next = StatusState.SLOW_DOWN;
         }
+        previousTransferSize = totalTransfer;
+        return next;
     }
 
     public ComponentLoadReport report() {
