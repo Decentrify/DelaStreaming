@@ -20,7 +20,6 @@ package se.sics.nstream.torrent;
 
 import org.javatuples.Pair;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.tracking.load.util.StatusState;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 
 /**
@@ -28,7 +27,7 @@ import se.sics.ledbat.ncore.msg.LedbatMsg;
  */
 public interface Router {
     
-    public void appState(StatusState state);
+    public void appState(double adjustment);
     public KAddress randomPartner();
     public Pair<KAddress, Long> availableDownloadSlot();
     public void useDownloadSlot(KAddress target);
@@ -39,4 +38,5 @@ public interface Router {
     public void useUploadSlot(KAddress target);
     //*******************************REPORT*************************************
     public TransferSpeed speed();
+    public double totalCwnd();
 }

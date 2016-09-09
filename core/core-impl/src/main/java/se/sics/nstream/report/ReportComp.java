@@ -165,9 +165,9 @@ public class ReportComp extends ComponentDefinition {
         public void handle(TransferStatus.Response resp) {
             transferSpeed = resp.transferSpeed;
             percentageCompleted = resp.percentageCompleted;
-            LOG.info("{}report transfer pc:{} ds:{} us:{}", new Object[]{logPrefix, percentageCompleted, transferSpeed.totalDownloadSpeed, transferSpeed.totalUploadSpeed});
-            LOG.info("{}report comp qd:{} bs:{} ts:{} cs:{} ecs:{}", new Object[]{logPrefix, resp.compLoadReport.queueDelay, resp.compLoadReport.totalBufferSize, 
-                resp.compLoadReport.totalTransferSize, resp.compLoadReport.totalCacheSize, resp.compLoadReport.totalExtendedCacheSize});
+//            LOG.info("{}report transfer pc:{} ds:{} us:{}", new Object[]{logPrefix, percentageCompleted, transferSpeed.totalDownloadSpeed, transferSpeed.totalUploadSpeed});
+//            LOG.info("{}report comp qd:{} bs:{} ts:{} cs:{} ecs:{}", new Object[]{logPrefix, resp.compLoadReport.avgQueueDelay, resp.compLoadReport.totalBufferSize, 
+//                resp.compLoadReport.totalTransferSize, resp.compLoadReport.totalCacheSize, resp.compLoadReport.totalExtendedCacheSize});
             fileReport(resp);
         }
     };
@@ -175,9 +175,11 @@ public class ReportComp extends ComponentDefinition {
     private void fileReport(TransferStatus.Response resp) {
         if(fileCounter > 0) {
             try {
-                transferFile.write(resp.percentageCompleted + "," + resp.transferSpeed.totalDownloadSpeed + "," + resp.transferSpeed.totalUploadSpeed + "\n");
+                transferFile.write(resp.percentageCompleted + "," + resp.transferSpeed.totalDownloadSpeed + "," 
+                        + resp.transferSpeed.totalUploadSpeed + "," + resp.appCwnd + "\n");
                 transferFile.flush();
-                loadFile.write(resp.compLoadReport.queueDelay + "," + resp.compLoadReport.totalTransferSize + "," + resp.compLoadReport.totalBufferSize + "\n");
+                loadFile.write(resp.compLoadReport.avgQueueDelay + "," + resp.compLoadReport.instQueueDelay + "," 
+                        + resp.compLoadReport.avgBufferSize + "," + resp.compLoadReport.instBufferSize + "\n");
                 loadFile.flush();
             } catch (IOException ex) {
                 throw new RuntimeException("file report error");

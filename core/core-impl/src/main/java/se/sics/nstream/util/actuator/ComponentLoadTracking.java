@@ -20,29 +20,31 @@ package se.sics.nstream.util.actuator;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 import org.javatuples.Pair;
 import se.sics.kompics.ComponentProxy;
+import se.sics.ktoolbox.util.predict.ExpMovingAvg;
+import se.sics.ktoolbox.util.predict.STGMAvg;
+import se.sics.ktoolbox.util.predict.SimpleSmoothing;
 import se.sics.ktoolbox.util.tracking.load.NetworkQueueLoadProxy;
 import se.sics.ktoolbox.util.tracking.load.QueueLoadConfig;
-import se.sics.ktoolbox.util.tracking.load.util.StatusState;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ComponentLoadTracking {
 
-    private StatusState state;
     private final NetworkQueueLoadProxy networkQueueLoad;
+    private final STGMAvg avgBufferLoad;
+    private int instBufferLoad;
+
     private final Map<String, Integer> transferSize = new HashMap<>();
     private final Map<String, Integer> bufferSize = new HashMap<>();
     private final Map<String, Pair<Integer, Integer>> cacheSize = new HashMap<>();
-    private long previousTransferSize = 0;
-    
+
     public ComponentLoadTracking(String componentName, ComponentProxy proxy, QueueLoadConfig queueLoadConfig) {
         this.networkQueueLoad = new NetworkQueueLoadProxy(componentName + "network", proxy, queueLoadConfig);
-        Random rand = new Random(ComponentLoadConfig.seed);
-        this.state = StatusState.MAINTAIN;
+        this.avgBufferLoad = new STGMAvg(new ExpMovingAvg(), Pair.with(0.0, (double)ComponentLoadConfig.maxTransfer), new SimpleSmoothing());
+        this.instBufferLoad = 0;
     }
 
     public void startTracking() {
@@ -61,45 +63,25 @@ public class ComponentLoadTracking {
         cacheSize.put(fileName, Pair.with(normalCacheSize, extendedCacheSize));
     }
 
-    public StatusState state() {
-        StatusState queue = networkQueueLoad.state();
-        StatusState buffer = buffer();
-        if (queue.equals(StatusState.SLOW_DOWN) || buffer.equals(StatusState.SLOW_DOWN)) {
-            state = StatusState.SLOW_DOWN;
-        } else if (queue.equals(StatusState.MAINTAIN) || buffer.equals(StatusState.MAINTAIN)) {
-            state = StatusState.MAINTAIN;
-        } else {
-            state = StatusState.SPEED_UP;
-        }
-        return state;
+    public double adjustment() {
+        double queue = networkQueueLoad.adjustment();
+        double buffer = bufferAdjustment();
+
+        double adjustment = Math.min(queue, buffer);
+        return adjustment;
     }
 
-    private StatusState buffer() {
+    private double bufferAdjustment() {
         int totalTransfer = 0;
         for (Integer tS : transferSize.values()) {
             totalTransfer += tS;
         }
-        double transferUtilization = (double) totalTransfer / ComponentLoadConfig.maxTransfer;
-        
-        StatusState next;
-        if (transferUtilization < 0.4) {
-            next = StatusState.SPEED_UP;
-        } else if (transferUtilization < 0.8) {
-            if(transferUtilization < 0.8 * previousTransferSize) {
-                next = StatusState.SPEED_UP;
-            } else if(transferUtilization > 1.2 * previousTransferSize) {
-                next = StatusState.SLOW_DOWN;
-            } else {
-                next = StatusState.MAINTAIN;
-            }
-        } else {
-             next = StatusState.SLOW_DOWN;
-        }
-        previousTransferSize = totalTransfer;
-        return next;
+        instBufferLoad = totalTransfer;
+        double adjustment = avgBufferLoad.update(instBufferLoad);
+        return adjustment;
     }
 
     public ComponentLoadReport report() {
-        return new ComponentLoadReport(networkQueueLoad.queueDelay(), transferSize, bufferSize, cacheSize);
+        return new ComponentLoadReport(networkQueueLoad.queueDelay(), Pair.with((int)avgBufferLoad.get(), instBufferLoad));
     }
 }

@@ -280,7 +280,7 @@ public abstract class TransferFSM {
 
         @Override
         public void handleTransferStatusReq(TransferStatus.Request req) {
-            cs.proxy.answer(req, req.answer(transferMngr.percentageComplete(), cs.router.speed(), cs.componentLoad.report()));
+            cs.proxy.answer(req, req.answer(transferMngr.percentageComplete(), cs.router.speed(), cs.componentLoad.report(), (int)cs.router.totalCwnd()));
         }
         
         @Override
@@ -520,7 +520,7 @@ public abstract class TransferFSM {
         @Override
         public void report() {
             LOG.info("{}transfer report:\n{}", cs.logPrefix, transferMngr.report());
-//            LOG.info("{}state report:{}",cs.logPrefix, cs.router.report());
+//            LOG.info("{}adjustment report:{}",cs.logPrefix, cs.router.report());
             LOG.debug("{}transfer report details: success:{} timeouts:{}\n{}", new Object[]{cs.logPrefix, periodSuccess, periodTimeouts, transferMngr.report()});
             periodSuccess = 0;
             periodTimeouts = 0;
@@ -529,7 +529,7 @@ public abstract class TransferFSM {
         private void tryDownload() {
             LOG.trace("{}downloading...", cs.logPrefix);
 
-            cs.router.appState(cs.componentLoad.state());
+            cs.router.appState(cs.componentLoad.adjustment());
             if (!transferMngr.hasOngoing()) {
                 LOG.info("{}download completed write to storage", cs.logPrefix);
                 return;

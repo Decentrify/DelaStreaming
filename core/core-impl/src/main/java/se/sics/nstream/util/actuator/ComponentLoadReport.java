@@ -18,7 +18,6 @@
  */
 package se.sics.nstream.util.actuator;
 
-import java.util.Map;
 import org.javatuples.Pair;
 
 /**
@@ -26,35 +25,15 @@ import org.javatuples.Pair;
  */
 public class ComponentLoadReport {
 
-    public final long queueDelay;
-    public final int totalTransferSize;
-    public final int totalBufferSize;
-    public final int totalCacheSize;
-    public final int totalExtendedCacheSize;
+    public final int avgQueueDelay;
+    public final int instQueueDelay;
+    public final int avgBufferSize;
+    public final int instBufferSize;
 
-    public ComponentLoadReport(long lastQueueDelay, Map<String, Integer> transferSize, Map<String, Integer> bufferSize, Map<String, Pair<Integer, Integer>> cacheSize) {
-        this.queueDelay = lastQueueDelay;
-
-        int tbs = 0;
-        for (Integer bs : bufferSize.values()) {
-            tbs += bs;
-        }
-        this.totalBufferSize = tbs;
-
-        int tts = 0;
-        for (Integer ts : transferSize.values()) {
-            tts += ts;
-        }
-        this.totalTransferSize = tts;
-        
-        int tcs = 0;
-        int tecs = 0;
-        for (Pair<Integer, Integer> cs : cacheSize.values()) {
-            tcs += cs.getValue0();
-            tecs += cs.getValue1();
-        }
-        this.totalCacheSize = tcs;
-        this.totalExtendedCacheSize = tecs;
+    public ComponentLoadReport(Pair<Integer, Integer> queueDelay, Pair<Integer, Integer> bufferSize) {
+        this.avgQueueDelay = queueDelay.getValue0();
+        this.instQueueDelay = queueDelay.getValue1();
+        this.avgBufferSize = bufferSize.getValue0();
+        this.instBufferSize = bufferSize.getValue1();
     }
-
 }

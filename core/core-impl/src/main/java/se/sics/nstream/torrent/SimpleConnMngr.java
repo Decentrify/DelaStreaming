@@ -25,7 +25,6 @@ import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.tracking.load.util.StatusState;
 import se.sics.ledbat.core.AppCongestionWindow;
 import se.sics.ledbat.core.LedbatConfig;
 import se.sics.ledbat.core.util.ThroughputHandler;
@@ -53,10 +52,10 @@ public class SimpleConnMngr implements Router {
     }
 
     @Override
-    public void appState(StatusState state) {
+    public void appState(double adjustment) {
         long now = System.currentTimeMillis();
         for(AppCongestionWindow acw : seederTracker.values()) {
-            acw.appState(now, state);
+            acw.appState(now, adjustment);
         }
     }
     @Override
@@ -139,5 +138,14 @@ public class SimpleConnMngr implements Router {
     @Override
     public TransferSpeed speed() {
         return TransferSpeed.transferReport(seederTracker, leecherTracker);
+    }
+    
+    @Override 
+    public double totalCwnd() {
+        double totalCwnd = 0;
+        for(AppCongestionWindow acw : seederTracker.values()) {
+            totalCwnd += acw.cwnd();
+        }
+        return totalCwnd;
     }
 }

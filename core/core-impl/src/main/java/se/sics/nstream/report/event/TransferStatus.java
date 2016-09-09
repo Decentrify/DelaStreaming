@@ -92,8 +92,8 @@ public class TransferStatus {
             this(UUIDIdentifier.randomId(), overlayId);
         }
         
-        public Response answer(double percentageCompleted, TransferSpeed transferSpeed, ComponentLoadReport compLoadReport) {
-            return new Response(eventId, overlayId, percentageCompleted, transferSpeed, compLoadReport);
+        public Response answer(double percentageCompleted, TransferSpeed transferSpeed, ComponentLoadReport compLoadReport, int appCwnd) {
+            return new Response(eventId, overlayId, percentageCompleted, transferSpeed, compLoadReport, appCwnd);
         }
 
         @Override
@@ -113,17 +113,19 @@ public class TransferStatus {
         public final double percentageCompleted;
         public final TransferSpeed transferSpeed;
         public final ComponentLoadReport compLoadReport;
+        public final int appCwnd;
 
-        Response(Identifier eventId, Identifier overlayId, double percentageCompleted, TransferSpeed transferSpeed, ComponentLoadReport compLoadReport) {
+        Response(Identifier eventId, Identifier overlayId, double percentageCompleted, TransferSpeed transferSpeed, ComponentLoadReport compLoadReport, int appCwnd) {
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.percentageCompleted = percentageCompleted;
             this.transferSpeed = transferSpeed;
             this.compLoadReport = compLoadReport;
+            this.appCwnd = appCwnd;
         }
 
-        Response(Identifier overlayId, double percentageCompleted, TransferSpeed transferSpeed, ComponentLoadReport compLoadReport) {
-            this(UUIDIdentifier.randomId(), overlayId, percentageCompleted, transferSpeed, compLoadReport);
+        Response(Identifier overlayId, double percentageCompleted, TransferSpeed transferSpeed, ComponentLoadReport compLoadReport, int appCwnd) {
+            this(UUIDIdentifier.randomId(), overlayId, percentageCompleted, transferSpeed, compLoadReport, appCwnd);
         }
 
         @Override
