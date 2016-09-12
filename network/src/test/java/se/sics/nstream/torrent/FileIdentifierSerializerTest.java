@@ -16,28 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage.cache;
+package se.sics.nstream.torrent;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import java.util.Set;
-import java.util.TreeSet;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
-import se.sics.nstream.test.KHintSummaryEC;
+import se.sics.nstream.torrent.FileIdentifier;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class KHintSummarySerializerTest {
-    @BeforeClass
+public class FileIdentifierSerializerTest {
+     @BeforeClass
     public static void setup() {
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
@@ -46,23 +45,19 @@ public class KHintSummarySerializerTest {
     
     @Test
     public void simpleTest() {
-        Serializer serializer = Serializers.lookupSerializer(KHint.Summary.class);
-        KHintSummaryEC eqc = new KHintSummaryEC();
-        KHint.Summary original, copy;
+        Serializer serializer = Serializers.lookupSerializer(FileIdentifier.class);
+        FileIdentifier original, copy;
         ByteBuf serializedOriginal, serializedCopy;
         
-        Set<Integer> blocks = new TreeSet<>();
-        blocks.add(0);
-        blocks.add(1);
-        original = new KHint.Summary(1l, blocks);
+        original = new FileIdentifier(new IntIdentifier(0), 1);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (KHint.Summary) serializer.fromBinary(serializedCopy, Optional.absent());
+        copy = (FileIdentifier) serializer.fromBinary(serializedCopy, Optional.absent());
         
-        Assert.assertTrue(eqc.isEqual(original, copy));
+        Assert.assertEquals(original, copy);
         Assert.assertEquals(0, serializedCopy.readableBytes());
     }
 }

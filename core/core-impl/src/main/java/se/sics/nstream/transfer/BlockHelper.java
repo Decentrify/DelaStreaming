@@ -85,7 +85,7 @@ public class BlockHelper {
         
         return new KPieceImpl(blockNr, pieceBlockNr, lower, higher);
     }
-
+    
     public static KBlock getHashRange(int blockNr, FileBaseDetails fileDetails) {
         int hashSize = HashUtil.getHashSize(fileDetails.hashAlg);
         long lower = blockNr * hashSize;

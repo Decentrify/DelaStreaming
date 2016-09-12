@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage.cache;
+package se.sics.nstream.torrent.conn.msg;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
@@ -29,14 +29,17 @@ import org.junit.Test;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
-import se.sics.nstream.test.KHintSummaryEC;
+import se.sics.nstream.storage.cache.KHint;
+import se.sics.nstream.test.CacheHintRequestEC;
+import se.sics.nstream.test.CacheHintResponseEC;
+import se.sics.nstream.torrent.FileIdentifier;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class KHintSummarySerializerTest {
+public class CacheHintSerializerTest {
     @BeforeClass
     public static void setup() {
         int serializerId = 128;
@@ -45,24 +48,49 @@ public class KHintSummarySerializerTest {
     }
     
     @Test
-    public void simpleTest() {
-        Serializer serializer = Serializers.lookupSerializer(KHint.Summary.class);
-        KHintSummaryEC eqc = new KHintSummaryEC();
-        KHint.Summary original, copy;
+    public void simpleReq() {
+        Serializer serializer = Serializers.lookupSerializer(CacheHint.Request.class);
+        CacheHintRequestEC ec = new CacheHintRequestEC();
+        CacheHint.Request original, copy;
         ByteBuf serializedOriginal, serializedCopy;
         
         Set<Integer> blocks = new TreeSet<>();
         blocks.add(0);
         blocks.add(1);
-        original = new KHint.Summary(1l, blocks);
+        KHint.Summary cacheHint = new KHint.Summary(1l, blocks);
+        original = new CacheHint.Request(new FileIdentifier(new IntIdentifier(1), 2), cacheHint);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (KHint.Summary) serializer.fromBinary(serializedCopy, Optional.absent());
+        copy = (CacheHint.Request) serializer.fromBinary(serializedCopy, Optional.absent());
         
-        Assert.assertTrue(eqc.isEqual(original, copy));
+        Assert.assertTrue(ec.isEqual(original, copy));
+        Assert.assertEquals(0, serializedCopy.readableBytes());
+    }
+    
+    @Test
+    public void simpleResp() {
+        Serializer serializer = Serializers.lookupSerializer(CacheHint.Response.class);
+        CacheHintResponseEC ec = new CacheHintResponseEC();
+        CacheHint.Response original, copy;
+        ByteBuf serializedOriginal, serializedCopy;
+        
+        Set<Integer> blocks = new TreeSet<>();
+        blocks.add(0);
+        blocks.add(1);
+        KHint.Summary cacheHint = new KHint.Summary(1l, blocks);
+        CacheHint.Request request = new CacheHint.Request(new FileIdentifier(new IntIdentifier(1), 2), cacheHint);
+        original = request.success();
+        serializedOriginal = Unpooled.buffer();
+        serializer.toBinary(original, serializedOriginal);
+
+        serializedCopy = Unpooled.buffer();
+        serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
+        copy = (CacheHint.Response) serializer.fromBinary(serializedCopy, Optional.absent());
+        
+        Assert.assertTrue(ec.isEqual(original, copy));
         Assert.assertEquals(0, serializedCopy.readableBytes());
     }
 }

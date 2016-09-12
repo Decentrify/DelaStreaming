@@ -16,23 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.test;
+package se.sics.nstream.torrent.conn;
 
-import se.sics.ktoolbox.util.test.EqualComparator;
-import se.sics.nstream.storage.cache.KHint;
+import se.sics.kompics.PortType;
+import se.sics.nstream.torrent.conn.upld.event.GetBlocks;
+import se.sics.nstream.torrent.conn.upld.event.UpldConnReport;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class KHintSummaryEqc implements EqualComparator<KHint.Summary>{
-    @Override
-    public boolean isEqual(KHint.Summary o1, KHint.Summary o2) {
-        if(o1.lStamp != o2.lStamp) {
-            return false;
-        }
-        if(!o1.blocks.equals(o2.blocks)) {
-            return false;
-        }
-        return true;
+public class UpldConnPort extends PortType {
+    {
+        indication(UpldConnReport.class);
+        indication(GetBlocks.Request.class);
+        request(GetBlocks.Response.class);
     }
 }

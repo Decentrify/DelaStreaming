@@ -55,7 +55,7 @@ public class SimpleConnMngr implements Router {
     public void appState(double adjustment) {
         long now = System.currentTimeMillis();
         for(AppCongestionWindow acw : seederTracker.values()) {
-            acw.appState(now, adjustment);
+            acw.adjustState(adjustment);
         }
     }
     @Override

@@ -35,7 +35,7 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.storage.cache.KHint;
-import se.sics.nstream.test.KHintSummaryEqc;
+import se.sics.nstream.test.KHintSummaryEC;
 import se.sics.nstream.test.PieceGetEqc;
 import se.sics.nstream.test.StringKeyMapEqc;
 
@@ -54,7 +54,7 @@ public class PieceGetSerializerTest {
     @Test
     public void simpleReqTest() {
         Serializer serializer = Serializers.lookupSerializer(PieceGet.Request.class);
-        PieceGetEqc.Request eqc = new PieceGetEqc.Request(new StringKeyMapEqc(new KHintSummaryEqc()));
+        PieceGetEqc.Request eqc = new PieceGetEqc.Request(new StringKeyMapEqc(new KHintSummaryEC()));
         PieceGet.Request original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
@@ -74,7 +74,7 @@ public class PieceGetSerializerTest {
     @Test
     public void simpleRangeReqTest() {
         Serializer serializer = Serializers.lookupSerializer(PieceGet.RangeRequest.class);
-        PieceGetEqc.RangeRequest eqc = new PieceGetEqc.RangeRequest(new StringKeyMapEqc(new KHintSummaryEqc()));
+        PieceGetEqc.RangeRequest eqc = new PieceGetEqc.RangeRequest(new StringKeyMapEqc(new KHintSummaryEC()));
         PieceGet.RangeRequest original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 

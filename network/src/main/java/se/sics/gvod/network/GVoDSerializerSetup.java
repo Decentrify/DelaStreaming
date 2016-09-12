@@ -24,6 +24,12 @@ import se.sics.ktoolbox.croupier.CroupierSerializerSetup;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.cache.KHintSummarySerializer;
+import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.torrent.FileIdentifierSerializer;
+import se.sics.nstream.torrent.conn.msg.CacheHint;
+import se.sics.nstream.torrent.conn.msg.CacheHintSerializer;
+import se.sics.nstream.torrent.conn.msg.DownloadPiece;
+import se.sics.nstream.torrent.conn.msg.DownloadPieceSerializer;
 import se.sics.nstream.torrent.event.HashGet;
 import se.sics.nstream.torrent.event.HashGetSerializer;
 import se.sics.nstream.torrent.event.PieceGet;
@@ -39,14 +45,20 @@ import se.sics.nstream.util.FileBaseDetailsSerializer;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class GVoDSerializerSetup {
-    public static int serializerIds = 10;
+    public static int serializerIds = 15;
     
     public static enum GVoDSerializers {
+        FileIdentifier(FileIdentifier.class, "nStreamFileIdentifier"),
+        KHintSummary(KHint.Summary.class, "nStreamKHintSummary"),
+        CacheHintRequest(CacheHint.Request.class, "nstreamCacheHintRequest"),
+        CacheHintResponse(CacheHint.Response.class, "nstreamCacheHintResponse"),
+        DownloadPieceRequest(DownloadPiece.Request.class, "nstreamDownloadPieceRequest"),
+        DownloadPieceResponse(DownloadPiece.Response.class, "nstreamDownloadPieceResponse"),
         BlockDetails(BlockDetails.class, "nstreamBlockDetails"),
         FileBaseDetails(FileBaseDetails.class, "nstreamFileBaseDetails"),
         TorrentGetRequest(TorrentGet.Request.class, "nstreamTorrentGetRequest"),
         TorrentGetResponse(TorrentGet.Response.class, "nstreamTorrentGetResponse"),
-        KHintSummary(KHint.Summary.class, "nStramKHintSummary"),
+        
         HashGetRequest(HashGet.Request.class, "nstreamHashGetRequest"),
         HashGetResponse(HashGet.Response.class, "nstreamHashGetResopnse"),
         PieceGetRequest(PieceGet.Request.class, "nstreamPieceGetRequest"),
@@ -80,6 +92,30 @@ public class GVoDSerializerSetup {
     public static int registerSerializers(int startingId) {
         int currentId = startingId;
         
+        FileIdentifierSerializer fileIdentifierSerializer = new FileIdentifierSerializer(currentId++);
+        Serializers.register(fileIdentifierSerializer, GVoDSerializers.FileIdentifier.serializerName);
+        Serializers.register(GVoDSerializers.FileIdentifier.serializedClass, GVoDSerializers.FileIdentifier.serializerName);
+        
+        KHintSummarySerializer kHintSummarySerializer = new KHintSummarySerializer(currentId++);
+        Serializers.register(kHintSummarySerializer, GVoDSerializers.KHintSummary.serializerName);
+        Serializers.register(GVoDSerializers.KHintSummary.serializedClass, GVoDSerializers.KHintSummary.serializerName);
+        
+        CacheHintSerializer.Request cacheHintRequestSerializer = new CacheHintSerializer.Request(currentId++);
+        Serializers.register(cacheHintRequestSerializer, GVoDSerializers.CacheHintRequest.serializerName);
+        Serializers.register(GVoDSerializers.CacheHintRequest.serializedClass, GVoDSerializers.CacheHintRequest.serializerName);
+        
+        CacheHintSerializer.Response cacheHintResponseSerializer = new CacheHintSerializer.Response(currentId++);
+        Serializers.register(cacheHintResponseSerializer, GVoDSerializers.CacheHintResponse.serializerName);
+        Serializers.register(GVoDSerializers.CacheHintResponse.serializedClass, GVoDSerializers.CacheHintResponse.serializerName);
+        
+        DownloadPieceSerializer.Request downloadPieceRequestSerializer = new DownloadPieceSerializer.Request(currentId++);
+        Serializers.register(downloadPieceRequestSerializer, GVoDSerializers.DownloadPieceRequest.serializerName);
+        Serializers.register(GVoDSerializers.DownloadPieceRequest.serializedClass, GVoDSerializers.DownloadPieceRequest.serializerName);
+        
+        DownloadPieceSerializer.Response downloadPieceResponseSerializer = new DownloadPieceSerializer.Response(currentId++);
+        Serializers.register(downloadPieceResponseSerializer, GVoDSerializers.DownloadPieceResponse.serializerName);
+        Serializers.register(GVoDSerializers.DownloadPieceResponse.serializedClass, GVoDSerializers.DownloadPieceResponse.serializerName);
+        
         BlockDetailsSerializer blockDetailsSerializer = new BlockDetailsSerializer(currentId++);
         Serializers.register(blockDetailsSerializer, GVoDSerializers.BlockDetails.serializerName);
         Serializers.register(GVoDSerializers.BlockDetails.serializedClass, GVoDSerializers.BlockDetails.serializerName);
@@ -95,10 +131,6 @@ public class GVoDSerializerSetup {
         TorrentGetSerializer.Response torrentGetResponseSerializer = new TorrentGetSerializer.Response(currentId++);
         Serializers.register(torrentGetResponseSerializer, GVoDSerializers.TorrentGetResponse.serializerName);
         Serializers.register(GVoDSerializers.TorrentGetResponse.serializedClass, GVoDSerializers.TorrentGetResponse.serializerName);
-        
-        KHintSummarySerializer kHintSummarySerializer = new KHintSummarySerializer(currentId++);
-        Serializers.register(kHintSummarySerializer, GVoDSerializers.KHintSummary.serializerName);
-        Serializers.register(GVoDSerializers.KHintSummary.serializedClass, GVoDSerializers.KHintSummary.serializerName);
         
         HashGetSerializer.Request hashGetRequestSerializer = new HashGetSerializer.Request(currentId++);
         Serializers.register(hashGetRequestSerializer, GVoDSerializers.HashGetRequest.serializerName);

@@ -48,7 +48,7 @@ public class ComponentLoadTracking {
     }
 
     public void startTracking() {
-        networkQueueLoad.startTracking();
+        networkQueueLoad.start();
     }
 
     public void setBufferSize(String bufferName, int size) {
