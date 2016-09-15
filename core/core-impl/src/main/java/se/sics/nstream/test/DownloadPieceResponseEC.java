@@ -21,7 +21,7 @@ package se.sics.nstream.test;
 import java.util.Arrays;
 import java.util.Objects;
 import se.sics.ktoolbox.util.test.EqualComparator;
-import se.sics.nstream.torrent.conn.msg.DownloadPiece;
+import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 
 /**
  *
@@ -36,14 +36,14 @@ public class DownloadPieceResponseEC implements EqualComparator<DownloadPiece.Re
         if(o1 == null || o2 == null) {
             return false;
         }
-        if(o1.eventId.equals(o2.eventId)) {
-            return true;
+        if(!o1.eventId.equals(o2.eventId)) {
+            return false;
         }
-        if(o1.fileId.equals(o2.fileId)) {
-            return true;
+        if(!o1.fileId.equals(o2.fileId)) {
+            return false;
         }
-        if(Objects.equals(o1.piece, o2.piece)) {
-            return true;
+        if(!Objects.equals(o1.piece, o2.piece)) {
+            return false;
         }
         
         byte[] v1 = o1.val.isLeft() ? o1.val.getLeft().getValue().get() : o1.val.getRight();

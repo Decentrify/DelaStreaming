@@ -97,7 +97,7 @@ public class Library {
         status = Pair.with(status.getValue0(), TorrentStatus.DOWNLOADING);
         torrentStatus.put(torrentId, status);
         TorrentDetails torrentDetails = pendingDownload.remove(torrentId);
-        TransferDetails transferDetails = new TransferDetails(torrentDetails, extendedDetails);
+        TransferDetails transferDetails = new TransferDetails(null, torrentDetails, extendedDetails);
         torrents.put(torrentId, transferDetails);
         return transferDetails;
     }

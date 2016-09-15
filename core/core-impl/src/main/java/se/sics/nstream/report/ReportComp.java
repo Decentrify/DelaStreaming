@@ -44,7 +44,7 @@ import se.sics.nstream.library.util.TorrentStatus;
 import se.sics.nstream.report.event.DownloadSummaryEvent;
 import se.sics.nstream.report.event.StatusSummaryEvent;
 import se.sics.nstream.report.event.TransferStatus;
-import se.sics.nstream.torrent.TransferSpeed;
+import se.sics.nstream.torrent.ConnMngrReport;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -65,7 +65,7 @@ public class ReportComp extends ComponentDefinition {
     private TorrentStatus status = TorrentStatus.UPLOADING;
     private long startingTime;
     private long transferSize = 0;
-    private TransferSpeed transferSpeed;
+    private ConnMngrReport transferSpeed;
     private double percentageCompleted = 100;
 
     private UUID reportTId;

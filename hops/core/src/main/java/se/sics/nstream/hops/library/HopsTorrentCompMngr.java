@@ -23,7 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.javatuples.Pair;
+import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Channel;
@@ -39,6 +39,7 @@ import se.sics.ktoolbox.util.idextractor.EventOverlayIdExtractor;
 import se.sics.ktoolbox.util.idextractor.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
+import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
 import se.sics.nstream.hops.hdfs.HDFSComp;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSPort;
@@ -68,6 +69,7 @@ public class HopsTorrentCompMngr {
     private final One2NChannel reportChannel;
     private final Map<Identifier, Component> report = new HashMap<>();
     private final Map<Identifier, Component> torrent = new HashMap<>();
+    private final Map<Identifier, Component> networkRetry = new HashMap<>();
     private final Map<Identifier, Component> hdfs = new HashMap<>();
     private final Map<Identifier, Component> kafka = new HashMap<>();
 
@@ -82,9 +84,10 @@ public class HopsTorrentCompMngr {
 
     public void startDownload(Positive<TransferMngrPort> transferMngrPort, Identifier torrentId, List<KAddress> partners) {
         LOG.info("{}setting up torrent download {}", logPrefix, torrentId);
-        Pair<Component, Component> torrentComp = setupTorrent(transferMngrPort, false, torrentId, (Optional) Optional.absent(), partners);
+        Triplet<Component, Component, Component> torrentComp = setupTorrent(transferMngrPort, false, torrentId, (Optional) Optional.absent(), partners);
         proxy.trigger(Start.event, torrentComp.getValue0().control());
         proxy.trigger(Start.event, torrentComp.getValue1().control());
+        proxy.trigger(Start.event, torrentComp.getValue2().control());
     }
 
     public void advanceDownload(Identifier torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint) {
@@ -99,29 +102,34 @@ public class HopsTorrentCompMngr {
         }
     }
 
-    public void startUpload(Positive<TransferMngrPort> transferMngrPort, Identifier torrentId, HDFSEndpoint hdfsEndpoint, Pair<byte[], TransferDetails> extendedDetails) {
+    public void startUpload(Positive<TransferMngrPort> transferMngrPort, Identifier torrentId, HDFSEndpoint hdfsEndpoint, TransferDetails extendedDetails) {
         LOG.info("{}setting up torrent upload {}", logPrefix, torrentId);
-        Pair<Component, Component> torrentComp = setupTorrent(transferMngrPort, true, torrentId, Optional.of(extendedDetails), new ArrayList<KAddress>());
+        Triplet<Component, Component, Component> torrentComp = setupTorrent(transferMngrPort, true, torrentId, Optional.of(extendedDetails), new ArrayList<KAddress>());
         LOG.info("{}setting up hdfs {}", logPrefix, torrentId);
         Component hdfsComp = setupHDFS(torrentId, hdfsEndpoint, torrentComp.getValue0());
         proxy.trigger(Start.event, torrentComp.getValue0().control());
         proxy.trigger(Start.event, torrentComp.getValue1().control());
+        proxy.trigger(Start.event, torrentComp.getValue2().control());
         proxy.trigger(Start.event, hdfsComp.control());
     }
 
-    private Pair<Component, Component> setupTorrent(Positive<TransferMngrPort> transferMngrPort, boolean upload, Identifier torrentId,
-            Optional<Pair<byte[], TransferDetails>> extendedDetails, List<KAddress> partners) {
+    private Triplet<Component, Component, Component> setupTorrent(Positive<TransferMngrPort> transferMngrPort, boolean upload, Identifier torrentId,
+            Optional<TransferDetails> extendedDetails, List<KAddress> partners) {
+        Component networkRetryComp = proxy.create(BestEffortNetworkComp.class, new BestEffortNetworkComp.Init(selfAdr));
+        networkRetry.put(torrentId, networkRetryComp);
+        proxy.connect(extPorts.timerPort, networkRetryComp.getNegative(Timer.class), Channel.TWO_WAY);
+        networkChannel.addChannel(torrentId, networkRetryComp.getNegative(Network.class));
         Component torrentComp = proxy.create(TorrentComp.class, new TorrentComp.Init(selfAdr, torrentId, new HopsStorageProvider(), partners, upload, extendedDetails));
         torrent.put(torrentId, torrentComp);
         Component reportComp = proxy.create(ReportComp.class, new ReportComp.Init(torrentId, 1000));
         report.put(torrentId, reportComp);
         proxy.connect(extPorts.timerPort, torrentComp.getNegative(Timer.class), Channel.TWO_WAY);
-        networkChannel.addChannel(torrentId, torrentComp.getNegative(Network.class));
+        proxy.connect(networkRetryComp.getPositive(Network.class), torrentComp.getNegative(Network.class), Channel.TWO_WAY);
         proxy.connect(transferMngrPort, torrentComp.getNegative(TransferMngrPort.class), Channel.TWO_WAY);
         proxy.connect(extPorts.timerPort, reportComp.getNegative(Timer.class), Channel.TWO_WAY);
         proxy.connect(torrentComp.getPositive(TransferStatusPort.class), reportComp.getNegative(TransferStatusPort.class), Channel.TWO_WAY);
         reportChannel.addChannel(torrentId, reportComp.getPositive(ReportPort.class));
-        return Pair.with(torrentComp, reportComp);
+        return Triplet.with(torrentComp, reportComp, networkRetryComp);
     }
 
     private Component setupHDFS(Identifier torrentId, HDFSEndpoint hdfsEndpoint, Component torrentComp) {
@@ -139,11 +147,13 @@ public class HopsTorrentCompMngr {
     }
 
     public void destroy(Identifier torrentId) {
+        Component networkComp = networkRetry.remove(torrentId);
         Component torrentComp = torrent.remove(torrentId);
         Component hdfsComp = hdfs.remove(torrentId);
         Component kafkaComp = kafka.remove(torrentId);
 
-        networkChannel.removeChannel(torrentId, torrentComp.getNegative(Network.class));
+        networkChannel.removeChannel(torrentId, networkComp.getNegative(Network.class));
+        proxy.trigger(Kill.event, networkComp.control());
         proxy.trigger(Kill.event, torrentComp.control());
         if (hdfsComp != null) {
             proxy.trigger(Kill.event, hdfsComp.control());

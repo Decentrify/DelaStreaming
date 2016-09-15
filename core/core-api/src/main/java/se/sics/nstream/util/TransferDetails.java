@@ -24,10 +24,12 @@ import java.util.Map;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TransferDetails {
+    public final byte[] torrent;
     public final TorrentDetails base;
     public final Map<String, FileExtendedDetails> extended;
     
-    public TransferDetails(TorrentDetails base, Map<String, FileExtendedDetails> extended) {
+    public TransferDetails(byte[] torrent, TorrentDetails base, Map<String, FileExtendedDetails> extended) {
+        this.torrent = torrent;
         this.base = base;
         this.extended = extended;
     }

@@ -25,15 +25,13 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.ktoolbox.util.predict.ExpMovingAvg;
 import se.sics.ktoolbox.util.predict.STGMAvg;
 import se.sics.ktoolbox.util.predict.SimpleSmoothing;
-import se.sics.ktoolbox.util.tracking.load.NetworkQueueLoadProxy;
-import se.sics.ktoolbox.util.tracking.load.QueueLoadConfig;
+import se.sics.nutil.tracking.load.QueueLoadConfig;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ComponentLoadTracking {
 
-    private final NetworkQueueLoadProxy networkQueueLoad;
     private final STGMAvg avgBufferLoad;
     private int instBufferLoad;
 
@@ -42,13 +40,8 @@ public class ComponentLoadTracking {
     private final Map<String, Pair<Integer, Integer>> cacheSize = new HashMap<>();
 
     public ComponentLoadTracking(String componentName, ComponentProxy proxy, QueueLoadConfig queueLoadConfig) {
-        this.networkQueueLoad = new NetworkQueueLoadProxy(componentName + "network", proxy, queueLoadConfig);
         this.avgBufferLoad = new STGMAvg(new ExpMovingAvg(), Pair.with(0.0, (double)ComponentLoadConfig.maxTransfer), new SimpleSmoothing());
         this.instBufferLoad = 0;
-    }
-
-    public void startTracking() {
-        networkQueueLoad.start();
     }
 
     public void setBufferSize(String bufferName, int size) {
@@ -64,11 +57,7 @@ public class ComponentLoadTracking {
     }
 
     public double adjustment() {
-        double queue = networkQueueLoad.adjustment();
-        double buffer = bufferAdjustment();
-
-        double adjustment = Math.min(queue, buffer);
-        return adjustment;
+        return bufferAdjustment();
     }
 
     private double bufferAdjustment() {
@@ -82,6 +71,6 @@ public class ComponentLoadTracking {
     }
 
     public ComponentLoadReport report() {
-        return new ComponentLoadReport(networkQueueLoad.queueDelay(), Pair.with((int)avgBufferLoad.get(), instBufferLoad));
+        return new ComponentLoadReport(null, Pair.with((int)avgBufferLoad.get(), instBufferLoad));
     }
 }

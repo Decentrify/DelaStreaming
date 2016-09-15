@@ -22,7 +22,7 @@ import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.nstream.StreamEvent;
-import se.sics.nstream.torrent.TransferSpeed;
+import se.sics.nstream.torrent.ConnMngrReport;
 import se.sics.nstream.util.actuator.ComponentLoadReport;
 
 /**
@@ -92,7 +92,7 @@ public class TransferStatus {
             this(UUIDIdentifier.randomId(), overlayId);
         }
         
-        public Response answer(double percentageCompleted, TransferSpeed transferSpeed, ComponentLoadReport compLoadReport, int appCwnd) {
+        public Response answer(double percentageCompleted, ConnMngrReport transferSpeed, ComponentLoadReport compLoadReport, int appCwnd) {
             return new Response(eventId, overlayId, percentageCompleted, transferSpeed, compLoadReport, appCwnd);
         }
 
@@ -111,11 +111,11 @@ public class TransferStatus {
         public final Identifier eventId;
         public final Identifier overlayId;
         public final double percentageCompleted;
-        public final TransferSpeed transferSpeed;
+        public final ConnMngrReport transferSpeed;
         public final ComponentLoadReport compLoadReport;
         public final int appCwnd;
 
-        Response(Identifier eventId, Identifier overlayId, double percentageCompleted, TransferSpeed transferSpeed, ComponentLoadReport compLoadReport, int appCwnd) {
+        Response(Identifier eventId, Identifier overlayId, double percentageCompleted, ConnMngrReport transferSpeed, ComponentLoadReport compLoadReport, int appCwnd) {
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.percentageCompleted = percentageCompleted;
@@ -124,7 +124,7 @@ public class TransferStatus {
             this.appCwnd = appCwnd;
         }
 
-        Response(Identifier overlayId, double percentageCompleted, TransferSpeed transferSpeed, ComponentLoadReport compLoadReport, int appCwnd) {
+        Response(Identifier overlayId, double percentageCompleted, ConnMngrReport transferSpeed, ComponentLoadReport compLoadReport, int appCwnd) {
             this(UUIDIdentifier.randomId(), overlayId, percentageCompleted, transferSpeed, compLoadReport, appCwnd);
         }
 

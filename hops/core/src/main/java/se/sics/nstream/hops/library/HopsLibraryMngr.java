@@ -148,9 +148,9 @@ public class HopsLibraryMngr {
                         byte[] torrentByte = HDFSHelper.getManifestByte(manifest.getValue());
                         TorrentDetails torrentDetails = ManifestJSON.getTorrentDetails(manifest.getValue());
                         Map<String, FileExtendedDetails> extendedDetails = getUploadExtendedDetails(req.hdfsEndpoint, req.manifestResource, torrentDetails);
-                        TransferDetails transferDetails = new TransferDetails(torrentDetails, extendedDetails);
+                        TransferDetails transferDetails = new TransferDetails(torrentByte, torrentDetails, extendedDetails);
                         library.upload(req.torrentId, req.torrentName, req.hdfsEndpoint, req.manifestResource, transferDetails);
-                        components.startUpload(transferMngrPort.getPair(), req.torrentId, req.hdfsEndpoint, Pair.with(torrentByte, transferDetails));
+                        components.startUpload(transferMngrPort.getPair(), req.torrentId, req.hdfsEndpoint, transferDetails);
 
                         HopsTorrentUploadEvent.Response hopsResp = req.uploading(Result.success(true));
                         LOG.trace("{}sending:{}", logPrefix, hopsResp);

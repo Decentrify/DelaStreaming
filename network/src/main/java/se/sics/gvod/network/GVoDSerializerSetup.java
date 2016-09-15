@@ -26,16 +26,24 @@ import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.cache.KHintSummarySerializer;
 import se.sics.nstream.torrent.FileIdentifier;
 import se.sics.nstream.torrent.FileIdentifierSerializer;
-import se.sics.nstream.torrent.conn.msg.CacheHint;
-import se.sics.nstream.torrent.conn.msg.CacheHintSerializer;
-import se.sics.nstream.torrent.conn.msg.DownloadPiece;
-import se.sics.nstream.torrent.conn.msg.DownloadPieceSerializer;
+import se.sics.nstream.torrent.conn.msg.NetCloseTransfer;
+import se.sics.nstream.torrent.conn.msg.NetCloseTransferSerializer;
+import se.sics.nstream.torrent.conn.msg.NetConnect;
+import se.sics.nstream.torrent.conn.msg.NetConnectSerializer;
+import se.sics.nstream.torrent.conn.msg.NetDetailedState;
+import se.sics.nstream.torrent.conn.msg.NetDetailedStateSerializer;
+import se.sics.nstream.torrent.conn.msg.NetOpenTransfer;
+import se.sics.nstream.torrent.conn.msg.NetOpenTransferSerializer;
 import se.sics.nstream.torrent.event.HashGet;
 import se.sics.nstream.torrent.event.HashGetSerializer;
 import se.sics.nstream.torrent.event.PieceGet;
 import se.sics.nstream.torrent.event.PieceGetSerializer;
 import se.sics.nstream.torrent.event.TorrentGet;
 import se.sics.nstream.torrent.event.TorrentGetSerializer;
+import se.sics.nstream.torrent.transfer.msg.CacheHint;
+import se.sics.nstream.torrent.transfer.msg.CacheHintSerializer;
+import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
+import se.sics.nstream.torrent.transfer.msg.DownloadPieceSerializer;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockDetailsSerializer;
 import se.sics.nstream.util.FileBaseDetails;
@@ -45,10 +53,17 @@ import se.sics.nstream.util.FileBaseDetailsSerializer;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class GVoDSerializerSetup {
-    public static int serializerIds = 15;
+    public static int serializerIds = 22;
     
     public static enum GVoDSerializers {
         FileIdentifier(FileIdentifier.class, "nStreamFileIdentifier"),
+        NetConnectRequest(NetConnect.Request.class, "nStreamNetConnRequest"),
+        NetConnectResponse(NetConnect.Response.class, "nStreamNetConnResponse"),
+        NetDetailedStateRequest(NetDetailedState.Request.class, "nStreamNetDetailedStateRequest"),
+        NetDetailedStateResponse(NetDetailedState.Response.class, "nStreamNetDetailedStateResponse"),
+        NetOpenTransferDefRequest(NetOpenTransfer.DefinitionRequest.class, "nStreamNetOpenTransferDefRequest"),
+        NetOpenTransferDefResponse(NetOpenTransfer.DefinitionResponse.class, "nStreamNetOpenTransferDefResponse"),
+        NetCloseTransfer(NetCloseTransfer.class, "nStreamNetCloseTransfer"),
         KHintSummary(KHint.Summary.class, "nStreamKHintSummary"),
         CacheHintRequest(CacheHint.Request.class, "nstreamCacheHintRequest"),
         CacheHintResponse(CacheHint.Response.class, "nstreamCacheHintResponse"),
@@ -95,6 +110,34 @@ public class GVoDSerializerSetup {
         FileIdentifierSerializer fileIdentifierSerializer = new FileIdentifierSerializer(currentId++);
         Serializers.register(fileIdentifierSerializer, GVoDSerializers.FileIdentifier.serializerName);
         Serializers.register(GVoDSerializers.FileIdentifier.serializedClass, GVoDSerializers.FileIdentifier.serializerName);
+       
+        NetConnectSerializer.Request connRequestSerializer = new NetConnectSerializer.Request(currentId++);
+        Serializers.register(connRequestSerializer, GVoDSerializers.NetConnectRequest.serializerName);
+        Serializers.register(GVoDSerializers.NetConnectRequest.serializedClass, GVoDSerializers.NetConnectRequest.serializerName);
+        
+        NetConnectSerializer.Response connResponseSerializer = new NetConnectSerializer.Response(currentId++);
+        Serializers.register(connResponseSerializer, GVoDSerializers.NetConnectResponse.serializerName);
+        Serializers.register(GVoDSerializers.NetConnectResponse.serializedClass, GVoDSerializers.NetConnectResponse.serializerName);
+        
+        NetDetailedStateSerializer.Request torrentDefinitionRequestSerializer = new NetDetailedStateSerializer.Request(currentId++);
+        Serializers.register(torrentDefinitionRequestSerializer, GVoDSerializers.NetDetailedStateRequest.serializerName);
+        Serializers.register(GVoDSerializers.NetDetailedStateRequest.serializedClass, GVoDSerializers.NetDetailedStateRequest.serializerName);
+        
+        NetDetailedStateSerializer.Response torrentDefinitionResponseSerializer = new NetDetailedStateSerializer.Response(currentId++);
+        Serializers.register(torrentDefinitionResponseSerializer, GVoDSerializers.NetDetailedStateResponse.serializerName);
+        Serializers.register(GVoDSerializers.NetDetailedStateResponse.serializedClass, GVoDSerializers.NetDetailedStateResponse.serializerName);
+        
+        NetOpenTransferSerializer.DefinitionRequest transferDefinitionRequest = new NetOpenTransferSerializer.DefinitionRequest(currentId++);
+        Serializers.register(transferDefinitionRequest, GVoDSerializers.NetOpenTransferDefRequest.serializerName);
+        Serializers.register(GVoDSerializers.NetOpenTransferDefRequest.serializedClass, GVoDSerializers.NetOpenTransferDefRequest.serializerName);
+        
+        NetOpenTransferSerializer.DefinitionResponse transferDefinitionResponse = new NetOpenTransferSerializer.DefinitionResponse(currentId++);
+        Serializers.register(transferDefinitionResponse, GVoDSerializers.NetOpenTransferDefResponse.serializerName);
+        Serializers.register(GVoDSerializers.NetOpenTransferDefResponse.serializedClass, GVoDSerializers.NetOpenTransferDefResponse.serializerName);
+
+        NetCloseTransferSerializer closeTransfer = new NetCloseTransferSerializer(currentId++);
+        Serializers.register(closeTransfer, GVoDSerializers.NetCloseTransfer.serializerName);
+        Serializers.register(GVoDSerializers.NetCloseTransfer.serializedClass, GVoDSerializers.NetCloseTransfer.serializerName);
         
         KHintSummarySerializer kHintSummarySerializer = new KHintSummarySerializer(currentId++);
         Serializers.register(kHintSummarySerializer, GVoDSerializers.KHintSummary.serializerName);

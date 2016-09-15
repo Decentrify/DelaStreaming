@@ -41,7 +41,7 @@ import se.sics.ktoolbox.util.test.MockComponentProxy;
 import se.sics.ktoolbox.util.test.MockExceptionHandler;
 import se.sics.ktoolbox.util.test.PortValidator;
 import se.sics.ktoolbox.util.test.Validator;
-import se.sics.ktoolbox.util.tracking.load.QueueLoadConfig;
+import se.sics.nutil.tracking.load.QueueLoadConfig;
 import se.sics.nstream.storage.StorageRead;
 import se.sics.nstream.test.MockStreamEndpoint;
 import se.sics.nstream.test.MockStreamPort;

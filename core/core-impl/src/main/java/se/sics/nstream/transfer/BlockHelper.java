@@ -73,14 +73,13 @@ public class BlockHelper {
         return new KBlockImpl(blockNr, lower, higher);
     }
 
-    public static KPiece getPieceRange(Pair<Integer, Integer> pieceNr, FileBaseDetails fileDetails) {
-        return getPieceRange(pieceNr.getValue0(), pieceNr.getValue1(), fileDetails);
+    public static KPiece getPieceRange(Pair<Integer, Integer> pieceNr, BlockDetails blockDetails, BlockDetails defaultBlockDetails) {
+        return getPieceRange(pieceNr.getValue0(), pieceNr.getValue1(), blockDetails, defaultBlockDetails);
     }
     
-    public static KPiece getPieceRange(int blockNr, int pieceBlockNr, FileBaseDetails fileDetails) {
-        BlockDetails blockDetails = fileDetails.getBlockDetails(blockNr);
+    public static KPiece getPieceRange(int blockNr, int pieceBlockNr, BlockDetails blockDetails, BlockDetails defaultBlockDetails) {
         int pieceSize = blockDetails.getPieceSize(pieceBlockNr);
-        long lower = blockNr * fileDetails.defaultBlock.blockSize + pieceBlockNr * blockDetails.defaultPieceSize;
+        long lower = blockNr * defaultBlockDetails.blockSize + pieceBlockNr * blockDetails.defaultPieceSize;
         long higher = lower + pieceSize - 1;
         
         return new KPieceImpl(blockNr, pieceBlockNr, lower, higher);

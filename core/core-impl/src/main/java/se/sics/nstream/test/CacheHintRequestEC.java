@@ -19,7 +19,7 @@
 package se.sics.nstream.test;
 
 import se.sics.ktoolbox.util.test.EqualComparator;
-import se.sics.nstream.torrent.conn.msg.CacheHint;
+import se.sics.nstream.torrent.transfer.msg.CacheHint;
 
 /**
  *
@@ -36,15 +36,15 @@ public class CacheHintRequestEC implements EqualComparator<CacheHint.Request>{
         if(o1 == null || o2 == null) {
             return false;
         }
-        if(o1.eventId.equals(o2.eventId)) {
-            return true;
+        if(!o1.eventId.equals(o2.eventId)) {
+            return false;
         }
-        if(o1.fileId.equals(o2.fileId)) {
-            return true;
+        if(!o1.fileId.equals(o2.fileId)) {
+            return false;
         }
-        if(khsEC.isEqual(o1.requestCache, o2.requestCache)) {
-            return true;
+        if(!khsEC.isEqual(o1.requestCache, o2.requestCache)) {
+            return false;
         }
-        return false;
+        return true;
     }
 }

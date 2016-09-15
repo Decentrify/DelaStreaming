@@ -1,0 +1,497 @@
+/*
+ * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
+ * 2009 Royal Institute of Technology (KTH)
+ *
+ * GVoD is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
+package se.sics.nstream.torrent.conn;
+
+import com.google.common.base.Optional;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+import org.javatuples.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import se.sics.kompics.ClassMatchedHandler;
+import se.sics.kompics.ComponentDefinition;
+import se.sics.kompics.Handler;
+import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.Negative;
+import se.sics.kompics.Positive;
+import se.sics.kompics.Start;
+import se.sics.kompics.network.Network;
+import se.sics.kompics.network.Transport;
+import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.identifiable.Identifiable;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.KHeader;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.torrent.conn.event.CloseTransfer;
+import se.sics.nstream.torrent.conn.event.DetailedState;
+import se.sics.nstream.torrent.conn.event.OpenTransferDefinition;
+import se.sics.nstream.torrent.conn.event.Seeder;
+import se.sics.nstream.torrent.conn.msg.NetCloseTransfer;
+import se.sics.nstream.torrent.conn.msg.NetConnect;
+import se.sics.nstream.torrent.conn.msg.NetDetailedState;
+import se.sics.nstream.torrent.conn.msg.NetOpenTransfer;
+import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.util.BlockDetails;
+import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
+import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
+import se.sics.nutil.tracking.load.QueueLoadConfig;
+
+/**
+ * @author Alex Ormenisan <aaor@kth.se>
+ */
+public class ConnectionComp extends ComponentDefinition {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ConnectionComp.class);
+    private String logPrefix;
+
+    private static final int DEFAULT_RETRIES = 5;
+    //**************************************************************************
+    Negative<ConnectionPort> connPort = provides(ConnectionPort.class);
+    Positive<Network> networkPort = requires(Network.class);
+    Positive<Timer> timerPort = requires(Timer.class);
+    //**************************************************************************
+    private final Identifier torrentId;
+    private final KAddress selfAdr;
+    //**************************************************************************
+    private final NetworkQueueLoadProxy networkQueueLoad;
+    //**************************************************************************
+    private LeecherConnectionState leecherConnState;
+    private SeederConnectionState seederConnState;
+
+    public ConnectionComp(Init init) {
+        torrentId = init.torrentId;
+        selfAdr = init.selfAdr;
+        logPrefix = "<nid:" + selfAdr.getId() + ",oid:" + torrentId + "> ";
+
+        networkQueueLoad = new NetworkQueueLoadProxy("connection:" + logPrefix, proxy, new QueueLoadConfig(config()));
+        seederConnState = new SeederConnectionState();
+        if (init.details.isPresent()) {
+            leecherConnState = new LeecherConnectionState(init.details.get());
+        }
+
+        subscribe(handleStart, control);
+        subscribe(handlePeerConnect, connPort);
+        subscribe(handleDetailedState, connPort);
+        subscribe(handleOpenTransferDefinitionLeecher, connPort);
+        subscribe(handleOpenTransferDefinitionSeeder, connPort);
+        subscribe(handleCloseTransfer, connPort);
+        subscribe(handleNetworkTimeouts, networkPort);
+
+        subscribe(handleConnectionReq, networkPort);
+        subscribe(handleConnectionResp, networkPort);
+        subscribe(handleDetailedStateReq, networkPort);
+        subscribe(handleDetailedStateResp, networkPort);
+        subscribe(handleOpenTransferDefinitionReq, networkPort);
+        subscribe(handleOpenTransferDefinitionResp, networkPort);
+    }
+
+    Handler handleStart = new Handler<Start>() {
+
+        @Override
+        public void handle(Start event) {
+            LOG.info("{}starting", logPrefix);
+            networkQueueLoad.start();
+            seederConnState.start();
+            if (leecherConnState != null) {
+                leecherConnState.start();
+            }
+        }
+    };
+
+    @Override
+    public void tearDown() {
+        networkQueueLoad.tearDown();
+        seederConnState.tearDown();
+        if (leecherConnState != null) {
+            leecherConnState.tearDown();
+        }
+    }
+    //**************************************************************************
+    Handler handlePeerConnect = new Handler<Seeder.Connect>() {
+        @Override
+        public void handle(Seeder.Connect req) {
+            seederConnState.connect(req);
+        }
+    };
+    Handler handleDetailedState = new Handler<DetailedState.Request>() {
+        @Override
+        public void handle(DetailedState.Request req) {
+            seederConnState.detailedState(req);
+        }
+    };
+    Handler handleOpenTransferDefinitionLeecher = new Handler<OpenTransferDefinition.LeecherRequest>() {
+        @Override
+        public void handle(OpenTransferDefinition.LeecherRequest req) {
+            seederConnState.transferDefinition(req);
+        }
+    };
+    Handler handleOpenTransferDefinitionSeeder = new Handler<OpenTransferDefinition.SeederResponse>() {
+        @Override
+        public void handle(OpenTransferDefinition.SeederResponse event) {
+            leecherConnState.transferDefinitionResp(event);
+        }
+    };
+
+    Handler handleCloseTransfer = new Handler<CloseTransfer.Request>() {
+        @Override
+        public void handle(CloseTransfer.Request req) {
+            LOG.info("{}closing conn:{}", logPrefix, req);
+            if (req.connId.leecher) {
+                seederConnState.localClose(req.connId);
+            } else {
+                leecherConnState.localClose(req.connId);
+            }
+        }
+    };
+
+    //**************************************************************************
+    private void simpleUDPSend(Identifiable content, KAddress target) {
+        LOG.trace("{}sending:{} to:{}", new Object[]{logPrefix, content, target});
+        KHeader header = new BasicHeader(selfAdr, target, Transport.UDP);
+        KContentMsg msg = new BasicContentMsg(header, content);
+        trigger(msg, networkPort);
+    }
+
+    private void bestEffortUDPSend(Identifiable content, KAddress target, int retries) {
+        simpleUDPSend(new BestEffortMsg.Request<>(content, retries, 1000), target);
+    }
+
+    private void answerNetwork(KContentMsg msg, KompicsEvent content) {
+        LOG.trace("{}answering:{} to:{}", new Object[]{logPrefix, content, msg.getHeader().getSource()});
+        KContentMsg resp = msg.answer(content);
+        trigger(resp, networkPort);
+    }
+
+    ClassMatchedHandler handleNetworkTimeouts
+            = new ClassMatchedHandler<BestEffortMsg.Timeout, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout>>() {
+                @Override
+                public void handle(BestEffortMsg.Timeout content, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout> context) {
+                    LOG.trace("{}timed out:{}", logPrefix, content);
+                    Object baseContent = content.getWrappedContent();
+                    Identifier netReqId = content.getWrappedContent().getId();
+                    KAddress source = context.getHeader().getSource();
+
+                    if (baseContent instanceof NetConnect.Request) {
+                        seederConnState.connectTimeout(netReqId);
+                    } else if (baseContent instanceof NetDetailedState.Request) {
+                        seederConnState.detailedStateTimeout(netReqId, source);
+                    } else if (baseContent instanceof NetOpenTransfer.DefinitionRequest) {
+                        seederConnState.transferDefinitionTimeout(netReqId, source);
+                    } else {
+                        throw new RuntimeException("ups");
+                    }
+                }
+            };
+    //**************************************************************************
+    ClassMatchedHandler handleConnectionReq
+            = new ClassMatchedHandler<NetConnect.Request, KContentMsg<KAddress, KHeader<KAddress>, NetConnect.Request>>() {
+                @Override
+                public void handle(NetConnect.Request content, KContentMsg<KAddress, KHeader<KAddress>, NetConnect.Request> context) {
+                    LOG.trace("{}received:{}", logPrefix, content);
+                    if (leecherConnState != null) {
+                        leecherConnState.connect(context, content);
+                    }
+                }
+            };
+    ClassMatchedHandler handleConnectionResp
+            = new ClassMatchedHandler<NetConnect.Response, KContentMsg<KAddress, KHeader<KAddress>, NetConnect.Response>>() {
+                @Override
+                public void handle(NetConnect.Response content, KContentMsg<KAddress, KHeader<KAddress>, NetConnect.Response> context) {
+                    LOG.trace("{}received:{}", logPrefix, content);
+                    seederConnState.connectResp(content.getId(), content.result);
+                }
+            };
+    ClassMatchedHandler handleDetailedStateReq
+            = new ClassMatchedHandler<NetDetailedState.Request, KContentMsg<KAddress, KHeader<KAddress>, NetDetailedState.Request>>() {
+                @Override
+                public void handle(NetDetailedState.Request content, KContentMsg<KAddress, KHeader<KAddress>, NetDetailedState.Request> context) {
+                    LOG.trace("{}received:{}", logPrefix, content);
+                    LOG.trace("{}received:{}", logPrefix, content);
+                    if (leecherConnState != null) {
+                        leecherConnState.detailedState(context, content);
+                    }
+                }
+            };
+
+    ClassMatchedHandler handleDetailedStateResp
+            = new ClassMatchedHandler<NetDetailedState.Response, KContentMsg<KAddress, KHeader<KAddress>, NetDetailedState.Response>>() {
+                @Override
+                public void handle(NetDetailedState.Response content, KContentMsg<KAddress, KHeader<KAddress>, NetDetailedState.Response> context) {
+                    LOG.trace("{}received:{}", logPrefix, content);
+                    if (leecherConnState == null) {
+                        leecherConnState = new LeecherConnectionState(content.lastBlockDetails);
+                        leecherConnState.start();
+                    }
+                    seederConnState.detailedStateResp(content.getId(), content.lastBlockDetails);
+                }
+            };
+
+    ClassMatchedHandler handleOpenTransferDefinitionReq
+            = new ClassMatchedHandler<NetOpenTransfer.DefinitionRequest, KContentMsg<KAddress, KHeader<KAddress>, NetOpenTransfer.DefinitionRequest>>() {
+                @Override
+                public void handle(NetOpenTransfer.DefinitionRequest content, KContentMsg<KAddress, KHeader<KAddress>, NetOpenTransfer.DefinitionRequest> context) {
+                    LOG.trace("{}received:{}", logPrefix, content);
+                    if (leecherConnState != null) {
+                        leecherConnState.transferDefinition(context);
+                    }
+                }
+            };
+
+    ClassMatchedHandler handleOpenTransferDefinitionResp
+            = new ClassMatchedHandler<NetOpenTransfer.DefinitionResponse, KContentMsg<KAddress, KHeader<KAddress>, NetOpenTransfer.DefinitionResponse>>() {
+                @Override
+                public void handle(NetOpenTransfer.DefinitionResponse content, KContentMsg<KAddress, KHeader<KAddress>, NetOpenTransfer.DefinitionResponse> context) {
+                    LOG.trace("{}received:{}", logPrefix, content);
+                    seederConnState.transferDefinitionResp(content.getId(), content.result);
+                }
+            };
+    
+    ClassMatchedHandler handleNetCloseTransfer
+            = new ClassMatchedHandler<NetCloseTransfer, KContentMsg<KAddress, KHeader<KAddress>, NetCloseTransfer>>() {
+                @Override
+                public void handle(NetCloseTransfer content, KContentMsg<KAddress, KHeader<KAddress>, NetCloseTransfer> context) {
+                    LOG.trace("{}received:{}", logPrefix, context);
+                    KAddress peer = context.getHeader().getSource();
+                    if(content.leecher) {
+                        leecherConnState.remoteClose(content.fileId, peer.getId());
+                    } else {
+                        seederConnState.remoteClose(content.fileId, peer.getId());
+                    }
+                }
+            };
+
+    //**************************************************************************
+    public static class Init extends se.sics.kompics.Init<ConnectionComp> {
+
+        public final Identifier torrentId;
+        public final KAddress selfAdr;
+        public final Optional<Pair<Integer, BlockDetails>> details;
+
+        public Init(Identifier torrentId, KAddress selfAdr, Optional<Pair<Integer, BlockDetails>> details) {
+            this.torrentId = torrentId;
+            this.selfAdr = selfAdr;
+            this.details = details;
+        }
+    }
+
+    public class LeecherConnectionState {
+
+        private final Pair<Integer, BlockDetails> details;
+        //<peerId, peer>
+        private final Map<Identifier, KAddress> connected = new HashMap<>();
+        //<localReqId, netReq>
+        private final Map<Identifier, KContentMsg> pendingTransferDefinition = new HashMap<>();
+
+        public LeecherConnectionState(Pair<Integer, BlockDetails> details) {
+            this.details = details;
+        }
+
+        public void start() {
+        }
+
+        public void tearDown() {
+
+        }
+
+        public void refreshConnections() {
+
+        }
+
+        public void connect(KContentMsg<KAddress, ?, ?> msg, NetConnect.Request req) {
+            KAddress peer = msg.getHeader().getSource();
+            LOG.info("{}connected to leecher:{}", logPrefix, peer);
+            connected.put(peer.getId(), peer);
+            answerNetwork(msg, req.answer(true));
+        }
+
+        public void detailedState(KContentMsg msg, NetDetailedState.Request req) {
+            answerNetwork(msg, req.success(details));
+        }
+
+        public void transferDefinition(KContentMsg<KAddress, ?, ?> msg) {
+            KAddress source = msg.getHeader().getSource();
+            OpenTransferDefinition.SeederRequest localReq = new OpenTransferDefinition.SeederRequest(source);
+            pendingTransferDefinition.put(localReq.getId(), msg);
+            trigger(localReq, connPort);
+        }
+
+        public void transferDefinitionResp(OpenTransferDefinition.SeederResponse resp) {
+            KContentMsg<?, ?, NetOpenTransfer.DefinitionRequest> msg = pendingTransferDefinition.remove(resp.getId());
+            answerNetwork(msg, msg.getContent().answer(resp.result));
+        }
+
+        public void localClose(TorrentConnId connId) {
+            KAddress peer = connected.get(connId.targetId);
+            if (peer != null) {
+                simpleUDPSend(new NetCloseTransfer(connId.fileId, !connId.leecher), peer);
+            }
+        }
+        
+        public void remoteClose(FileIdentifier fileId, Identifier peerId) {
+            trigger(new CloseTransfer.Indication(new TorrentConnId(peerId, fileId, false)), connPort);
+        }
+    }
+
+    public class SeederConnectionState {
+
+        private final Map<Identifier, KAddress> suspected = new HashMap<>();
+        private final TreeMap<Identifier, KAddress> connected = new TreeMap<>();
+        private final Map<Identifier, Seeder.Connect> connectedReq = new HashMap<>();
+        //**********************************************************************
+        private final Map<Identifier, Seeder.Connect> pendingConnect = new HashMap<>();
+        private final Map<Identifier, DetailedState.Request> pendingDetailedState = new HashMap<>();
+        private final Map<Identifier, OpenTransferDefinition.LeecherRequest> pendingTransferDef = new HashMap<>();
+        private final Map<Identifier, Object> pendingTransferData = new HashMap<>();
+
+        public void start() {
+        }
+
+        public void tearDown() {
+        }
+
+        public void refreshConnections(Optional<KAddress> connectionCandidate) {
+            if (connectionCandidate.isPresent()) {
+            }
+        }
+
+        //**********************************************************************
+        public void connect(Seeder.Connect req) {
+            LOG.debug("{}connecting to seeder:{}", logPrefix, req.peer);
+            NetConnect.Request netReq = new NetConnect.Request(torrentId);
+            pendingConnect.put(netReq.getId(), req);
+            bestEffortUDPSend(netReq, req.peer, DEFAULT_RETRIES);
+        }
+
+        public void connectResp(Identifier reqId, boolean result) {
+            Seeder.Connect req = pendingConnect.remove(reqId);
+            if (req == null) {
+                LOG.trace("{}late req:{}", logPrefix, reqId);
+                return;
+            }
+            if (result) {
+                LOG.info("{}connected to seeder:{}", logPrefix, req.peer);
+                connected.put(req.peer.getId(), req.peer);
+                connectedReq.put(req.peer.getId(), req);
+                answer(req, req.success());
+            } else {
+                throw new RuntimeException("ups");
+            }
+        }
+
+        public void connectTimeout(Identifier reqId) {
+            Seeder.Connect req = pendingConnect.remove(reqId);
+            if (req == null) {
+                LOG.trace("{}late timeout:{}", logPrefix, reqId);
+                return;
+            }
+            LOG.info("{}connection to seeder:{} timed out", logPrefix, req.peer);
+            answer(req, req.timeout());
+        }
+
+        //**********************************************************************
+        public void detailedState(DetailedState.Request req) {
+            if (connected.isEmpty()) {
+                LOG.info("{}detailed state - no connection", logPrefix);
+                answer(req, req.none());
+                return;
+            }
+            KAddress peer = connected.firstEntry().getValue();
+            LOG.debug("{}detailed state - requesting from:{}", logPrefix, peer);
+            NetDetailedState.Request netReq = new NetDetailedState.Request(torrentId);
+            pendingDetailedState.put(netReq.getId(), req);
+            bestEffortUDPSend(netReq, peer, DEFAULT_RETRIES);
+        }
+
+        public void detailedStateResp(Identifier reqId, Pair<Integer, BlockDetails> lastBlockDetails) {
+            DetailedState.Request req = pendingDetailedState.remove(reqId);
+            if (req == null) {
+                LOG.trace("{}detailed state - late:{}", logPrefix, reqId);
+                return;
+            }
+            LOG.info("{}detailed state - received", logPrefix);
+            answer(req, req.success(lastBlockDetails));
+        }
+
+        public void detailedStateTimeout(Identifier reqId, KAddress peer) {
+            DetailedState.Request req = pendingDetailedState.remove(reqId);
+            if (req == null) {
+                LOG.trace("{}late timeout:{}", logPrefix, reqId);
+                return;
+            }
+            Seeder.Connect connectReq = connectedReq.get(peer.getId());
+            if (connectReq != null) {
+                connected.remove(peer.getId());
+                suspected.put(peer.getId(), peer);
+                LOG.debug("{}suspect:{}", logPrefix, peer);
+                answer(connectReq, connectReq.suspect());
+            }
+            detailedState(req);
+        }
+
+        //**********************************************************************
+        public void transferDefinition(OpenTransferDefinition.LeecherRequest req) {
+            LOG.debug("{}transfer definition leecher - requesting from:{}", logPrefix, req.peer);
+            NetOpenTransfer.DefinitionRequest netReq = new NetOpenTransfer.DefinitionRequest(torrentId);
+            pendingTransferDef.put(netReq.getId(), req);
+            bestEffortUDPSend(netReq, req.peer, DEFAULT_RETRIES);
+        }
+
+        public void transferDefinitionResp(Identifier reqId, boolean result) {
+            OpenTransferDefinition.LeecherRequest req = pendingTransferDef.remove(reqId);
+            if (req == null) {
+                LOG.trace("{}transfer definition leecher - late:{}", logPrefix, reqId);
+                return;
+            }
+            LOG.info("{}transfer definition leecher - received from:{}", logPrefix, req.peer);
+            answer(req, req.answer(result));
+        }
+
+        public void transferDefinitionTimeout(Identifier reqId, KAddress peer) {
+            OpenTransferDefinition.LeecherRequest req = pendingTransferDef.remove(reqId);
+            if (req == null) {
+                LOG.trace("{}transfer definition leecher - late timeout:{}", logPrefix, reqId);
+                return;
+            }
+            Seeder.Connect connectReq = connectedReq.get(peer.getId());
+            if (connectReq != null) {
+                connected.remove(peer.getId());
+                suspected.put(peer.getId(), peer);
+                LOG.debug("{}suspect:{}", logPrefix, peer);
+                answer(connectReq, connectReq.suspect());
+            }
+            answer(req, req.timeout());
+        }
+
+        public void localClose(TorrentConnId connId) {
+            KAddress peer = connected.get(connId.targetId);
+            if (peer != null) {
+                simpleUDPSend(new NetCloseTransfer(connId.fileId, !connId.leecher), peer);
+            }
+        }
+        
+        public void remoteClose(FileIdentifier fileId, Identifier peerId) {
+            trigger(new CloseTransfer.Indication(new TorrentConnId(peerId, fileId, true)), connPort);
+        }
+    }
+}
