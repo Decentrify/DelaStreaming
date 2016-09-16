@@ -53,6 +53,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
@@ -64,13 +65,14 @@ import se.sics.nstream.torrent.conn.event.DetailedState;
 import se.sics.nstream.torrent.conn.event.OpenTransferDefinition;
 import se.sics.nstream.torrent.conn.event.Seeder;
 import se.sics.nstream.torrent.connMngr.TorrentConnMngr;
+import se.sics.nstream.torrent.fileMngr.TFileWrite;
 import se.sics.nstream.torrent.fileMngr.TorrentFileMngr;
 import se.sics.nstream.torrent.old.TorrentConfig;
 import se.sics.nstream.torrent.transfer.DwnlConnComp;
 import se.sics.nstream.torrent.transfer.DwnlConnPort;
 import se.sics.nstream.torrent.transfer.UpldConnComp;
 import se.sics.nstream.torrent.transfer.UpldConnPort;
-import se.sics.nstream.torrent.transfer.dwnl.event.BlocksCompleted;
+import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
 import se.sics.nstream.torrent.transfer.upld.event.GetBlocks;
 import se.sics.nstream.torrent.util.EventTorrentConnIdExtractor;
@@ -167,7 +169,7 @@ public class TorrentComp extends ComponentDefinition {
         subscribe(handleCloseTransfer, connPort);
 
         subscribe(handleGetBlocks, upldConnPort);
-        subscribe(handleBlockCompleted, dwnlConnPort);
+        subscribe(handleCompletedBlocks, dwnlConnPort);
         subscribe(handleTransferDetails, transferMngrPort);
     }
 
@@ -320,11 +322,11 @@ public class TorrentComp extends ComponentDefinition {
             answer(req, req.answer(true));
         }
     };
-    
+
     Handler handleCloseTransfer = new Handler<CloseTransfer.Indication>() {
         @Override
         public void handle(CloseTransfer.Indication event) {
-            if(event.connId.leecher) {
+            if (event.connId.leecher) {
                 LOG.warn("{}close transfer - conn:{} as leecher", new Object[]{logPrefix, event.connId});
                 return;
             } else {
@@ -333,7 +335,7 @@ public class TorrentComp extends ComponentDefinition {
             }
         }
     };
-    
+
     //**************************************************************************
     Handler handleRefreshConnections = new Handler<TorrentComp.RefreshConnectionsTimeout>() {
         @Override
@@ -345,14 +347,10 @@ public class TorrentComp extends ComponentDefinition {
     Handler handleTransferDetails = new Handler<Transfer.DownloadResponse>() {
         @Override
         public void handle(Transfer.DownloadResponse resp) {
-//            if (getDefState != null) {
-//                getDefState.handleTransferDetails(resp);
-//            }
         }
     };
     //**************************************************************************
     Handler handleGetBlocks = new Handler<GetBlocks.Request>() {
-
         @Override
         public void handle(GetBlocks.Request req) {
             LOG.debug("{}conn:{} req blocks:{}", new Object[]{logPrefix, req.connId, req.blocks});
@@ -360,56 +358,47 @@ public class TorrentComp extends ComponentDefinition {
                 serveDefState.getBlocks(req);
             }
         }
-
     };
 
-    Handler handleBlockCompleted = new Handler<BlocksCompleted>() {
+    Handler handleCompletedBlocks = new Handler<CompletedBlocks>() {
         @Override
-        public void handle(BlocksCompleted event) {
+        public void handle(CompletedBlocks event) {
             if (getDefState != null && event.connId.fileId.fileId == DEF_FILE_ID) {
                 getDefState.handleBlockCompleted(event);
+            } else {
+                writeToFile(event.connId.fileId.fileId, event.blocks);
+                updateConn(event.connId, event.blocks);
             }
         }
     };
 
+    private void writeToFile(int fileNr, Map<Integer, byte[]> blocks) {
+        TFileWrite fileWriter = fileMngr.writeTo(fileNr);
+        for (Map.Entry<Integer, byte[]> block : blocks.entrySet()) {
+            KReference<byte[]> ref = KReferenceFactory.getReference(block.getValue());
+            fileWriter.block(block.getKey(), ref);
+            try {
+                ref.release();
+            } catch (KReferenceException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+    }
+    
+    private void updateConn(TorrentConnId connId, Map<Integer, byte[]> blocks) {
+        for(Integer blockNr : blocks.keySet()) {
+            connMngr.releaseSlot(connId.fileId, connId.targetId);
+        }
+    }
+
     //*********************************STATES***********************************
-    private void completeDefinitionState(TorrentDef td) {
-
-    }
-
-    private void killedGetDefinitionState() {
-
-    }
-
-    private void completeGetDefinitionState(Map<Integer, BlockDetails> blockDetails) {
-//        getDefState = new GetDefinitionState(0, connMngr.randomPeer(), blockDetails);
-//        getDefState.startInstance();
-//        getDefState.start();
-    }
-
-    public class TorrentState {
-
-        private boolean init;
-
-        public TorrentState(boolean init) {
-            this.init = init;
+    private void completeGetDefinitionState(TorrentDef torrentDef) {
+        getDefState = null;
+        if (serveDefState == null) {
+            throw new RuntimeException("ups");
         }
-
-        public void start() {
-        }
-
-        public void tearDown() {
-        }
-
-        public boolean isInit() {
-            return init;
-        }
-
-        public void init() {
-            init = true;
-//            getDefState = new ConnectionComp.GetDefinitionState();
-//            getDefState.start();
-        }
+        serveDefState = new ServeDefinitionState(torrentDef);
+        serveDefState.start();
     }
 
     public class ConnectionState {
@@ -504,7 +493,7 @@ public class TorrentComp extends ComponentDefinition {
             connId = null;
         }
 
-        public void handleBlockCompleted(BlocksCompleted event) {
+        public void handleBlockCompleted(CompletedBlocks event) {
             if (!event.connId.equals(connId)) {
                 throw new RuntimeException("ups");
             }
@@ -526,7 +515,7 @@ public class TorrentComp extends ComponentDefinition {
             tdBuilder.setBase(resp.transferDetails.base.baseDetails);
             tdBuilder.setExtended(resp.transferDetails.extended);
             tearDown();
-            completeDefinitionState(tdBuilder.build());
+            completeGetDefinitionState(tdBuilder.build());
         }
     }
 
@@ -598,10 +587,10 @@ public class TorrentComp extends ComponentDefinition {
             Map<Integer, BlockDetails> irregularBlocks = new TreeMap<>();
             Map<Integer, KReference<byte[]>> blockValues = new TreeMap<>();
             int lastBlockNr = td.details.getValue0() - 1;
-            if(req.blocks.contains(lastBlockNr)) {
+            if (req.blocks.contains(lastBlockNr)) {
                 irregularBlocks.put(lastBlockNr, td.details.getValue1());
             }
-            for(Integer blockNr : req.blocks) {
+            for (Integer blockNr : req.blocks) {
                 KReference<byte[]> ref = KReferenceFactory.getReference(td.blocks.get(blockNr));
                 blockValues.put(blockNr, ref);
             }

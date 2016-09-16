@@ -69,7 +69,7 @@ public class TorrentConnMngr {
         FileConnection fileConnection = new SimpleFileConnection(fileId);
         fileConnections.put(fileId, fileConnection);
     }
-
+    
     public ConnResult getSlot(FileIdentifier fileId, int block) {
         FileConnection fileConnection = fileConnections.get(fileId);
         if (fileConnection == null) {

@@ -49,7 +49,7 @@ import se.sics.ledbat.core.LedbatConfig;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 import se.sics.nstream.torrent.event.TorrentTimeout;
 import se.sics.nstream.torrent.old.TransferConfig;
-import se.sics.nstream.torrent.transfer.dwnl.event.BlocksCompleted;
+import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DwnlConnReport;
 import se.sics.nstream.torrent.transfer.dwnl.event.FPDControl;
@@ -238,7 +238,7 @@ public class DwnlConnComp extends ComponentDefinition {
                     if (workController.hasComplete()) {
                         Map<Integer, byte[]> completedBlocks = workController.getCompleteBlocks();
                         LOG.info("{}completed blocks:{}", logPrefix, completedBlocks.keySet());
-                        trigger(new BlocksCompleted(connId, completedBlocks), connPort);
+                        trigger(new CompletedBlocks(connId, completedBlocks), connPort);
                     }
                 }
             };

@@ -19,7 +19,7 @@
 package se.sics.nstream.torrent.transfer;
 
 import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.transfer.dwnl.event.BlocksCompleted;
+import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DwnlConnReport;
 import se.sics.nstream.torrent.transfer.dwnl.event.FPDControl;
@@ -33,6 +33,6 @@ public class DwnlConnPort extends PortType {
         request(FPDControl.class);
         indication(DwnlConnReport.class);
         request(DownloadBlocks.class);
-        indication(BlocksCompleted.class);
+        indication(CompletedBlocks.class);
     }
 }
