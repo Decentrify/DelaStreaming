@@ -18,10 +18,13 @@
  */
 package se.sics.nstream.torrent.fileMngr;
 
+import java.util.HashMap;
+import java.util.Map;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.managed.CompleteFileMngr;
-import se.sics.nstream.transfer.BlockHelper;
+import se.sics.nstream.util.BlockHelper;
+import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.HashReadCallback;
@@ -64,8 +67,8 @@ public class TFileComplete implements TFileRead {
     }
 
     @Override
-    public void setCacheHint(Identifier reader, KHint.Expanded hint) {
-        file.setFutureReads(reader, hint);
+    public void setCacheHint(Identifier reader, KHint.Summary hint) {
+        file.setFutureReads(reader, hint.expand(fileDetails));
     }
 
     //********************************READ_DATA*********************************
@@ -89,5 +92,12 @@ public class TFileComplete implements TFileRead {
     public void readBlock(int blockNr, ReadCallback delayedResult) {
         KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
         file.read(blockRange, delayedResult);
+    }
+
+    @Override
+    public Map<Integer, BlockDetails> getIrregularBlocks() {
+        Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
+        irregularBlocks.put(fileDetails.nrBlocks-1, fileDetails.lastBlock);
+        return irregularBlocks;
     }
 }

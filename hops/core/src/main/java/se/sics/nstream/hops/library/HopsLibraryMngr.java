@@ -18,7 +18,6 @@
  */
 package se.sics.nstream.hops.library;
 
-import com.google.common.base.Optional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,12 +50,12 @@ import se.sics.nstream.library.util.TorrentStatus;
 import se.sics.nstream.report.ReportPort;
 import se.sics.nstream.report.event.DownloadSummaryEvent;
 import se.sics.nstream.report.event.StatusSummaryEvent;
+import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.transfer.Transfer;
 import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.CoreExtPorts;
+import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.FileExtendedDetails;
-import se.sics.nstream.util.TorrentDetails;
-import se.sics.nstream.util.TransferDetails;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -93,7 +92,7 @@ public class HopsLibraryMngr {
         torrentPort = proxy.getPositive(HopsTorrentPort.class).getPair();
         transferMngrPort = proxy.getPositive(TransferMngrPort.class).getPair();
         reportPort = proxy.getNegative(ReportPort.class).getPair();
-        
+
         proxy.subscribe(handleHopsTorrentUpload, torrentPort);
         proxy.subscribe(handleHopsTorrentDownload, torrentPort);
         proxy.subscribe(handleTransferDetailsReq, transferMngrPort);
@@ -126,7 +125,7 @@ public class HopsLibraryMngr {
             HopsTorrentUploadEvent.Response resp;
             switch (status) {
                 case UPLOADING:
-                    if (compareUploadDetails(library.getManifest(req.torrentId), Pair.with(req.hdfsEndpoint, req.manifestResource))) {
+                    if (compareUploadDetails(library.getTorrent(req.torrentId), Pair.with(req.hdfsEndpoint, req.manifestResource))) {
                         resp = req.alreadyExists(Result.success(true));
                     } else {
                         resp = req.alreadyExists(Result.badArgument("existing - upload details do not match"));
@@ -134,8 +133,10 @@ public class HopsLibraryMngr {
                     LOG.trace("{}answering:{}", logPrefix, resp);
                     proxy.answer(req, resp);
                     break;
-                case PENDING_DOWNLOAD:
                 case DOWNLOADING:
+                case DOWNLOAD_1:
+                case DOWNLOAD_2:
+                case DOWNLOAD_3:
                     resp = req.alreadyExists(Result.badArgument("expected NONE/UPLOADING, found:" + status));
                     LOG.trace("{}answering:{}", logPrefix, resp);
                     proxy.answer(req, resp);
@@ -146,11 +147,13 @@ public class HopsLibraryMngr {
                     Result<ManifestJSON> manifest = HDFSHelper.readManifest(ugi, req.hdfsEndpoint, req.manifestResource);
                     if (manifest.isSuccess()) {
                         byte[] torrentByte = HDFSHelper.getManifestByte(manifest.getValue());
-                        TorrentDetails torrentDetails = ManifestJSON.getTorrentDetails(manifest.getValue());
-                        Map<String, FileExtendedDetails> extendedDetails = getUploadExtendedDetails(req.hdfsEndpoint, req.manifestResource, torrentDetails);
-                        TransferDetails transferDetails = new TransferDetails(torrentByte, torrentDetails, extendedDetails);
-                        library.upload(req.torrentId, req.torrentName, req.hdfsEndpoint, req.manifestResource, transferDetails);
-                        components.startUpload(transferMngrPort.getPair(), req.torrentId, req.hdfsEndpoint, transferDetails);
+                        Map<String, FileBaseDetails> baseDetails = ManifestJSON.getBaseDetails(manifest.getValue(), MyTorrent.defaultDataBlock);
+                        Map<String, FileExtendedDetails> extendedDetails = getUploadExtendedDetails(req.hdfsEndpoint, req.manifestResource, baseDetails);
+                        MyTorrent.Manifest torrentManifest = MyTorrent.buildDefinition(torrentByte);
+                        MyTorrent torrent = new MyTorrent(torrentManifest, baseDetails, extendedDetails);
+                        Library.Torrent libTorrent = new Library.Torrent(req.hdfsEndpoint, req.manifestResource, torrent);
+                        library.upload(req.torrentId, req.torrentName, libTorrent);
+                        components.startUpload(transferMngrPort.getPair(), req.torrentId, req.hdfsEndpoint, torrent);
 
                         HopsTorrentUploadEvent.Response hopsResp = req.uploading(Result.success(true));
                         LOG.trace("{}sending:{}", logPrefix, hopsResp);
@@ -170,16 +173,16 @@ public class HopsLibraryMngr {
         }
     };
 
-    private Map<String, FileExtendedDetails> getUploadExtendedDetails(HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource, TorrentDetails torrentDetails) {
+    private Map<String, FileExtendedDetails> getUploadExtendedDetails(HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource, Map<String, FileBaseDetails> baseDetails) {
         Map<String, FileExtendedDetails> extendedDetails = new HashMap<>();
-        for (String fileName : torrentDetails.baseDetails.keySet()) {
+        for (String fileName : baseDetails.keySet()) {
             FileExtendedDetails fed = new HopsFED(Pair.with(hdfsEndpoint, new HDFSResource(manifestResource.dirPath, fileName)));
             extendedDetails.put(fileName, fed);
         }
         return extendedDetails;
     }
 
-    private boolean compareUploadDetails(Triplet<String, HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
+    private boolean compareUploadDetails(Pair<String, Library.Torrent> foundTorrent, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
         //TODO Alex - what needs to match?
         return false;
     }
@@ -194,28 +197,31 @@ public class HopsLibraryMngr {
             switch (status) {
                 case DESTROYED:
                 case NONE:
-                    library.startingDownload(req.torrentId, req.torrentName, req.hdfsEndpoint, req.manifest);
+                    Library.TorrentBuilder libTorrentBuilder = new Library.TorrentBuilder(req.hdfsEndpoint, req.manifest);
+                    library.startDownload(req.torrentId, req.torrentName, libTorrentBuilder);
                     components.startDownload(transferMngrPort.getPair(), req.torrentId, req.partners);
                     pendingExtDwnl.put(req.torrentId, req);
                     break;
                 case UPLOADING:
                 case DOWNLOADING:
+                case DOWNLOAD_1:
+                case DOWNLOAD_2:
+                case DOWNLOAD_3:
                     //TODO Alex - check manifests
-                    hopsResp = req.alreadyExists(Result.success(Pair.with(library.getManifest(req.torrentId), library.getExtendedDetails(req.torrentId))));
-                    LOG.trace("{}answering:{}", logPrefix, hopsResp);
+//                    hopsResp = req.alreadyExists(Result.success(library.getTorrent(req.torrentId)));
+//                    LOG.trace("{}answering:{}", logPrefix, hopsResp);
+                    hopsResp = req.alreadyExists(Result.internalStateFailure("missing logic"));
                     proxy.answer(req, hopsResp);
                     break;
-                case PENDING_DOWNLOAD:
-                    //TODO Alex - check manifests
-                    Optional<TorrentDetails> torrentDetails = library.getTorrentDetails(req.torrentId);
-                    if (torrentDetails.isPresent()) {
-                        hopsResp = req.starting(Result.success(true));
-                        LOG.trace("{}answering:{}", logPrefix, hopsResp);
-                        proxy.answer(req, hopsResp);
-                    } else {
-                        pendingExtDwnl.put(req.torrentId, req);
-                    }
-                    break;
+                //TODO Alex - check manifests
+//                    Library.TorrentBuilder torrentDetails = library.getTorrentBuilder(req.torrentId);
+//                    if (torrentDetails.isPresent()) {
+//                        hopsResp = req.starting(Result.success(true));
+//                        LOG.trace("{}answering:{}", logPrefix, hopsResp);
+//                        proxy.answer(req, hopsResp);
+//                    } else {
+//                        pendingExtDwnl.put(req.torrentId, req);
+//                    }
                 default:
                     hopsResp = req.alreadyExists(Result.internalStateFailure("missing logic"));
                     LOG.trace("{}answering:{}", logPrefix, hopsResp);
@@ -234,15 +240,17 @@ public class HopsLibraryMngr {
         public void handle(Transfer.DownloadRequest req) {
             LOG.trace("{}received:{}", logPrefix, req);
             HopsTorrentDownloadEvent.StartRequest hopsReq = pendingExtDwnl.remove(req.torrentId);
-            if (req.torrentByte.isSuccess()) {
-                ManifestJSON manifest = HDFSHelper.getManifestJSON(req.torrentByte.getValue());
-                Triplet<String, HDFSEndpoint, HDFSResource> manifestResource = library.getManifest(req.torrentId);
-                UserGroupInformation ugi = UserGroupInformation.createRemoteUser(manifestResource.getValue1().user);
-                Result<Boolean> manifestResult = HDFSHelper.writeManifest(ugi, manifestResource.getValue1(), manifestResource.getValue2(), manifest);
+            if (req.manifest.isSuccess()) {
+                ManifestJSON manifest = HDFSHelper.getManifestJSON(req.manifest.getValue().manifestByte);
+                Pair<String, Library.TorrentBuilder> torrentBuilder = library.getTorrentBuilder(req.torrentId);
+                String user = torrentBuilder.getValue1().hdfsEndpoint.user;
+                HDFSEndpoint hdfsEndpoint = torrentBuilder.getValue1().hdfsEndpoint;
+                HDFSResource manifestResource = torrentBuilder.getValue1().manifestResource;
+                UserGroupInformation ugi = UserGroupInformation.createRemoteUser(user);
+                Result<Boolean> manifestResult = HDFSHelper.writeManifest(ugi, hdfsEndpoint, manifestResource, manifest);
                 if (manifestResult.isSuccess()) {
-                    TorrentDetails torrentDetails = ManifestJSON.getTorrentDetails(manifest);
                     pendingIntDwnl.put(req.torrentId, req);
-                    library.pendingDownload(req.torrentId, torrentDetails);
+                    library.pendingDownload(req.torrentId, req.manifest.getValue());
                     if (hopsReq != null) {
                         HopsTorrentDownloadEvent.StartResponse hopsResp = hopsReq.starting(Result.success(true));
                         LOG.trace("{}sending:{}", logPrefix, hopsResp);
@@ -260,7 +268,7 @@ public class HopsLibraryMngr {
             } else {
                 cleanAndDestroy(req.torrentId);
                 if (hopsReq != null) {
-                    Result<Boolean> failure = Result.failure(req.torrentByte.status, req.torrentByte.getException());
+                    Result<Boolean> failure = Result.failure(req.manifest.status, req.manifest.getException());
                     HopsTorrentDownloadEvent.StartResponse hopsResp = hopsReq.starting(failure);
                     LOG.trace("{}sending:{}", logPrefix, hopsResp);
                     proxy.answer(hopsReq, hopsResp);
@@ -275,10 +283,10 @@ public class HopsLibraryMngr {
             LOG.trace("{}received:{}", logPrefix, req);
             Transfer.DownloadRequest nstreamReq = pendingIntDwnl.remove(req.torrentId);
             if (req.extendedDetails.isSuccess()) {
-                TransferDetails transferDetails = library.download(req.torrentId, req.extendedDetails.getValue());
+                MyTorrent torrent = library.download(req.torrentId, req.extendedDetails.getValue());
                 if (nstreamReq != null) {
                     components.advanceDownload(req.torrentId, req.hdfsEndpoint, req.kafkaEndpoint);
-                    Transfer.DownloadResponse nstreamResp = nstreamReq.answer(transferDetails);
+                    Transfer.DownloadResponse nstreamResp = nstreamReq.answer(torrent);
                     LOG.trace("{}sending:{}", logPrefix, nstreamResp);
                     proxy.answer(nstreamReq, nstreamResp);
                     proxy.answer(req, req.answer(Result.success(true)));

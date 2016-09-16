@@ -31,6 +31,7 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.test.NetTransferDefRequestEC;
 import se.sics.nstream.test.NetTransferDefResponseEC;
+import se.sics.nstream.torrent.FileIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -45,18 +46,18 @@ public class NetOpenTransferSerializerTest {
 
     @Test
     public void simpleDefinitionRequest() {
-        Serializer serializer = Serializers.lookupSerializer(NetOpenTransfer.DefinitionRequest.class);
+        Serializer serializer = Serializers.lookupSerializer(NetOpenTransfer.Request.class);
         NetTransferDefRequestEC ec = new NetTransferDefRequestEC();
-        NetOpenTransfer.DefinitionRequest original, copy;
+        NetOpenTransfer.Request original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        original = new NetOpenTransfer.DefinitionRequest(new IntIdentifier(1));
+        original = new NetOpenTransfer.Request(new FileIdentifier(new IntIdentifier(1), 1));
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (NetOpenTransfer.DefinitionRequest) serializer.fromBinary(serializedCopy, Optional.absent());
+        copy = (NetOpenTransfer.Request) serializer.fromBinary(serializedCopy, Optional.absent());
 
         Assert.assertTrue(ec.isEqual(original, copy));
         Assert.assertEquals(0, serializedCopy.readableBytes());
@@ -64,19 +65,19 @@ public class NetOpenTransferSerializerTest {
 
     @Test
     public void simpleResp() {
-        Serializer serializer = Serializers.lookupSerializer(NetOpenTransfer.DefinitionResponse.class);
+        Serializer serializer = Serializers.lookupSerializer(NetOpenTransfer.Response.class);
         NetTransferDefResponseEC ec = new NetTransferDefResponseEC();
-        NetOpenTransfer.DefinitionResponse original, copy;
+        NetOpenTransfer.Response original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        NetOpenTransfer.DefinitionRequest request = new NetOpenTransfer.DefinitionRequest(new IntIdentifier(1));
+        NetOpenTransfer.Request request = new NetOpenTransfer.Request(new FileIdentifier(new IntIdentifier(1), 1));
         original = request.answer(true);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (NetOpenTransfer.DefinitionResponse) serializer.fromBinary(serializedCopy, Optional.absent());
+        copy = (NetOpenTransfer.Response) serializer.fromBinary(serializedCopy, Optional.absent());
 
         Assert.assertTrue(ec.isEqual(original, copy));
         Assert.assertEquals(0, serializedCopy.readableBytes());

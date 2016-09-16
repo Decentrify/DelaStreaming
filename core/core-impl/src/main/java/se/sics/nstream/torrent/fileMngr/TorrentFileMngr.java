@@ -10,7 +10,7 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU General Public License for more defLastBlock.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
@@ -36,12 +36,13 @@ import se.sics.nstream.storage.buffer.SimpleAppendKBuffer;
 import se.sics.nstream.storage.cache.SimpleKCache;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.CompleteFileMngr;
+import se.sics.nstream.transfer.MyTorrent;
+import se.sics.nstream.torrent.util.BufferName;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.FileExtendedDetails;
 import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamResource;
-import se.sics.nstream.util.TransferDetails;
+import se.sics.nstream.util.StreamSink;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 
 /**
@@ -55,12 +56,12 @@ public class TorrentFileMngr {
     private final TreeMap<Integer, TFileIncomplete> pending = new TreeMap<>();
     
     public TorrentFileMngr(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler, ComponentLoadTracking loadTracker,
-           TransferDetails transferDetails, boolean complete) {
+           MyTorrent torrentDef, boolean complete) {
         int id = 0;
-        for (Map.Entry<String, FileExtendedDetails> entry : transferDetails.extended.entrySet()) {
-            FileBaseDetails fileDetails = transferDetails.base.baseDetails.get(entry.getKey());
-            Pair<StreamEndpoint, StreamResource> mainResource = entry.getValue().getMainResource();
-            List<Pair<StreamEndpoint, StreamResource>> secondaryResources = entry.getValue().getSecondaryResource();
+        for (Map.Entry<String, FileExtendedDetails> entry : torrentDef.extended.entrySet()) {
+            FileBaseDetails fileDetails = torrentDef.base.get(entry.getKey());
+            Pair<StreamEndpoint, StreamSink> mainResource = entry.getValue().getMainResource();
+            List<Pair<StreamEndpoint, StreamSink>> secondaryResources = entry.getValue().getSecondaryResource();
             if (complete) {
                 SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainResource.getValue0(), mainResource.getValue1());
                 AsyncCompleteStorage file = new AsyncCompleteStorage(cache);
@@ -73,9 +74,11 @@ public class TorrentFileMngr {
             } else {
                 SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainResource.getValue0(), mainResource.getValue1());
                 List<KBuffer> bufs = new ArrayList<>();
-                bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainResource.getValue0(), mainResource.getValue1(), 0));
-                for (Pair<StreamEndpoint, StreamResource> writeResource : secondaryResources) {
-                    bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, writeResource.getValue0(), writeResource.getValue1(), 0));
+                BufferName bufName = new BufferName(id, entry.getKey(), mainResource.getValue1().getSinkName());
+                bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainResource.getValue0(), mainResource.getValue1(), bufName, 0));
+                for (Pair<StreamEndpoint, StreamSink> writeResource : secondaryResources) {
+                    BufferName bName = new BufferName(id, entry.getKey(), writeResource.getValue1().getSinkName());
+                    bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, writeResource.getValue0(), writeResource.getValue1(), bName, 0));
                 }
                 KBuffer buffer = new MultiKBuffer(bufs);
                 AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);

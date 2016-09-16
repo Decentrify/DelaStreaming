@@ -29,7 +29,7 @@ import se.sics.nstream.storage.buffer.WriteResult;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.tracker.ComponentTracker;
 import se.sics.nstream.tracker.IncompleteTracker;
-import se.sics.nstream.transfer.BlockHelper;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;

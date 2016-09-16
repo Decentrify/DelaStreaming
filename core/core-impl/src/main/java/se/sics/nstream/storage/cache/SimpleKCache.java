@@ -50,7 +50,7 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.StoragePort;
 import se.sics.nstream.storage.StorageRead;
 import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.StreamSink;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
@@ -67,7 +67,7 @@ public class SimpleKCache implements KCache {
     private String logPrefix = "";
 
     private final KCacheConfig cacheConfig;
-    private final StreamResource readResource;
+    private final StreamSink readResource;
     //**************************************************************************
     private final Positive<StoragePort> readPort;
     private final Positive<Timer> timerPort;
@@ -89,7 +89,7 @@ public class SimpleKCache implements KCache {
     private UUID extendedCacheCleanTid;
 
     public SimpleKCache(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExHandling, ComponentLoadTracking loadTracker,
-            StreamEndpoint readEndpoint, StreamResource readResource) {
+            StreamEndpoint readEndpoint, StreamSink readResource) {
         this.cacheConfig = new KCacheConfig(config);
         this.readResource = readResource;
         this.proxy = proxy;
@@ -248,7 +248,7 @@ public class SimpleKCache implements KCache {
             throw crashingException;
         }
 
-        loadTracker.setCacheSize(readResource.getResourceName(), cacheRef.size(), systemRef.size());
+        loadTracker.setCacheSize(readResource.getSinkName(), cacheRef.size(), systemRef.size());
 
         //check cache
         Map.Entry<Long, Pair<KBlock, CacheKReference>> cached = cacheRef.floorEntry(readRange.lowerAbsEndpoint());
@@ -319,7 +319,7 @@ public class SimpleKCache implements KCache {
         @Override
         public void handle(StorageRead.Response resp) {
             LOG.debug("{}received:{}", logPrefix, resp);
-            loadTracker.setCacheSize(readResource.getResourceName(), cacheRef.size(), systemRef.size());
+            loadTracker.setCacheSize(readResource.getSinkName(), cacheRef.size(), systemRef.size());
             if (resp.result.isSuccess()) {
                 KBlock blockRange = resp.req.readRange;
                 long blockPos = blockRange.lowerAbsEndpoint();

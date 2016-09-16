@@ -10,7 +10,7 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * GNU General Public License for more defLastBlock.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
@@ -18,21 +18,19 @@
  */
 package se.sics.nstream.hops.library;
 
-import com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
-import org.javatuples.Triplet;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
 import se.sics.nstream.library.util.TorrentStatus;
+import se.sics.nstream.transfer.MyTorrent;
+import se.sics.nstream.transfer.MyTorrent.Manifest;
 import se.sics.nstream.util.FileExtendedDetails;
-import se.sics.nstream.util.TorrentDetails;
-import se.sics.nstream.util.TransferDetails;
 
 /**
  *
@@ -41,9 +39,8 @@ import se.sics.nstream.util.TransferDetails;
 public class Library {
 
     private final Map<Identifier, Pair<String, TorrentStatus>> torrentStatus = new HashMap<>();
-    private final Map<Identifier, Triplet<String, HDFSEndpoint, HDFSResource>> manifests = new HashMap<>();
-    private final Map<Identifier, TorrentDetails> pendingDownload = new HashMap<>();
-    private final Map<Identifier, TransferDetails> torrents = new HashMap<>();
+    private final Map<Identifier, Pair<String, Torrent>> manifests = new HashMap<>();
+    private final Map<Identifier, Pair<String, TorrentBuilder>> pendingManifests = new HashMap<>();
 
     public boolean containsTorrent(Identifier torrentId) {
         return torrentStatus.containsKey(torrentId);
@@ -64,43 +61,55 @@ public class Library {
         torrentStatus.put(torrentId, status);
     }
 
-    public void upload(Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, TransferDetails transferDetails) {
+    public void upload(Identifier torrentId, String torrentName, Torrent torrent) {
         torrentStatus.put(torrentId, Pair.with(torrentName, TorrentStatus.UPLOADING));
-        manifests.put(torrentId, Triplet.with(torrentName, hdfsEndpoint, manifest));
-        torrents.put(torrentId, transferDetails);
+        manifests.put(torrentId, Pair.with(torrentName, torrent));
     }
 
-    public void startingDownload(Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest) {
-        torrentStatus.put(torrentId, Pair.with(torrentName, TorrentStatus.PENDING_DOWNLOAD));
-        manifests.put(torrentId, Triplet.with(torrentName, hdfsEndpoint, manifest));
+    public void startDownload(Identifier torrentId, String torrentName, TorrentBuilder torrentBuilder) {
+        torrentStatus.put(torrentId, Pair.with(torrentName, TorrentStatus.DOWNLOAD_1));
+        pendingManifests.put(torrentId, Pair.with(torrentName, torrentBuilder));
     }
 
-    public void pendingDownload(Identifier torrentId, TorrentDetails torrentDetails) {
-        pendingDownload.put(torrentId, torrentDetails);
+    public byte[] pendingDownload(Identifier torrentId, Manifest manifest) {
+        Pair<String, TorrentStatus> ts = torrentStatus.get(torrentId);
+        Pair<String, TorrentBuilder> torrentBuilder = pendingManifests.get(torrentId);
+        torrentBuilder.getValue1().torrentBuilder.manifestBuilder.addBlocks(manifest.manifestBlocks);
+        torrentStatus.put(torrentId, Pair.with(ts.getValue0(), TorrentStatus.DOWNLOAD_2));
+        return manifest.manifestByte;
     }
-
-    public Map<String, FileExtendedDetails> getExtendedDetails(Identifier torrentId) {
-        TransferDetails aux = torrents.get(torrentId);
-        return aux.extended;
-    }
-
-    public Optional<TorrentDetails> getTorrentDetails(Identifier torrentId) {
-        return Optional.fromNullable(pendingDownload.get(torrentId));
-    }
-
-    public Triplet<String, HDFSEndpoint, HDFSResource> getManifest(Identifier torrentId) {
-        return manifests.get(torrentId);
-    }
-
-    public TransferDetails download(Identifier torrentId, Map<String, FileExtendedDetails> extendedDetails) {
+    
+    public MyTorrent download(Identifier torrentId, Map<String, FileExtendedDetails> extendedDetails) {
         Pair<String, TorrentStatus> status = torrentStatus.remove(torrentId);
         status = Pair.with(status.getValue0(), TorrentStatus.DOWNLOADING);
         torrentStatus.put(torrentId, status);
-        TorrentDetails torrentDetails = pendingDownload.remove(torrentId);
-        TransferDetails transferDetails = new TransferDetails(null, torrentDetails, extendedDetails);
-        torrents.put(torrentId, transferDetails);
-        return transferDetails;
+        Pair<String, TorrentBuilder> torrentBuilder = pendingManifests.remove(torrentId);
+        torrentBuilder.getValue1().torrentBuilder.setExtended(extendedDetails);
+        Torrent torrent = torrentBuilder.getValue1().build();
+        manifests.put(torrentId, Pair.with(torrentBuilder.getValue0(), torrent));
+        return torrent.torrent;
     }
+
+    public Map<String, FileExtendedDetails> getExtendedDetails(Identifier torrentId) {
+        Pair<String, Torrent> aux = manifests.get(torrentId);
+        return aux.getValue1().torrent.extended;
+    }
+    
+    public Pair<String, Torrent> getTorrent(Identifier torrentId) {
+        return manifests.get(torrentId);
+    }
+    
+    public Pair<String, TorrentBuilder> getTorrentBuilder(Identifier torrentId) {
+        return pendingManifests.get(torrentId);
+    }
+
+//    public Optional<TorrentDetails> getTorrentDetails(Identifier torrentId) {
+//        return Optional.fromNullable(pendingDownload.get(torrentId));
+//    }
+//
+//    public Triplet<String, HDFSEndpoint, HDFSResource> getManifest(Identifier torrentId) {
+//        return manifests.get(torrentId);
+//    }
 
     public void finishDownload(Identifier torrentId) {
         Pair<String, TorrentStatus> status = torrentStatus.remove(torrentId);
@@ -110,8 +119,7 @@ public class Library {
 
     private void remove(Identifier torrentId) {
         manifests.remove(torrentId);
-        pendingDownload.remove(torrentId);
-        torrents.remove(torrentId);
+        pendingManifests.remove(torrentId);
     }
 
     public List<ElementSummary> getSummary() {
@@ -133,5 +141,31 @@ public class Library {
 //            }
 //        }
         return summary;
+    }
+    
+    public static class Torrent {
+        public final HDFSEndpoint hdfsEndpoint;
+        public final HDFSResource manifest;
+        public final MyTorrent torrent;
+        
+        public Torrent(HDFSEndpoint hdfsEndpoint, HDFSResource manifest, MyTorrent torrent) {
+            this.hdfsEndpoint = hdfsEndpoint;
+            this.manifest = manifest;
+            this.torrent = torrent;
+        }
+    }
+    public static class TorrentBuilder {
+        public final HDFSEndpoint hdfsEndpoint;
+        public final HDFSResource manifestResource;
+        private MyTorrent.Builder torrentBuilder;
+        
+        public TorrentBuilder(HDFSEndpoint hdfsEndpoint, HDFSResource manifest) {
+            this.hdfsEndpoint = hdfsEndpoint;
+            this.manifestResource = manifest;
+        }
+        
+        public Torrent build() {
+            return new Torrent(hdfsEndpoint, manifestResource, torrentBuilder.build());
+        }
     }
 }

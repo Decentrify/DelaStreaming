@@ -23,10 +23,12 @@ import java.util.Set;
 import se.sics.kompics.KompicsEvent;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.ports.ChannelFilter;
+import se.sics.nstream.torrent.conn.msg.NetCloseTransfer;
 import se.sics.nstream.torrent.conn.msg.NetConnect;
 import se.sics.nstream.torrent.conn.msg.NetDetailedState;
 import se.sics.nstream.torrent.conn.msg.NetOpenTransfer;
 import se.sics.nstream.torrent.transfer.msg.CacheHint;
+import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nutil.ContentWrapper;
 import se.sics.nutil.ContentWrapperHelper;
@@ -45,8 +47,9 @@ public class TorrentCompFilters {
             allowedClasses.add(NetConnect.Response.class);
             allowedClasses.add(NetDetailedState.Request.class);
             allowedClasses.add(NetDetailedState.Response.class);
-            allowedClasses.add(NetOpenTransfer.DefinitionRequest.class);
-            allowedClasses.add(NetOpenTransfer.DefinitionResponse.class);
+            allowedClasses.add(NetOpenTransfer.Request.class);
+            allowedClasses.add(NetOpenTransfer.Response.class);
+            allowedClasses.add(NetCloseTransfer.class);
         }
 
         @Override
@@ -70,6 +73,8 @@ public class TorrentCompFilters {
             allowedClasses.add(CacheHint.Response.class);
             allowedClasses.add(DownloadPiece.Request.class);
             allowedClasses.add(DownloadPiece.Response.class);
+            allowedClasses.add(DownloadHash.Request.class);
+            allowedClasses.add(DownloadHash.Response.class);
         }
 
         @Override

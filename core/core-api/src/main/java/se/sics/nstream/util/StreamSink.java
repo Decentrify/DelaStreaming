@@ -2,7 +2,7 @@
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
  *
- * GVoD is free software; you can redistribute it and/or
+ * KompicsToolbox is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
@@ -18,19 +18,9 @@
  */
 package se.sics.nstream.util;
 
-import java.util.Map;
-
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TransferDetails {
-    public final byte[] torrent;
-    public final TorrentDetails base;
-    public final Map<String, FileExtendedDetails> extended;
-    
-    public TransferDetails(byte[] torrent, TorrentDetails base, Map<String, FileExtendedDetails> extended) {
-        this.torrent = torrent;
-        this.base = base;
-        this.extended = extended;
-    }
+public interface StreamSink {
+    public String getSinkName();
 }

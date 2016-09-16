@@ -23,6 +23,7 @@ import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.torrent.FileIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -32,10 +33,12 @@ public class OpenTransferDefinition {
     public static class LeecherRequest extends Direct.Request<LeecherResponse> implements Identifiable {
 
         public final Identifier eventId;
+        public final FileIdentifier fileId;
         public final KAddress peer;
 
-        public LeecherRequest(KAddress peer) {
+        public LeecherRequest(KAddress peer, FileIdentifier fileId) {
             this.eventId = UUIDIdentifier.randomId();
+            this.fileId = fileId;
             this.peer = peer;
         }
 

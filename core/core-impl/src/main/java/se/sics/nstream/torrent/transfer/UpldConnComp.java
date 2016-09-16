@@ -22,6 +22,7 @@ import com.google.common.collect.Sets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -45,11 +46,12 @@ import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 import se.sics.nstream.torrent.transfer.msg.CacheHint;
+import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.transfer.upld.event.GetBlocks;
 import se.sics.nstream.torrent.transfer.upld.event.UpldConnReport;
 import se.sics.nstream.torrent.util.TorrentConnId;
-import se.sics.nstream.transfer.BlockHelper;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.range.KPiece;
 import se.sics.nstream.util.range.RangeKReference;
@@ -74,27 +76,29 @@ public class UpldConnComp extends ComponentDefinition {
     private final TorrentConnId connId;
     private final KAddress self;
     private final BlockDetails defaultBlock;
+    private final boolean withHashes;
     //**************************************************************************
     private final NetworkQueueLoadProxy networkQueueLoad;
     private final Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
     private final Map<Integer, KReference<byte[]>> servedBlocks = new HashMap<>();
+    private final Map<Integer, byte[]> servedHashes = new HashMap<>();
     private KContentMsg<?, ?, CacheHint.Request> pendingCacheReq;
     //**************************************************************************
     private UUID reportTid;
 
     public UpldConnComp(Init init) {
-        this.connId = init.connId;
-        this.self = init.self;
-        this.defaultBlock = init.defaultBlock;
+        connId = init.connId;
+        self = init.self;
+        defaultBlock = init.defaultBlock;
+        withHashes = init.withHashes;
         logPrefix = connId.toString();
 
-        
         networkQueueLoad = new NetworkQueueLoadProxy(logPrefix, proxy, new QueueLoadConfig(config()));
         subscribe(handleStart, control);
         subscribe(handleReport, timerPort);
         subscribe(handleCache, networkPort);
         subscribe(handleGetBlocks, connPort);
-        subscribe(handlePiece, networkPort);
+        subscribe(handleLedbat, networkPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -114,7 +118,7 @@ public class UpldConnComp extends ComponentDefinition {
             silentRelease(block);
         }
     }
-    
+
     Handler handleReport = new Handler<ReportTimeout>() {
         @Override
         public void handle(ReportTimeout event) {
@@ -123,7 +127,7 @@ public class UpldConnComp extends ComponentDefinition {
             trigger(new UpldConnReport(connId, queueDelay, queueAdjustment), connPort);
         }
     };
-    
+
     //**************************************************************************
     ClassMatchedHandler handleCache
             = new ClassMatchedHandler<CacheHint.Request, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Request>>() {
@@ -136,11 +140,12 @@ public class UpldConnComp extends ComponentDefinition {
                         Set<Integer> newCache = Sets.difference(content.requestCache.blocks, servedBlocks.keySet());
                         Set<Integer> delCache = Sets.difference(servedBlocks.keySet(), content.requestCache.blocks);
 
-                        trigger(new GetBlocks.Request(connId, newCache), connPort);
+                        trigger(new GetBlocks.Request(connId, newCache, withHashes, content.requestCache), connPort);
 
                         //release references that were retained when given to us
                         for (Integer blockNr : delCache) {
                             KReference<byte[]> block = servedBlocks.remove(blockNr);
+                            servedHashes.remove(blockNr);
                             irregularBlocks.remove(blockNr);
                             silentRelease(block);
                         }
@@ -153,33 +158,59 @@ public class UpldConnComp extends ComponentDefinition {
         public void handle(GetBlocks.Response resp) {
             //references are already retained by whoever gives them to us
             servedBlocks.putAll(resp.blocks);
+            servedHashes.putAll(resp.hashes);
             irregularBlocks.putAll(resp.irregularBlocks);
             answerMsg(pendingCacheReq, pendingCacheReq.getContent().success());
             pendingCacheReq = null;
         }
     };
     //**************************************************************************
-    ClassMatchedHandler handlePiece
-            = new ClassMatchedHandler<LedbatMsg.Request<DownloadPiece.Request>, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<DownloadPiece.Request>>>() {
-
+    ClassMatchedHandler handleLedbat
+            = new ClassMatchedHandler<LedbatMsg.Request, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request>>() {
                 @Override
-                public void handle(LedbatMsg.Request<DownloadPiece.Request> content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request<DownloadPiece.Request>> context) {
-                    int blockNr = content.getWrappedContent().piece.getValue0();
-                    BlockDetails blockDetails = irregularBlocks.containsKey(blockNr) ? irregularBlocks.get(blockNr) : defaultBlock;
-                    KReference<byte[]> block = servedBlocks.get(blockNr);
-                    if(block == null) {
-                        throw new RuntimeException("bad cache-block logic");
+                public void handle(LedbatMsg.Request content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request> context) {
+                    Object baseContent = content.getWrappedContent();
+                    if (baseContent instanceof DownloadPiece.Request) {
+                        handlePiece(context, content);
+                    } else if (baseContent instanceof DownloadHash.Request) {
+                        handleHashes(context, content);
+                    } else {
+                        LOG.error("{}received:{}", logPrefix, content);
+                        throw new RuntimeException("ups");
                     }
-                    //retain block here - release in serializer
-                    if(!block.retain()) {
-                        throw new RuntimeException("bad ref logic");
-                    }
-                    KPiece pieceRange = BlockHelper.getPieceRange(content.getWrappedContent().piece, blockDetails, defaultBlock);
-                    RangeKReference piece = RangeKReference.createInstance(block, blockNr, pieceRange);
-                    LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(piece));
-                    answerMsg(context, ledbatContent);
                 }
             };
+
+    public void handlePiece(KContentMsg msg, LedbatMsg.Request<DownloadPiece.Request> content) {
+        int blockNr = content.getWrappedContent().piece.getValue0();
+        BlockDetails blockDetails = irregularBlocks.containsKey(blockNr) ? irregularBlocks.get(blockNr) : defaultBlock;
+        KReference<byte[]> block = servedBlocks.get(blockNr);
+        if (block == null) {
+            throw new RuntimeException("bad cache-block logic");
+        }
+        //retain block here - release in serializer
+        if (!block.retain()) {
+            throw new RuntimeException("bad ref logic");
+        }
+        KPiece pieceRange = BlockHelper.getPieceRange(content.getWrappedContent().piece, blockDetails, defaultBlock);
+        RangeKReference piece = RangeKReference.createInstance(block, blockNr, pieceRange);
+        LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(piece));
+        answerMsg(msg, ledbatContent);
+    }
+    
+    public void handleHashes(KContentMsg msg, LedbatMsg.Request<DownloadHash.Request> content) {
+        Map<Integer, byte[]> hashValues = new TreeMap<>();
+        for(Integer hashNr : content.getWrappedContent().hashes) {
+            byte[] hashVal = servedHashes.get(hashNr);
+            if(hashVal == null) {
+                LOG.warn("{}no hash - not serving incomplete", logPrefix);
+                return;
+            }
+            hashValues.put(hashNr, hashVal);
+        }
+        LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(hashValues    ));
+        answerMsg(msg, ledbatContent);
+    }
     //**************************************************************************
 
     private void answerMsg(KContentMsg original, Identifiable respContent) {
@@ -194,20 +225,22 @@ public class UpldConnComp extends ComponentDefinition {
             throw new RuntimeException(ex);
         }
     }
-    
+
     public static class Init extends se.sics.kompics.Init<UpldConnComp> {
 
         public final TorrentConnId connId;
         public final KAddress self;
         public final BlockDetails defaultBlock;
+        public final boolean withHashes;
 
-        public Init(TorrentConnId connId, KAddress self, BlockDetails defaultBlock) {
+        public Init(TorrentConnId connId, KAddress self, BlockDetails defaultBlock, boolean withHashes) {
             this.connId = connId;
             this.self = self;
             this.defaultBlock = defaultBlock;
+            this.withHashes = withHashes;
         }
     }
-    
+
     private void scheduleReport() {
         SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(REPORT_PERIOD, REPORT_PERIOD);
         ReportTimeout rt = new ReportTimeout(spt);
@@ -221,8 +254,9 @@ public class UpldConnComp extends ComponentDefinition {
         trigger(cpd, timerPort);
         reportTid = null;
     }
-    
+
     public static class ReportTimeout extends Timeout {
+
         public ReportTimeout(SchedulePeriodicTimeout spt) {
             super(spt);
         }

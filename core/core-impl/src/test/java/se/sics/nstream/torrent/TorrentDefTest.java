@@ -19,7 +19,8 @@
 package se.sics.nstream.torrent;
 
 import org.junit.Test;
-import se.sics.nstream.util.BlockDetails;
+import se.sics.nstream.transfer.MyTorrent;
+import se.sics.nstream.transfer.MyTorrent.Manifest;
 
 /**
  *
@@ -28,6 +29,6 @@ import se.sics.nstream.util.BlockDetails;
 public class TorrentDefTest {
     @Test
     public void simpleTest() {
-        TorrentDef td = TorrentDef.buildDefinition(null, null, new byte[]{1,2,3,4,5,6,7,8,9,10,11}, new BlockDetails(4, 2, 2, 2));
+        Manifest td = MyTorrent.buildDefinition(new byte[]{1,2,3,4,5,6,7,8,9,10,11});
     }
 }

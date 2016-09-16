@@ -20,6 +20,7 @@ package se.sics.nstream.torrent.transfer;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +37,9 @@ import se.sics.nstream.util.BlockDetails;
  */
 public class DwnlConnWorkCtrl {
 
+    private static final int BATCHED_HASHES = 20;
+
+    private final boolean withHashes;
     //**************************************************************************
     private final Map<Integer, BlockMngr> completedBlocks = new HashMap<>();
     /**
@@ -56,16 +60,21 @@ public class DwnlConnWorkCtrl {
     private final BlockDetails defaultBlockDetails;
     private final Map<Integer, BlockDetails> irregularBlockDetails = new HashMap<>();
     //**************************************************************************
+    private final Set<Integer> cachedHashes = new TreeSet<>();
+    private final Set<Integer> pendingHashes = new HashSet<>();
+    private final Map<Integer, byte[]> completedHashes = new HashMap<>();
+    //**************************************************************************
     private KHint.Summary oldHint = new KHint.Summary(0, new TreeSet<Integer>());
     private boolean cacheHintChanged = false; //new work or finishing a block changes this to true
     private boolean cacheConfirmed = true;
     //**************************************************************************
     private final Map<Integer, BlockMngr> ongoingBlocks = new HashMap<>();
-    private final TreeMap<Integer, LinkedList<Integer>> nextPieces = new TreeMap<>();
+    private final TreeMap<Integer, LinkedList<Integer>> cachedPieces = new TreeMap<>();
     private final TreeMap<Integer, Set<Integer>> pendingPieces = new TreeMap<>();
 
-    public DwnlConnWorkCtrl(BlockDetails defaultBlocksDetails) {
+    public DwnlConnWorkCtrl(BlockDetails defaultBlocksDetails, boolean withHashes) {
         this.defaultBlockDetails = defaultBlocksDetails;
+        this.withHashes = withHashes;
     }
 
     public void add(Set<Integer> newBlocks, Map<Integer, BlockDetails> newIrregularBlocks) {
@@ -76,8 +85,11 @@ public class DwnlConnWorkCtrl {
 
     public void cacheConfirmed() {
         cacheConfirmed = true;
-        cachedBlocks.addAll(oldHint.blocks);
-        pendingCacheBlocks.removeAll(oldHint.blocks);
+        cachedBlocks.addAll(pendingCacheBlocks);
+        if (withHashes) {
+            cachedHashes.addAll(pendingCacheBlocks);
+        }
+        pendingCacheBlocks.clear();
     }
 
     public boolean hasNewHint() {
@@ -89,14 +101,46 @@ public class DwnlConnWorkCtrl {
         return rebuildCacheHint();
     }
 
-    public boolean hasNextPiece() {
-        if (nextPieces.isEmpty()) {
-            newWorkPieces();
-        }
-        return !nextPieces.isEmpty();
+    public boolean hasHashes() {
+        return !cachedHashes.isEmpty();
     }
 
-    public Pair<Integer, Integer> next() {
+    public Set<Integer> nextHashes() {
+        Set<Integer> nextHash = new TreeSet<>();
+        int nrH = BATCHED_HASHES;
+        Iterator<Integer> it = cachedHashes.iterator();
+        while (it.hasNext() && nrH-- > 0) {
+            int hash = it.next();
+            nextHash.add(hash);
+            pendingHashes.add(hash);
+            it.remove();
+        }
+        return nextHash;
+    }
+
+    public void hashes(Map<Integer, byte[]> hashes) {
+        pendingHashes.removeAll(hashes.keySet());
+        completedHashes.putAll(hashes);
+    }
+
+    public void hashTimeout(Set<Integer> hashes) {
+        if (pendingHashes.removeAll(hashes)) {
+            cachedHashes.addAll(hashes);
+        }
+    }
+
+    public void lateHashes(Map<Integer, byte[]> lateHashes) {
+        //wait for next batch
+    }
+
+    public boolean hasPiece() {
+        if (cachedPieces.isEmpty()) {
+            newWorkPieces();
+        }
+        return !cachedPieces.isEmpty();
+    }
+
+    public Pair<Integer, Integer> nextPiece() {
         Pair<Integer, Integer> nextPiece = removeNextPiece();
         addPendingPiece(nextPiece);
         return nextPiece;
@@ -118,7 +162,7 @@ public class DwnlConnWorkCtrl {
         if (removePendingPiece(piece)) {
             addToBlock(piece, val);
         }
-        if(removeNextPiece(piece)) {
+        if (removeNextPiece(piece)) {
             addToBlock(piece, val);
         }
     }
@@ -127,13 +171,18 @@ public class DwnlConnWorkCtrl {
         return !completedBlocks.isEmpty();
     }
 
-    public Map<Integer, byte[]> getCompleteBlocks() {
-        Map<Integer, byte[]> result = new HashMap<>();
+    //<hashes, blocks>
+    public Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> getComplete() {
+        Map<Integer, byte[]> hResult = new HashMap<>(completedHashes);
+        completedHashes.clear();
+
+        Map<Integer, byte[]> bResult = new HashMap<>();
         for (Map.Entry<Integer, BlockMngr> completedBlock : completedBlocks.entrySet()) {
             byte[] blockValue = completedBlock.getValue().getBlock();
-            result.put(completedBlock.getKey(), blockValue);
+            bResult.put(completedBlock.getKey(), blockValue);
         }
-        return result;
+        completedBlocks.clear();
+        return Pair.with(hResult, bResult);
     }
 
     //**************************************************************************
@@ -151,7 +200,7 @@ public class DwnlConnWorkCtrl {
         for (int i = 0; i < bd.nrPieces; i++) {
             pieceList.add(i);
         }
-        nextPieces.put(blockNr, pieceList);
+        cachedPieces.put(blockNr, pieceList);
     }
 
     private KHint.Summary rebuildCacheHint() {
@@ -169,30 +218,30 @@ public class DwnlConnWorkCtrl {
     }
 
     private void addNextPiece(Pair<Integer, Integer> piece) {
-        LinkedList<Integer> nextBlock = nextPieces.get(piece.getValue0());
+        LinkedList<Integer> nextBlock = cachedPieces.get(piece.getValue0());
         if (nextBlock == null) {
             nextBlock = new LinkedList<>();
-            nextPieces.put(piece.getValue0(), nextBlock);
+            cachedPieces.put(piece.getValue0(), nextBlock);
         }
         nextBlock.add(piece.getValue1());
     }
 
     private Pair<Integer, Integer> removeNextPiece() {
-        Map.Entry<Integer, LinkedList<Integer>> nextBlock = nextPieces.firstEntry();
+        Map.Entry<Integer, LinkedList<Integer>> nextBlock = cachedPieces.firstEntry();
         Integer nextPiece = nextBlock.getValue().removeFirst();
         if (nextBlock.getValue().isEmpty()) {
-            nextPieces.remove(nextBlock.getKey());
+            cachedPieces.remove(nextBlock.getKey());
         }
         return Pair.with(nextBlock.getKey(), nextPiece);
     }
 
     private boolean removeNextPiece(Pair<Integer, Integer> piece) {
         boolean result = false;
-        LinkedList<Integer> block = nextPieces.get(piece.getValue0());
+        LinkedList<Integer> block = cachedPieces.get(piece.getValue0());
         if (block != null) {
             result = block.remove(piece.getValue1());
             if (block.isEmpty()) {
-                nextPieces.remove(piece.getValue0());
+                cachedPieces.remove(piece.getValue0());
             }
         }
         return result;

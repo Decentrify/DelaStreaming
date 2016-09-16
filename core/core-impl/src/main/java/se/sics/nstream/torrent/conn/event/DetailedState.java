@@ -18,13 +18,12 @@
  */
 package se.sics.nstream.torrent.conn.event;
 
-import org.javatuples.Pair;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.util.BlockDetails;
+import se.sics.nstream.transfer.MyTorrent.ManifestDef;
 
 /**
  *
@@ -43,8 +42,8 @@ public class DetailedState {
             return eventId;
         }
         
-        public Success success(Pair<Integer, BlockDetails> lastBlockDetails) {
-            return new Success(this, lastBlockDetails);
+        public Success success(ManifestDef manifestDef) {
+            return new Success(this, manifestDef);
         }
         
         public Timeout timeout() {
@@ -70,11 +69,11 @@ public class DetailedState {
     }
     
     public static class Success extends Indication {
-        public final Pair<Integer, BlockDetails> lastBlockDetails;
+        public final ManifestDef manifestDef;
         
-        private Success(Request req, Pair<Integer, BlockDetails> lastBlockDetails) {
+        private Success(Request req, ManifestDef manifestDef) {
             super(req);
-            this.lastBlockDetails = lastBlockDetails;
+            this.manifestDef = manifestDef;
         }
     }
     

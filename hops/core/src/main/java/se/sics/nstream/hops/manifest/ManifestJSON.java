@@ -23,12 +23,9 @@ import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
-import se.sics.nstream.hops.HopsFES;
-import se.sics.nstream.transfer.BlockHelper;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
-import se.sics.nstream.util.FileExtendedSummary;
-import se.sics.nstream.util.TorrentDetails;
 
 /**
  *
@@ -109,21 +106,14 @@ public class ManifestJSON {
         this.metaDataJsons = metaDataJsons;
     }
 
-    public static TorrentDetails getTorrentDetails(ManifestJSON manifest) {
+    public static Map<String, FileBaseDetails> getBaseDetails(ManifestJSON manifest, BlockDetails defaultBlock) {
         Map<String, FileBaseDetails> baseDetails = new HashMap<>();
-        Map<String, FileExtendedSummary> extendedSummary = new HashMap<>();
         for(FileInfoJSON fileInfo : manifest.fileInfos) {
-            BlockDetails defaultBlock = new BlockDetails(1024*1024, 1024, 1024, 1024);
             String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
             Pair<Integer, BlockDetails> fileDetails = BlockHelper.getFileDetails(fileInfo.getLength(), defaultBlock);
             FileBaseDetails fbd = new FileBaseDetails(fileInfo.getLength(), fileDetails.getValue0(), defaultBlock, fileDetails.getValue1(), hashAlg);
             baseDetails.put(fileInfo.getFileName(), fbd);
-            if(fileInfo.getSchema() != null) {
-                HopsFES fes = new HopsFES(fileInfo.getSchema());
-                extendedSummary.put(fileInfo.getFileName(), fes);
-            }
         }
-        TorrentDetails torrentDetails = new TorrentDetails(baseDetails, extendedSummary);
-        return torrentDetails;
+        return baseDetails;
     }
 }

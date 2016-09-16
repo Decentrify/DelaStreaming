@@ -18,12 +18,14 @@
  */
 package se.sics.nstream.torrent.fileMngr;
 
+import com.google.common.base.Optional;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
@@ -33,7 +35,8 @@ import se.sics.nstream.storage.buffer.WriteResult;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.FileBWC;
-import se.sics.nstream.transfer.BlockHelper;
+import se.sics.nstream.util.BlockHelper;
+import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.HashReadCallback;
@@ -87,8 +90,8 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
     }
 
     @Override
-    public void setCacheHint(Identifier reader, KHint.Expanded hint) {
-        file.setFutureReads(reader, hint);
+    public void setCacheHint(Identifier reader, KHint.Summary hint) {
+        file.setFutureReads(reader, hint.expand(fileDetails));
     }
 
     //********************************READ_DATA*********************************
@@ -112,6 +115,13 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
     public void readBlock(int blockNr, ReadCallback delayedResult) {
         KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
         file.read(blockRange, delayedResult);
+    }
+    
+    @Override
+    public Map<Integer, BlockDetails> getIrregularBlocks() {
+        Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
+        irregularBlocks.put(fileDetails.nrBlocks-1, fileDetails.lastBlock);
+        return irregularBlocks;
     }
     //*******************************WRITE_DATA*********************************
     @Override
@@ -179,10 +189,14 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
     }
 
     @Override
-    public int requestBlock() {
-        int block = nextBlocks.pollFirst();
-        ongoingBlocks.add(block);
-        return block;
+    public Pair<Integer, Optional<BlockDetails>> requestBlock() {
+        int blockNr = nextBlocks.pollFirst();
+        Optional<BlockDetails> irregularBlock = Optional.absent();
+        if(blockNr == fileDetails.nrBlocks - 1) {
+            irregularBlock = Optional.of(fileDetails.lastBlock);
+        }
+        ongoingBlocks.add(blockNr);
+        return Pair.with(blockNr, irregularBlock);
     }
 
     @Override

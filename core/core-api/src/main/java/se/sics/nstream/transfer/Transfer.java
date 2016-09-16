@@ -24,7 +24,7 @@ import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
-import se.sics.nstream.util.TransferDetails;
+import se.sics.nstream.transfer.MyTorrent.Manifest;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -34,12 +34,12 @@ public class Transfer {
 
         public final Identifier eventId;
         public final Identifier torrentId;
-        public final Result<byte[]> torrentByte;
+        public final Result<Manifest> manifest;
 
-        public DownloadRequest(Identifier torrentId, Result<byte[]> torrentByte) {
+        public DownloadRequest(Identifier torrentId, Result<Manifest> manifest) {
             this.eventId = UUIDIdentifier.randomId();
             this.torrentId = torrentId;
-            this.torrentByte = torrentByte;
+            this.manifest = manifest;
         }
 
         @Override
@@ -47,8 +47,8 @@ public class Transfer {
             return eventId;
         }
         
-        public DownloadResponse answer(TransferDetails transferDetails) {
-            return new DownloadResponse(this, transferDetails);
+        public DownloadResponse answer(MyTorrent torrent) {
+            return new DownloadResponse(this, torrent);
         }
 
         @Override
@@ -59,11 +59,11 @@ public class Transfer {
     
     public static class DownloadResponse implements Direct.Response, StreamEvent {
         public final DownloadRequest req;
-        public final TransferDetails transferDetails;
+        public final MyTorrent torrent;
         
-        public DownloadResponse(DownloadRequest req, TransferDetails transferDetails) {
+        public DownloadResponse(DownloadRequest req, MyTorrent torrent) {
             this.req = req;
-            this.transferDetails = transferDetails;
+            this.torrent = torrent;
         }
 
         @Override

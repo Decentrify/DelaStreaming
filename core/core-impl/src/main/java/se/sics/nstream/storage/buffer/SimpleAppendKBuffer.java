@@ -36,8 +36,9 @@ import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.StoragePort;
 import se.sics.nstream.storage.StorageWrite;
+import se.sics.nstream.torrent.util.BufferName;
 import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.StreamSink;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.WriteCallback;
@@ -55,7 +56,8 @@ public class SimpleAppendKBuffer implements KBuffer {
     private String logPrefix = "";
 
     private final KBufferConfig bufferConfig;
-    private final StreamResource writeResource;
+    private final BufferName bufName;
+    private final StreamSink writeResource;
     //**************************************************************************
     private final Positive<StoragePort> writePort;
     private final ComponentProxy proxy;
@@ -70,7 +72,7 @@ public class SimpleAppendKBuffer implements KBuffer {
     //**************************************************************************
 
     public SimpleAppendKBuffer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExceptionHandling, ComponentLoadTracking loadTracker,
-            StreamEndpoint writeEndpoint, StreamResource writeResource, long appendPos) {
+            StreamEndpoint writeEndpoint, StreamSink writeResource, BufferName bufName, long appendPos) {
         this.bufferConfig = new KBufferConfig(config);
         this.writeResource = writeResource;
         this.proxy = proxy;
@@ -80,6 +82,7 @@ public class SimpleAppendKBuffer implements KBuffer {
         this.appendPos = appendPos;
         this.blockPos = 0;
         this.answeredBlockPos = 0;
+        this.bufName = bufName;
         proxy.subscribe(handleWriteResp, writePort);
     }
 
@@ -110,7 +113,7 @@ public class SimpleAppendKBuffer implements KBuffer {
             return;
         }
         buffer.put(writeRange.lowerAbsEndpoint(), Pair.with(val, delayedWrite));
-        loadTracker.setBufferSize(writeResource.getResourceName(), buffer.size());
+        loadTracker.setBufferSize(bufName, buffer.size());
         if (writeRange.lowerAbsEndpoint() == appendPos) {
             addNewTasks();
         }
@@ -146,13 +149,13 @@ public class SimpleAppendKBuffer implements KBuffer {
                     LOG.error("{}buf size:{}", logPrefix, buffer.size());
                     throw new RuntimeException("error");
                 }
-                loadTracker.setBufferSize(writeResource.getResourceName(), buffer.size());
+                loadTracker.setBufferSize(bufName, buffer.size());
                 try {
                     ref.getValue0().release();
                 } catch (KReferenceException ex) {
                     fail(Result.internalFailure(ex));
                 }
-                WriteResult result = new WriteResult(resp.req.pos, resp.req.value.length, writeResource.getResourceName());
+                WriteResult result = new WriteResult(resp.req.pos, resp.req.value.length, writeResource.getSinkName());
                 ref.getValue1().success(Result.success(result));
                 addNewTasks();
             } else {

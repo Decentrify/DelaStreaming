@@ -31,11 +31,13 @@ import se.sics.nstream.torrent.util.TorrentConnId;
 public class CompletedBlocks implements TorrentConnEvent {
     public final Identifier eventId;
     public final TorrentConnId connId;
+    public final Map<Integer, byte[]> hashes;
     public final Map<Integer, byte[]> blocks;
     
-    public CompletedBlocks(TorrentConnId connId, Map<Integer, byte[]> blocks) {
+    public CompletedBlocks(TorrentConnId connId, Map<Integer, byte[]> hashes, Map<Integer, byte[]> blocks) {
         this.eventId = UUIDIdentifier.randomId();
         this.connId = connId;
+        this.hashes = hashes;
         this.blocks = blocks;
     }
     

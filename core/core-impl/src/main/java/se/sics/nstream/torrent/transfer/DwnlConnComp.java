@@ -54,9 +54,11 @@ import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DwnlConnReport;
 import se.sics.nstream.torrent.transfer.dwnl.event.FPDControl;
 import se.sics.nstream.torrent.transfer.msg.CacheHint;
+import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.util.TorrentConnId;
 import se.sics.nstream.util.BlockDetails;
+import se.sics.nutil.ContentWrapperHelper;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
 import se.sics.nutil.tracking.load.QueueLoadConfig;
@@ -73,7 +75,7 @@ public class DwnlConnComp extends ComponentDefinition {
     private String logPrefix;
 
     private static final long ADVANCE_DOWNLOAD = 1000;
-    private static final long CACHE_TIMEOUT = 2000;
+    private static final long CACHE_TIMEOUT = 10000;
     private static final long REPORT_PERIOD = 1000;
     //**************************************************************************
     Negative<DwnlConnPort> connPort = provides(DwnlConnPort.class);
@@ -104,7 +106,7 @@ public class DwnlConnComp extends ComponentDefinition {
         ledbatConfig = new LedbatConfig(config());
         networkQueueLoad = new NetworkQueueLoadProxy(logPrefix, proxy, new QueueLoadConfig(config()));
         cwnd = new AppCongestionWindow(ledbatConfig, connId);
-        workController = new DwnlConnWorkCtrl(init.defaultBlockDetails);
+        workController = new DwnlConnWorkCtrl(init.defaultBlockDetails, init.withHashes);
 
         subscribe(handleStart, control);
         subscribe(handleReport, timerPort);
@@ -113,7 +115,7 @@ public class DwnlConnComp extends ComponentDefinition {
         subscribe(handleNewBlocks, connPort);
         subscribe(handleNetworkTimeouts, networkPort);
         subscribe(handleCache, networkPort);
-        subscribe(handlePiece, networkPort);
+        subscribe(handleLedbat, networkPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -168,13 +170,15 @@ public class DwnlConnComp extends ComponentDefinition {
             = new ClassMatchedHandler<BestEffortMsg.Timeout, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout>>() {
                 @Override
                 public void handle(BestEffortMsg.Timeout wrappedContent, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout> context) {
-                    Object content = wrappedContent.content;
+                    Object content = ContentWrapperHelper.getBaseContent(wrappedContent, Object.class);
                     if (content instanceof CacheHint.Request) {
                         handleCacheTimeout((CacheHint.Request) content);
                     } else if (content instanceof DownloadPiece.Request) {
                         handlePieceTimeout((DownloadPiece.Request) content);
+                    } else if (content instanceof DownloadHash.Request) {
+                        handleHashTimeout((DownloadHash.Request) content);
                     } else {
-                        LOG.debug("{}possible performance issue - fix");
+                        LOG.warn("{}!!!possible performance issue - fix:{}", logPrefix, content);
                     }
                 }
             };
@@ -187,6 +191,15 @@ public class DwnlConnComp extends ComponentDefinition {
         if (pendingMsgs.remove(req.eventId)) {
             long now = System.currentTimeMillis();
             workController.pieceTimeout(req.piece);
+            cwnd.timeout(now, ledbatConfig.mss);
+            tryDownload(now);
+        }
+    }
+    
+    public void handleHashTimeout(DownloadHash.Request req) {
+        if (pendingMsgs.remove(req.eventId)) {
+            long now = System.currentTimeMillis();
+            workController.hashTimeout(req.hashes);
             cwnd.timeout(now, ledbatConfig.mss);
             tryDownload(now);
         }
@@ -219,29 +232,59 @@ public class DwnlConnComp extends ComponentDefinition {
                 }
             };
 
-    ClassMatchedHandler handlePiece
-            = new ClassMatchedHandler<LedbatMsg.Response<DownloadPiece.Response>, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response<DownloadPiece.Response>>>() {
+    ClassMatchedHandler handleLedbat
+            = new ClassMatchedHandler<LedbatMsg.Response, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response>>() {
 
                 @Override
-                public void handle(LedbatMsg.Response<DownloadPiece.Response> content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response<DownloadPiece.Response>> context) {
-                    LOG.trace("{}received:{}", logPrefix, content);
-                    DownloadPiece.Response resp = content.getWrappedContent();
-                    long now = System.currentTimeMillis();
-                    if (pendingMsgs.remove(resp.eventId)) {
-                        workController.piece(resp.piece, resp.val.getRight());
-                        cwnd.success(now, ledbatConfig.mss, content);
-                        tryDownload(now);
+                public void handle(LedbatMsg.Response content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response> context) {
+                    Object baseContent = content.getWrappedContent();
+                    if (baseContent instanceof DownloadPiece.Response) {
+                        handlePiece(content);
+                    } else if (baseContent instanceof DownloadHash.Response) {
+                        handleHash(content);
                     } else {
-                        workController.latePiece(resp.piece, resp.val.getRight());
-                        cwnd.late(now, ledbatConfig.mss, content);
-                    }
-                    if (workController.hasComplete()) {
-                        Map<Integer, byte[]> completedBlocks = workController.getCompleteBlocks();
-                        LOG.info("{}completed blocks:{}", logPrefix, completedBlocks.keySet());
-                        trigger(new CompletedBlocks(connId, completedBlocks), connPort);
+                        throw new RuntimeException("ups");
                     }
                 }
             };
+
+    private void handlePiece(LedbatMsg.Response<DownloadPiece.Response> content) {
+        LOG.trace("{}received:{}", logPrefix, content);
+        DownloadPiece.Response resp = content.getWrappedContent();
+        long now = System.currentTimeMillis();
+        if (pendingMsgs.remove(resp.eventId)) {
+            workController.piece(resp.piece, resp.val.getRight());
+            cwnd.success(now, ledbatConfig.mss, content);
+            tryDownload(now);
+        } else {
+            workController.latePiece(resp.piece, resp.val.getRight());
+            cwnd.late(now, ledbatConfig.mss, content);
+        }
+        if (workController.hasComplete()) {
+            Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
+            LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
+            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
+        }
+    }
+
+    private void handleHash(LedbatMsg.Response<DownloadHash.Response> content) {
+        LOG.trace("{}received:{}", logPrefix, content);
+        DownloadHash.Response resp = content.getWrappedContent();
+        long now = System.currentTimeMillis();
+        if (pendingMsgs.remove(resp.eventId)) {
+            workController.hashes(resp.hashValues);
+            cwnd.success(now, ledbatConfig.mss, content);
+            tryDownload(now);
+        } else {
+            workController.lateHashes(resp.hashValues);
+            cwnd.late(now, ledbatConfig.mss, content);
+        }
+        if (workController.hasComplete()) {
+            Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
+            LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
+            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
+        }
+    }
 
     //**************************************************************************
     private void tryDownload(long now) {
@@ -250,8 +293,14 @@ public class DwnlConnComp extends ComponentDefinition {
             sendSimpleUDP(req);
             pendingMsgs.add(req.getId());
         }
-        while (workController.hasNextPiece() && cwnd.canSend()) {
-            DownloadPiece.Request req = new DownloadPiece.Request(connId.fileId, workController.next());
+        while (workController.hasHashes() && cwnd.canSend()) {
+            DownloadHash.Request req = new DownloadHash.Request(connId.fileId, workController.nextHashes());
+            sendSimpleLedbat(req);
+            pendingMsgs.add(req.getId());
+            cwnd.request(now, ledbatConfig.mss);
+        }
+        while (workController.hasPiece() && cwnd.canSend()) {
+            DownloadPiece.Request req = new DownloadPiece.Request(connId.fileId, workController.nextPiece());
             sendSimpleLedbat(req);
             pendingMsgs.add(req.getId());
             cwnd.request(now, ledbatConfig.mss);
@@ -265,12 +314,14 @@ public class DwnlConnComp extends ComponentDefinition {
         public final KAddress self;
         public final KAddress target;
         public final BlockDetails defaultBlockDetails;
+        public final boolean withHashes;
 
-        public Init(TorrentConnId connId, KAddress self, KAddress target, BlockDetails defaultBlockDetails) {
+        public Init(TorrentConnId connId, KAddress self, KAddress target, BlockDetails defaultBlockDetails, boolean withHashes) {
             this.connId = connId;
             this.self = self;
             this.target = target;
             this.defaultBlockDetails = defaultBlockDetails;
+            this.withHashes = withHashes;
         }
     }
 

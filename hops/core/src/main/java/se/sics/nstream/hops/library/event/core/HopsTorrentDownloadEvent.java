@@ -22,7 +22,6 @@ import com.google.common.base.Optional;
 import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
-import org.javatuples.Triplet;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
@@ -32,6 +31,7 @@ import se.sics.nstream.StreamEvent;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
+import se.sics.nstream.hops.library.Library;
 import se.sics.nstream.util.FileExtendedDetails;
 
 /**
@@ -66,7 +66,7 @@ public class HopsTorrentDownloadEvent {
             return eventId;
         }
 
-        public StartResponse alreadyExists(Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result) {
+        public StartResponse alreadyExists(Result<Pair<String, Library.Torrent>> result) {
             return new AlreadyExists(this, result);
         }
 
@@ -97,9 +97,9 @@ public class HopsTorrentDownloadEvent {
     public static class AlreadyExists implements StartResponse {
 
         public final StartRequest req;
-        public final Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result;
+        public final Result<Pair<String, Library.Torrent>> result;
 
-        public AlreadyExists(StartRequest req, Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result) {
+        public AlreadyExists(StartRequest req, Result<Pair<String, Library.Torrent>> result) {
             this.req = req;
             this.result = result;
         }

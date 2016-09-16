@@ -22,5 +22,5 @@ package se.sics.nstream.library.util;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public enum TorrentStatus {
-    NONE, UPLOADING, PENDING_DOWNLOAD, DOWNLOADING, DESTROYED;
+    NONE, UPLOADING, DOWNLOAD_1, DOWNLOAD_2, DOWNLOAD_3, DOWNLOADING, DESTROYED;
 }

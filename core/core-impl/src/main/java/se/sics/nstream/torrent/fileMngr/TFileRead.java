@@ -18,8 +18,10 @@
  */
 package se.sics.nstream.torrent.fileMngr;
 
+import java.util.Map;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.storage.cache.KHint;
+import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.result.HashReadCallback;
 import se.sics.nstream.util.result.ReadCallback;
 
@@ -31,11 +33,12 @@ public interface TFileRead extends TFileMngr {
 
     public void clean(Identifier reader);
 
-    public void setCacheHint(Identifier reader, KHint.Expanded hint);
+    public void setCacheHint(Identifier reader, KHint.Summary hint);
 
     //**************************************************************************
     public boolean hasBlock(int blockNr);
     public boolean hasHash(int blockNr);
     public void readHash(int blockNr, HashReadCallback delayedResult);
     public void readBlock(int blockNr, ReadCallback delayedResult);
+    public Map<Integer, BlockDetails> getIrregularBlocks();
 }

@@ -25,10 +25,10 @@ import se.sics.nstream.torrent.conn.msg.NetOpenTransfer;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NetTransferDefRequestEC implements EqualComparator<NetOpenTransfer.DefinitionRequest>{
+public class NetTransferDefRequestEC implements EqualComparator<NetOpenTransfer.Request>{
     
     @Override
-    public boolean isEqual(NetOpenTransfer.DefinitionRequest o1, NetOpenTransfer.DefinitionRequest o2) {
+    public boolean isEqual(NetOpenTransfer.Request o1, NetOpenTransfer.Request o2) {
         if(o1 == null && o2 == null) {
             return true;
         }
@@ -38,7 +38,7 @@ public class NetTransferDefRequestEC implements EqualComparator<NetOpenTransfer.
         if(!o1.eventId.equals(o2.eventId)) {
             return false;
         }
-        if(!o1.torrentId.equals(o2.torrentId)) {
+        if(!o1.fileId.equals(o2.fileId)) {
             return false;
         }
         return true;

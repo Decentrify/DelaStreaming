@@ -42,6 +42,8 @@ import se.sics.nstream.torrent.event.TorrentGet;
 import se.sics.nstream.torrent.event.TorrentGetSerializer;
 import se.sics.nstream.torrent.transfer.msg.CacheHint;
 import se.sics.nstream.torrent.transfer.msg.CacheHintSerializer;
+import se.sics.nstream.torrent.transfer.msg.DownloadHash;
+import se.sics.nstream.torrent.transfer.msg.DownloadHashSerializer;
 import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.transfer.msg.DownloadPieceSerializer;
 import se.sics.nstream.util.BlockDetails;
@@ -53,7 +55,7 @@ import se.sics.nstream.util.FileBaseDetailsSerializer;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class GVoDSerializerSetup {
-    public static int serializerIds = 22;
+    public static int serializerIds = 24;
     
     public static enum GVoDSerializers {
         FileIdentifier(FileIdentifier.class, "nStreamFileIdentifier"),
@@ -61,14 +63,17 @@ public class GVoDSerializerSetup {
         NetConnectResponse(NetConnect.Response.class, "nStreamNetConnResponse"),
         NetDetailedStateRequest(NetDetailedState.Request.class, "nStreamNetDetailedStateRequest"),
         NetDetailedStateResponse(NetDetailedState.Response.class, "nStreamNetDetailedStateResponse"),
-        NetOpenTransferDefRequest(NetOpenTransfer.DefinitionRequest.class, "nStreamNetOpenTransferDefRequest"),
-        NetOpenTransferDefResponse(NetOpenTransfer.DefinitionResponse.class, "nStreamNetOpenTransferDefResponse"),
+        NetOpenTransferRequest(NetOpenTransfer.Request.class, "nStreamNetOpenTransferRequest"),
+        NetOpenTransferResponse(NetOpenTransfer.Response.class, "nStreamNetOpenTransferResponse"),
         NetCloseTransfer(NetCloseTransfer.class, "nStreamNetCloseTransfer"),
         KHintSummary(KHint.Summary.class, "nStreamKHintSummary"),
         CacheHintRequest(CacheHint.Request.class, "nstreamCacheHintRequest"),
         CacheHintResponse(CacheHint.Response.class, "nstreamCacheHintResponse"),
         DownloadPieceRequest(DownloadPiece.Request.class, "nstreamDownloadPieceRequest"),
         DownloadPieceResponse(DownloadPiece.Response.class, "nstreamDownloadPieceResponse"),
+        DownloadHashRequest(DownloadHash.Request.class, "nstreamDownloadHashRequest"),
+        DownloadHashResponse(DownloadHash.Response.class, "nstreamDownloadHashResponse"),
+
         BlockDetails(BlockDetails.class, "nstreamBlockDetails"),
         FileBaseDetails(FileBaseDetails.class, "nstreamFileBaseDetails"),
         TorrentGetRequest(TorrentGet.Request.class, "nstreamTorrentGetRequest"),
@@ -128,12 +133,12 @@ public class GVoDSerializerSetup {
         Serializers.register(GVoDSerializers.NetDetailedStateResponse.serializedClass, GVoDSerializers.NetDetailedStateResponse.serializerName);
         
         NetOpenTransferSerializer.DefinitionRequest transferDefinitionRequest = new NetOpenTransferSerializer.DefinitionRequest(currentId++);
-        Serializers.register(transferDefinitionRequest, GVoDSerializers.NetOpenTransferDefRequest.serializerName);
-        Serializers.register(GVoDSerializers.NetOpenTransferDefRequest.serializedClass, GVoDSerializers.NetOpenTransferDefRequest.serializerName);
+        Serializers.register(transferDefinitionRequest, GVoDSerializers.NetOpenTransferRequest.serializerName);
+        Serializers.register(GVoDSerializers.NetOpenTransferRequest.serializedClass, GVoDSerializers.NetOpenTransferRequest.serializerName);
         
         NetOpenTransferSerializer.DefinitionResponse transferDefinitionResponse = new NetOpenTransferSerializer.DefinitionResponse(currentId++);
-        Serializers.register(transferDefinitionResponse, GVoDSerializers.NetOpenTransferDefResponse.serializerName);
-        Serializers.register(GVoDSerializers.NetOpenTransferDefResponse.serializedClass, GVoDSerializers.NetOpenTransferDefResponse.serializerName);
+        Serializers.register(transferDefinitionResponse, GVoDSerializers.NetOpenTransferResponse.serializerName);
+        Serializers.register(GVoDSerializers.NetOpenTransferResponse.serializedClass, GVoDSerializers.NetOpenTransferResponse.serializerName);
 
         NetCloseTransferSerializer closeTransfer = new NetCloseTransferSerializer(currentId++);
         Serializers.register(closeTransfer, GVoDSerializers.NetCloseTransfer.serializerName);
@@ -158,6 +163,14 @@ public class GVoDSerializerSetup {
         DownloadPieceSerializer.Response downloadPieceResponseSerializer = new DownloadPieceSerializer.Response(currentId++);
         Serializers.register(downloadPieceResponseSerializer, GVoDSerializers.DownloadPieceResponse.serializerName);
         Serializers.register(GVoDSerializers.DownloadPieceResponse.serializedClass, GVoDSerializers.DownloadPieceResponse.serializerName);
+        
+        DownloadHashSerializer.Request downloadHashRequestSerializer = new DownloadHashSerializer.Request(currentId++);
+        Serializers.register(downloadHashRequestSerializer, GVoDSerializers.DownloadHashRequest.serializerName);
+        Serializers.register(GVoDSerializers.DownloadHashRequest.serializedClass, GVoDSerializers.DownloadHashRequest.serializerName);
+        
+        DownloadHashSerializer.Response downloadHashResponseSerializer = new DownloadHashSerializer.Response(currentId++);
+        Serializers.register(downloadHashResponseSerializer, GVoDSerializers.DownloadHashResponse.serializerName);
+        Serializers.register(GVoDSerializers.DownloadHashResponse.serializedClass, GVoDSerializers.DownloadHashResponse.serializerName);
         
         BlockDetailsSerializer blockDetailsSerializer = new BlockDetailsSerializer(currentId++);
         Serializers.register(blockDetailsSerializer, GVoDSerializers.BlockDetails.serializerName);

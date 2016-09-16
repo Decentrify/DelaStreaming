@@ -18,9 +18,12 @@
  */
 package se.sics.nstream.torrent.fileMngr;
 
+import com.google.common.base.Optional;
 import java.util.Map;
 import java.util.Set;
+import org.javatuples.Pair;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.nstream.util.BlockDetails;
 
 /**
  *
@@ -40,7 +43,7 @@ public interface TFileWrite extends TFileMngr {
 
     public void hashes(Map<Integer, byte[]> hashes, Set<Integer> missingHashes);
 
-    public int requestBlock();
+    public Pair<Integer, Optional<BlockDetails>> requestBlock();
 
     public void block(final int blockNr, final KReference<byte[]> block);
 }

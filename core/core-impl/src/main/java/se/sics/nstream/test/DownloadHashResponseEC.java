@@ -18,17 +18,19 @@
  */
 package se.sics.nstream.test;
 
+import java.util.Arrays;
+import java.util.Map;
 import se.sics.ktoolbox.util.test.EqualComparator;
-import se.sics.nstream.torrent.conn.msg.NetDetailedState;
+import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NetDetailedStateResponseEC implements EqualComparator<NetDetailedState.Response> {
+public class DownloadHashResponseEC implements EqualComparator<DownloadHash.Response> {
 
     @Override
-    public boolean isEqual(NetDetailedState.Response o1, NetDetailedState.Response o2) {
+    public boolean isEqual(DownloadHash.Response o1, DownloadHash.Response o2) {
         if (o1 == null && o2 == null) {
             return true;
         }
@@ -38,23 +40,20 @@ public class NetDetailedStateResponseEC implements EqualComparator<NetDetailedSt
         if (!o1.eventId.equals(o2.eventId)) {
             return false;
         }
-        if (!o1.torrentId.equals(o2.torrentId)) {
+        if (!o1.fileId.equals(o2.fileId)) {
             return false;
         }
-        if(o1.manifestDef.nrBlocks != o2.manifestDef.nrBlocks) {
+        if (o1.hashValues.size() != o2.hashValues.size()) {
             return false;
         }
-        if (o1.manifestDef.lastBlock.blockSize != o2.manifestDef.lastBlock.blockSize) {
-            return false;
-        }
-        if (o1.manifestDef.lastBlock.defaultPieceSize != o2.manifestDef.lastBlock.defaultPieceSize) {
-            return false;
-        }
-        if (o1.manifestDef.lastBlock.lastPieceSize != o2.manifestDef.lastBlock.lastPieceSize) {
-            return false;
-        }
-        if (o1.manifestDef.lastBlock.nrPieces != o2.manifestDef.lastBlock.nrPieces) {
-            return false;
+        for (Map.Entry<Integer, byte[]> hv1 : o1.hashValues.entrySet()) {
+            byte[] hv2 = o2.hashValues.get(hv1.getKey());
+            if (hv2 == null) {
+                return false;
+            }
+            if (!Arrays.equals(hv1.getValue(), hv2)) {
+                return false;
+            }
         }
         return true;
     }

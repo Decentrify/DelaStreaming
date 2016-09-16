@@ -16,31 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.conn.msg;
+package se.sics.nstream.torrent.transfer.msg;
 
+import java.util.Map;
+import java.util.Set;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
-import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.torrent.util.TorrentConnId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NetOpenTransfer {
-
-    public static class Request implements OverlayEvent {
-
+public class DownloadHash {
+    public static class Request implements ConnectionMsg {
         public final Identifier eventId;
         public final FileIdentifier fileId;
-
-        protected Request(Identifier eventId, FileIdentifier fileId) {
+        public final Set<Integer> hashes;
+        
+        protected Request(Identifier eventId, FileIdentifier fileId, Set<Integer> hashes) {
             this.eventId = eventId;
             this.fileId = fileId;
+            this.hashes = hashes;
         }
 
-        public Request(FileIdentifier fileId) {
-            this(UUIDIdentifier.randomId(), fileId);
+        public Request(FileIdentifier fileId, Set<Integer> hashes) {
+            this(UUIDIdentifier.randomId(), fileId, hashes);
         }
         
         @Override
@@ -53,36 +54,44 @@ public class NetOpenTransfer {
             return fileId.overlayId;
         }
         
-        public Response answer(boolean result) {
-            return new Response(this, result);
+        @Override
+        public TorrentConnId getConnectionId(Identifier target) {
+            return new TorrentConnId(target, fileId, false);
+        }
+        
+        public Response success(Map<Integer, byte[]> hashValues) {
+            return new Response(this, hashValues);
         }
     }
     
-    public static class Response implements OverlayEvent {
-
+    public static class Response implements ConnectionMsg {
         public final Identifier eventId;
         public final FileIdentifier fileId;
-        public final boolean result;
-
-        protected Response(Identifier eventId, FileIdentifier fileId, boolean result) {
+        public final Map<Integer, byte[]> hashValues;
+        
+        protected Response(Identifier eventId, FileIdentifier fileId, Map<Integer, byte[]> hashValues) {
             this.eventId = eventId;
             this.fileId = fileId;
-            this.result = result;
+            this.hashValues = hashValues;
         }
-
-        private Response(Request req, boolean result) {
-            this(req.eventId, req.fileId, result);
+        
+        private Response(Request req, Map<Integer, byte[]> hashValues) {
+            this(req.eventId, req.fileId, hashValues);
         }
         
         @Override
         public Identifier getId() {
             return eventId;
         }
-
+        
         @Override
         public Identifier overlayId() {
             return fileId.overlayId;
         }
 
+        @Override
+        public TorrentConnId getConnectionId(Identifier target) {
+            return new TorrentConnId(target, fileId, true);
+        }
     }
 }

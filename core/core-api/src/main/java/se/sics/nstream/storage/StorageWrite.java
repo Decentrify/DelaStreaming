@@ -23,7 +23,7 @@ import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.StreamSink;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -31,18 +31,18 @@ import se.sics.nstream.util.StreamResource;
 public class StorageWrite {
     public static class Request extends Direct.Request<Response> implements Identifiable {
         public final Identifier eventId;
-        public final StreamResource resource;
+        public final StreamSink resource;
         public final long pos;
         public final byte[] value;
         
-        public Request(Identifier eventId, StreamResource resource, long pos, byte[] value) {
+        public Request(Identifier eventId, StreamSink resource, long pos, byte[] value) {
             this.eventId = eventId;
             this.resource = resource;
             this.pos = pos;
             this.value = value;
         }
         
-        public Request(StreamResource resource, long pos, byte[] value) {
+        public Request(StreamSink resource, long pos, byte[] value) {
             this(UUIDIdentifier.randomId(), resource, pos, value);
         }
         

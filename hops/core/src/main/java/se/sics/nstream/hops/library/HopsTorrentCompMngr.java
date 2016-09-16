@@ -39,7 +39,6 @@ import se.sics.ktoolbox.util.idextractor.EventOverlayIdExtractor;
 import se.sics.ktoolbox.util.idextractor.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
-import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
 import se.sics.nstream.hops.hdfs.HDFSComp;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSPort;
@@ -51,9 +50,10 @@ import se.sics.nstream.report.ReportComp;
 import se.sics.nstream.report.ReportPort;
 import se.sics.nstream.report.TransferStatusPort;
 import se.sics.nstream.torrent.TorrentComp;
+import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.CoreExtPorts;
-import se.sics.nstream.util.TransferDetails;
+import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -102,9 +102,9 @@ public class HopsTorrentCompMngr {
         }
     }
 
-    public void startUpload(Positive<TransferMngrPort> transferMngrPort, Identifier torrentId, HDFSEndpoint hdfsEndpoint, TransferDetails extendedDetails) {
+    public void startUpload(Positive<TransferMngrPort> transferMngrPort, Identifier torrentId, HDFSEndpoint hdfsEndpoint, MyTorrent torrentDef) {
         LOG.info("{}setting up torrent upload {}", logPrefix, torrentId);
-        Triplet<Component, Component, Component> torrentComp = setupTorrent(transferMngrPort, true, torrentId, Optional.of(extendedDetails), new ArrayList<KAddress>());
+        Triplet<Component, Component, Component> torrentComp = setupTorrent(transferMngrPort, true, torrentId, Optional.of(torrentDef), new ArrayList<KAddress>());
         LOG.info("{}setting up hdfs {}", logPrefix, torrentId);
         Component hdfsComp = setupHDFS(torrentId, hdfsEndpoint, torrentComp.getValue0());
         proxy.trigger(Start.event, torrentComp.getValue0().control());
@@ -114,12 +114,12 @@ public class HopsTorrentCompMngr {
     }
 
     private Triplet<Component, Component, Component> setupTorrent(Positive<TransferMngrPort> transferMngrPort, boolean upload, Identifier torrentId,
-            Optional<TransferDetails> extendedDetails, List<KAddress> partners) {
+            Optional<MyTorrent> torrentDef, List<KAddress> partners) {
         Component networkRetryComp = proxy.create(BestEffortNetworkComp.class, new BestEffortNetworkComp.Init(selfAdr));
         networkRetry.put(torrentId, networkRetryComp);
         proxy.connect(extPorts.timerPort, networkRetryComp.getNegative(Timer.class), Channel.TWO_WAY);
         networkChannel.addChannel(torrentId, networkRetryComp.getNegative(Network.class));
-        Component torrentComp = proxy.create(TorrentComp.class, new TorrentComp.Init(selfAdr, torrentId, new HopsStorageProvider(), partners, upload, extendedDetails));
+        Component torrentComp = proxy.create(TorrentComp.class, new TorrentComp.Init(selfAdr, torrentId, new HopsStorageProvider(), partners, upload, torrentDef));
         torrent.put(torrentId, torrentComp);
         Component reportComp = proxy.create(ReportComp.class, new ReportComp.Init(torrentId, 1000));
         report.put(torrentId, reportComp);

@@ -16,10 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.conn.msg;
+package se.sics.nstream.torrent.transfer.msg;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -29,14 +33,14 @@ import se.sics.nstream.torrent.FileIdentifier;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NetOpenTransferSerializer {
-    public static class DefinitionRequest implements Serializer {
+public class DownloadHashSerializer {
+    public static class Request implements Serializer {
         private final int id;
         
-        public DefinitionRequest(int id) {
+        public Request(int id) {
             this.id = id;
         }
-        
+
         @Override
         public int identifier() {
             return id;
@@ -44,26 +48,36 @@ public class NetOpenTransferSerializer {
 
         @Override
         public void toBinary(Object o, ByteBuf buf) {
-            NetOpenTransfer.Request obj = (NetOpenTransfer.Request)o;
+            DownloadHash.Request obj = (DownloadHash.Request)o;
             Serializers.toBinary(obj.eventId, buf);
             Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
+            buf.writeInt(obj.hashes.size());
+            for(Integer h : obj.hashes) {
+                buf.writeInt(h);
+            }
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
             FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
-            return new NetOpenTransfer.Request(eventId, fileId);
+            Set<Integer> hashes = new TreeSet();
+            int hashSize = buf.readInt();
+            while(hashSize > 0) {
+                hashSize--;
+                hashes.add(buf.readInt());
+            }
+            return new DownloadHash.Request(eventId, fileId, hashes);
         }
     }
     
-     public static class DefinitionResponse implements Serializer {
+    public static class Response implements Serializer {
         private final int id;
         
-        public DefinitionResponse(int id) {
+        public Response(int id) {
             this.id = id;
         }
-        
+
         @Override
         public int identifier() {
             return id;
@@ -71,18 +85,32 @@ public class NetOpenTransferSerializer {
 
         @Override
         public void toBinary(Object o, ByteBuf buf) {
-            NetOpenTransfer.Response obj = (NetOpenTransfer.Response)o;
+            DownloadHash.Response obj = (DownloadHash.Response)o;
             Serializers.toBinary(obj.eventId, buf);
             Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
-            buf.writeBoolean(obj.result);
+            buf.writeInt(obj.hashValues.size());
+            for(Map.Entry<Integer, byte[]> hv : obj.hashValues.entrySet()) {
+                buf.writeInt(hv.getKey());
+                buf.writeInt(hv.getValue().length);
+                buf.writeBytes(hv.getValue());
+            }
         }
-
+        
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
             FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
-            boolean result = buf.readBoolean();
-            return new NetOpenTransfer.Response(eventId, fileId, result);
+            int hashSize = buf.readInt();
+            Map<Integer, byte[]> hashValues = new TreeMap<>();
+            while(hashSize > 0) {
+                hashSize--;
+                int hashNr = buf.readInt();
+                int hashValueSize = buf.readInt();
+                byte[] hashValue = new byte[hashValueSize];
+                buf.readBytes(hashValue);
+                hashValues.put(hashNr, hashValue);
+            }
+            return new DownloadHash.Response(eventId, fileId, hashValues);
         }
     }
 }

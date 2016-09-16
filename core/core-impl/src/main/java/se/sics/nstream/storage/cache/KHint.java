@@ -21,7 +21,7 @@ package se.sics.nstream.storage.cache;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import se.sics.nstream.transfer.BlockHelper;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
 

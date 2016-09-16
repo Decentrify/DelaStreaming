@@ -20,10 +20,10 @@ package se.sics.nstream.torrent.conn.msg;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
-import org.javatuples.Pair;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.util.BlockDetails;
 
 /**
@@ -78,24 +78,24 @@ public class NetDetailedStateSerializer {
             NetDetailedState.Response obj = (NetDetailedState.Response) o;
             Serializers.toBinary(obj.eventId, buf);
             Serializers.toBinary(obj.torrentId, buf);
-            buf.writeInt(obj.lastBlockDetails.getValue0());
-            buf.writeInt(obj.lastBlockDetails.getValue1().blockSize);
-            buf.writeInt(obj.lastBlockDetails.getValue1().defaultPieceSize);
-            buf.writeInt(obj.lastBlockDetails.getValue1().lastPieceSize);
-            buf.writeInt(obj.lastBlockDetails.getValue1().nrPieces);
+            buf.writeInt(obj.manifestDef.nrBlocks);
+            buf.writeInt(obj.manifestDef.lastBlock.blockSize);
+            buf.writeInt(obj.manifestDef.lastBlock.defaultPieceSize);
+            buf.writeInt(obj.manifestDef.lastBlock.lastPieceSize);
+            buf.writeInt(obj.manifestDef.lastBlock.nrPieces);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
             Identifier torrentId = (Identifier) Serializers.fromBinary(buf, hint);
-            int lastBlockNr = buf.readInt();
+            int nrBlocks = buf.readInt();
             int blockSize = buf.readInt();
             int defaultPieceSize = buf.readInt();
             int lastPieceSize = buf.readInt();
             int nrPieces = buf.readInt();
             BlockDetails lastBlock = new BlockDetails(blockSize, nrPieces, defaultPieceSize, lastPieceSize);
-            return new NetDetailedState.Response(eventId, torrentId, Pair.with(lastBlockNr, lastBlock));
+            return new NetDetailedState.Response(eventId, torrentId, new MyTorrent.ManifestDef(nrBlocks, lastBlock));
         }
     }
 }

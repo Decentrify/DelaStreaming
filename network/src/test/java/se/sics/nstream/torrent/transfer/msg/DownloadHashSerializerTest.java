@@ -16,11 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.conn.msg;
+package se.sics.nstream.torrent.transfer.msg;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -29,15 +33,14 @@ import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
-import se.sics.nstream.test.NetDetailedStateRequestEC;
-import se.sics.nstream.test.NetDetailedStateResponseEC;
-import se.sics.nstream.transfer.MyTorrent;
-import se.sics.nstream.util.BlockDetails;
+import se.sics.nstream.test.DownloadHashRequestEC;
+import se.sics.nstream.test.DownloadHashResponseEC;
+import se.sics.nstream.torrent.FileIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NetDetailedStateSerializerTest {
+public class DownloadHashSerializerTest {
 
     @BeforeClass
     public static void setup() {
@@ -48,18 +51,21 @@ public class NetDetailedStateSerializerTest {
 
     @Test
     public void simpleReq() {
-        Serializer serializer = Serializers.lookupSerializer(NetDetailedState.Request.class);
-        NetDetailedStateRequestEC ec = new NetDetailedStateRequestEC();
-        NetDetailedState.Request original, copy;
+        Serializer serializer = Serializers.lookupSerializer(DownloadHash.Request.class);
+        DownloadHashRequestEC ec = new DownloadHashRequestEC();
+        DownloadHash.Request original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        original = new NetDetailedState.Request(new IntIdentifier(1));
+        Set<Integer> hashes = new TreeSet<>();
+        hashes.add(1);
+        hashes.add(2);
+        original = new DownloadHash.Request(new FileIdentifier(new IntIdentifier(1), 2), hashes);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (NetDetailedState.Request) serializer.fromBinary(serializedCopy, Optional.absent());
+        copy = (DownloadHash.Request) serializer.fromBinary(serializedCopy, Optional.absent());
 
         Assert.assertTrue(ec.isEqual(original, copy));
         Assert.assertEquals(0, serializedCopy.readableBytes());
@@ -67,19 +73,25 @@ public class NetDetailedStateSerializerTest {
 
     @Test
     public void simpleResp() {
-        Serializer serializer = Serializers.lookupSerializer(NetDetailedState.Response.class);
-        NetDetailedStateResponseEC ec = new NetDetailedStateResponseEC();
-        NetDetailedState.Response original, copy;
+        Serializer serializer = Serializers.lookupSerializer(DownloadHash.Response.class);
+        DownloadHashResponseEC ec = new DownloadHashResponseEC();
+        DownloadHash.Response original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        NetDetailedState.Request request = new NetDetailedState.Request(new IntIdentifier(1));
-        original = request.success(new MyTorrent.ManifestDef(2, new BlockDetails(5, 3, 2, 1)));
+        Set<Integer> hashes = new TreeSet<>();
+        hashes.add(1);
+        hashes.add(2);
+        DownloadHash.Request request = new DownloadHash.Request(new FileIdentifier(new IntIdentifier(1), 2), hashes);
+        Map<Integer, byte[]> hashValues = new TreeMap<>();
+        hashValues.put(1, new byte[]{1,2,3,4});
+        hashValues.put(2, new byte[]{1,2,3,4,5});
+        original = request.success(hashValues);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (NetDetailedState.Response) serializer.fromBinary(serializedCopy, Optional.absent());
+        copy = (DownloadHash.Response) serializer.fromBinary(serializedCopy, Optional.absent());
 
         Assert.assertTrue(ec.isEqual(original, copy));
         Assert.assertEquals(0, serializedCopy.readableBytes());

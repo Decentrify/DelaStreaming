@@ -19,12 +19,14 @@
 package se.sics.nstream.util.actuator;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.kompics.ComponentProxy;
 import se.sics.ktoolbox.util.predict.ExpMovingAvg;
 import se.sics.ktoolbox.util.predict.STGMAvg;
 import se.sics.ktoolbox.util.predict.SimpleSmoothing;
+import se.sics.nstream.torrent.util.BufferName;
 import se.sics.nutil.tracking.load.QueueLoadConfig;
 
 /**
@@ -36,7 +38,7 @@ public class ComponentLoadTracking {
     private int instBufferLoad;
 
     private final Map<String, Integer> transferSize = new HashMap<>();
-    private final Map<String, Integer> bufferSize = new HashMap<>();
+    private final Map<String, Pair<BufferName, Integer>> bufferSize = new HashMap<>();
     private final Map<String, Pair<Integer, Integer>> cacheSize = new HashMap<>();
 
     public ComponentLoadTracking(String componentName, ComponentProxy proxy, QueueLoadConfig queueLoadConfig) {
@@ -44,10 +46,25 @@ public class ComponentLoadTracking {
         this.instBufferLoad = 0;
     }
 
-    public void setBufferSize(String bufferName, int size) {
-        bufferSize.put(bufferName, size);
+    public void setBufferSize(BufferName bufferName, int size) {
+        bufferSize.put(bufferName.fullName(), Pair.with(bufferName, size));
     }
-
+    
+    public int getMaxBufferSize(int fileId) {
+        Iterator<Pair<BufferName, Integer>> it = bufferSize.values().iterator();
+        int maxSize = -1;
+        while(it.hasNext()) {
+            Pair<BufferName, Integer> next = it.next();
+            if(next.getValue0().fileId != fileId) {
+                continue;
+            }
+            if(maxSize < next.getValue1()) {
+                maxSize = next.getValue1();
+            }
+        }
+        return maxSize;
+    }
+    
     public void setTransferSize(String fileName, int size) {
         transferSize.put(fileName, size);
     }

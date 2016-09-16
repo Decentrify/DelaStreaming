@@ -23,7 +23,7 @@ import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.StreamSink;
 import se.sics.nstream.util.range.KBlock;
 
 /**
@@ -32,16 +32,16 @@ import se.sics.nstream.util.range.KBlock;
 public class StorageRead {
     public static class Request extends Direct.Request<Response> implements Identifiable {
         public final Identifier eventId;
-        public final StreamResource resource;
+        public final StreamSink resource;
         public final KBlock readRange;
         
-        public Request(Identifier eventId, StreamResource resource, KBlock readRange) {
+        public Request(Identifier eventId, StreamSink resource, KBlock readRange) {
             this.eventId = eventId;
             this.resource = resource;
             this.readRange = readRange;
         }
         
-        public Request(StreamResource resource, KBlock readRange) {
+        public Request(StreamSink resource, KBlock readRange) {
             this(UUIDIdentifier.randomId(), resource, readRange);
         }
         

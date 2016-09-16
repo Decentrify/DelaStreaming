@@ -18,12 +18,12 @@
  */
 package se.sics.nstream.test;
 
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.StreamSink;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class MockStreamResource implements StreamResource {
+public class MockStreamResource implements StreamSink {
     private final String resourceName;
     
     public MockStreamResource(String resourceName) {
@@ -31,7 +31,7 @@ public class MockStreamResource implements StreamResource {
     }
 
     @Override
-    public String getResourceName() {
+    public String getSinkName() {
         return resourceName;
     }
 }

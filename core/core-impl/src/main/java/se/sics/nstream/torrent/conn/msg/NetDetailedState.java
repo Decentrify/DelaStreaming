@@ -18,11 +18,10 @@
  */
 package se.sics.nstream.torrent.conn.msg;
 
-import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
-import se.sics.nstream.util.BlockDetails;
+import se.sics.nstream.transfer.MyTorrent.ManifestDef;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -53,8 +52,9 @@ public class NetDetailedState {
             return eventId;
         }
 
-        public Response success(Pair<Integer, BlockDetails> lastBlockDetails) {
-            return new Response(this, lastBlockDetails);
+        public Response success(ManifestDef manifestDef) {
+            return new Response(this, manifestDef
+            );
         }
     }
 
@@ -62,16 +62,16 @@ public class NetDetailedState {
 
         public final Identifier eventId;
         public final Identifier torrentId;
-        public Pair<Integer, BlockDetails> lastBlockDetails;
+        public final ManifestDef manifestDef;
 
-        protected Response(Identifier eventId, Identifier torrentId, Pair<Integer, BlockDetails> lastBlockDetails) {
+        protected Response(Identifier eventId, Identifier torrentId, ManifestDef manifestDef) {
             this.eventId = eventId;
             this.torrentId = torrentId;
-            this.lastBlockDetails = lastBlockDetails;
+            this.manifestDef = manifestDef;
         }
 
-        private Response(Request req, Pair<Integer, BlockDetails> lastBlockDetails) {
-            this(req.eventId, req.torrentId, lastBlockDetails);
+        private Response(Request req, ManifestDef manifestDef) {
+            this(req.eventId, req.torrentId, manifestDef);
         }
 
         @Override

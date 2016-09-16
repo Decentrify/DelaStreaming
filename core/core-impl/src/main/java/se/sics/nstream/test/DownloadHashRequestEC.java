@@ -16,19 +16,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.util;
+package se.sics.nstream.test;
 
-import java.util.Map;
+import java.util.Objects;
+import se.sics.ktoolbox.util.test.EqualComparator;
+import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentDetails {
-    public final Map<String, FileBaseDetails> baseDetails;
-    public final Map<String, FileExtendedSummary> extendedSummary;
-    
-    public TorrentDetails(Map<String, FileBaseDetails> baseDetails, Map<String, FileExtendedSummary> extendedSummary) {
-        this.baseDetails = baseDetails;
-        this.extendedSummary = extendedSummary;
+public class DownloadHashRequestEC implements EqualComparator<DownloadHash.Request>{
+    @Override
+    public boolean isEqual(DownloadHash.Request o1, DownloadHash.Request o2) {
+        if(o1 == null && o2 == null) {
+            return true;
+        }
+        if(o1 == null || o2 == null) {
+            return false;
+        }
+        if(!o1.eventId.equals(o2.eventId)) {
+            return false;
+        }
+        if(!o1.fileId.equals(o2.fileId)) {
+            return false;
+        }
+        if(!Objects.equals(o1.hashes, o2.hashes)) {
+            return false;
+        }
+        return true;
     }
 }

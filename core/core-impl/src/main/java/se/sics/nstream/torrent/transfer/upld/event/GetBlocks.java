@@ -24,6 +24,7 @@ import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
 import se.sics.nstream.torrent.util.TorrentConnId;
 import se.sics.nstream.util.BlockDetails;
@@ -38,11 +39,16 @@ public class GetBlocks {
         public final Identifier eventId;
         public final TorrentConnId connId;
         public final Set<Integer> blocks;
+        public final boolean withHashes;
+        
+        public final KHint.Summary cacheHint;
 
-        public Request(TorrentConnId connId, Set<Integer> blocks) {
+        public Request(TorrentConnId connId, Set<Integer> blocks, boolean withHashes, KHint.Summary cacheHint) {
             this.eventId = UUIDIdentifier.randomId();
             this.connId = connId;
             this.blocks = blocks;
+            this.withHashes = withHashes;
+            this.cacheHint = cacheHint;
         }
 
         @Override
@@ -60,8 +66,8 @@ public class GetBlocks {
             return connId;
         }
 
-        public Response success(Map<Integer, KReference<byte[]>> blocks, Map<Integer, BlockDetails> irregularBlocks) {
-            return new Response(this, blocks, irregularBlocks);
+        public Response success(Map<Integer, byte[]> hashes, Map<Integer, KReference<byte[]>> blocks, Map<Integer, BlockDetails> irregularBlocks) {
+            return new Response(this, hashes, blocks, irregularBlocks);
         }
     }
 
@@ -69,12 +75,14 @@ public class GetBlocks {
 
         public final Identifier eventId;
         public final TorrentConnId connId;
+        public final Map<Integer, byte[]> hashes;
         public final Map<Integer, BlockDetails> irregularBlocks;
         public final Map<Integer, KReference<byte[]>> blocks;
 
-        private Response(Request req, Map<Integer, KReference<byte[]>> blocks, Map<Integer, BlockDetails> irregularBlocks) {
+        private Response(Request req, Map<Integer, byte[]> hashes, Map<Integer, KReference<byte[]>> blocks, Map<Integer, BlockDetails> irregularBlocks) {
             this.eventId = req.eventId;
             this.connId = req.connId;
+            this.hashes = hashes;
             this.blocks = blocks;
             this.irregularBlocks = irregularBlocks;
         }
