@@ -42,16 +42,16 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nstream.torrent.FileIdentifier;
-import se.sics.nstream.transfer.MyTorrent.ManifestDef;
 import se.sics.nstream.torrent.conn.event.CloseTransfer;
 import se.sics.nstream.torrent.conn.event.DetailedState;
-import se.sics.nstream.torrent.conn.event.OpenTransferDefinition;
+import se.sics.nstream.torrent.conn.event.OpenTransfer;
 import se.sics.nstream.torrent.conn.event.Seeder;
 import se.sics.nstream.torrent.conn.msg.NetCloseTransfer;
 import se.sics.nstream.torrent.conn.msg.NetConnect;
 import se.sics.nstream.torrent.conn.msg.NetDetailedState;
 import se.sics.nstream.torrent.conn.msg.NetOpenTransfer;
 import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.transfer.MyTorrent.ManifestDef;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
 import se.sics.nutil.tracking.load.QueueLoadConfig;
@@ -92,17 +92,18 @@ public class ConnectionComp extends ComponentDefinition {
         subscribe(handleStart, control);
         subscribe(handlePeerConnect, connPort);
         subscribe(handleDetailedState, connPort);
-        subscribe(handleOpenTransferDefinitionLeecher, connPort);
-        subscribe(handleOpenTransferDefinitionSeeder, connPort);
+        subscribe(handleOpenTransferLeecher, connPort);
+        subscribe(handleOpenTransferSeeder, connPort);
         subscribe(handleCloseTransfer, connPort);
         subscribe(handleNetworkTimeouts, networkPort);
 
-        subscribe(handleConnectionReq, networkPort);
-        subscribe(handleConnectionResp, networkPort);
-        subscribe(handleDetailedStateReq, networkPort);
-        subscribe(handleDetailedStateResp, networkPort);
-        subscribe(handleOpenTransferDefinitionReq, networkPort);
-        subscribe(handleOpenTransferDefinitionResp, networkPort);
+        subscribe(handleNetConnectionReq, networkPort);
+        subscribe(handleNetConnectionResp, networkPort);
+        subscribe(handleNetDetailedStateReq, networkPort);
+        subscribe(handleNetDetailedStateResp, networkPort);
+        subscribe(handleNetOpenTransferReq, networkPort);
+        subscribe(handleNetOpenTransferResp, networkPort);
+        subscribe(handleNetCloseTransfer, networkPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -131,15 +132,15 @@ public class ConnectionComp extends ComponentDefinition {
             seederConnState.detailedState(req);
         }
     };
-    Handler handleOpenTransferDefinitionLeecher = new Handler<OpenTransferDefinition.LeecherRequest>() {
+    Handler handleOpenTransferLeecher = new Handler<OpenTransfer.LeecherRequest>() {
         @Override
-        public void handle(OpenTransferDefinition.LeecherRequest req) {
+        public void handle(OpenTransfer.LeecherRequest req) {
             seederConnState.openTransfer(req);
         }
     };
-    Handler handleOpenTransferDefinitionSeeder = new Handler<OpenTransferDefinition.SeederResponse>() {
+    Handler handleOpenTransferSeeder = new Handler<OpenTransfer.SeederResponse>() {
         @Override
-        public void handle(OpenTransferDefinition.SeederResponse event) {
+        public void handle(OpenTransfer.SeederResponse event) {
             leecherConnState.openTransferResp(event);
         }
     };
@@ -195,7 +196,7 @@ public class ConnectionComp extends ComponentDefinition {
                 }
             };
     //**************************************************************************
-    ClassMatchedHandler handleConnectionReq
+    ClassMatchedHandler handleNetConnectionReq
             = new ClassMatchedHandler<NetConnect.Request, KContentMsg<KAddress, KHeader<KAddress>, NetConnect.Request>>() {
                 @Override
                 public void handle(NetConnect.Request content, KContentMsg<KAddress, KHeader<KAddress>, NetConnect.Request> context) {
@@ -205,7 +206,7 @@ public class ConnectionComp extends ComponentDefinition {
                     }
                 }
             };
-    ClassMatchedHandler handleConnectionResp
+    ClassMatchedHandler handleNetConnectionResp
             = new ClassMatchedHandler<NetConnect.Response, KContentMsg<KAddress, KHeader<KAddress>, NetConnect.Response>>() {
                 @Override
                 public void handle(NetConnect.Response content, KContentMsg<KAddress, KHeader<KAddress>, NetConnect.Response> context) {
@@ -213,7 +214,7 @@ public class ConnectionComp extends ComponentDefinition {
                     seederConnState.connectResp(content.getId(), content.result);
                 }
             };
-    ClassMatchedHandler handleDetailedStateReq
+    ClassMatchedHandler handleNetDetailedStateReq
             = new ClassMatchedHandler<NetDetailedState.Request, KContentMsg<KAddress, KHeader<KAddress>, NetDetailedState.Request>>() {
                 @Override
                 public void handle(NetDetailedState.Request content, KContentMsg<KAddress, KHeader<KAddress>, NetDetailedState.Request> context) {
@@ -225,7 +226,7 @@ public class ConnectionComp extends ComponentDefinition {
                 }
             };
 
-    ClassMatchedHandler handleDetailedStateResp
+    ClassMatchedHandler handleNetDetailedStateResp
             = new ClassMatchedHandler<NetDetailedState.Response, KContentMsg<KAddress, KHeader<KAddress>, NetDetailedState.Response>>() {
                 @Override
                 public void handle(NetDetailedState.Response content, KContentMsg<KAddress, KHeader<KAddress>, NetDetailedState.Response> context) {
@@ -237,18 +238,18 @@ public class ConnectionComp extends ComponentDefinition {
                 }
             };
 
-    ClassMatchedHandler handleOpenTransferDefinitionReq
+    ClassMatchedHandler handleNetOpenTransferReq
             = new ClassMatchedHandler<NetOpenTransfer.Request, KContentMsg<KAddress, KHeader<KAddress>, NetOpenTransfer.Request>>() {
                 @Override
                 public void handle(NetOpenTransfer.Request content, KContentMsg<KAddress, KHeader<KAddress>, NetOpenTransfer.Request> context) {
                     LOG.trace("{}received:{}", logPrefix, content);
                     if (leecherConnState != null) {
-                        leecherConnState.openTransfer(context);
+                        leecherConnState.openTransfer(context.getHeader().getSource(), content.fileId, context);
                     }
                 }
             };
 
-    ClassMatchedHandler handleOpenTransferDefinitionResp
+    ClassMatchedHandler handleNetOpenTransferResp
             = new ClassMatchedHandler<NetOpenTransfer.Response, KContentMsg<KAddress, KHeader<KAddress>, NetOpenTransfer.Response>>() {
                 @Override
                 public void handle(NetOpenTransfer.Response content, KContentMsg<KAddress, KHeader<KAddress>, NetOpenTransfer.Response> context) {
@@ -312,14 +313,14 @@ public class ConnectionComp extends ComponentDefinition {
             answerNetwork(msg, req.success(manifestDef));
         }
 
-        public void openTransfer(KContentMsg<KAddress, ?, ?> msg) {
-            KAddress source = msg.getHeader().getSource();
-            OpenTransferDefinition.SeederRequest localReq = new OpenTransferDefinition.SeederRequest(source);
+        public void openTransfer(KAddress peer, FileIdentifier fileId, KContentMsg msg) {
+            TorrentConnId connId = new TorrentConnId(peer.getId(), fileId, false);
+            OpenTransfer.SeederRequest localReq = new OpenTransfer.SeederRequest(peer, connId);
             pendingOpenTransfer.put(localReq.getId(), msg);
             trigger(localReq, connPort);
         }
 
-        public void openTransferResp(OpenTransferDefinition.SeederResponse resp) {
+        public void openTransferResp(OpenTransfer.SeederResponse resp) {
             KContentMsg<?, ?, NetOpenTransfer.Request> msg = pendingOpenTransfer.remove(resp.getId());
             answerNetwork(msg, msg.getContent().answer(resp.result));
         }
@@ -332,7 +333,7 @@ public class ConnectionComp extends ComponentDefinition {
         }
         
         public void remoteClose(FileIdentifier fileId, Identifier peerId) {
-            trigger(new CloseTransfer.Indication(new TorrentConnId(peerId, fileId, false)), connPort);
+            trigger(new CloseTransfer.Indication(new TorrentConnId(peerId, fileId, true)), connPort);
         }
     }
 
@@ -344,7 +345,7 @@ public class ConnectionComp extends ComponentDefinition {
         //**********************************************************************
         private final Map<Identifier, Seeder.Connect> pendingConnect = new HashMap<>();
         private final Map<Identifier, DetailedState.Request> pendingDetailedState = new HashMap<>();
-        private final Map<Identifier, OpenTransferDefinition.LeecherRequest> pendingOpenTransfer = new HashMap<>();
+        private final Map<Identifier, OpenTransfer.LeecherRequest> pendingOpenTransfer = new HashMap<>();
 
         public void refreshConnections(Optional<KAddress> connectionCandidate) {
             if (connectionCandidate.isPresent()) {
@@ -426,15 +427,15 @@ public class ConnectionComp extends ComponentDefinition {
         }
 
         //**********************************************************************
-        public void openTransfer(OpenTransferDefinition.LeecherRequest req) {
+        public void openTransfer(OpenTransfer.LeecherRequest req) {
             LOG.debug("{}transfer leecher - requesting from:{}", logPrefix, req.peer);
-            NetOpenTransfer.Request netReq = new NetOpenTransfer.Request(req.fileId);
+            NetOpenTransfer.Request netReq = new NetOpenTransfer.Request(req.connId.fileId);
             pendingOpenTransfer.put(netReq.getId(), req);
             bestEffortUDPSend(netReq, req.peer, DEFAULT_RETRIES);
         }
 
         public void openTransferResp(Identifier reqId, boolean result) {
-            OpenTransferDefinition.LeecherRequest req = pendingOpenTransfer.remove(reqId);
+            OpenTransfer.LeecherRequest req = pendingOpenTransfer.remove(reqId);
             if (req == null) {
                 LOG.trace("{}transfer leecher - late:{}", logPrefix, reqId);
                 return;
@@ -444,7 +445,7 @@ public class ConnectionComp extends ComponentDefinition {
         }
 
         public void openTransferTimeout(Identifier reqId, KAddress peer) {
-            OpenTransferDefinition.LeecherRequest req = pendingOpenTransfer.remove(reqId);
+            OpenTransfer.LeecherRequest req = pendingOpenTransfer.remove(reqId);
             if (req == null) {
                 LOG.trace("{}transfer definition leecher - late timeout:{}", logPrefix, reqId);
                 return;
@@ -467,7 +468,7 @@ public class ConnectionComp extends ComponentDefinition {
         }
         
         public void remoteClose(FileIdentifier fileId, Identifier peerId) {
-            trigger(new CloseTransfer.Indication(new TorrentConnId(peerId, fileId, true)), connPort);
+            trigger(new CloseTransfer.Indication(new TorrentConnId(peerId, fileId, false)), connPort);
         }
     }
 }

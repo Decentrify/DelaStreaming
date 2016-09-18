@@ -18,53 +18,85 @@
  */
 package se.sics.nstream.torrent.connMngr;
 
-import java.util.Set;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.util.actuator.ComponentLoadTracking;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class SimpleFileConnection implements FileConnection {
+
     private final FileIdentifier fileId;
-    
-    public SimpleFileConnection(FileIdentifier fileId) {
+    //**************************************************************************
+    private final ComponentLoadTracking loadTracking;
+    private final int maxBufSize;
+    private int totalSlots = 0;
+    //**************************************************************************
+    private final Map<Identifier, FilePeerConnection> fpcs = new HashMap<>();
+
+    public SimpleFileConnection(FileIdentifier fileId, ComponentLoadTracking loadTracking, int maxBufSize) {
         this.fileId = fileId;
+        this.loadTracking = loadTracking;
+        this.maxBufSize = maxBufSize;
     }
-    
+
     @Override
     public FileIdentifier getId() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return fileId;
+    }
+
+    @Override
+    public void useSlot() {
+        totalSlots++;
+    }
+
+    @Override
+    public void releaseSlot() {
+        totalSlots--;
     }
 
     @Override
     public boolean available() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        //connection imposed limitation - like manual speed limitation or seeder communicated limitation- none so far
+        return availableBufferSpace();
     }
 
     @Override
     public boolean available(Identifier peerId) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        //connection imposed limitation - like manual speed limitation or seeder communicated limitation- none so far
+        return availableBufferSpace();
+    }
+
+    private boolean availableBufferSpace() {
+        int bufSize = loadTracking.getMaxBufferSize(fileId.fileId);
+        int usedTransferSize = bufSize == -1 ? totalSlots : totalSlots + bufSize;
+        if(usedTransferSize < maxBufSize) {
+            return true;
+        }
+        return false;
     }
 
     @Override
-    public Set<FilePeerConnection> getPeerConnections() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public Collection<FilePeerConnection> getPeerConnections() {
+        return fpcs.values();
     }
 
     @Override
     public void addFilePeerConnection(Identifier peerId, FilePeerConnection fpc) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        fpcs.put(peerId, fpc);
     }
 
     @Override
     public FilePeerConnection getFilePeerConnection(Identifier peerId) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return fpcs.get(peerId);
     }
 
     @Override
     public FilePeerConnection removeFilePeerConnection(Identifier peerId) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return fpcs.remove(peerId);
     }
-    
 }

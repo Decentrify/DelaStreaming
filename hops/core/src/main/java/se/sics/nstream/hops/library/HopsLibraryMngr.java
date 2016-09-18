@@ -198,7 +198,7 @@ public class HopsLibraryMngr {
                 case DESTROYED:
                 case NONE:
                     Library.TorrentBuilder libTorrentBuilder = new Library.TorrentBuilder(req.hdfsEndpoint, req.manifest);
-                    library.startDownload(req.torrentId, req.torrentName, libTorrentBuilder);
+                    library.download1(req.torrentId, req.torrentName, libTorrentBuilder);
                     components.startDownload(transferMngrPort.getPair(), req.torrentId, req.partners);
                     pendingExtDwnl.put(req.torrentId, req);
                     break;
@@ -242,6 +242,7 @@ public class HopsLibraryMngr {
             HopsTorrentDownloadEvent.StartRequest hopsReq = pendingExtDwnl.remove(req.torrentId);
             if (req.manifest.isSuccess()) {
                 ManifestJSON manifest = HDFSHelper.getManifestJSON(req.manifest.getValue().manifestByte);
+                Map<String, FileBaseDetails> baseDetails = ManifestJSON.getBaseDetails(manifest, MyTorrent.defaultDataBlock);
                 Pair<String, Library.TorrentBuilder> torrentBuilder = library.getTorrentBuilder(req.torrentId);
                 String user = torrentBuilder.getValue1().hdfsEndpoint.user;
                 HDFSEndpoint hdfsEndpoint = torrentBuilder.getValue1().hdfsEndpoint;
@@ -250,7 +251,7 @@ public class HopsLibraryMngr {
                 Result<Boolean> manifestResult = HDFSHelper.writeManifest(ugi, hdfsEndpoint, manifestResource, manifest);
                 if (manifestResult.isSuccess()) {
                     pendingIntDwnl.put(req.torrentId, req);
-                    library.pendingDownload(req.torrentId, req.manifest.getValue());
+                    library.download2(req.torrentId, req.manifest.getValue(), baseDetails);
                     if (hopsReq != null) {
                         HopsTorrentDownloadEvent.StartResponse hopsResp = hopsReq.starting(Result.success(true));
                         LOG.trace("{}sending:{}", logPrefix, hopsResp);

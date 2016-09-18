@@ -18,9 +18,8 @@
  */
 package se.sics.nstream.torrent.transfer;
 
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -75,7 +74,8 @@ public class DwnlConnComp extends ComponentDefinition {
     private String logPrefix;
 
     private static final long ADVANCE_DOWNLOAD = 1000;
-    private static final long CACHE_TIMEOUT = 10000;
+    private static final long CACHE_BASE_TIMEOUT = 10000;
+    private static final int CACHE_RETRY = 5;
     private static final long REPORT_PERIOD = 1000;
     //**************************************************************************
     Negative<DwnlConnPort> connPort = provides(DwnlConnPort.class);
@@ -93,7 +93,7 @@ public class DwnlConnComp extends ComponentDefinition {
     private UUID advanceDownloadTid;
     private UUID cacheTid;
     private UUID reportTid;
-    private final Set<Identifier> pendingMsgs = new HashSet<>();
+    private final Map<Identifier, Identifiable> pendingMsgs = new HashMap<>();
     //**************************************************************************
     private final LedbatConfig ledbatConfig;
 
@@ -130,6 +130,9 @@ public class DwnlConnComp extends ComponentDefinition {
 
     @Override
     public void tearDown() {
+        for (Identifiable msg : pendingMsgs.values()) {
+            cancelMsg(msg);
+        }
         networkQueueLoad.tearDown();
         cancelAdvanceDownload();
         cancelReport();
@@ -184,20 +187,21 @@ public class DwnlConnComp extends ComponentDefinition {
             };
 
     public void handleCacheTimeout(CacheHint.Request req) {
+        LOG.error("{}cache timeout on hint:{} blocks:{}", new Object[]{logPrefix, req.requestCache.lStamp, req.requestCache.blocks});
         throw new RuntimeException("ups");
     }
 
     public void handlePieceTimeout(DownloadPiece.Request req) {
-        if (pendingMsgs.remove(req.eventId)) {
+        if (pendingMsgs.remove(req.eventId) != null) {
             long now = System.currentTimeMillis();
             workController.pieceTimeout(req.piece);
             cwnd.timeout(now, ledbatConfig.mss);
             tryDownload(now);
         }
     }
-    
+
     public void handleHashTimeout(DownloadHash.Request req) {
-        if (pendingMsgs.remove(req.eventId)) {
+        if (pendingMsgs.remove(req.eventId) != null) {
             long now = System.currentTimeMillis();
             workController.hashTimeout(req.hashes);
             cwnd.timeout(now, ledbatConfig.mss);
@@ -206,8 +210,16 @@ public class DwnlConnComp extends ComponentDefinition {
     }
 
     //**************************************************************************
-    private void sendSimpleUDP(Identifiable content) {
-        BestEffortMsg.Request wrappedContent = new BestEffortMsg.Request<>(content, 1, cwnd.getRTO());
+    private void cancelMsg(Identifiable content) {
+        BestEffortMsg.Cancel wrappedContent = new BestEffortMsg.Cancel<>(content);
+        KHeader header = new BasicHeader(self, target, Transport.UDP);
+        KContentMsg msg = new BasicContentMsg<>(header, wrappedContent);
+        LOG.trace("{}canceling:{}", logPrefix, content);
+        trigger(msg, networkPort);
+    }
+
+    private void sendSimpleUDP(Identifiable content, int retries, long rto) {
+        BestEffortMsg.Request wrappedContent = new BestEffortMsg.Request<>(content, retries, rto);
         KHeader header = new BasicHeader(self, target, Transport.UDP);
         KContentMsg msg = new BasicContentMsg<>(header, wrappedContent);
         LOG.trace("{}sending:{}", logPrefix, content);
@@ -216,7 +228,7 @@ public class DwnlConnComp extends ComponentDefinition {
 
     private void sendSimpleLedbat(Identifiable content) {
         LedbatMsg.Request ledbatContent = new LedbatMsg.Request(content);
-        sendSimpleUDP(ledbatContent);
+        sendSimpleUDP(ledbatContent, 0, cwnd.getRTO());
     }
 
     ClassMatchedHandler handleCache
@@ -224,9 +236,10 @@ public class DwnlConnComp extends ComponentDefinition {
 
                 @Override
                 public void handle(CacheHint.Response content, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Response> context) {
-                    if (pendingMsgs.remove(content.getId())) {
-                        LOG.debug("{}received cache confirm", logPrefix);
-                        workController.cacheConfirmed();
+                    CacheHint.Request req = (CacheHint.Request)pendingMsgs.remove(content.getId());
+                    if (req != null) {
+                        LOG.info("{}cache confirm ts:{}", logPrefix, req.requestCache.lStamp);
+                        workController.cacheConfirmed(req.requestCache.lStamp);
                         tryDownload(System.currentTimeMillis());
                     }
                 }
@@ -252,7 +265,7 @@ public class DwnlConnComp extends ComponentDefinition {
         LOG.trace("{}received:{}", logPrefix, content);
         DownloadPiece.Response resp = content.getWrappedContent();
         long now = System.currentTimeMillis();
-        if (pendingMsgs.remove(resp.eventId)) {
+        if (pendingMsgs.remove(resp.eventId) != null) {
             workController.piece(resp.piece, resp.val.getRight());
             cwnd.success(now, ledbatConfig.mss, content);
             tryDownload(now);
@@ -271,7 +284,7 @@ public class DwnlConnComp extends ComponentDefinition {
         LOG.trace("{}received:{}", logPrefix, content);
         DownloadHash.Response resp = content.getWrappedContent();
         long now = System.currentTimeMillis();
-        if (pendingMsgs.remove(resp.eventId)) {
+        if (pendingMsgs.remove(resp.eventId) != null) {
             workController.hashes(resp.hashValues);
             cwnd.success(now, ledbatConfig.mss, content);
             tryDownload(now);
@@ -290,19 +303,20 @@ public class DwnlConnComp extends ComponentDefinition {
     private void tryDownload(long now) {
         if (workController.hasNewHint()) {
             CacheHint.Request req = new CacheHint.Request(connId.fileId, workController.newHint());
-            sendSimpleUDP(req);
-            pendingMsgs.add(req.getId());
+            LOG.info("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp, req.requestCache.blocks});
+            sendSimpleUDP(req, CACHE_RETRY, CACHE_BASE_TIMEOUT);
+            pendingMsgs.put(req.getId(), req);
         }
         while (workController.hasHashes() && cwnd.canSend()) {
             DownloadHash.Request req = new DownloadHash.Request(connId.fileId, workController.nextHashes());
             sendSimpleLedbat(req);
-            pendingMsgs.add(req.getId());
+            pendingMsgs.put(req.getId(), req);
             cwnd.request(now, ledbatConfig.mss);
         }
         while (workController.hasPiece() && cwnd.canSend()) {
             DownloadPiece.Request req = new DownloadPiece.Request(connId.fileId, workController.nextPiece());
             sendSimpleLedbat(req);
-            pendingMsgs.add(req.getId());
+            pendingMsgs.put(req.getId(), req);
             cwnd.request(now, ledbatConfig.mss);
         }
     }

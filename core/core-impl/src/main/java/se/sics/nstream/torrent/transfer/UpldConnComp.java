@@ -20,6 +20,7 @@ package se.sics.nstream.torrent.transfer;
 
 import com.google.common.collect.Sets;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -51,8 +52,8 @@ import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.transfer.upld.event.GetBlocks;
 import se.sics.nstream.torrent.transfer.upld.event.UpldConnReport;
 import se.sics.nstream.torrent.util.TorrentConnId;
-import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.BlockDetails;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.range.KPiece;
 import se.sics.nstream.util.range.RangeKReference;
 import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
@@ -136,12 +137,17 @@ public class UpldConnComp extends ComponentDefinition {
                 public void handle(CacheHint.Request content, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Request> context) {
                     LOG.trace("{}received:{}", new Object[]{logPrefix, content});
                     if (pendingCacheReq == null) {
+                        LOG.info("{}cache:{} req - ts:{} blocks:{}", 
+                                new Object[]{logPrefix, content.getId(), content.requestCache.lStamp, content.requestCache.blocks});
                         pendingCacheReq = context;
                         Set<Integer> newCache = Sets.difference(content.requestCache.blocks, servedBlocks.keySet());
-                        Set<Integer> delCache = Sets.difference(servedBlocks.keySet(), content.requestCache.blocks);
+                        Set<Integer> delCache = new HashSet<>(Sets.difference(servedBlocks.keySet(), content.requestCache.blocks));
 
-                        trigger(new GetBlocks.Request(connId, newCache, withHashes, content.requestCache), connPort);
-
+                        if (!newCache.isEmpty()) {
+                            trigger(new GetBlocks.Request(connId, newCache, withHashes, content.requestCache), connPort);
+                        } else {
+                            answerCacheHint();
+                        }
                         //release references that were retained when given to us
                         for (Integer blockNr : delCache) {
                             KReference<byte[]> block = servedBlocks.remove(blockNr);
@@ -157,13 +163,18 @@ public class UpldConnComp extends ComponentDefinition {
         @Override
         public void handle(GetBlocks.Response resp) {
             //references are already retained by whoever gives them to us
+            LOG.info("{}serving blocks:{} hashes:{}", new Object[]{logPrefix, resp.blocks.keySet(), resp.hashes.keySet()});
             servedBlocks.putAll(resp.blocks);
             servedHashes.putAll(resp.hashes);
             irregularBlocks.putAll(resp.irregularBlocks);
-            answerMsg(pendingCacheReq, pendingCacheReq.getContent().success());
-            pendingCacheReq = null;
+            answerCacheHint();
         }
     };
+
+    private void answerCacheHint() {
+        answerMsg(pendingCacheReq, pendingCacheReq.getContent().success());
+        pendingCacheReq = null;
+    }
     //**************************************************************************
     ClassMatchedHandler handleLedbat
             = new ClassMatchedHandler<LedbatMsg.Request, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request>>() {
@@ -186,29 +197,31 @@ public class UpldConnComp extends ComponentDefinition {
         BlockDetails blockDetails = irregularBlocks.containsKey(blockNr) ? irregularBlocks.get(blockNr) : defaultBlock;
         KReference<byte[]> block = servedBlocks.get(blockNr);
         if (block == null) {
-            throw new RuntimeException("bad cache-block logic");
+            //TODO Alex
+            return;
+//            throw new RuntimeException("bad cache-block logic");
         }
         //retain block here - release in serializer
         if (!block.retain()) {
             throw new RuntimeException("bad ref logic");
         }
         KPiece pieceRange = BlockHelper.getPieceRange(content.getWrappedContent().piece, blockDetails, defaultBlock);
-        RangeKReference piece = RangeKReference.createInstance(block, blockNr, pieceRange);
+        RangeKReference piece = RangeKReference.createInstance(block, BlockHelper.getBlockPos(blockNr, defaultBlock), pieceRange);
         LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(piece));
         answerMsg(msg, ledbatContent);
     }
-    
+
     public void handleHashes(KContentMsg msg, LedbatMsg.Request<DownloadHash.Request> content) {
         Map<Integer, byte[]> hashValues = new TreeMap<>();
-        for(Integer hashNr : content.getWrappedContent().hashes) {
+        for (Integer hashNr : content.getWrappedContent().hashes) {
             byte[] hashVal = servedHashes.get(hashNr);
-            if(hashVal == null) {
-                LOG.warn("{}no hash - not serving incomplete", logPrefix);
+            if (hashVal == null) {
+                LOG.warn("{}no hash for:{} - not serving incomplete", logPrefix, hashNr);
                 return;
             }
             hashValues.put(hashNr, hashVal);
         }
-        LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(hashValues    ));
+        LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(hashValues));
         answerMsg(msg, ledbatContent);
     }
     //**************************************************************************

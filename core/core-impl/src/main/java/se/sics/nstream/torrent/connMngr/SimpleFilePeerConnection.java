@@ -18,13 +18,16 @@
  */
 package se.sics.nstream.torrent.connMngr;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class SimpleFilePeerConnection implements FilePeerConnection {
     private final FileConnection fc;
     private final PeerConnection pc;
-    private int usedSlots;
+    private final Set<Integer> blockSlots = new HashSet<>();
     
     public SimpleFilePeerConnection(FileConnection fc, PeerConnection pc) {
         this.fc = fc;
@@ -42,17 +45,19 @@ public class SimpleFilePeerConnection implements FilePeerConnection {
     }
 
     @Override
-    public void useSlot() {
-        usedSlots++;
+    public void useSlot(int blockNr) {
+        fc.useSlot();
+        blockSlots.add(blockNr);
     }
 
     @Override
-    public void releaseSlot() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public void releaseSlot(int blockNr) {
+        fc.releaseSlot();
+        blockSlots.remove(blockNr);
     }
 
     @Override
     public boolean isActive() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return blockSlots.size() > 0;
     }
 }

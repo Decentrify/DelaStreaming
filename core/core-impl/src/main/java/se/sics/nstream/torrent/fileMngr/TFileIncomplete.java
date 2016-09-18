@@ -35,8 +35,8 @@ import se.sics.nstream.storage.buffer.WriteResult;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.FileBWC;
-import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.BlockDetails;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.HashReadCallback;
@@ -83,7 +83,9 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
     public void close() {
         file.close();
     }
+
     //*******************************CACHE_HINT*********************************
+
     @Override
     public void clean(Identifier reader) {
         file.clean(reader);
@@ -116,24 +118,26 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
         KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
         file.read(blockRange, delayedResult);
     }
-    
+
     @Override
     public Map<Integer, BlockDetails> getIrregularBlocks() {
         Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
-        irregularBlocks.put(fileDetails.nrBlocks-1, fileDetails.lastBlock);
+        irregularBlocks.put(fileDetails.nrBlocks - 1, fileDetails.lastBlock);
         return irregularBlocks;
     }
+
     //*******************************WRITE_DATA*********************************
+
     @Override
     public boolean isComplete() {
         return file.isComplete();
     }
-    
+
     @Override
     public TFileComplete complete() {
         return new TFileComplete(file.complete(), fileDetails);
     }
-    
+
     @Override
     public boolean hasHashes() {
         if (nextBlocks.isEmpty()) {
@@ -165,6 +169,7 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
 
     @Override
     public void hashes(Map<Integer, byte[]> hashes, Set<Integer> missingHashes) {
+        nextHashes.removeAll(hashes.keySet()); //if we do not use the file hash request management
         nextHashes.addAll(missingHashes);
         ongoingHashes.removeAll(missingHashes);
         ongoingHashes.removeAll(hashes.keySet());
@@ -192,7 +197,7 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
     public Pair<Integer, Optional<BlockDetails>> requestBlock() {
         int blockNr = nextBlocks.pollFirst();
         Optional<BlockDetails> irregularBlock = Optional.absent();
-        if(blockNr == fileDetails.nrBlocks - 1) {
+        if (blockNr == fileDetails.nrBlocks - 1) {
             irregularBlock = Optional.of(fileDetails.lastBlock);
         }
         ongoingBlocks.add(blockNr);
@@ -201,7 +206,6 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
 
     @Override
     public void block(final int blockNr, final KReference<byte[]> block) {
-        ongoingBlocks.remove(blockNr);
         final KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
         block.retain();
         FileBWC fileBWC = new FileBWC() {
@@ -211,8 +215,11 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
                     //nothing - we write it
                 } else {
                     //didn't hash - redownload;
+                    ongoingBlocks.remove(blockNr);
                     silentRelease(block);
                     nextBlocks.add(blockNr);
+                    //TODO Alex remove
+                    throw new RuntimeException("hash mismatch");
                 }
             }
 
@@ -223,10 +230,12 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
 
             @Override
             public boolean success(Result<WriteResult> result) {
+                ongoingBlocks.remove(blockNr);
                 silentRelease(block);
                 return true;
             }
         };
+        file.writeBlock(blockRange, block, fileBWC);
     }
 
     //**************************************************************************

@@ -63,6 +63,11 @@ public class DownloadPiece {
         public Response success(KReference<byte[]> val) {
             return new Response(this, val);
         }
+        
+        @Override
+        public String toString() {
+            return "DwnlPieceReq<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + eventId.toString() + ">";
+        }
     }
     
     public static class Response implements ConnectionMsg {
@@ -99,6 +104,11 @@ public class DownloadPiece {
         @Override
         public TorrentConnId getConnectionId(Identifier target) {
             return new TorrentConnId(target, fileId, true);
+        }
+        
+        @Override
+        public String toString() {
+            return "DwnlPieceResp<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + eventId.toString() + ">";
         }
     }
 }

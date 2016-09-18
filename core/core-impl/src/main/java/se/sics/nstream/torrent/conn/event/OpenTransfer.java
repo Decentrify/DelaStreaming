@@ -23,22 +23,22 @@ import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.torrent.util.TorrentConnId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class OpenTransferDefinition {
+public class OpenTransfer {
 
     public static class LeecherRequest extends Direct.Request<LeecherResponse> implements Identifiable {
 
         public final Identifier eventId;
-        public final FileIdentifier fileId;
+        public final TorrentConnId connId;
         public final KAddress peer;
 
-        public LeecherRequest(KAddress peer, FileIdentifier fileId) {
+        public LeecherRequest(KAddress peer, TorrentConnId connId) {
             this.eventId = UUIDIdentifier.randomId();
-            this.fileId = fileId;
+            this.connId = connId;
             this.peer = peer;
         }
 
@@ -59,10 +59,12 @@ public class OpenTransferDefinition {
     public static abstract class LeecherIndication implements Direct.Response, Identifiable {
 
         public final Identifier eventId;
+        public final TorrentConnId connId;
         public final KAddress peer;
 
         public LeecherIndication(LeecherRequest req) {
             this.eventId = req.eventId;
+            this.connId = req.connId;
             this.peer = req.peer;
         }
 
@@ -91,10 +93,12 @@ public class OpenTransferDefinition {
     public static class SeederRequest extends Direct.Request<SeederResponse> implements Identifiable {
 
         public final Identifier eventId;
+        public final TorrentConnId connId;
         public final KAddress peer;
 
-        public SeederRequest(KAddress peer) {
+        public SeederRequest(KAddress peer, TorrentConnId connId) {
             this.eventId = UUIDIdentifier.randomId();
+            this.connId = connId;
             this.peer = peer;
         }
 
@@ -111,11 +115,13 @@ public class OpenTransferDefinition {
     public static class SeederResponse implements Direct.Response, Identifiable {
 
         public final Identifier eventId;
+        public final TorrentConnId connId;
         public final KAddress peer;
         public final boolean result;
 
         private SeederResponse(SeederRequest req, boolean result) {
             this.eventId = req.eventId;
+            this.connId = req.connId;
             this.peer = req.peer;
             this.result = result;
         }

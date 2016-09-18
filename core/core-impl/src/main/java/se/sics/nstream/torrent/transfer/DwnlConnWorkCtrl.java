@@ -83,7 +83,10 @@ public class DwnlConnWorkCtrl {
         irregularBlockDetails.putAll(newIrregularBlocks);
     }
 
-    public void cacheConfirmed() {
+    public void cacheConfirmed(long ts) {
+        if(oldHint.lStamp != ts) {
+            return;
+        }
         cacheConfirmed = true;
         cachedBlocks.addAll(pendingCacheBlocks);
         if (withHashes) {
@@ -214,7 +217,7 @@ public class DwnlConnWorkCtrl {
         hint.addAll(pendingCacheBlocks);
         oldHint = new KHint.Summary(oldHint.lStamp + 1, hint);
         cacheHintChanged = false;
-        return oldHint;
+        return oldHint.copy();
     }
 
     private void addNextPiece(Pair<Integer, Integer> piece) {
@@ -256,8 +259,11 @@ public class DwnlConnWorkCtrl {
         pendingBlock.add(piece.getValue1());
     }
 
-    private boolean removePendingPiece(Pair<Integer, Integer> piece) {
+    private Boolean removePendingPiece(Pair<Integer, Integer> piece) {
         Set<Integer> pendingBlock = pendingPieces.get(piece.getValue0());
+        if(pendingBlock == null) {
+            return false;
+        }
         boolean result = pendingBlock.remove(piece.getValue1());
         if (pendingBlock.isEmpty()) {
             pendingPieces.remove(piece.getValue0());

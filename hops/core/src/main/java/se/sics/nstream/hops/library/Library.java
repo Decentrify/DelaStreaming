@@ -30,6 +30,7 @@ import se.sics.nstream.hops.hdfs.HDFSResource;
 import se.sics.nstream.library.util.TorrentStatus;
 import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.transfer.MyTorrent.Manifest;
+import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.FileExtendedDetails;
 
 /**
@@ -66,15 +67,16 @@ public class Library {
         manifests.put(torrentId, Pair.with(torrentName, torrent));
     }
 
-    public void startDownload(Identifier torrentId, String torrentName, TorrentBuilder torrentBuilder) {
+    public void download1(Identifier torrentId, String torrentName, TorrentBuilder torrentBuilder) {
         torrentStatus.put(torrentId, Pair.with(torrentName, TorrentStatus.DOWNLOAD_1));
         pendingManifests.put(torrentId, Pair.with(torrentName, torrentBuilder));
     }
 
-    public byte[] pendingDownload(Identifier torrentId, Manifest manifest) {
+    public byte[] download2(Identifier torrentId, Manifest manifest, Map<String, FileBaseDetails> base) {
         Pair<String, TorrentStatus> ts = torrentStatus.get(torrentId);
         Pair<String, TorrentBuilder> torrentBuilder = pendingManifests.get(torrentId);
-        torrentBuilder.getValue1().torrentBuilder.manifestBuilder.addBlocks(manifest.manifestBlocks);
+        torrentBuilder.getValue1().setManifest(manifest);
+        torrentBuilder.getValue1().torrentBuilder.setBase(base);
         torrentStatus.put(torrentId, Pair.with(ts.getValue0(), TorrentStatus.DOWNLOAD_2));
         return manifest.manifestByte;
     }
@@ -104,7 +106,7 @@ public class Library {
     }
 
 //    public Optional<TorrentDetails> getTorrentDetails(Identifier torrentId) {
-//        return Optional.fromNullable(pendingDownload.get(torrentId));
+//        return Optional.fromNullable(download2.get(torrentId));
 //    }
 //
 //    public Triplet<String, HDFSEndpoint, HDFSResource> getManifest(Identifier torrentId) {
@@ -162,6 +164,11 @@ public class Library {
         public TorrentBuilder(HDFSEndpoint hdfsEndpoint, HDFSResource manifest) {
             this.hdfsEndpoint = hdfsEndpoint;
             this.manifestResource = manifest;
+        }
+        
+        public void setManifest(Manifest manifest) {
+            torrentBuilder = new MyTorrent.Builder(manifest.getDef());
+            torrentBuilder.manifestBuilder.addBlocks(manifest.manifestBlocks);
         }
         
         public Torrent build() {

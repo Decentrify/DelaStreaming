@@ -49,7 +49,7 @@ public class CacheHint {
         public Identifier getId() {
             return eventId;
         }
-        
+
         @Override
         public Identifier overlayId() {
             return fileId.overlayId;
@@ -62,6 +62,11 @@ public class CacheHint {
 
         public Response success() {
             return new Response(this);
+        }
+
+        @Override
+        public String toString() {
+            return "CHReq<" + fileId.toString() + ",ts:" + requestCache.lStamp + "," + eventId.toString() + ">";
         }
     }
 
@@ -92,6 +97,11 @@ public class CacheHint {
         @Override
         public TorrentConnId getConnectionId(Identifier target) {
             return new TorrentConnId(target, fileId, true);
+        }
+        
+         @Override
+        public String toString() {
+            return "CHResp<" + fileId.toString() + "," + eventId.toString() + ">";
         }
     }
 }

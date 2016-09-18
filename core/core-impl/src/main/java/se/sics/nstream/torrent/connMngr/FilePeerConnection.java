@@ -25,7 +25,7 @@ package se.sics.nstream.torrent.connMngr;
 public interface FilePeerConnection {
     public PeerConnection getPeerConnection();
     public FileConnection getFileConnection();
-    public void useSlot();
-    public void releaseSlot();
+    public void useSlot(int blockNr);
+    public void releaseSlot(int blockNr);
     public boolean isActive();
 }

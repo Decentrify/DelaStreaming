@@ -36,8 +36,8 @@ import se.sics.nstream.storage.buffer.SimpleAppendKBuffer;
 import se.sics.nstream.storage.cache.SimpleKCache;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.CompleteFileMngr;
-import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.torrent.util.BufferName;
+import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.FileExtendedDetails;
@@ -57,7 +57,7 @@ public class TorrentFileMngr {
     
     public TorrentFileMngr(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler, ComponentLoadTracking loadTracker,
            MyTorrent torrentDef, boolean complete) {
-        int id = 0;
+        int id = 1; //0 is def phase
         for (Map.Entry<String, FileExtendedDetails> entry : torrentDef.extended.entrySet()) {
             FileBaseDetails fileDetails = torrentDef.base.get(entry.getKey());
             Pair<StreamEndpoint, StreamSink> mainResource = entry.getValue().getMainResource();
@@ -149,13 +149,13 @@ public class TorrentFileMngr {
     public TFileRead readFrom(int fileId) {
         TFileRead transferMngr = completed.get(fileId);
         if (transferMngr == null) {
-            transferMngr = pending.get(fileId);
+            transferMngr = ongoing.get(fileId);
         }
         return transferMngr;
     }
 
     public TFileWrite writeTo(int fileId) {
-        return pending.get(fileId);
+        return ongoing.get(fileId);
     }
 
     public int nextPending() {

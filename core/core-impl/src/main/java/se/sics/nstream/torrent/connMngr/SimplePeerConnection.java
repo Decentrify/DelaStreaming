@@ -18,6 +18,8 @@
  */
 package se.sics.nstream.torrent.connMngr;
 
+import java.util.HashMap;
+import java.util.Map;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.torrent.FileIdentifier;
 
@@ -26,6 +28,7 @@ import se.sics.nstream.torrent.FileIdentifier;
  */
 public class SimplePeerConnection implements PeerConnection {
     private final KAddress peer;
+    private final Map<FileIdentifier, FilePeerConnection> fpcs = new HashMap<>();
     
     public SimplePeerConnection(KAddress peer) {
         this.peer = peer;
@@ -33,22 +36,23 @@ public class SimplePeerConnection implements PeerConnection {
     
     @Override
     public KAddress getPeer() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return peer;
     }
 
     @Override
     public boolean available(FileIdentifier fileId) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        //manual or seeder imposed limitations - none atm
+        return true;
     }
 
     @Override
     public void addFilePeerConnection(FileIdentifier fileId, FilePeerConnection fpc) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        fpcs.put(fileId, fpc);
     }
 
     @Override
     public FilePeerConnection removeFileConnection(FileIdentifier fileId) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        return fpcs.remove(fileId);
     }
     
 }

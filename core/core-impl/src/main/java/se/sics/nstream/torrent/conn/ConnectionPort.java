@@ -21,7 +21,7 @@ package se.sics.nstream.torrent.conn;
 import se.sics.kompics.PortType;
 import se.sics.nstream.torrent.conn.event.CloseTransfer;
 import se.sics.nstream.torrent.conn.event.DetailedState;
-import se.sics.nstream.torrent.conn.event.OpenTransferDefinition;
+import se.sics.nstream.torrent.conn.event.OpenTransfer;
 import se.sics.nstream.torrent.conn.event.Seeder;
 
 /**
@@ -39,11 +39,11 @@ public class ConnectionPort extends PortType {
         indication(DetailedState.Timeout.class);
         indication(DetailedState.None.class);
         
-        request(OpenTransferDefinition.LeecherRequest.class);
-        indication(OpenTransferDefinition.LeecherResponse.class);
-        indication(OpenTransferDefinition.LeecherTimeout.class);
-        indication(OpenTransferDefinition.SeederRequest.class);
-        request(OpenTransferDefinition.SeederResponse.class);
+        request(OpenTransfer.LeecherRequest.class);
+        indication(OpenTransfer.LeecherResponse.class);
+        indication(OpenTransfer.LeecherTimeout.class);
+        indication(OpenTransfer.SeederRequest.class);
+        request(OpenTransfer.SeederResponse.class);
         
         request(CloseTransfer.Request.class);
         indication(CloseTransfer.Indication.class);

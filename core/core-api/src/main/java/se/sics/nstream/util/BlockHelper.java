@@ -20,8 +20,6 @@ package se.sics.nstream.util;
 
 import org.javatuples.Pair;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
-import se.sics.nstream.util.BlockDetails;
-import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KBlockImpl;
 import se.sics.nstream.util.range.KPiece;
@@ -64,6 +62,10 @@ public class BlockHelper {
     public static int getBlockPieceNr(long pieceNr, FileBaseDetails fileDetails) {
         int bpNr = (int) (pieceNr % fileDetails.defaultBlock.nrPieces);
         return bpNr;
+    }
+    
+    public static long getBlockPos(int blockNr, BlockDetails defaultBlock) {
+        return blockNr * defaultBlock.blockSize;
     }
 
     public static KBlock getBlockRange(int blockNr, FileBaseDetails fileDetails) {

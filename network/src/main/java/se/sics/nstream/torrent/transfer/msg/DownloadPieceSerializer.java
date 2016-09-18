@@ -18,7 +18,6 @@
  */
 package se.sics.nstream.torrent.transfer.msg;
 
-import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import org.javatuples.Pair;
