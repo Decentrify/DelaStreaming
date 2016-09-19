@@ -28,4 +28,5 @@ public interface FilePeerConnection {
     public void useSlot(int blockNr);
     public void releaseSlot(int blockNr);
     public boolean isActive();
+    public void close();
 }

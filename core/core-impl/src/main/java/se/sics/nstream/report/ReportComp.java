@@ -144,6 +144,7 @@ public class ReportComp extends ComponentDefinition {
             startingTime = System.currentTimeMillis();
             status = TorrentStatus.DOWNLOADING;
             percentageCompleted = 0;
+            transferSpeed = new ConnMngrReport(0, 0);
         }
     };
 

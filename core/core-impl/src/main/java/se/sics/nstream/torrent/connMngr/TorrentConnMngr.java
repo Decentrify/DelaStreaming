@@ -104,6 +104,11 @@ public class TorrentConnMngr {
         FileConnection fileConnection = new SimpleFileConnection(fileId, loadTracking, MAX_FILE_BUF);
         fileConnections.put(fileId, fileConnection);
     }
+    
+    public Set<Identifier> closeFileConnection(FileIdentifier fileId) {
+        FileConnection fc = fileConnections.remove(fileId);
+        return fc.closeAll();
+    }
 
     public ConnResult attemptSlot(FileIdentifier fileId, int blockNr, Optional<BlockDetails> irregularBlock) {
         FileConnection fileConnection = fileConnections.get(fileId);
@@ -141,13 +146,12 @@ public class TorrentConnMngr {
         return new NoConnections();
     }
 
-    public UseFileConnection connectPeerFile(NewFileConnection conn) {
-        FileConnection fc = fileConnections.get(conn.connId.fileId);
-        PeerConnection pc = peerConnections.get(conn.peer.getId());
+    public void connectPeerFile(TorrentConnId connId) {
+        FileConnection fc = fileConnections.get(connId.fileId);
+        PeerConnection pc = peerConnections.get(connId.targetId);
         FilePeerConnection fpc = new SimpleFilePeerConnection(fc, pc);
-        fc.addFilePeerConnection(conn.peer.getId(), fpc);
-        pc.addFilePeerConnection(conn.connId.fileId, fpc);
-        return conn.advance();
+        fc.addFilePeerConnection(connId.targetId, fpc);
+        pc.addFilePeerConnection(connId.fileId, fpc);
     }
 
     public void useSlot(UseFileConnection conn) {
@@ -224,7 +228,7 @@ public class TorrentConnMngr {
             super(connId, peer, blockNr, irregularBlock);
         }
 
-        private UseFileConnection advance() {
+        public UseFileConnection advance() {
             return new UseFileConnection(connId, peer, blockNr, irregularBlock);
         }
         

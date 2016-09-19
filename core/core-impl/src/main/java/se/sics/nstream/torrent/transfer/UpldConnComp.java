@@ -198,8 +198,9 @@ public class UpldConnComp extends ComponentDefinition {
         KReference<byte[]> block = servedBlocks.get(blockNr);
         if (block == null) {
             //TODO Alex
-            return;
-//            throw new RuntimeException("bad cache-block logic");
+//            return;
+            LOG.error("{}block req:{} served blocks:{}", new Object[]{logPrefix, blockNr, servedBlocks.keySet()});
+            throw new RuntimeException("bad cache-block logic");
         }
         //retain block here - release in serializer
         if (!block.retain()) {

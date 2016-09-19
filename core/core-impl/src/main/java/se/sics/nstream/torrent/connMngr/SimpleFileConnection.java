@@ -20,7 +20,9 @@ package se.sics.nstream.torrent.connMngr;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.torrent.FileIdentifier;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
@@ -98,5 +100,16 @@ public class SimpleFileConnection implements FileConnection {
     @Override
     public FilePeerConnection removeFilePeerConnection(Identifier peerId) {
         return fpcs.remove(peerId);
+    }
+
+    @Override
+    public Set<Identifier> closeAll() {
+        Set<Identifier> result = new HashSet<>();
+        for(FilePeerConnection fpc : fpcs.values()) {
+            Identifier peerId = fpc.getPeerConnection().getPeer().getId();
+            result.add(peerId);
+            fpc.close();
+        }
+        return result;
     }
 }

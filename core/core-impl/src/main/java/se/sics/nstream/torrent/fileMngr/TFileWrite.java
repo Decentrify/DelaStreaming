@@ -46,4 +46,6 @@ public interface TFileWrite extends TFileMngr {
     public Pair<Integer, Optional<BlockDetails>> requestBlock();
 
     public void block(final int blockNr, final KReference<byte[]> block);
+    
+    public void resetBlock(int blockNr);
 }

@@ -19,6 +19,7 @@
 package se.sics.nstream.torrent.connMngr;
 
 import java.util.Collection;
+import java.util.Set;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.torrent.FileIdentifier;
 
@@ -43,4 +44,6 @@ public interface FileConnection {
     //
     public void useSlot();
     public void releaseSlot();
+    //<peerId>
+    public Set<Identifier> closeAll();
 }

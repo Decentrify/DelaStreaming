@@ -134,6 +134,14 @@ public class TorrentFileMngr {
         return pending.isEmpty()&&ongoing.isEmpty();
     }
     
+    public void complete(int fileId) {
+        TFileWrite fileWriter = ongoing.remove(fileId);
+        if(fileWriter == null || !fileWriter.isComplete()) {
+            throw new RuntimeException("ups");
+        }
+        completed.put(fileId, fileWriter.complete());
+    }
+    
     public boolean hasOngoing() {
         return !ongoing.isEmpty();
     }

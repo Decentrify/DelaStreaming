@@ -60,4 +60,11 @@ public class SimpleFilePeerConnection implements FilePeerConnection {
     public boolean isActive() {
         return blockSlots.size() > 0;
     }
+
+    @Override
+    public void close() {
+        if(isActive()) {
+            throw new RuntimeException("still active - or bad slot management");
+        }
+    }
 }

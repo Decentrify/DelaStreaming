@@ -237,6 +237,12 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
         };
         file.writeBlock(blockRange, block, fileBWC);
     }
+    
+    @Override
+    public void resetBlock(int blockNr) {
+        ongoingBlocks.remove(blockNr);
+        nextBlocks.add(blockNr);
+    }
 
     //**************************************************************************
     private void newNextBlocks() {

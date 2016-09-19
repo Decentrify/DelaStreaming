@@ -165,6 +165,7 @@ public class DwnlConnComp extends ComponentDefinition {
     private Handler handleNewBlocks = new Handler<DownloadBlocks>() {
         @Override
         public void handle(DownloadBlocks event) {
+            LOG.info("{}new blocks:{}", logPrefix, event.blocks);
             workController.add(event.blocks, event.irregularBlocks);
         }
     };
