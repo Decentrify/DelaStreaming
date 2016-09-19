@@ -270,13 +270,13 @@ public class TorrentComp extends ComponentDefinition {
                 return;
             }
             int batchSize = 2;
-            Pair<Integer, Optional<BlockDetails>> block = nextBlock(fileId);
+            Pair<Integer, Optional<BlockDetails>> block = nextBlock(fileWriter);
             while (block != null && batchSize > 0) {
                 batchSize--;
                 if (!advanceConn(fileId, block.getValue0(), block.getValue1())) {
                     break;
                 }
-                block = nextBlock(fileId);
+                block = nextBlock(fileWriter);
             }
             if (block != null) {
                 fileWriter.resetBlock(block.getValue0());
@@ -296,12 +296,7 @@ public class TorrentComp extends ComponentDefinition {
         LOG.warn("{}nothing", logPrefix);
     }
 
-    private Pair<Integer, Optional<BlockDetails>> nextBlock(int fileId) {
-        TFileWrite fileWriter = fileMngr.writeTo(fileId);
-        if (fileWriter.isComplete()) {
-            fileMngr.complete(fileId);
-            return null;
-        }
+    private Pair<Integer, Optional<BlockDetails>> nextBlock(TFileWrite fileWriter) {
         fileWriter.hasHashes();
         if (fileWriter.hasBlocks()) {
             //for the moment we get hashes with blocks - same management
