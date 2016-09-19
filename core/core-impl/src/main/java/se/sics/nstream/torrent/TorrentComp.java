@@ -578,7 +578,6 @@ public class TorrentComp extends ComponentDefinition {
         public void start() {
             trigger(Start.event, connComp.control());
             if (connMngr.hasConnCandidates()) {
-                trigger(new TransferStatus.DownloadStarting(torrentId), transferStatusPort);
                 trigger(new Seeder.Connect(connMngr.getConnCandidate()), connPort);
             }
         }
@@ -599,6 +598,7 @@ public class TorrentComp extends ComponentDefinition {
 
         public GetDefinitionState(ManifestDef manifestDef) {
             this.tdBuilder = new MyTorrent.Builder(manifestDef);
+            trigger(new TransferStatus.DownloadStarting(torrentId), transferStatusPort);
         }
 
         public void startInstance(KAddress peer) {
