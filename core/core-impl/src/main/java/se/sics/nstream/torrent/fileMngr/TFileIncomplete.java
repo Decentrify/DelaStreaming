@@ -21,7 +21,6 @@ package se.sics.nstream.torrent.fileMngr;
 import com.google.common.base.Optional;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -59,7 +58,7 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
     private final Set<Integer> ongoingHashes = new TreeSet<>();
     private final Set<Integer> nextHashes = new TreeSet<>();
     private final TreeSet<Integer> ongoingBlocks = new TreeSet<>();
-    private final LinkedList<Integer> nextBlocks = new LinkedList<>();
+    private final TreeSet<Integer> nextBlocks = new TreeSet<>();
     private final Map<Integer, FileBWC> pendingStorageWrites = new HashMap<>();
 
     public TFileIncomplete(AppendFileMngr file, FileBaseDetails fileDetails) {

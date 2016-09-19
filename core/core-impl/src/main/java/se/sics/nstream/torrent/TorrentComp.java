@@ -269,14 +269,17 @@ public class TorrentComp extends ComponentDefinition {
                 getFilesState.killInstances(fileId, closeConn);
                 return;
             }
-            int batchSize = 1;
+            int batchSize = 2;
             Pair<Integer, Optional<BlockDetails>> block = nextBlock(fileId);
             while (block != null && batchSize > 0) {
                 batchSize--;
                 if (!advanceConn(fileId, block.getValue0(), block.getValue1())) {
-                    fileWriter.resetBlock(block.getValue0());
                     break;
                 }
+                block = nextBlock(fileId);
+            }
+            if (block != null) {
+                fileWriter.resetBlock(block.getValue0());
             }
             if (batchSize == 0) {
                 return;
@@ -802,7 +805,7 @@ public class TorrentComp extends ComponentDefinition {
             trigger(Start.event, leecherComp.control());
             leechers.put(connId, leecherComp);
             compIdToLeecherId.put(leecherComp.id(), connId);
-            
+
             connMngr.connectPeerFile(connId);
             for (TorrentConnMngr.NewFileConnection fc : fcs) {
                 useFileConnection(fc.advance());
@@ -814,9 +817,9 @@ public class TorrentComp extends ComponentDefinition {
             connMngr.useSlot(conn);
             trigger(conn.getMsg(), dwnlConnPort);
         }
-        
+
         public void killInstances(int fileId, Set<Identifier> peerIds) {
-            for(Identifier peerId : peerIds) {
+            for (Identifier peerId : peerIds) {
                 TorrentConnId connId = new TorrentConnId(peerId, new FileIdentifier(torrentId, fileId), true);
                 killInstance(connId);
             }
