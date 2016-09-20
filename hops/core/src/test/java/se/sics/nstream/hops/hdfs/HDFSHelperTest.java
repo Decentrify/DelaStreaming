@@ -18,12 +18,10 @@
  */
 package se.sics.nstream.hops.hdfs;
 
-import se.sics.nstream.hops.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.hdfs.HDFSHelper;
-import se.sics.nstream.hops.hdfs.HDFSResource;
 import java.util.Random;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.profiling.KProfiler;
 
 /**
@@ -34,8 +32,8 @@ public class HDFSHelperTest {
 
     @Test
     public void simpleAppend() throws InterruptedException {
-        HDFSEndpoint endpoint = new HDFSEndpoint("bbc1.sics.se", 26801, "glassfish");
-        HDFSResource resource = new HDFSResource("/experiment/download/", "test");
+        HDFSEndpoint endpoint = new HDFSEndpoint(new IntIdentifier(1), "bbc1.sics.se", 26801, "glassfish");
+        HDFSResource resource = new HDFSResource("/experiment/download/", "test", new IntIdentifier(1));
         Random rand = new Random(123);
         byte[] data;
 

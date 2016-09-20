@@ -19,21 +19,39 @@
 package se.sics.nstream.hops.library;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import se.sics.kompics.PortType;
+import java.util.Map;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.nstream.hops.hdfs.HDFSControlPort;
 import se.sics.nstream.hops.hdfs.HDFSPort;
+import se.sics.nstream.hops.kafka.KafkaControlPort;
 import se.sics.nstream.hops.kafka.KafkaPort;
+import se.sics.nstream.storage.StorageControlPort;
+import se.sics.nstream.storage.StoragePort;
 import se.sics.nstream.torrent.StorageProvider;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsStorageProvider implements StorageProvider {
+    public static final Identifier hdfsIdentifier = new IntIdentifier(1);
+    public static final Identifier kafkaIdentifier = new IntIdentifier(2);
+    
     @Override
-    public List<Class<PortType>> requiresPorts() {
+    public List<Class<? extends StoragePort>> requiredStoragePorts() {
         List ports = new ArrayList();
         ports.add(HDFSPort.class);
         ports.add(KafkaPort.class);
         return ports;
+    }
+
+    @Override
+    public Map<Identifier, Class<? extends StorageControlPort>> requiredStorageControlPorts() {
+        Map<Identifier, Class<? extends StorageControlPort>> ctrlPorts = new HashMap<>();
+        ctrlPorts.put(hdfsIdentifier, HDFSControlPort.class);
+        ctrlPorts.put(kafkaIdentifier, KafkaControlPort.class);
+        return ctrlPorts;
     }
 }

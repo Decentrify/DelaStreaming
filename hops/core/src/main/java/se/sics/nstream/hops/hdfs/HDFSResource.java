@@ -18,23 +18,31 @@
  */
 package se.sics.nstream.hops.hdfs;
 
-import se.sics.nstream.util.StreamSink;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.nstream.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSResource implements StreamSink {
+public class HDFSResource implements StreamResource {
 
     public final String dirPath;
     public final String fileName;
+    public final Identifier resourceId;
 
-    public HDFSResource(String dirPath, String fileName) {
+    public HDFSResource(String dirPath, String fileName, Identifier resourceId) {
         this.dirPath = dirPath;
         this.fileName = fileName;
+        this.resourceId = resourceId;
     }
 
     @Override
     public String getSinkName() {
         return "hdfs://" + dirPath + "/" + fileName;
+    }
+
+    @Override
+    public Identifier getResourceId() {
+        return resourceId;
     }
 }

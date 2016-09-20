@@ -18,6 +18,8 @@
  */
 package se.sics.nstream.test;
 
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.nstream.util.StreamEndpoint;
 
 /**
@@ -25,7 +27,22 @@ import se.sics.nstream.util.StreamEndpoint;
  */
 public class MockStreamEndpoint implements StreamEndpoint {
     @Override
-    public Class<MockStreamPort> resourcePort() {
+    public Class<MockStreamPort> getStoragePortType() {
         return MockStreamPort.class;
+    }
+
+    @Override
+    public Class<MockStreamControlPort> getControlPortType() {
+        return MockStreamControlPort.class;
+    }
+
+    @Override
+    public String getEndpointName() {
+        return "mock";
+    }
+
+    @Override
+    public Identifier getEndpointId() {
+        return new IntIdentifier(0);
     }
 }

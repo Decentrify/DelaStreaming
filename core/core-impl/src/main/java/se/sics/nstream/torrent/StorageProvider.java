@@ -19,11 +19,15 @@
 package se.sics.nstream.torrent;
 
 import java.util.List;
-import se.sics.kompics.PortType;
+import java.util.Map;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.nstream.storage.StorageControlPort;
+import se.sics.nstream.storage.StoragePort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface StorageProvider {
-    public List<Class<PortType>> requiresPorts();
+    public List<Class<? extends StoragePort>> requiredStoragePorts();
+    public Map<Identifier, Class<? extends StorageControlPort>> requiredStorageControlPorts();
 }

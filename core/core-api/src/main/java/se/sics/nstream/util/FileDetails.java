@@ -26,10 +26,10 @@ import org.javatuples.Pair;
  */
 public class FileDetails {
     public final FileBaseDetails base;
-    public final Pair<StreamEndpoint, StreamSink> mainResource;
-    public final List<Pair<StreamEndpoint, StreamSink>> secondaryResources;
+    public final Pair<StreamEndpoint, StreamResource> mainResource;
+    public final List<Pair<StreamEndpoint, StreamResource>> secondaryResources;
     
-    public FileDetails(FileBaseDetails base, Pair<StreamEndpoint, StreamSink> mainResource, List<Pair<StreamEndpoint, StreamSink>> secondaryResources) {
+    public FileDetails(FileBaseDetails base, Pair<StreamEndpoint, StreamResource> mainResource, List<Pair<StreamEndpoint, StreamResource>> secondaryResources) {
         this.base = base;
         this.mainResource = mainResource;
         this.secondaryResources = secondaryResources;

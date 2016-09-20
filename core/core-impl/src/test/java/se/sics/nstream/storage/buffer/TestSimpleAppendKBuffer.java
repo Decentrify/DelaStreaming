@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.config.Config;
 import se.sics.kompics.config.TypesafeConfig;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
@@ -59,7 +60,7 @@ public class TestSimpleAppendKBuffer {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        MockStreamResource writeResource = new MockStreamResource("mock1");
+        MockStreamResource writeResource = new MockStreamResource("mock1", new IntIdentifier(1));
         MockStreamEndpoint writeEndpoint = new MockStreamEndpoint();
         MockWC allWriteResult = new MockWC();
 
@@ -134,7 +135,7 @@ public class TestSimpleAppendKBuffer {
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
         MockStreamEndpoint writeEndpoint = new MockStreamEndpoint();
-        MockStreamResource writeResource = new MockStreamResource("mock1");
+        MockStreamResource writeResource = new MockStreamResource("mock1", new IntIdentifier(1));
         MockWC allWriteResult = new MockWC();
         long appendPos = 0;
         Validator validator;
@@ -204,7 +205,7 @@ public class TestSimpleAppendKBuffer {
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
         MockStreamEndpoint writeEndpoint = new MockStreamEndpoint();
-        MockStreamResource writeResource = new MockStreamResource("mock1");
+        MockStreamResource writeResource = new MockStreamResource("mock1", new IntIdentifier(1));
         MockWC allWriteResult = new MockWC();
         long appendPos = 0;
         Validator validator;

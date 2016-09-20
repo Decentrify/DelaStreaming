@@ -41,7 +41,6 @@ import se.sics.ktoolbox.util.test.MockComponentProxy;
 import se.sics.ktoolbox.util.test.MockExceptionHandler;
 import se.sics.ktoolbox.util.test.PortValidator;
 import se.sics.ktoolbox.util.test.Validator;
-import se.sics.nutil.tracking.load.QueueLoadConfig;
 import se.sics.nstream.storage.StorageRead;
 import se.sics.nstream.test.MockStreamEndpoint;
 import se.sics.nstream.test.MockStreamPort;
@@ -53,6 +52,7 @@ import se.sics.nstream.util.range.KBlockImpl;
 import se.sics.nstream.util.range.KPieceImpl;
 import se.sics.nstream.util.range.KRange;
 import se.sics.nstream.util.result.ReadCallback;
+import se.sics.nutil.tracking.load.QueueLoadConfig;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -62,7 +62,7 @@ public class TestSimpleKCache {
     private static final Logger LOG = LoggerFactory.getLogger(TestSimpleKCache.class);
 
     MockStreamEndpoint readEndpoint = new MockStreamEndpoint();
-    MockStreamResource readResource = new MockStreamResource("mock1");
+    MockStreamResource readResource = new MockStreamResource("mock1", new IntIdentifier(1));
     Identifier reader = new IntIdentifier(0);
     KBlock b0, b1, b2;
     Map<Long, KBlock> hintE = new TreeMap<>();
@@ -258,7 +258,7 @@ public class TestSimpleKCache {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        MockStreamResource readResource = new MockStreamResource("mock1");
+        MockStreamResource readResource = new MockStreamResource("mock1", new IntIdentifier(1));
         
         Validator validator;
         MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
@@ -307,7 +307,7 @@ public class TestSimpleKCache {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        MockStreamResource readResource = new MockStreamResource("mock1");
+        MockStreamResource readResource = new MockStreamResource("mock1", new IntIdentifier(1));
         
         Validator validator;
         MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));

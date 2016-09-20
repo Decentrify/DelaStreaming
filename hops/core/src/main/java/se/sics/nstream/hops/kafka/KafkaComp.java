@@ -24,6 +24,9 @@ import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
+import se.sics.nstream.storage.StorageInitBuilder;
+import se.sics.nstream.util.StreamEndpoint;
+import se.sics.nstream.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -38,7 +41,7 @@ public class KafkaComp extends ComponentDefinition {
     
     public KafkaComp(Init init) {
         LOG.info("{}init", logPrefix);
-        kafka = new KafkaProxy(proxy, init.kafkaEndpoint);
+        kafka = new KafkaProxy(proxy, init.endpoint);
         proxy.subscribe(handleStart, control);
     }
 
@@ -57,10 +60,20 @@ public class KafkaComp extends ComponentDefinition {
     //**************************************************************************
     public static class Init extends se.sics.kompics.Init<KafkaComp> {
 
-        public final KafkaEndpoint kafkaEndpoint;
+        public final KafkaEndpoint endpoint;
+        public final KafkaResource resource;
 
-        public Init(KafkaEndpoint kafkaEndpoint) {
-            this.kafkaEndpoint = kafkaEndpoint;
+        public Init(KafkaEndpoint endpoint, KafkaResource resource) {
+            this.endpoint = endpoint;
+            this.resource = resource;
+        }
+    }
+    
+    public static class InitBuilder implements StorageInitBuilder {
+
+        @Override
+        public Init buildWith(StreamEndpoint endpoint, StreamResource resource) {
+            return new Init((KafkaEndpoint) endpoint, (KafkaResource) resource);
         }
     }
 }

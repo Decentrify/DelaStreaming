@@ -18,20 +18,28 @@
  */
 package se.sics.nstream.test;
 
-import se.sics.nstream.util.StreamSink;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.nstream.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class MockStreamResource implements StreamSink {
+public class MockStreamResource implements StreamResource {
     private final String resourceName;
+    private final Identifier resourceId;
     
-    public MockStreamResource(String resourceName) {
+    public MockStreamResource(String resourceName, Identifier resourceId) {
         this.resourceName = resourceName;
+        this.resourceId = resourceId;
     }
 
     @Override
     public String getSinkName() {
         return resourceName;
+    }
+
+    @Override
+    public Identifier getResourceId() {
+        return resourceId;
     }
 }

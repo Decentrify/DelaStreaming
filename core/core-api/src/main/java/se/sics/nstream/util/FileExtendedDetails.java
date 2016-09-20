@@ -21,12 +21,12 @@ package se.sics.nstream.util;
 import java.util.List;
 import org.javatuples.Pair;
 import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamSink;
+import se.sics.nstream.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface FileExtendedDetails {
-    public Pair<StreamEndpoint, StreamSink> getMainResource();
-    public List<Pair<StreamEndpoint, StreamSink>> getSecondaryResource();
+    public Pair<StreamEndpoint, StreamResource> getMainResource();
+    public List<Pair<StreamEndpoint, StreamResource>> getSecondaryResource();
 }

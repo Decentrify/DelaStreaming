@@ -1,10 +1,8 @@
-package se.sics.nstream.hops.kafka.test;
-
 /*
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
  *
- * KompicsToolbox is free software; you can redistribute it and/or
+ * GVoD is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
@@ -18,20 +16,16 @@ package se.sics.nstream.hops.kafka.test;
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.nstream.storage;
 
-
-import org.apache.avro.Schema;
-import se.sics.nstream.hops.kafka.KafkaResource;
+import se.sics.kompics.Init;
+import se.sics.nstream.util.StreamEndpoint;
+import se.sics.nstream.util.StreamResource;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TestKafkaResource extends KafkaResource {
-    public final Schema schema;
-    
-    public TestKafkaResource(Schema schema) {
-        super(null, null, null);
-        this.schema = schema;
-    }
+public interface StorageInitBuilder {
+    public Init buildWith(StreamEndpoint endpoint, StreamResource resource);
 }

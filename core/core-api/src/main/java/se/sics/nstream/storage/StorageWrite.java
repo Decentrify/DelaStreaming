@@ -19,30 +19,30 @@
 package se.sics.nstream.storage;
 
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.util.StreamSink;
+import se.sics.nstream.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class StorageWrite {
-    public static class Request extends Direct.Request<Response> implements Identifiable {
+    public static class Request extends Direct.Request<Response> implements OverlayEvent {
         public final Identifier eventId;
-        public final StreamSink resource;
+        public final StreamResource resource;
         public final long pos;
         public final byte[] value;
         
-        public Request(Identifier eventId, StreamSink resource, long pos, byte[] value) {
+        public Request(Identifier eventId, StreamResource resource, long pos, byte[] value) {
             this.eventId = eventId;
             this.resource = resource;
             this.pos = pos;
             this.value = value;
         }
         
-        public Request(StreamSink resource, long pos, byte[] value) {
+        public Request(StreamResource resource, long pos, byte[] value) {
             this(UUIDIdentifier.randomId(), resource, pos, value);
         }
         
@@ -51,12 +51,17 @@ public class StorageWrite {
             return eventId;
         }
         
+        @Override
+        public Identifier overlayId() {
+            return resource.getResourceId();
+        }
+        
         public Response respond(Result<Boolean> result) {
             return new Response(this, result);
         }
     }
     
-    public static class Response implements Direct.Response, Identifiable {
+    public static class Response implements Direct.Response, OverlayEvent {
         public final Request req;
         public final Result<Boolean> result;
         
@@ -68,6 +73,11 @@ public class StorageWrite {
         @Override
         public Identifier getId() {
             return req.getId();
+        }
+
+        @Override
+        public Identifier overlayId() {
+            return req.overlayId();
         }
     }
 }

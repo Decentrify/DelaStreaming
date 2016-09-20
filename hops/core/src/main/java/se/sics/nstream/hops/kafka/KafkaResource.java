@@ -18,22 +18,30 @@
  */
 package se.sics.nstream.hops.kafka;
 
-import se.sics.nstream.util.StreamSink;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.nstream.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class KafkaResource implements StreamSink {
+public class KafkaResource implements StreamResource {
     public final String sessionId;
     public final String topicName;
+    public final Identifier resourceId;
 
-    public KafkaResource(String sessionId, String topicName) {
+    public KafkaResource(String sessionId, String topicName, Identifier resourceId) {
         this.sessionId = sessionId;
         this.topicName = topicName;
+        this.resourceId = resourceId;
     }
 
     @Override
     public String getSinkName() {
         return "kafka - topic:" + topicName; 
+    }
+
+    @Override
+    public Identifier getResourceId() {
+        return resourceId;
     }
 }

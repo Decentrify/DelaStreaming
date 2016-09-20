@@ -1,5 +1,3 @@
-package se.sics.nstream.hops.kafka.test;
-
 /*
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
@@ -18,20 +16,14 @@ package se.sics.nstream.hops.kafka.test;
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.nstream.util;
 
-
-import org.apache.avro.Schema;
-import se.sics.nstream.hops.kafka.KafkaResource;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TestKafkaResource extends KafkaResource {
-    public final Schema schema;
-    
-    public TestKafkaResource(Schema schema) {
-        super(null, null, null);
-        this.schema = schema;
-    }
+public interface StreamResource {
+    public String getSinkName();
+    public Identifier getResourceId();
 }

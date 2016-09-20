@@ -28,7 +28,7 @@ import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
 import se.sics.nstream.util.FileExtendedDetails;
 import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamSink;
+import se.sics.nstream.util.StreamResource;
 
 /**
  *
@@ -48,13 +48,13 @@ public class HopsFED implements FileExtendedDetails {
     }
     
     @Override
-    public Pair<StreamEndpoint, StreamSink> getMainResource() {
+    public Pair<StreamEndpoint, StreamResource> getMainResource() {
         return (Pair)mainResource;
     }
 
     @Override
-    public List<Pair<StreamEndpoint, StreamSink>> getSecondaryResource() {
-        List<Pair<StreamEndpoint, StreamSink>> sr = new ArrayList<>();
+    public List<Pair<StreamEndpoint, StreamResource>> getSecondaryResource() {
+        List<Pair<StreamEndpoint, StreamResource>> sr = new ArrayList<>();
         if(secondaryResource.isPresent()) {
             sr.add((Pair)secondaryResource.get());
         }

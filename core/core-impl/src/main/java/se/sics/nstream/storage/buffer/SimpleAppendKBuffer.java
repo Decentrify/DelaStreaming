@@ -38,7 +38,7 @@ import se.sics.nstream.storage.StoragePort;
 import se.sics.nstream.storage.StorageWrite;
 import se.sics.nstream.torrent.util.BufferName;
 import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamSink;
+import se.sics.nstream.util.StreamResource;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.WriteCallback;
@@ -57,7 +57,7 @@ public class SimpleAppendKBuffer implements KBuffer {
 
     private final KBufferConfig bufferConfig;
     private final BufferName bufName;
-    private final StreamSink writeResource;
+    private final StreamResource writeResource;
     //**************************************************************************
     private final Positive<StoragePort> writePort;
     private final ComponentProxy proxy;
@@ -72,12 +72,12 @@ public class SimpleAppendKBuffer implements KBuffer {
     //**************************************************************************
 
     public SimpleAppendKBuffer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExceptionHandling, ComponentLoadTracking loadTracker,
-            StreamEndpoint writeEndpoint, StreamSink writeResource, BufferName bufName, long appendPos) {
+            StreamEndpoint writeEndpoint, StreamResource writeResource, BufferName bufName, long appendPos) {
         this.bufferConfig = new KBufferConfig(config);
         this.writeResource = writeResource;
         this.proxy = proxy;
         this.syncExHandling = syncExceptionHandling;
-        this.writePort = proxy.getNegative(writeEndpoint.resourcePort()).getPair();
+        this.writePort = proxy.getNegative(writeEndpoint.getStoragePortType()).getPair();
         this.loadTracker = loadTracker;
         this.appendPos = appendPos;
         this.blockPos = 0;

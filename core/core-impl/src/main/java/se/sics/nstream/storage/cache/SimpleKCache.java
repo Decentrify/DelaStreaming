@@ -50,7 +50,7 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.StoragePort;
 import se.sics.nstream.storage.StorageRead;
 import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamSink;
+import se.sics.nstream.util.StreamResource;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
@@ -67,7 +67,7 @@ public class SimpleKCache implements KCache {
     private String logPrefix = "";
 
     private final KCacheConfig cacheConfig;
-    private final StreamSink readResource;
+    private final StreamResource readResource;
     //**************************************************************************
     private final Positive<StoragePort> readPort;
     private final Positive<Timer> timerPort;
@@ -89,13 +89,13 @@ public class SimpleKCache implements KCache {
     private UUID extendedCacheCleanTid;
 
     public SimpleKCache(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExHandling, ComponentLoadTracking loadTracker,
-            StreamEndpoint readEndpoint, StreamSink readResource) {
+            StreamEndpoint readEndpoint, StreamResource readResource) {
         this.cacheConfig = new KCacheConfig(config);
         this.readResource = readResource;
         this.proxy = proxy;
         this.syncExHandling = syncExHandling;
         this.loadTracker = loadTracker;
-        this.readPort = proxy.getNegative(readEndpoint.resourcePort()).getPair();
+        this.readPort = proxy.getNegative(readEndpoint.getStoragePortType()).getPair();
         this.timerPort = proxy.getNegative(Timer.class).getPair();
         this.proxy.subscribe(handleExtendedCacheClean, timerPort);
         this.proxy.subscribe(handleReadResp, readPort);

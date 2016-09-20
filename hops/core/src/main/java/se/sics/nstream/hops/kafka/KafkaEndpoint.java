@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.hops.kafka;
 
+import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.hops.kafka.avro.AvroMsgProducer;
 import se.sics.nstream.hops.kafka.avro.KafkaProducer;
 import se.sics.nstream.util.StreamEndpoint;
@@ -27,6 +28,7 @@ import se.sics.nstream.util.StreamEndpoint;
  */
 public class KafkaEndpoint implements StreamEndpoint {
 
+    public final Identifier endpointId;
     public final String brokerEndpoint;
     public final String restEndpoint;
     public final String domain;
@@ -34,7 +36,8 @@ public class KafkaEndpoint implements StreamEndpoint {
     public final String keyStore;
     public final String trustStore;
 
-    public KafkaEndpoint(String brokerEndpoint, String restEndpoint, String domain, String projectId, String keyStore, String trustStore) {
+    public KafkaEndpoint(Identifier endpointId, String brokerEndpoint, String restEndpoint, String domain, String projectId, String keyStore, String trustStore) {
+        this.endpointId = endpointId;
         this.brokerEndpoint = brokerEndpoint;
         this.restEndpoint = restEndpoint;
         this.domain = domain;
@@ -43,12 +46,27 @@ public class KafkaEndpoint implements StreamEndpoint {
         this.trustStore = trustStore;
     }
 
+    public AvroMsgProducer getProducer(KafkaResource resource) {
+        return new KafkaProducer(this, resource);
+    }
+    
     @Override
-    public Class<KafkaPort> resourcePort() {
+    public Class<KafkaControlPort> getControlPortType() {
+        return KafkaControlPort.class;
+    }
+    
+    @Override
+    public Class<KafkaPort> getStoragePortType() {
         return KafkaPort.class;
     }
     
-    public AvroMsgProducer getProducer(KafkaResource resource) {
-        return new KafkaProducer(this, resource);
+    @Override
+    public String getEndpointName() {
+        return "kafka";
+    }
+
+    @Override
+    public Identifier getEndpointId() {
+        return endpointId;
     }
 }

@@ -33,6 +33,7 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.HopsFED;
@@ -176,7 +177,8 @@ public class HopsLibraryMngr {
     private Map<String, FileExtendedDetails> getUploadExtendedDetails(HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource, Map<String, FileBaseDetails> baseDetails) {
         Map<String, FileExtendedDetails> extendedDetails = new HashMap<>();
         for (String fileName : baseDetails.keySet()) {
-            FileExtendedDetails fed = new HopsFED(Pair.with(hdfsEndpoint, new HDFSResource(manifestResource.dirPath, fileName)));
+            Identifier randomlyAssignedResourceId = UUIDIdentifier.randomId();
+            FileExtendedDetails fed = new HopsFED(Pair.with(hdfsEndpoint, new HDFSResource(manifestResource.dirPath, fileName, randomlyAssignedResourceId)));
             extendedDetails.put(fileName, fed);
         }
         return extendedDetails;

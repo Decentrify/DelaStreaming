@@ -18,11 +18,16 @@
  */
 package se.sics.nstream.util;
 
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.nstream.storage.StorageControlPort;
 import se.sics.nstream.storage.StoragePort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface StreamEndpoint {
-    public <P extends StoragePort> Class<P> resourcePort();
+    public <P extends StoragePort> Class<P> getStoragePortType();
+    public <P extends StorageControlPort> Class<P> getControlPortType();
+    public Identifier getEndpointId();
+    public String getEndpointName();
 }
