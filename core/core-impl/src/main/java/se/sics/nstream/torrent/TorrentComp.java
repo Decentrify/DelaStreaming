@@ -58,7 +58,7 @@ import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.report.TransferStatusPort;
-import se.sics.nstream.report.event.TransferStatus;
+import se.sics.nstream.report.event.TorrentTracking;
 import se.sics.nstream.storage.StoragePort;
 import se.sics.nstream.torrent.conn.ConnectionComp;
 import se.sics.nstream.torrent.conn.ConnectionPort;
@@ -81,6 +81,10 @@ import se.sics.nstream.torrent.transfer.UpldConnPort;
 import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
 import se.sics.nstream.torrent.transfer.upld.event.GetBlocks;
+import se.sics.nstream.torrent.transferTracking.TransferReportPort;
+import se.sics.nstream.torrent.transferTracking.TransferTrackingComp;
+import se.sics.nstream.torrent.transferTracking.TransferTrackingPort;
+import se.sics.nstream.torrent.transferTracking.TransferTrackingReport;
 import se.sics.nstream.torrent.util.EventTorrentConnIdExtractor;
 import se.sics.nstream.torrent.util.MsgTorrentConnIdExtractor;
 import se.sics.nstream.torrent.util.TorrentConnId;
@@ -105,8 +109,6 @@ public class TorrentComp extends ComponentDefinition {
     private String logPrefix;
 
     private static final int DEF_FILE_ID = 0;
-    private static final long REFRESH_CONN_PERIOD = 10000;
-    private static final int CONN_RETRY = 5;
     private static final long ADVANCE_PERIOD = 1000;
 
     private final TorrentConfig torrentConfig;
@@ -119,14 +121,15 @@ public class TorrentComp extends ComponentDefinition {
     Positive<Timer> timerPort = requires(Timer.class);
     //resources port
     Positive<TorrentResourceMngrPort> resourcePort = requires(TorrentResourceMngrPort.class);
-    //torrent ports
+    //transfer ports
+    Positive<TransferReportPort> transferReportPort = requires(TransferReportPort.class);
     Positive<DwnlConnPort> dwnlConnPort = requires(DwnlConnPort.class);
     Positive<UpldConnPort> upldConnPort = requires(UpldConnPort.class);
     //conn ports
     Positive<ConnectionPort> connPort = requires(ConnectionPort.class);
     //other
-    Positive<TransferMngrPort> transferMngrPort = requires(TransferMngrPort.class);
-    Negative<TransferStatusPort> transferStatusPort = provides(TransferStatusPort.class);
+    Positive<TransferMngrPort> detailsPort = requires(TransferMngrPort.class);
+    Negative<TransferStatusPort> statusPort = provides(TransferStatusPort.class);
     //local multiplexing channels
     private One2NChannel<Network> connNetworkChannel;
     private One2NChannel<Network> transferNetworkChannel;
@@ -142,6 +145,7 @@ public class TorrentComp extends ComponentDefinition {
     private GetDefinitionState getDefState;
     private ServeFilesState serveFilesState;
     private GetFilesState getFilesState;
+    private Component transferTrackingComp;
     //**************************************************************************
     private UUID advanceTid;
 
@@ -158,7 +162,7 @@ public class TorrentComp extends ComponentDefinition {
 
         Optional<MyTorrent.ManifestDef> manifest = Optional.absent();
         if (init.torrentDef.isPresent()) {
-            initializeTorrent(init.torrentDef.get());
+            serveDefState = new ServeDefinitionState(init.torrentDef.get());
             manifest = Optional.of(init.torrentDef.get().manifest.getDef());
         }
         connState = new ConnectionState(manifest);
@@ -170,6 +174,7 @@ public class TorrentComp extends ComponentDefinition {
         subscribe(handleAdvance, timerPort);
 
         subscribe(handleResourcesPrepared, resourcePort);
+        subscribe(handleTransferReport, transferReportPort);
 
         subscribe(handleSeederConnectSuccess, connPort);
         subscribe(handleSeederConnectTimeout, connPort);
@@ -184,7 +189,7 @@ public class TorrentComp extends ComponentDefinition {
 
         subscribe(handleGetBlocks, upldConnPort);
         subscribe(handleCompletedBlocks, dwnlConnPort);
-        subscribe(handleTransferDetails, transferMngrPort);
+        subscribe(handleTransferDetails, detailsPort);
     }
 
     private void buildChannels() {
@@ -211,10 +216,14 @@ public class TorrentComp extends ComponentDefinition {
             }
         };
         fileMngr = new TorrentFileMngr(config(), proxy, deh, componentTracking, torrent, seeder);
-        serveDefState = new ServeDefinitionState(torrent);
+        //transfer report
+        transferTrackingComp = create(TransferTrackingComp.class, new TransferTrackingComp.Init(torrentId));
+        connect(transferTrackingComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+        connect(transferTrackingComp.getPositive(TransferReportPort.class), transferReportPort.getPair(), Channel.TWO_WAY);
     }
-    
+
     private void startTorrent(MyTorrent torrent) {
+        trigger(Start.event, transferTrackingComp.control());
         trigger(new PrepareResources.Request(torrent), resourcePort);
     }
 
@@ -223,7 +232,8 @@ public class TorrentComp extends ComponentDefinition {
         @Override
         public void handle(Start event) {
             LOG.info("{}starting", logPrefix);
-            if(seeder) {
+            if (seeder) {
+                initializeTorrent(serveDefState.td);
                 startTorrent(serveDefState.td);
             }
             if (connState != null) {
@@ -267,6 +277,15 @@ public class TorrentComp extends ComponentDefinition {
         }
     };
     //**************************************************************************
+    Handler handleTransferReport = new Handler<TransferTrackingReport>() {
+        @Override
+        public void handle(TransferTrackingReport event) {
+            LOG.info("{}transfer report", logPrefix);
+            TorrentTracking.Indication report = new TorrentTracking.Indication(fileMngr.report(), event.downloadReport);
+            trigger(report, statusPort);
+        }
+    };
+    //**************************************************************************
     Handler handleAdvance = new Handler<AdvanceTimeout>() {
         @Override
         public void handle(AdvanceTimeout event) {
@@ -281,7 +300,7 @@ public class TorrentComp extends ComponentDefinition {
         }
         if (fileMngr.complete()) {
             cancelAdvance();
-            trigger(new TransferStatus.DownloadDone(torrentId), transferStatusPort);
+            trigger(new TorrentTracking.DownloadDone(torrentId, fileMngr.report()), statusPort);
         }
 
         int fileId = connMngr.canAdvanceFile();
@@ -414,11 +433,10 @@ public class TorrentComp extends ComponentDefinition {
         @Override
         public void handle(OpenTransfer.LeecherResponse resp) {
             LOG.info("{}open transfer - leecher response", logPrefix);
-            if (serveDefState == null && getDefState != null) {
+            if (resp.connId.fileId.fileId == DEF_FILE_ID) {
                 //def phase
                 getDefState.startInstance(connMngr.randomPeer());
-            }
-            if (getFilesState != null) {
+            } else {
                 getFilesState.fileConnected(resp.connId, resp.peer);
             }
         }
@@ -466,6 +484,7 @@ public class TorrentComp extends ComponentDefinition {
             LOG.info("{}starting transfer", logPrefix);
             initializeTorrent(resp.torrent);
             startTorrent(resp.torrent);
+            trigger(new TorrentTracking.DownloadStarting(torrentId, fileMngr.report()), statusPort);
         }
     };
     //**************************************************************************
@@ -621,7 +640,6 @@ public class TorrentComp extends ComponentDefinition {
 
         public GetDefinitionState(ManifestDef manifestDef) {
             this.tdBuilder = new MyTorrent.Builder(manifestDef);
-            trigger(new TransferStatus.DownloadStarting(torrentId), transferStatusPort);
         }
 
         public void startInstance(KAddress peer) {
@@ -677,7 +695,7 @@ public class TorrentComp extends ComponentDefinition {
         }
 
         private void interpretManifest(Manifest manifest) {
-            trigger(new Transfer.DownloadRequest(torrentId, Result.success(manifest)), transferMngrPort);
+            trigger(new Transfer.DownloadRequest(torrentId, Result.success(manifest)), detailsPort);
             trigger(new CloseTransfer.Request(connId), connPort);
             killInstance();
         }
@@ -820,6 +838,7 @@ public class TorrentComp extends ComponentDefinition {
 
             Component leecherComp = create(DwnlConnComp.class, new DwnlConnComp.Init(connId, selfAdr, peer, MyTorrent.defaultDataBlock, true));
             connect(leecherComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+            connect(leecherComp.getPositive(TransferTrackingPort.class), transferTrackingComp.getNegative(TransferTrackingPort.class), Channel.TWO_WAY);
             transferNetworkChannel.addChannel(connId, leecherComp.getNegative(Network.class));
             dwnlConnChannel.addChannel(connId, leecherComp.getPositive(DwnlConnPort.class));
             trigger(Start.event, leecherComp.control());

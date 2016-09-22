@@ -44,17 +44,21 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.ledbat.core.AppCongestionWindow;
+import se.sics.ledbat.core.DownloadThroughput;
 import se.sics.ledbat.core.LedbatConfig;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 import se.sics.nstream.torrent.event.TorrentTimeout;
 import se.sics.nstream.torrent.old.TransferConfig;
 import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.DwnlConnReport;
 import se.sics.nstream.torrent.transfer.dwnl.event.FPDControl;
 import se.sics.nstream.torrent.transfer.msg.CacheHint;
 import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
+import se.sics.nstream.torrent.transferTracking.DownloadConnectionClosed;
+import se.sics.nstream.torrent.transferTracking.DownloadTrackingReport;
+import se.sics.nstream.torrent.transferTracking.DownloadTrackingTrace;
+import se.sics.nstream.torrent.transferTracking.TransferTrackingPort;
 import se.sics.nstream.torrent.util.TorrentConnId;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nutil.ContentWrapperHelper;
@@ -74,11 +78,12 @@ public class DwnlConnComp extends ComponentDefinition {
     private String logPrefix;
 
     private static final long ADVANCE_DOWNLOAD = 1000;
-    private static final long CACHE_BASE_TIMEOUT = 10000;
-    private static final int CACHE_RETRY = 5;
-    private static final long REPORT_PERIOD = 1000;
+    private static final long CACHE_BASE_TIMEOUT = 1000;
+    private static final int CACHE_RETRY = 30;
+    private static final long REPORT_PERIOD = 200;
     //**************************************************************************
     Negative<DwnlConnPort> connPort = provides(DwnlConnPort.class);
+    Negative<TransferTrackingPort> reportPort = provides(TransferTrackingPort.class);
     Positive<Network> networkPort = requires(Network.class);
     Positive<Timer> timerPort = requires(Timer.class);
     //**************************************************************************
@@ -136,13 +141,17 @@ public class DwnlConnComp extends ComponentDefinition {
         networkQueueLoad.tearDown();
         cancelAdvanceDownload();
         cancelReport();
+        trigger(new DownloadConnectionClosed(connId), reportPort);
     }
 
     Handler handleReport = new Handler<ReportTimeout>() {
         @Override
         public void handle(ReportTimeout event) {
+            LOG.info("{}reporting", logPrefix);
             Pair<Integer, Integer> queueDelay = networkQueueLoad.queueDelay();
-            trigger(new DwnlConnReport(connId, queueDelay), connPort);
+            DownloadThroughput downloadThroughput = cwnd.report();
+            DownloadTrackingTrace trace = new DownloadTrackingTrace(downloadThroughput, workController.blockSize(), cwnd.cwnd());
+            trigger(new DownloadTrackingReport(connId, trace), reportPort);
         }
     };
 

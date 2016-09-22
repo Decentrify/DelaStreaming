@@ -16,21 +16,30 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.transfer;
+package se.sics.nstream.torrent;
 
-import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.FPDControl;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import org.javatuples.Pair;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DwnlConnPort extends PortType {
-    {
-        request(FPDControl.class);
-        request(DownloadBlocks.class);
-        indication(CompletedBlocks.class);
+public class DataReport {
+    public final TreeMap<Integer, String> fileNames;
+    //<MaxSize, CurrentSize>
+    public final Pair<Long, Long> totalSize;
+    public final Map<Integer, Pair<Long, Long>> ongoing;
+    public final Set<Integer> completed;
+    public final Set<Integer> pending;
+    
+    public DataReport(TreeMap<Integer, String> fileNames, Pair<Long, Long> totalSize, Set<Integer> completed, Map<Integer, Pair<Long, Long>> ongoing, Set<Integer> pending) {
+        this.fileNames = fileNames;
+        this.totalSize = totalSize;
+        this.completed = completed;
+        this.ongoing = ongoing;
+        this.pending = pending;
     }
 }

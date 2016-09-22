@@ -16,21 +16,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.transfer;
+package se.sics.nstream.torrent.transferTracking;
 
-import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.FPDControl;
+import java.util.LinkedList;
+import se.sics.nstream.torrent.util.TorrentConnId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DwnlConnPort extends PortType {
-    {
-        request(FPDControl.class);
-        request(DownloadBlocks.class);
-        indication(CompletedBlocks.class);
+public class ConnTracking {
+    public TorrentConnId connId;
+    private final DownloadTraceSummary trace = new DownloadTraceSummary();
+    private final LinkedList<DownloadTrackingTrace> window = new LinkedList<>();
+    
+    public ConnTracking(TorrentConnId connId) {
+        this.connId = connId;
+    }
+    
+    public void handle(DownloadTrackingTrace trace) {
+        window.add(trace);
+    }
+    
+    public void tick() {
+        trace.update(window);
+        window.clear();
+    }
+    
+    public DownloadTrackingTrace report() {
+        return trace.get();
     }
 }

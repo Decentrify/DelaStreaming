@@ -18,17 +18,16 @@
  */
 package se.sics.nstream.report;
 
-import se.sics.nstream.report.event.TransferStatus;
 import se.sics.kompics.PortType;
+import se.sics.nstream.report.event.TorrentTracking;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TransferStatusPort extends PortType {
     {
-        indication(TransferStatus.DownloadStarting.class);
-        indication(TransferStatus.DownloadDone.class);
-        request(TransferStatus.Request.class);
-        indication(TransferStatus.Response.class);
+        indication(TorrentTracking.DownloadStarting.class);
+        indication(TorrentTracking.DownloadDone.class);
+        indication(TorrentTracking.Indication.class);
     }
 }

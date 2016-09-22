@@ -16,21 +16,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.transfer;
+package se.sics.nstream.torrent.transferTracking;
 
-import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.FPDControl;
+import java.util.List;
+import se.sics.ledbat.core.DownloadThroughput;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DwnlConnPort extends PortType {
-    {
-        request(FPDControl.class);
-        request(DownloadBlocks.class);
-        indication(CompletedBlocks.class);
+public class DownloadTraceSummary {
+
+    private DownloadTrackingTrace current;
+
+    public DownloadTraceSummary() {
+    }
+
+    public DownloadTrackingTrace update(List<DownloadTrackingTrace> windowTraces) {
+        if (!windowTraces.isEmpty()) {
+            DownloadTrackingTrace.WithinConnectionAccumulator acc = new DownloadTrackingTrace.WithinConnectionAccumulator();
+            acc.accumulate(windowTraces);
+            current = acc.build();
+        } else {
+            DownloadThroughput dt = new DownloadThroughput(0, 0, 0, 0);
+            current = new DownloadTrackingTrace(dt, 0, 0);
+        }
+        return current;
+    }
+
+    public DownloadTrackingTrace get() {
+        return current;
     }
 }

@@ -84,7 +84,6 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
     }
 
     //*******************************CACHE_HINT*********************************
-
     @Override
     public void clean(Identifier reader) {
         file.clean(reader);
@@ -126,7 +125,6 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
     }
 
     //*******************************WRITE_DATA*********************************
-
     @Override
     public boolean isComplete() {
         return file.isComplete();
@@ -236,7 +234,7 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
         };
         file.writeBlock(blockRange, block, fileBWC);
     }
-    
+
     @Override
     public void resetBlock(int blockNr) {
         ongoingBlocks.remove(blockNr);
@@ -256,5 +254,16 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
         } catch (KReferenceException ex) {
             throw new RuntimeException("ref logic");
         }
+    }
+
+    // <totalSize, currentSize>
+    public Pair<Long, Long> report() {
+        long currentSize;
+        if (!file.isComplete()) {
+            currentSize = (long) file.filePos() * fileDetails.defaultBlock.blockSize;
+        } else {
+            currentSize = fileDetails.length;
+        }
+        return Pair.with(fileDetails.length, currentSize);
     }
 }

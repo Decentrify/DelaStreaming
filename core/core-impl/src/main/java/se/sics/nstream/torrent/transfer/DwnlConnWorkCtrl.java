@@ -286,4 +286,8 @@ public class DwnlConnWorkCtrl {
             completedBlocks.put(piece.getValue0(), bm);
         }
     }
+    
+    public int blockSize() {
+        return ongoingBlocks.size() + cachedBlocks.size() + pendingCacheBlocks.size() + nextBlocks.size() + completedBlocks.size();
+    }
 }

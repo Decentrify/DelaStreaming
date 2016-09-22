@@ -24,7 +24,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.UUID;
+import java.util.TreeMap;
+import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
@@ -33,18 +34,14 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.kompics.timer.CancelPeriodicTimeout;
-import se.sics.kompics.timer.SchedulePeriodicTimeout;
-import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
-import se.sics.nstream.StreamEvent;
 import se.sics.nstream.library.util.TorrentStatus;
 import se.sics.nstream.report.event.DownloadSummaryEvent;
 import se.sics.nstream.report.event.StatusSummaryEvent;
-import se.sics.nstream.report.event.TransferStatus;
-import se.sics.nstream.torrent.ConnMngrReport;
+import se.sics.nstream.report.event.TorrentTracking;
+import se.sics.nstream.torrent.DataReport;
+import se.sics.nstream.torrent.transferTracking.DownloadReport;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -61,18 +58,15 @@ public class ReportComp extends ComponentDefinition {
     private final Identifier torrentId;
     private final long reportDelay;
     private static final int pieceSize = 1024;
-    
+
     private TorrentStatus status = TorrentStatus.UPLOADING;
     private long startingTime;
-    private long transferSize = 0;
-    private ConnMngrReport transferSpeed;
-    private double percentageCompleted = 100;
-
-    private UUID reportTId;
+    private DataReport dataReport;
+    private DownloadReport downloadReport;
     //**************************************************************************
     private final ReportConfig reportConfig;
-    private BufferedWriter transferFile;
-    private BufferedWriter loadFile;
+    private BufferedWriter dataFile;
+    private BufferedWriter downloadFile;
     private int fileCounter = 0;
 
     public ReportComp(Init init) {
@@ -80,25 +74,25 @@ public class ReportComp extends ComponentDefinition {
 
         torrentId = init.torrentId;
         reportDelay = init.reportDelay;
-        
+
         reportConfig = new ReportConfig(config());
-        if(reportConfig.reportDir == null) {
+        if (reportConfig.reportDir == null) {
             fileCounter = -1;
         } else {
             try {
-                File tf = new File(reportConfig.reportDir + File.separator + torrentId.toString() + ".transfer.csv");
-                if(tf.exists()) {
+                File tf = new File(reportConfig.reportDir + File.separator + torrentId.toString() + ".data.csv");
+                if (tf.exists()) {
                     tf.delete();
                     tf.createNewFile();
                 }
-                transferFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tf)));
-                File lf = new File(reportConfig.reportDir + File.separator + torrentId.toString() + ".load.csv");
-                if(lf.exists()) {
+                dataFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(tf)));
+                File lf = new File(reportConfig.reportDir + File.separator + torrentId.toString() + ".download.csv");
+                if (lf.exists()) {
                     lf.delete();
                     lf.createNewFile();
                 }
-                loadFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(lf)));
-                fileCounter = 1000*1000;
+                downloadFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(lf)));
+                fileCounter = 1000 * 1000;
             } catch (FileNotFoundException ex) {
                 throw new RuntimeException("file report error");
             } catch (IOException ex) {
@@ -109,10 +103,7 @@ public class ReportComp extends ComponentDefinition {
         subscribe(handleStart, control);
         subscribe(handleDownloadStarting, torrentPort);
         subscribe(handleDownloadDone, torrentPort);
-        subscribe(handleTransferStatusResponse, torrentPort);
-        
-        subscribe(handleReport, timerPort);
-        
+        subscribe(handleTorrentTrackingIndication, torrentPort);
         subscribe(handleStatusSummaryRequest, reportPort);
     }
 
@@ -120,139 +111,128 @@ public class ReportComp extends ComponentDefinition {
         @Override
         public void handle(Start event) {
             LOG.info("{}starting...", logPrefix);
-            scheduleReport(torrentId);
         }
     };
-    
+
     @Override
     public void tearDown() {
         LOG.warn("{}tearing down", logPrefix);
-        if(reportConfig.reportDir != null) {
+        if (reportConfig.reportDir != null) {
             try {
-                transferFile.close();
-                loadFile.close();
+                dataFile.close();
+                downloadFile.close();
             } catch (IOException ex) {
                 throw new RuntimeException("file report error");
             }
         }
     }
 
-    Handler handleDownloadStarting = new Handler<TransferStatus.DownloadStarting>() {
+    Handler handleDownloadStarting = new Handler<TorrentTracking.DownloadStarting>() {
         @Override
-        public void handle(TransferStatus.DownloadStarting event) {
+        public void handle(TorrentTracking.DownloadStarting event) {
             LOG.info("{}download:{} starting", logPrefix, event.overlayId);
             startingTime = System.currentTimeMillis();
             status = TorrentStatus.DOWNLOADING;
-            percentageCompleted = 0;
-            transferSpeed = new ConnMngrReport(0, 0);
+            dataReport = event.dataReport;
+//            dataHeader(dataReport.fileNames);
         }
     };
 
-    Handler handleDownloadDone = new Handler<TransferStatus.DownloadDone>() {
+    Handler handleDownloadDone = new Handler<TorrentTracking.DownloadDone>() {
         @Override
-        public void handle(TransferStatus.DownloadDone event) {
+        public void handle(TorrentTracking.DownloadDone event) {
             LOG.info("{}download:{} done", logPrefix, event.overlayId);
             long transferTime = System.currentTimeMillis() - startingTime;
-            LOG.info("{}download completed in:{} avg dwnl speed:{} KB/s", new Object[]{logPrefix, transferTime, (double)transferSize/transferTime});
-            trigger(new DownloadSummaryEvent(torrentId, transferSize, transferTime), reportPort);
-            transferSpeed = transferSpeed.resetDownloadSpeed();
+            dataReport = event.dataReport;
+            LOG.info("{}download completed in:{} avg dwnl speed:{} B/s", new Object[]{logPrefix, transferTime, (double) dataReport.totalSize.getValue1() / transferTime});
+            trigger(new DownloadSummaryEvent(torrentId, dataReport.totalSize.getValue1(), transferTime), reportPort);
             status = TorrentStatus.UPLOADING;
-            percentageCompleted = 100;
+            fileCounter = 0;
         }
     };
 
-    Handler handleTransferStatusResponse = new Handler<TransferStatus.Response>() {
+    Handler handleTorrentTrackingIndication = new Handler<TorrentTracking.Indication>() {
         @Override
-        public void handle(TransferStatus.Response resp) {
-            transferSpeed = resp.transferSpeed;
-            percentageCompleted = resp.percentageCompleted;
-//            LOG.info("{}report transfer pc:{} ds:{} us:{}", new Object[]{logPrefix, percentageCompleted, transferSpeed.totalDownloadSpeed, transferSpeed.totalUploadSpeed});
-//            LOG.info("{}report comp qd:{} bs:{} ts:{} cs:{} ecs:{}", new Object[]{logPrefix, resp.compLoadReport.avgQueueDelay, resp.compLoadReport.totalBufferSize, 
-//                resp.compLoadReport.totalTransferSize, resp.compLoadReport.totalCacheSize, resp.compLoadReport.totalExtendedCacheSize});
-            fileReport(resp);
+        public void handle(TorrentTracking.Indication resp) {
+            LOG.info("{}reporting", logPrefix);
+            dataReport = resp.dataReport;
+            downloadReport = resp.downloadReport;
+            if (fileCounter > 0) {
+                dataValues(resp.dataReport);
+                downloadValues(resp.downloadReport);
+                fileCounter--;
+            }
+            if (fileCounter == 0) {
+                try {
+                    dataFile.close();
+                    downloadFile.close();
+                } catch (IOException ex) {
+                    throw new RuntimeException("file report error");
+                }
+                fileCounter--;
+            }
         }
     };
-    
-    private void fileReport(TransferStatus.Response resp) {
-        if(fileCounter > 0) {
-            try {
-                transferFile.write(resp.percentageCompleted + "," + resp.transferSpeed.totalDownloadSpeed + "," 
-                        + resp.transferSpeed.totalUploadSpeed + "," + resp.appCwnd + "\n");
-                transferFile.flush();
-                loadFile.write(resp.compLoadReport.avgQueueDelay + "," + resp.compLoadReport.instQueueDelay + "," 
-                        + resp.compLoadReport.avgBufferSize + "," + resp.compLoadReport.instBufferSize + "\n");
-                loadFile.flush();
-            } catch (IOException ex) {
-                throw new RuntimeException("file report error");
+
+    private void dataHeader(TreeMap<Integer, String> files) {
+        try {
+            dataFile.write("total");
+            for (String file : files.values()) {
+                dataFile.write("," + file);
             }
-            fileCounter--;
-        } else if (fileCounter == 0) {
-            try {
-                transferFile.close();
-                loadFile.close();
-            } catch (IOException ex) {
-                throw new RuntimeException("file report error");
-            }
-            fileCounter--;
+            dataFile.write("\n");
+        } catch (IOException ex) {
+            throw new RuntimeException("file report error");
         }
     }
-    
-    Handler handleReport = new Handler<ReportTimeout>() {
-        @Override
-        public void handle(ReportTimeout event) {
-            trigger(new TransferStatus.Request(event.overlayId), torrentPort);
+
+    private void dataValues(DataReport report) {
+        try {
+            dataFile.write("" + 100 * ((double) report.totalSize.getValue1()) / report.totalSize.getValue0());
+            for (Integer fileId : report.fileNames.keySet()) {
+                if (report.pending.contains(fileId)) {
+                    dataFile.write(",0");
+                    continue;
+                }
+                if (report.completed.contains(fileId)) {
+                    dataFile.write(",100");
+                    continue;
+                }
+                Pair<Long, Long> progress = report.ongoing.get(fileId);
+                dataFile.write("," + 100 * ((double) progress.getValue1()) / progress.getValue0());
+            }
+            dataFile.write("\n");
+        } catch (IOException ex) {
+            throw new RuntimeException("file report error");
         }
-    };
-    
+    }
+
+    private void downloadValues(DownloadReport report) {
+        try {
+            downloadFile.write(report.total.throughput.inTimeThroughput / 1024 + "," + report.total.throughput.timedOutThroughput / 1024 + ","
+                    + report.total.ongoingBlocks + "," + report.total.cwnd +  "\n");
+        } catch (IOException ex) {
+            throw new RuntimeException("file report error");
+        }
+    }
+
     Handler handleStatusSummaryRequest = new Handler<StatusSummaryEvent.Request>() {
         @Override
         public void handle(StatusSummaryEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            answer(req, req.success(new TorrentExtendedStatus(torrentId, status, transferSpeed, percentageCompleted)));
+            double percentageCompleted = 100 * ((double) dataReport.totalSize.getValue1()) / dataReport.totalSize.getValue0();
+            answer(req, req.success(new TorrentExtendedStatus(torrentId, status, downloadReport.total.throughput.inTimeThroughput, percentageCompleted)));
         }
     };
-    
+
     public static class Init extends se.sics.kompics.Init<ReportComp> {
+
         public final Identifier torrentId;
         public final long reportDelay;
 
         public Init(Identifier torrentId, long reportDelay) {
             this.torrentId = torrentId;
             this.reportDelay = reportDelay;
-        }
-    }
-
-    public void scheduleReport(Identifier overlayId) {
-        SchedulePeriodicTimeout st = new SchedulePeriodicTimeout(reportDelay, reportDelay);
-        Timeout t = new ReportTimeout(st, overlayId);
-        st.setTimeoutEvent(t);
-        trigger(st, timerPort);
-        reportTId = t.getTimeoutId();
-    }
-
-    public void cancelReport() {
-        CancelPeriodicTimeout ct = new CancelPeriodicTimeout(reportTId);
-        trigger(ct, timerPort);
-        reportTId = null;
-    }
-
-    public static class ReportTimeout extends Timeout implements StreamEvent {
-
-        public final Identifier overlayId;
-
-        public ReportTimeout(SchedulePeriodicTimeout st, Identifier overlayId) {
-            super(st);
-            this.overlayId = overlayId;
-        }
-
-        @Override
-        public Identifier getId() {
-            return new UUIDIdentifier(getTimeoutId());
-        }
-
-        @Override
-        public String toString() {
-            return "Report<" + overlayId + ">Timeout<" + getId() + ">";
         }
     }
 }

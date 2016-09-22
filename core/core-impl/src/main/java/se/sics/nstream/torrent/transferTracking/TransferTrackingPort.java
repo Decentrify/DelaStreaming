@@ -16,21 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.transfer;
+package se.sics.nstream.torrent.transferTracking;
 
 import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.FPDControl;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DwnlConnPort extends PortType {
+public class TransferTrackingPort extends PortType {
     {
-        request(FPDControl.class);
-        request(DownloadBlocks.class);
-        indication(CompletedBlocks.class);
+        indication(DownloadTrackingReport.class);
+        indication(DownloadConnectionClosed.class);
     }
 }

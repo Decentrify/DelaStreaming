@@ -20,7 +20,6 @@ package se.sics.gvod.mngr.util;
 
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.library.util.TorrentStatus;
-import se.sics.nstream.torrent.ConnMngrReport;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -28,13 +27,13 @@ import se.sics.nstream.torrent.ConnMngrReport;
 public class TorrentExtendedStatus {
     public final Identifier torrentId;
     public final TorrentStatus torrentStatus;
-    public final ConnMngrReport transferSpeed;
+    public final double downloadSpeed;
     public final double percentageComplete;
     
-    public TorrentExtendedStatus(Identifier torrentId, TorrentStatus torrentStatus, ConnMngrReport transferSpeed, double percentageComplete) {
+    public TorrentExtendedStatus(Identifier torrentId, TorrentStatus torrentStatus, double downloadSpeed, double percentageComplete) {
         this.torrentStatus = torrentStatus;
         this.torrentId = torrentId;
-        this.transferSpeed = transferSpeed;
+        this.downloadSpeed = downloadSpeed;
         this.percentageComplete = percentageComplete;
     }
 }

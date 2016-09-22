@@ -20,6 +20,7 @@ package se.sics.nstream.torrent.fileMngr;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -37,6 +38,7 @@ import se.sics.nstream.storage.buffer.SimpleAppendKBuffer;
 import se.sics.nstream.storage.cache.SimpleKCache;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.CompleteFileMngr;
+import se.sics.nstream.torrent.DataReport;
 import se.sics.nstream.torrent.util.BufferName;
 import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.util.BlockDetails;
@@ -50,15 +52,16 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentFileMngr {
+
     private final MyTorrent torrent;
     private final Map<Integer, String> idToString = new HashMap<>();
     private final Map<Integer, BlockDetails> defaultBlocks = new HashMap<>();
     private final Map<Integer, TFileComplete> completed = new HashMap<>();
     private final Map<Integer, TFileIncomplete> ongoing = new HashMap<>();
     private final TreeMap<Integer, TFileIncomplete> pending = new TreeMap<>();
-    
+
     public TorrentFileMngr(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler, ComponentLoadTracking loadTracker,
-           MyTorrent torrent, boolean complete) {
+            MyTorrent torrent, boolean complete) {
         this.torrent = torrent;
         int id = 1; //0 is def phase
         for (Map.Entry<String, FileExtendedDetails> entry : torrent.extended.entrySet()) {
@@ -94,7 +97,7 @@ public class TorrentFileMngr {
             }
         }
     }
-    
+
     public void start() {
         for (TFileComplete e : completed.values()) {
             e.start();
@@ -106,7 +109,7 @@ public class TorrentFileMngr {
             e.start();
         }
     }
-    
+
     public boolean isIdle() {
         boolean idle = true;
         for (TFileComplete e : completed.values()) {
@@ -132,31 +135,31 @@ public class TorrentFileMngr {
             e.close();
         }
     }
-    
+
     public boolean complete() {
-        return pending.isEmpty()&&ongoing.isEmpty();
+        return pending.isEmpty() && ongoing.isEmpty();
     }
-    
+
     public void complete(int fileId) {
         TFileWrite fileWriter = ongoing.remove(fileId);
-        if(fileWriter == null || !fileWriter.isComplete()) {
+        if (fileWriter == null || !fileWriter.isComplete()) {
             throw new RuntimeException("ups");
         }
         completed.put(fileId, fileWriter.complete());
     }
-    
+
     public boolean hasOngoing() {
         return !ongoing.isEmpty();
     }
-    
+
     public boolean hasPending() {
         return !pending.isEmpty();
     }
-    
+
     public BlockDetails getDefaultBlock(int fileId) {
         return defaultBlocks.get(fileId);
     }
-    
+
     public TFileRead readFrom(int fileId) {
         TFileRead transferMngr = completed.get(fileId);
         if (transferMngr == null) {
@@ -175,18 +178,41 @@ public class TorrentFileMngr {
         Map<Identifier, StreamResource> resources = resources(next.getKey());
         return Pair.with(next.getKey(), resources);
     }
-    
+
     public Map<Identifier, StreamResource> resources(int fileId) {
         String fileName = idToString.get(fileId);
-        FileExtendedDetails details= torrent.extended.get(fileName);
-        if(details == null) {
+        FileExtendedDetails details = torrent.extended.get(fileName);
+        if (details == null) {
             throw new RuntimeException("ups");
         }
         Map<Identifier, StreamResource> result = new HashMap<>();
         result.put(details.getMainResource().getValue0().getEndpointId(), details.getMainResource().getValue1());
-        for(Pair<StreamEndpoint, StreamResource> resource: details.getSecondaryResource()) {
+        for (Pair<StreamEndpoint, StreamResource> resource : details.getSecondaryResource()) {
             result.put(resource.getValue0().getEndpointId(), resource.getValue1());
         }
         return result;
+    }
+
+    public DataReport report() {
+        long totalMaxSize = 0;
+        long totalCurrentSize = 0;
+        Map<Integer, Pair<Long, Long>> ongoingReport = new HashMap<>();
+        for(Map.Entry<Integer, TFileComplete> file : completed.entrySet()) {
+            Pair<Long, Long> size = file.getValue().report();
+            totalMaxSize += size.getValue0();
+            totalCurrentSize += size.getValue1();
+        }
+        for (Map.Entry<Integer, TFileIncomplete> file : ongoing.entrySet()) {
+            Pair<Long, Long> size = file.getValue().report();
+            totalMaxSize += size.getValue0();
+            totalCurrentSize += size.getValue1();
+            ongoingReport.put(file.getKey(), size);
+        }
+        for (Map.Entry<Integer, TFileIncomplete> file : pending.entrySet()) {
+            Pair<Long, Long> size = file.getValue().report();
+            totalMaxSize += size.getValue0();
+            totalCurrentSize += size.getValue1();
+        }
+        return new DataReport(new TreeMap<>(idToString), Pair.with(totalMaxSize, totalCurrentSize), new HashSet<>(completed.keySet()), ongoingReport, new HashSet<>(pending.keySet()));
     }
 }
