@@ -31,7 +31,12 @@ import org.junit.Test;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.test.DownloadHashRequestEC;
 import se.sics.nstream.test.DownloadHashResponseEC;
@@ -42,11 +47,20 @@ import se.sics.nstream.torrent.FileIdentifier;
  */
 public class DownloadHashSerializerTest {
 
+    private static OverlayIdFactory overlayIdFactory;
+
     @BeforeClass
     public static void setup() {
+        BasicIdentifiers.registerDefaults(1234l);
+        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory(), new OverlayId.BasicTypeComparator());
+
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
         serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
+
+        byte ownerId = 1;
+        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
     }
 
     @Test
@@ -59,7 +73,7 @@ public class DownloadHashSerializerTest {
         Set<Integer> hashes = new TreeSet<>();
         hashes.add(1);
         hashes.add(2);
-        original = new DownloadHash.Request(new FileIdentifier(new IntIdentifier(1), 2), hashes);
+        original = new DownloadHash.Request(new FileIdentifier(overlayIdFactory.randomId(), 2), hashes);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
@@ -81,10 +95,10 @@ public class DownloadHashSerializerTest {
         Set<Integer> hashes = new TreeSet<>();
         hashes.add(1);
         hashes.add(2);
-        DownloadHash.Request request = new DownloadHash.Request(new FileIdentifier(new IntIdentifier(1), 2), hashes);
+        DownloadHash.Request request = new DownloadHash.Request(new FileIdentifier(overlayIdFactory.randomId(), 2), hashes);
         Map<Integer, byte[]> hashValues = new TreeMap<>();
-        hashValues.put(1, new byte[]{1,2,3,4});
-        hashValues.put(2, new byte[]{1,2,3,4,5});
+        hashValues.put(1, new byte[]{1, 2, 3, 4});
+        hashValues.put(2, new byte[]{1, 2, 3, 4, 5});
         original = request.success(hashValues);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);

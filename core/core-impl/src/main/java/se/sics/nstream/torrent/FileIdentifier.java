@@ -20,16 +20,17 @@ package se.sics.nstream.torrent;
 
 import java.util.Objects;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class FileIdentifier implements Identifier {
 
-    public final Identifier overlayId;
+    public final OverlayId overlayId;
     public final int fileId;
 
-    public FileIdentifier(Identifier overlayId, int fileId) {
+    public FileIdentifier(OverlayId overlayId, int fileId) {
         this.overlayId = overlayId;
         this.fileId = fileId;
     }

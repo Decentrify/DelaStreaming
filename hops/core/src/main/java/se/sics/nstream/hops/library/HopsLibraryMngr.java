@@ -33,10 +33,8 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.hops.HopsFED;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSHelper;
 import se.sics.nstream.hops.hdfs.HDFSResource;
@@ -62,6 +60,7 @@ import se.sics.nstream.util.FileExtendedDetails;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsLibraryMngr {
+    private static final String TORRENT_LIST = "torrent"; 
 
     private static final Logger LOG = LoggerFactory.getLogger(LibraryMngrComp.class);
     private String logPrefix = "";
@@ -76,7 +75,7 @@ public class HopsLibraryMngr {
     private final Negative<TransferMngrPort> transferMngrPort;
     private final Positive<ReportPort> reportPort;
     //**************************************************************************
-    private Library library = new Library();
+    private Library library;
     private HopsTorrentCompMngr components;
     //**************************************************************************
     private Map<Identifier, HopsTorrentDownloadEvent.StartRequest> pendingExtDwnl = new HashMap<>();
@@ -89,6 +88,8 @@ public class HopsLibraryMngr {
         this.config = config;
         this.extPorts = extPorts;
         this.selfAdr = selfAdr;
+        
+        library = new Library(TorrentList.readTorrentList(config.getValue("torrent.list.save", String.class)));
         components = new HopsTorrentCompMngr(selfAdr, proxy, extPorts, logPrefix);
         torrentPort = proxy.getPositive(HopsTorrentPort.class).getPair();
         transferMngrPort = proxy.getPositive(TransferMngrPort.class).getPair();
@@ -115,8 +116,6 @@ public class HopsLibraryMngr {
         components.destroy(torrentId);
         library.destroyed(torrentId);
     }
-    //**************************************************************************
-
     //**********************************UPLOAD**********************************
     Handler handleHopsTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
         @Override
@@ -177,9 +176,11 @@ public class HopsLibraryMngr {
     private Map<String, FileExtendedDetails> getUploadExtendedDetails(HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource, Map<String, FileBaseDetails> baseDetails) {
         Map<String, FileExtendedDetails> extendedDetails = new HashMap<>();
         for (String fileName : baseDetails.keySet()) {
-            Identifier randomlyAssignedResourceId = UUIDIdentifier.randomId();
-            FileExtendedDetails fed = new HopsFED(Pair.with(hdfsEndpoint, new HDFSResource(manifestResource.dirPath, fileName, randomlyAssignedResourceId)));
-            extendedDetails.put(fileName, fed);
+            //TODO Alex - maybe special kind of overlay
+            throw new RuntimeException("fix me");
+//            Identifier randomlyAssignedResourceId = UUIDId.randomId();
+//            FileExtendedDetails fed = new HopsFED(Pair.with(hdfsEndpoint, new HDFSResource(manifestResource.dirPath, fileName, randomlyAssignedResourceId)));
+//            extendedDetails.put(fileName, fed);
         }
         return extendedDetails;
     }
@@ -286,7 +287,7 @@ public class HopsLibraryMngr {
             LOG.trace("{}received:{}", logPrefix, req);
             Transfer.DownloadRequest nstreamReq = pendingIntDwnl.remove(req.torrentId);
             if (req.extendedDetails.isSuccess()) {
-                MyTorrent torrent = library.download(req.torrentId, req.extendedDetails.getValue());
+                MyTorrent torrent = library.download3(req.torrentId, req.extendedDetails.getValue());
                 if (nstreamReq != null) {
                     components.advanceDownload(req.torrentId, req.hdfsEndpoint, req.kafkaEndpoint);
                     Transfer.DownloadResponse nstreamResp = nstreamReq.answer(torrent);

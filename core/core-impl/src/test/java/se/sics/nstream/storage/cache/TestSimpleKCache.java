@@ -29,8 +29,13 @@ import se.sics.kompics.config.TypesafeConfig;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
@@ -62,8 +67,13 @@ public class TestSimpleKCache {
     private static final Logger LOG = LoggerFactory.getLogger(TestSimpleKCache.class);
 
     MockStreamEndpoint readEndpoint = new MockStreamEndpoint();
-    MockStreamResource readResource = new MockStreamResource("mock1", new IntIdentifier(1));
-    Identifier reader = new IntIdentifier(0);
+    //TODO probably new type of overlay
+    byte owner = 1;
+    IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+    OverlayIdFactory overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, owner);
+    MockStreamResource readResource = new MockStreamResource("mock1", overlayIdFactory.randomId());
+    IntIdFactory intIdFactory = new IntIdFactory(null);
+    Identifier reader = intIdFactory.rawId(0);
     KBlock b0, b1, b2;
     Map<Long, KBlock> hintE = new TreeMap<>();
     Map<Long, KBlock> hint0 = new TreeMap<>();
@@ -215,10 +225,10 @@ public class TestSimpleKCache {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        
+
         Validator validator;
         MockDelayedRead read = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
-        
+
         //**********************************************************************
         int hintStamp = 1;
         SimpleKCache skCache = buildCache(config, proxy, syncExHandler);
@@ -247,9 +257,10 @@ public class TestSimpleKCache {
         //**********************************************************************
         closeCache(skCache, proxy, syncExHandler);
     }
-    
+
     /**
-     * NONE->PENDING_FETCH->DELAYED_READ(REQ)(2 solved by 1 fetch)->PENDING_FETCH->CACHE->DELAYED_READ(RESP)->CLEAN->END
+     * NONE->PENDING_FETCH->DELAYED_READ(REQ)(2 solved by 1
+     * fetch)->PENDING_FETCH->CACHE->DELAYED_READ(RESP)->CLEAN->END
      */
     public void testChain4() throws KReferenceException {
         LOG.info("***********************************************************");
@@ -258,12 +269,11 @@ public class TestSimpleKCache {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        MockStreamResource readResource = new MockStreamResource("mock1", new IntIdentifier(1));
-        
+
         Validator validator;
         MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
         MockDelayedRead read2 = new MockDelayedRead(new KPieceImpl(0, -1, 1l, 7l));
-        
+
         //**********************************************************************
         int hintStamp = 1;
         SimpleKCache skCache = buildCache(config, proxy, syncExHandler);
@@ -296,9 +306,10 @@ public class TestSimpleKCache {
         //**********************************************************************
         closeCache(skCache, proxy, syncExHandler);
     }
-    
+
     /**
-     * NONE->PENDING_FETCH->DELAYED_READ(REQ)(2 solved by 2 fetch)->PENDING_FETCH->CACHE->DELAYED_READ(RESP)->CLEAN->END
+     * NONE->PENDING_FETCH->DELAYED_READ(REQ)(2 solved by 2
+     * fetch)->PENDING_FETCH->CACHE->DELAYED_READ(RESP)->CLEAN->END
      */
     public void testChain5() throws KReferenceException {
         LOG.info("***********************************************************");
@@ -307,12 +318,11 @@ public class TestSimpleKCache {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        MockStreamResource readResource = new MockStreamResource("mock1", new IntIdentifier(1));
-        
+
         Validator validator;
         MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
         MockDelayedRead read2 = new MockDelayedRead(new KPieceImpl(1, -1, 0l, 17l));
-        
+
         //**********************************************************************
         int hintStamp = 1;
         SimpleKCache skCache = buildCache(config, proxy, syncExHandler);
@@ -349,7 +359,7 @@ public class TestSimpleKCache {
         //**********************************************************************
         closeCache(skCache, proxy, syncExHandler);
     }
-    
+
     private SimpleKCache buildCache(Config config, MockComponentProxy proxy, MockExceptionHandler syncExHandler) {
         proxy.expect(new PortValidator(MockStreamPort.class, false));
         proxy.expect(new PortValidator(Timer.class, false));

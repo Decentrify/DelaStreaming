@@ -20,7 +20,7 @@ package se.sics.gvod.core.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -34,7 +34,7 @@ public class DownloadVideo {
         public final Identifier overlayId;
 
         public Request(String videoName, Identifier overlayId) {
-            this.id = UUIDIdentifier.randomId();
+            this.id = UUIDId.randomId();
             this.videoName = videoName;
             this.overlayId = overlayId;
         }

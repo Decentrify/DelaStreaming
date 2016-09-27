@@ -27,7 +27,12 @@ import org.junit.Test;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.test.NetConnectRequestEC;
 import se.sics.nstream.test.NetConnectResponseEC;
@@ -36,11 +41,18 @@ import se.sics.nstream.test.NetConnectResponseEC;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class NetConnectSerializerTest {
+    private static OverlayIdFactory overlayIdFactory;
     @BeforeClass
     public static void setup() {
+        BasicIdentifiers.registerDefaults(1234l);
+        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory(), new OverlayId.BasicTypeComparator());
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
         serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
+        
+        byte ownerId = 1;
+        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
     }
 
     @Test
@@ -50,7 +62,8 @@ public class NetConnectSerializerTest {
         NetConnect.Request original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        original = new NetConnect.Request(new IntIdentifier(1));
+        
+        original = new NetConnect.Request(overlayIdFactory.randomId());
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
@@ -69,7 +82,7 @@ public class NetConnectSerializerTest {
         NetConnect.Response original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        NetConnect.Request request = new NetConnect.Request(new IntIdentifier(1));
+        NetConnect.Request request = new NetConnect.Request(overlayIdFactory.randomId());
         original = request.answer(true);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);

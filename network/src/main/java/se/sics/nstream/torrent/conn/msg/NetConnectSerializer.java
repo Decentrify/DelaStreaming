@@ -22,7 +22,10 @@ import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -30,9 +33,11 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 public class NetConnectSerializer {
     public static class Request implements Serializer {
         private final int id;
+        private final Class msgIdType;
         
         public Request(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
         }
         
         @Override
@@ -43,23 +48,25 @@ public class NetConnectSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             NetConnect.Request obj = (NetConnect.Request)o;
-            Serializers.toBinary(obj.eventId, buf);
-            Serializers.toBinary(obj.overlayId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+            Serializers.lookupSerializer(OverlayId.class).toBinary(obj.overlayId, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
-            Identifier overlayId = (Identifier)Serializers.fromBinary(buf, hint);
-            return new NetConnect.Request(eventId, overlayId);
+            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+            OverlayId overlayId = (OverlayId)Serializers.lookupSerializer(OverlayId.class).fromBinary(buf, hint);
+            return new NetConnect.Request(msgId, overlayId);
         }
     }
     
      public static class Response implements Serializer {
         private final int id;
+        private final Class msgIdType;
         
         public Response(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
         }
         
         @Override
@@ -70,17 +77,17 @@ public class NetConnectSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             NetConnect.Response obj = (NetConnect.Response)o;
-            Serializers.toBinary(obj.eventId, buf);
-            Serializers.toBinary(obj.overlayId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+            Serializers.lookupSerializer(OverlayId.class).toBinary(obj.overlayId, buf);
             buf.writeBoolean(obj.result);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
-            Identifier overlayId = (Identifier)Serializers.fromBinary(buf, hint);
+            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+            OverlayId overlayId = (OverlayId)Serializers.lookupSerializer(OverlayId.class).fromBinary(buf, hint);
             boolean result = buf.readBoolean();
-            return new NetConnect.Response(eventId, overlayId, result);
+            return new NetConnect.Response(msgId, overlayId, result);
         }
     }
 }

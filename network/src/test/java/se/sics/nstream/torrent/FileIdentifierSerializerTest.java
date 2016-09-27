@@ -27,20 +27,33 @@ import org.junit.Test;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
-import se.sics.nstream.torrent.FileIdentifier;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class FileIdentifierSerializerTest {
+    private static OverlayIdFactory overlayIdFactory;
+    
      @BeforeClass
     public static void setup() {
+        BasicIdentifiers.registerDefaults(1234l);
+        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory(), new OverlayId.BasicTypeComparator());
+        
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
         serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
+        
+        byte ownerId = 1;
+        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
     }
     
     @Test
@@ -49,7 +62,7 @@ public class FileIdentifierSerializerTest {
         FileIdentifier original, copy;
         ByteBuf serializedOriginal, serializedCopy;
         
-        original = new FileIdentifier(new IntIdentifier(0), 1);
+        original = new FileIdentifier(overlayIdFactory.randomId(), 1);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 

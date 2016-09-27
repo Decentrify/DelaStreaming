@@ -20,21 +20,14 @@ package se.sics.nstream.report.event;
 
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
-import se.sics.nstream.StreamEvent;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ReportTimeout extends Timeout implements StreamEvent {
+public class ReportTimeout extends Timeout {
     public ReportTimeout(SchedulePeriodicTimeout spt) {
         super(spt);
     }
     
-    @Override
-    public Identifier getId() {
-        return new UUIDIdentifier(getTimeoutId());
-    }
 }

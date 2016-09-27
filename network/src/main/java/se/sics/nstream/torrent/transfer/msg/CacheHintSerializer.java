@@ -18,12 +18,13 @@
  */
 package se.sics.nstream.torrent.transfer.msg;
 
-import se.sics.nstream.torrent.transfer.msg.CacheHint;
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.torrent.FileIdentifier;
 
@@ -34,9 +35,11 @@ import se.sics.nstream.torrent.FileIdentifier;
 public class CacheHintSerializer {
     public static class Request implements Serializer {
         private final int id;
+        private final Class msgIdType;
         
         public Request(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
         }
 
         @Override
@@ -47,25 +50,27 @@ public class CacheHintSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             CacheHint.Request obj = (CacheHint.Request)o;
-            Serializers.toBinary(obj.eventId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
             Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
             Serializers.lookupSerializer(KHint.Summary.class).toBinary(obj.requestCache, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
+            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
             FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
             KHint.Summary requestCache = (KHint.Summary)Serializers.lookupSerializer(KHint.Summary.class).fromBinary(buf, hint);
-            return new CacheHint.Request(eventId, fileId, requestCache);
+            return new CacheHint.Request(msgId, fileId, requestCache);
         }
     }
     
     public static class Response implements Serializer {
         private final int id;
+        private final Class msgIdType;
         
         public Response(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
         }
         
         @Override
@@ -77,15 +82,15 @@ public class CacheHintSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             CacheHint.Response obj = (CacheHint.Response)o;
             
-            Serializers.toBinary(obj.eventId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
             Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
+            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
             FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
-            return new CacheHint.Response(eventId, fileId);
+            return new CacheHint.Response(msgId, fileId);
         }
     }
 }

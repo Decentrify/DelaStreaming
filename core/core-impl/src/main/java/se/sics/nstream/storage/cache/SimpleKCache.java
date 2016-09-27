@@ -39,9 +39,7 @@ import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
@@ -478,15 +476,10 @@ public class SimpleKCache implements KCache {
         return new SimpleKCacheReport(cacheRef.size(), systemRef.size());
     }
 
-    public static class ExtendedCacheClean extends Timeout implements Identifiable {
+    public static class ExtendedCacheClean extends Timeout {
 
         public ExtendedCacheClean(SchedulePeriodicTimeout spt) {
             super(spt);
-        }
-
-        @Override
-        public Identifier getId() {
-            return new UUIDIdentifier(getTimeoutId());
         }
     }
 

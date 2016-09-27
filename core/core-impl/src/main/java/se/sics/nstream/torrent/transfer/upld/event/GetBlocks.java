@@ -22,7 +22,8 @@ import java.util.Map;
 import java.util.Set;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
@@ -44,7 +45,7 @@ public class GetBlocks {
         public final KHint.Summary cacheHint;
 
         public Request(TorrentConnId connId, Set<Integer> blocks, boolean withHashes, KHint.Summary cacheHint) {
-            this.eventId = UUIDIdentifier.randomId();
+            this.eventId = UUIDId.randomId();
             this.connId = connId;
             this.blocks = blocks;
             this.withHashes = withHashes;
@@ -57,7 +58,7 @@ public class GetBlocks {
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return connId.fileId.overlayId;
         }
 
@@ -93,7 +94,7 @@ public class GetBlocks {
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return connId.fileId.overlayId;
         }
 

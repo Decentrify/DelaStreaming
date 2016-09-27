@@ -20,7 +20,8 @@ package se.sics.nstream.torrent.transfer.dwnl.event;
 
 import java.util.Map;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
 import se.sics.nstream.torrent.util.TorrentConnId;
 
@@ -35,14 +36,14 @@ public class CompletedBlocks implements TorrentConnEvent {
     public final Map<Integer, byte[]> blocks;
     
     public CompletedBlocks(TorrentConnId connId, Map<Integer, byte[]> hashes, Map<Integer, byte[]> blocks) {
-        this.eventId = UUIDIdentifier.randomId();
+        this.eventId = UUIDId.randomId();
         this.connId = connId;
         this.hashes = hashes;
         this.blocks = blocks;
     }
     
     @Override
-    public Identifier overlayId() {
+    public OverlayId overlayId() {
         return connId.fileId.overlayId;
     }
 

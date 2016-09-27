@@ -202,7 +202,7 @@ public class DwnlConnComp extends ComponentDefinition {
     }
 
     public void handlePieceTimeout(DownloadPiece.Request req) {
-        if (pendingMsgs.remove(req.eventId) != null) {
+        if (pendingMsgs.remove(req.msgId) != null) {
             long now = System.currentTimeMillis();
             workController.pieceTimeout(req.piece);
             cwnd.timeout(now, ledbatConfig.mss);
@@ -211,7 +211,7 @@ public class DwnlConnComp extends ComponentDefinition {
     }
 
     public void handleHashTimeout(DownloadHash.Request req) {
-        if (pendingMsgs.remove(req.eventId) != null) {
+        if (pendingMsgs.remove(req.msgId) != null) {
             long now = System.currentTimeMillis();
             workController.hashTimeout(req.hashes);
             cwnd.timeout(now, ledbatConfig.mss);
@@ -275,7 +275,7 @@ public class DwnlConnComp extends ComponentDefinition {
         LOG.trace("{}received:{}", logPrefix, content);
         DownloadPiece.Response resp = content.getWrappedContent();
         long now = System.currentTimeMillis();
-        if (pendingMsgs.remove(resp.eventId) != null) {
+        if (pendingMsgs.remove(resp.msgId) != null) {
             workController.piece(resp.piece, resp.val.getRight());
             cwnd.success(now, ledbatConfig.mss, content);
             tryDownload(now);
@@ -294,7 +294,7 @@ public class DwnlConnComp extends ComponentDefinition {
         LOG.trace("{}received:{}", logPrefix, content);
         DownloadHash.Response resp = content.getWrappedContent();
         long now = System.currentTimeMillis();
-        if (pendingMsgs.remove(resp.eventId) != null) {
+        if (pendingMsgs.remove(resp.msgId) != null) {
             workController.hashes(resp.hashValues);
             cwnd.success(now, ledbatConfig.mss, content);
             tryDownload(now);

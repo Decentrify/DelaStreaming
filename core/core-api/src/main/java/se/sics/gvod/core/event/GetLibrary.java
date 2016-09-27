@@ -26,7 +26,7 @@ import se.sics.gvod.core.util.FileStatus;
 import se.sics.gvod.core.util.ResponseStatus;
 import se.sics.kompics.KompicsEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -36,7 +36,7 @@ public class GetLibrary {
         public final Identifier id;
         
         public Request() {
-            this.id = UUIDIdentifier.randomId();
+            this.id = UUIDId.randomId();
         }
 
         @Override
@@ -61,7 +61,7 @@ public class GetLibrary {
         }
         
         public Indication(ResponseStatus respStatus, Map<String, Pair<FileStatus, Identifier>> fileStatusMap) {
-            this(UUIDIdentifier.randomId(), respStatus, fileStatusMap);
+            this(UUIDId.randomId(), respStatus, fileStatusMap);
         }
 
         @Override

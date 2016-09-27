@@ -35,7 +35,7 @@ public class NetDetailedStateResponseEC implements EqualComparator<NetDetailedSt
         if (o1 == null || o2 == null) {
             return false;
         }
-        if (!o1.eventId.equals(o2.eventId)) {
+        if (!o1.msgId.equals(o2.msgId)) {
             return false;
         }
         if (!o1.torrentId.equals(o2.torrentId)) {

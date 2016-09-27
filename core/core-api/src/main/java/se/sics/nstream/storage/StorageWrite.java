@@ -19,8 +19,9 @@
 package se.sics.nstream.storage;
 
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.util.StreamResource;
@@ -43,7 +44,7 @@ public class StorageWrite {
         }
         
         public Request(StreamResource resource, long pos, byte[] value) {
-            this(UUIDIdentifier.randomId(), resource, pos, value);
+            this(BasicIdentifiers.eventId(), resource, pos, value);
         }
         
         @Override
@@ -52,7 +53,7 @@ public class StorageWrite {
         }
         
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return resource.getResourceId();
         }
         
@@ -76,7 +77,7 @@ public class StorageWrite {
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return req.overlayId();
         }
     }

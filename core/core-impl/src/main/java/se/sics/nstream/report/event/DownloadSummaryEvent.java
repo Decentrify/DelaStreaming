@@ -18,10 +18,11 @@
  */
 package se.sics.nstream.report.event;
 
-import se.sics.nstream.StreamEvent;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
+import se.sics.nstream.StreamEvent;
 
 /**
  *
@@ -29,19 +30,19 @@ import se.sics.ktoolbox.util.overlays.OverlayEvent;
  */
 public class DownloadSummaryEvent implements StreamEvent, OverlayEvent {
     public final Identifier eventId;
-    public final Identifier torrentId;
+    public final OverlayId torrentId;
     public final long transferSize;
     public final long transferTime;
 
-    public DownloadSummaryEvent(Identifier eventId, Identifier torrentId, long transferSize, long transferTime) {
+    public DownloadSummaryEvent(Identifier eventId, OverlayId torrentId, long transferSize, long transferTime) {
         this.eventId = eventId;
         this.transferSize = transferSize;
         this.transferTime = transferTime;
         this.torrentId = torrentId;
     }
     
-    public DownloadSummaryEvent(Identifier torrentId, long transferSize, long transferTime) {
-        this(UUIDIdentifier.randomId(), torrentId, transferSize, transferTime);
+    public DownloadSummaryEvent(OverlayId torrentId, long transferSize, long transferTime) {
+        this(BasicIdentifiers.eventId(), torrentId, transferSize, transferTime);
     }
     
     @Override
@@ -50,12 +51,12 @@ public class DownloadSummaryEvent implements StreamEvent, OverlayEvent {
     }
     
     @Override
-    public Identifier overlayId() {
+    public OverlayId overlayId() {
         return torrentId;
     }
     
     @Override
     public String toString() {
-        return "Download<" + torrentId + ">SummaryEvent<" + getId() + ">";
+        return "Download<" + overlayId() + ">SummaryEvent<" + getId() + ">";
     }
 }

@@ -20,7 +20,7 @@ package se.sics.gvod.core.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 
 
 /**
@@ -35,7 +35,7 @@ public class UploadVideo {
         public final Identifier overlayId;
 
         public Request(String videoName, Identifier overlayId) {
-            this.id = UUIDIdentifier.randomId();
+            this.id = UUIDId.randomId();
             this.videoName = videoName;
             this.overlayId = overlayId;
         }

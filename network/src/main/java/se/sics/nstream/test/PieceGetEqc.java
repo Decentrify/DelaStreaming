@@ -34,7 +34,7 @@ public class PieceGetEqc {
         
         @Override
         public boolean isEqual(PieceGet.Request o1, PieceGet.Request o2) {
-            if(!o1.eventId.equals(o2.eventId)) {
+            if(!o1.msgId.equals(o2.msgId)) {
                 return false;
             }
             if(!o1.overlayId.equals(o2.overlayId)) {
@@ -62,7 +62,7 @@ public class PieceGetEqc {
         
         @Override
         public boolean isEqual(PieceGet.RangeRequest o1, PieceGet.RangeRequest o2) {
-            if(!o1.eventId.equals(o2.eventId)) {
+            if(!o1.msgId.equals(o2.msgId)) {
                 return false;
             }
             if(!o1.overlayId.equals(o2.overlayId)) {
@@ -90,7 +90,7 @@ public class PieceGetEqc {
     public static class Response implements EqualComparator<PieceGet.Response> {
         @Override
         public boolean isEqual(PieceGet.Response o1, PieceGet.Response o2) {
-            if(!o1.eventId.equals(o2.eventId)) {
+            if(!o1.msgId.equals(o2.msgId)) {
                 return false;
             }
             if(!o1.overlayId.equals(o2.overlayId)) {

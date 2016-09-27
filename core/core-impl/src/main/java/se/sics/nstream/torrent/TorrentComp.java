@@ -47,6 +47,7 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.idextractor.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.idextractor.SourceHostIdExtractor;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -112,7 +113,7 @@ public class TorrentComp extends ComponentDefinition {
     private static final long ADVANCE_PERIOD = 1000;
 
     private final TorrentConfig torrentConfig;
-    private final Identifier torrentId;
+    private final OverlayId torrentId;
     private final KAddress selfAdr;
     private boolean seeder;
     //**************************************************************************
@@ -934,13 +935,13 @@ public class TorrentComp extends ComponentDefinition {
     public static class Init extends se.sics.kompics.Init<TorrentComp> {
 
         public final KAddress selfAdr;
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
         public final StorageProvider storageProvider;
         public List<KAddress> partners;
         public final boolean upload;
         public final Optional<MyTorrent> torrentDef;
 
-        public Init(KAddress selfAdr, Identifier torrentId, StorageProvider storageProvider, List<KAddress> partners,
+        public Init(KAddress selfAdr, OverlayId torrentId, StorageProvider storageProvider, List<KAddress> partners,
                 boolean upload, Optional<MyTorrent> torrentDef) {
             this.selfAdr = selfAdr;
             this.torrentId = torrentId;

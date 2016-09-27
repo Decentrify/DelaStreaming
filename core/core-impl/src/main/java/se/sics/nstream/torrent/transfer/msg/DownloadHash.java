@@ -20,8 +20,9 @@ package se.sics.nstream.torrent.transfer.msg;
 
 import java.util.Map;
 import java.util.Set;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.torrent.FileIdentifier;
 import se.sics.nstream.torrent.util.TorrentConnId;
 
@@ -30,27 +31,27 @@ import se.sics.nstream.torrent.util.TorrentConnId;
  */
 public class DownloadHash {
     public static class Request implements ConnectionMsg {
-        public final Identifier eventId;
+        public final Identifier msgId;
         public final FileIdentifier fileId;
         public final Set<Integer> hashes;
         
-        protected Request(Identifier eventId, FileIdentifier fileId, Set<Integer> hashes) {
-            this.eventId = eventId;
+        protected Request(Identifier msgId, FileIdentifier fileId, Set<Integer> hashes) {
+            this.msgId = msgId;
             this.fileId = fileId;
             this.hashes = hashes;
         }
 
         public Request(FileIdentifier fileId, Set<Integer> hashes) {
-            this(UUIDIdentifier.randomId(), fileId, hashes);
+            this(BasicIdentifiers.eventId(), fileId, hashes);
         }
         
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return fileId.overlayId;
         }
         
@@ -65,27 +66,27 @@ public class DownloadHash {
     }
     
     public static class Response implements ConnectionMsg {
-        public final Identifier eventId;
+        public final Identifier msgId;
         public final FileIdentifier fileId;
         public final Map<Integer, byte[]> hashValues;
         
-        protected Response(Identifier eventId, FileIdentifier fileId, Map<Integer, byte[]> hashValues) {
-            this.eventId = eventId;
+        protected Response(Identifier msgId, FileIdentifier fileId, Map<Integer, byte[]> hashValues) {
+            this.msgId = msgId;
             this.fileId = fileId;
             this.hashValues = hashValues;
         }
         
         private Response(Request req, Map<Integer, byte[]> hashValues) {
-            this(req.eventId, req.fileId, hashValues);
+            this(req.msgId, req.fileId, hashValues);
         }
         
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
         
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return fileId.overlayId;
         }
 

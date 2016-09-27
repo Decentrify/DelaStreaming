@@ -18,8 +18,9 @@
  */
 package se.sics.nstream.torrent.conn.msg;
 
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 
 /**
@@ -27,26 +28,26 @@ import se.sics.ktoolbox.util.overlays.OverlayEvent;
  */
 public class NetConnect {
     public static class Request implements OverlayEvent {
-        public final Identifier eventId;
-        public final Identifier overlayId;
+        public final Identifier msgId;
+        public final OverlayId overlayId;
         
-        protected Request(Identifier eventId, Identifier overlayId) {
-            this.eventId = eventId;
+        protected Request(Identifier msgId, OverlayId overlayId) {
+            this.msgId = msgId;
             this.overlayId = overlayId;
         }
         
-        public Request(Identifier overlayId) {
-            this(UUIDIdentifier.randomId(), overlayId);
+        public Request(OverlayId overlayId) {
+            this(BasicIdentifiers.msgId(), overlayId);
         }
         
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return overlayId;
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
         
         public Response answer(boolean result) {
@@ -55,28 +56,28 @@ public class NetConnect {
     }
     
     public static class Response implements OverlayEvent {
-        public final Identifier eventId;
-        public final Identifier overlayId;
+        public final Identifier msgId;
+        public final OverlayId overlayId;
         public final boolean result;
         
-        protected Response(Identifier eventId, Identifier overlayId, boolean result) {
-            this.eventId = eventId;
+        protected Response(Identifier msgId, OverlayId overlayId, boolean result) {
+            this.msgId = msgId;
             this.overlayId = overlayId;
             this.result = result;
         }
         
         private Response(Request req, boolean result) {
-            this(req.eventId, req.overlayId, result);
+            this(req.msgId, req.overlayId, result);
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return overlayId;
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
     }
 }

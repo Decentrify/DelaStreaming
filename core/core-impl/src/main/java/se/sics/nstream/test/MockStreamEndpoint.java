@@ -18,14 +18,22 @@
  */
 package se.sics.nstream.test;
 
+import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.nstream.util.StreamEndpoint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class MockStreamEndpoint implements StreamEndpoint {
+    private final Identifier endpointId;
+    
+    public MockStreamEndpoint() {
+        IntIdFactory factory = new IntIdFactory(null);
+        endpointId = factory.id(new BasicBuilders.IntBuilder(0));
+    }
+    
     @Override
     public Class<MockStreamPort> getStoragePortType() {
         return MockStreamPort.class;
@@ -43,6 +51,6 @@ public class MockStreamEndpoint implements StreamEndpoint {
 
     @Override
     public Identifier getEndpointId() {
-        return new IntIdentifier(0);
+        return endpointId;
     }
 }

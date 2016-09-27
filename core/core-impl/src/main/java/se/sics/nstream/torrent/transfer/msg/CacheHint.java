@@ -18,8 +18,9 @@
  */
 package se.sics.nstream.torrent.transfer.msg;
 
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.torrent.FileIdentifier;
 import se.sics.nstream.torrent.util.TorrentConnId;
@@ -31,27 +32,27 @@ public class CacheHint {
 
     public static class Request implements ConnectionMsg {
 
-        public final Identifier eventId;
+        public final Identifier msgId;
         public final FileIdentifier fileId;
         public final KHint.Summary requestCache;
 
-        protected Request(Identifier eventId, FileIdentifier fileId, KHint.Summary requestCache) {
-            this.eventId = eventId;
+        protected Request(Identifier msgId, FileIdentifier fileId, KHint.Summary requestCache) {
+            this.msgId = msgId;
             this.fileId = fileId;
             this.requestCache = requestCache;
         }
 
         public Request(FileIdentifier fileId, KHint.Summary requestCache) {
-            this(UUIDIdentifier.randomId(), fileId, requestCache);
+            this(BasicIdentifiers.msgId(), fileId, requestCache);
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return fileId.overlayId;
         }
 
@@ -66,32 +67,32 @@ public class CacheHint {
 
         @Override
         public String toString() {
-            return "CHReq<" + fileId.toString() + ",ts:" + requestCache.lStamp + "," + eventId.toString() + ">";
+            return "CHReq<" + fileId.toString() + ",ts:" + requestCache.lStamp + "," + msgId.toString() + ">";
         }
     }
 
     public static class Response implements ConnectionMsg {
 
-        public final Identifier eventId;
+        public final Identifier msgId;
         public final FileIdentifier fileId;
 
-        protected Response(Identifier eventId, FileIdentifier fileId) {
-            this.eventId = eventId;
+        protected Response(Identifier msgId, FileIdentifier fileId) {
+            this.msgId = msgId;
             this.fileId = fileId;
         }
 
         private Response(Request req) {
-            this(req.eventId, req.fileId);
+            this(req.msgId, req.fileId);
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return fileId.overlayId;
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         @Override
@@ -101,7 +102,7 @@ public class CacheHint {
         
          @Override
         public String toString() {
-            return "CHResp<" + fileId.toString() + "," + eventId.toString() + ">";
+            return "CHResp<" + fileId.toString() + "," + msgId.toString() + ">";
         }
     }
 }

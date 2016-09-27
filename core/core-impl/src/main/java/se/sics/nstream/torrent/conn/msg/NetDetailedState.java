@@ -18,8 +18,9 @@
  */
 package se.sics.nstream.torrent.conn.msg;
 
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.transfer.MyTorrent.ManifestDef;
 
@@ -30,58 +31,57 @@ public class NetDetailedState {
 
     public static class Request implements OverlayEvent {
 
-        public final Identifier eventId;
-        public final Identifier torrentId;
+        public final Identifier msgId;
+        public final OverlayId torrentId;
 
-        protected Request(Identifier eventId, Identifier torrentId) {
-            this.eventId = eventId;
+        protected Request(Identifier msgId, OverlayId torrentId) {
+            this.msgId = msgId;
             this.torrentId = torrentId;
         }
 
-        public Request(Identifier torrentId) {
-            this(UUIDIdentifier.randomId(), torrentId);
+        public Request(OverlayId torrentId) {
+            this(BasicIdentifiers.msgId(), torrentId);
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return torrentId;
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         public Response success(ManifestDef manifestDef) {
-            return new Response(this, manifestDef
-            );
+            return new Response(this, manifestDef);
         }
     }
 
     public static class Response implements OverlayEvent {
 
-        public final Identifier eventId;
-        public final Identifier torrentId;
+        public final Identifier msgId;
+        public final OverlayId torrentId;
         public final ManifestDef manifestDef;
 
-        protected Response(Identifier eventId, Identifier torrentId, ManifestDef manifestDef) {
-            this.eventId = eventId;
+        protected Response(Identifier msgId, OverlayId torrentId, ManifestDef manifestDef) {
+            this.msgId = msgId;
             this.torrentId = torrentId;
             this.manifestDef = manifestDef;
         }
 
         private Response(Request req, ManifestDef manifestDef) {
-            this(req.eventId, req.torrentId, manifestDef);
+            this(req.msgId, req.torrentId, manifestDef);
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return torrentId;
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
     }
 }

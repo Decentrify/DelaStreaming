@@ -18,8 +18,9 @@
  */
 package se.sics.nstream.torrent.event;
 
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.util.event.StreamMsg;
 
@@ -30,25 +31,25 @@ public class TorrentGet {
 
     public static class Request implements StreamMsg.Request {
 
-        public final Identifier eventId;
-        public final Identifier overlayId;
+        public final Identifier msgId;
+        public final OverlayId overlayId;
 
-        public Request(Identifier eventId, Identifier overlayId) {
-            this.eventId = eventId;
+        public Request(Identifier msgId, OverlayId overlayId) {
+            this.msgId = msgId;
             this.overlayId = overlayId;
         }
 
-        public Request(Identifier overlayId) {
-            this(UUIDIdentifier.randomId(), overlayId);
+        public Request(OverlayId overlayId) {
+            this(BasicIdentifiers.msgId(), overlayId);
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
         
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return overlayId;
         }
 
@@ -63,28 +64,28 @@ public class TorrentGet {
 
     public static class Response implements StreamMsg.Response {
 
-        public final Identifier eventId;
-        public final Identifier overlayId;
+        public final Identifier msgId;
+        public final OverlayId overlayId;
         public final Result.Status status;
         public final byte[] torrent;
         
-        Response(Identifier eventId, Identifier overlayId, Result.Status status, byte[] torrent) {
-            this.eventId = eventId;
+        Response(Identifier msgId, OverlayId overlayId, Result.Status status, byte[] torrent) {
+            this.msgId = msgId;
             this.overlayId = overlayId;
             this.status = status;
             this.torrent = torrent;
         }
         public Response(Request req, Result.Status status, byte[] torrent) {
-            this(req.eventId, req.overlayId, status, torrent);
+            this(req.msgId, req.overlayId, status, torrent);
         }
         
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
         
          @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return overlayId;
         }
 

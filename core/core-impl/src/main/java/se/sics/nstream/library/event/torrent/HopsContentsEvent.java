@@ -24,7 +24,7 @@ import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.result.Result;
 
 /**
@@ -42,7 +42,7 @@ public class HopsContentsEvent {
         }
         
         public Request(Optional<Integer> projectId) {
-            this(UUIDIdentifier.randomId(), projectId);
+            this(UUIDId.randomId(), projectId);
         }
         
         public Response success(List<ElementSummary> value) {

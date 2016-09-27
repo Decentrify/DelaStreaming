@@ -22,7 +22,10 @@ import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.util.BlockDetails;
 
@@ -35,9 +38,11 @@ public class NetDetailedStateSerializer {
     public static class Request implements Serializer {
 
         private final int id;
+        private final Class msgIdType;
 
         public Request(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
         }
 
         @Override
@@ -48,24 +53,26 @@ public class NetDetailedStateSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             NetDetailedState.Request obj = (NetDetailedState.Request) o;
-            Serializers.toBinary(obj.eventId, buf);
-            Serializers.toBinary(obj.torrentId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+            Serializers.lookupSerializer(OverlayId.class).toBinary(obj.torrentId, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
-            Identifier torrentId = (Identifier) Serializers.fromBinary(buf, hint);
-            return new NetDetailedState.Request(eventId, torrentId);
+            Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+            OverlayId torrentId = (OverlayId) Serializers.lookupSerializer(OverlayId.class).fromBinary(buf, hint);
+            return new NetDetailedState.Request(msgId, torrentId);
         }
     }
 
     public static class Response implements Serializer {
 
         private final int id;
+        private final Class msgIdType;
 
         public Response(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
         }
 
         @Override
@@ -76,26 +83,23 @@ public class NetDetailedStateSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             NetDetailedState.Response obj = (NetDetailedState.Response) o;
-            Serializers.toBinary(obj.eventId, buf);
-            Serializers.toBinary(obj.torrentId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+            Serializers.lookupSerializer(OverlayId.class).toBinary(obj.torrentId, buf);
             buf.writeInt(obj.manifestDef.nrBlocks);
-            buf.writeInt(obj.manifestDef.lastBlock.blockSize);
-            buf.writeInt(obj.manifestDef.lastBlock.defaultPieceSize);
-            buf.writeInt(obj.manifestDef.lastBlock.lastPieceSize);
-            buf.writeInt(obj.manifestDef.lastBlock.nrPieces);
+            Serializers.lookupSerializer(BlockDetails.class).toBinary(obj.manifestDef.lastBlock, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier) Serializers.fromBinary(buf, hint);
-            Identifier torrentId = (Identifier) Serializers.fromBinary(buf, hint);
+            Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+            OverlayId torrentId = (OverlayId) Serializers.lookupSerializer(OverlayId.class).fromBinary(buf, hint);
             int nrBlocks = buf.readInt();
             int blockSize = buf.readInt();
             int defaultPieceSize = buf.readInt();
             int lastPieceSize = buf.readInt();
             int nrPieces = buf.readInt();
             BlockDetails lastBlock = new BlockDetails(blockSize, nrPieces, defaultPieceSize, lastPieceSize);
-            return new NetDetailedState.Response(eventId, torrentId, new MyTorrent.ManifestDef(nrBlocks, lastBlock));
+            return new NetDetailedState.Response(msgId, torrentId, new MyTorrent.ManifestDef(nrBlocks, lastBlock));
         }
     }
 }

@@ -21,7 +21,7 @@ package se.sics.nstream.torrent.conn.event;
 import se.sics.kompics.KompicsEvent;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.nstream.torrent.util.TorrentConnId;
 
 /**
@@ -34,7 +34,7 @@ public class CloseTransfer {
         public final TorrentConnId connId;
 
         public Base(TorrentConnId connId) {
-            this.eventId = UUIDIdentifier.randomId();
+            this.eventId = UUIDId.randomId();
             this.connId = connId;
         }
 

@@ -19,7 +19,8 @@
 package se.sics.nstream.torrent.conn.msg;
 
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.torrent.FileIdentifier;
 
@@ -31,25 +32,25 @@ public class NetOpenTransfer {
 
     public static class Request implements OverlayEvent {
 
-        public final Identifier eventId;
+        public final Identifier msgId;
         public final FileIdentifier fileId;
 
-        protected Request(Identifier eventId, FileIdentifier fileId) {
-            this.eventId = eventId;
+        protected Request(Identifier msgId, FileIdentifier fileId) {
+            this.msgId = msgId;
             this.fileId = fileId;
         }
 
         public Request(FileIdentifier fileId) {
-            this(UUIDIdentifier.randomId(), fileId);
+            this(UUIDId.randomId(), fileId);
         }
         
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return fileId.overlayId;
         }
         
@@ -60,29 +61,28 @@ public class NetOpenTransfer {
     
     public static class Response implements OverlayEvent {
 
-        public final Identifier eventId;
+        public final Identifier msgId;
         public final FileIdentifier fileId;
         public final boolean result;
 
-        protected Response(Identifier eventId, FileIdentifier fileId, boolean result) {
-            this.eventId = eventId;
+        protected Response(Identifier msgId, FileIdentifier fileId, boolean result) {
+            this.msgId = msgId;
             this.fileId = fileId;
             this.result = result;
         }
 
         private Response(Request req, boolean result) {
-            this(req.eventId, req.fileId, result);
+            this(req.msgId, req.fileId, result);
         }
         
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return fileId.overlayId;
         }
-
     }
 }

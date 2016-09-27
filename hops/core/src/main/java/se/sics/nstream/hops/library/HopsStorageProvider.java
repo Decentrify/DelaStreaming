@@ -22,8 +22,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.nstream.hops.hdfs.HDFSControlPort;
 import se.sics.nstream.hops.hdfs.HDFSPort;
 import se.sics.nstream.hops.kafka.KafkaControlPort;
@@ -36,8 +37,9 @@ import se.sics.nstream.torrent.StorageProvider;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsStorageProvider implements StorageProvider {
-    public static final Identifier hdfsIdentifier = new IntIdentifier(1);
-    public static final Identifier kafkaIdentifier = new IntIdentifier(2);
+    private static final IntIdFactory factory = new IntIdFactory(null);
+    public static final Identifier hdfsIdentifier = factory.id(new BasicBuilders.IntBuilder(1));
+    public static final Identifier kafkaIdentifier = factory.id(new BasicBuilders.IntBuilder(2));
     
     @Override
     public List<Class<? extends StoragePort>> requiredStoragePorts() {

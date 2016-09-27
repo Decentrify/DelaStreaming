@@ -35,7 +35,7 @@ public class NetConnectResponseEC implements EqualComparator<NetConnect.Response
         if(o1 == null || o2 == null) {
             return false;
         }
-        if(!o1.eventId.equals(o2.eventId)) {
+        if(!o1.msgId.equals(o2.msgId)) {
             return false;
         }
         if(!o1.overlayId.equals(o2.overlayId)) {

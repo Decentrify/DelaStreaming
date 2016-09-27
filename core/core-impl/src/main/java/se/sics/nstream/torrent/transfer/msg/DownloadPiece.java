@@ -20,8 +20,9 @@ package se.sics.nstream.torrent.transfer.msg;
 
 import org.javatuples.Pair;
 import se.sics.ktoolbox.util.Either;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.torrent.FileIdentifier;
 import se.sics.nstream.torrent.util.TorrentConnId;
@@ -31,27 +32,27 @@ import se.sics.nstream.torrent.util.TorrentConnId;
  */
 public class DownloadPiece {
     public static class Request implements ConnectionMsg {
-        public final Identifier eventId;
+        public final Identifier msgId;
         public final FileIdentifier fileId;
         public final Pair<Integer, Integer> piece;
         
-        protected Request(Identifier eventId, FileIdentifier fileId, Pair<Integer, Integer> piece) {
-            this.eventId = eventId;
+        protected Request(Identifier msgId, FileIdentifier fileId, Pair<Integer, Integer> piece) {
+            this.msgId = msgId;
             this.fileId = fileId;
             this.piece = piece;
         }
 
         public Request(FileIdentifier fileId, Pair<Integer, Integer> piece) {
-            this(UUIDIdentifier.randomId(), fileId, piece);
+            this(BasicIdentifiers.msgId(), fileId, piece);
         }
         
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return fileId.overlayId;
         }
         
@@ -66,25 +67,25 @@ public class DownloadPiece {
         
         @Override
         public String toString() {
-            return "DwnlPieceReq<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + eventId.toString() + ">";
+            return "DwnlPieceReq<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + msgId.toString() + ">";
         }
     }
     
     public static class Response implements ConnectionMsg {
-        public final Identifier eventId;
+        public final Identifier msgId;
         public final FileIdentifier fileId;
         public final Pair<Integer, Integer> piece;
         public final Either<KReference<byte[]>, byte[]> val;
         
-        private Response(Identifier eventId, FileIdentifier fileId, Pair<Integer, Integer> piece, Either val) {
-            this.eventId = eventId;
+        private Response(Identifier msgId, FileIdentifier fileId, Pair<Integer, Integer> piece, Either val) {
+            this.msgId = msgId;
             this.fileId = fileId;
             this.piece = piece;
             this.val = val;
         }
         
         private Response(Request req, KReference<byte[]> val) {
-            this(req.eventId, req.fileId, req.piece, Either.left(val));
+            this(req.msgId, req.fileId, req.piece, Either.left(val));
         }
         
         protected Response(Identifier eventId, FileIdentifier fileId, Pair<Integer, Integer> piece, byte[] val) {
@@ -93,11 +94,11 @@ public class DownloadPiece {
         
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
         
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return fileId.overlayId;
         }
 
@@ -108,7 +109,7 @@ public class DownloadPiece {
         
         @Override
         public String toString() {
-            return "DwnlPieceResp<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + eventId.toString() + ">";
+            return "DwnlPieceResp<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + msgId.toString() + ">";
         }
     }
 }

@@ -24,7 +24,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.config.Config;
 import se.sics.kompics.config.TypesafeConfig;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
@@ -60,7 +64,12 @@ public class TestSimpleAppendKBuffer {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        MockStreamResource writeResource = new MockStreamResource("mock1", new IntIdentifier(1));
+        
+        //TODO probably new type of overlay
+        byte owner = 1;
+        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        OverlayIdFactory overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, owner);
+        MockStreamResource writeResource = new MockStreamResource("mock1", overlayIdFactory.randomId());
         MockStreamEndpoint writeEndpoint = new MockStreamEndpoint();
         MockWC allWriteResult = new MockWC();
 
@@ -135,7 +144,11 @@ public class TestSimpleAppendKBuffer {
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
         MockStreamEndpoint writeEndpoint = new MockStreamEndpoint();
-        MockStreamResource writeResource = new MockStreamResource("mock1", new IntIdentifier(1));
+        //TODO probably new type of overlay
+        byte owner = 1;
+        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        OverlayIdFactory overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, owner);
+        MockStreamResource writeResource = new MockStreamResource("mock1", overlayIdFactory.randomId());
         MockWC allWriteResult = new MockWC();
         long appendPos = 0;
         Validator validator;
@@ -205,7 +218,11 @@ public class TestSimpleAppendKBuffer {
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
         MockStreamEndpoint writeEndpoint = new MockStreamEndpoint();
-        MockStreamResource writeResource = new MockStreamResource("mock1", new IntIdentifier(1));
+        //TODO probably new type of overlay
+        byte owner = 1;
+        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        OverlayIdFactory overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, owner);
+        MockStreamResource writeResource = new MockStreamResource("mock1", overlayIdFactory.randomId());
         MockWC allWriteResult = new MockWC();
         long appendPos = 0;
         Validator validator;

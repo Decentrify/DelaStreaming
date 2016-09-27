@@ -1,0 +1,1 @@
+{"endpoints":{"1":"hdfs://bbc1.sics.se:20000"},"users":{"1":"user1"},"files":{"01":{"stringId":"01","torrentName":"torrent1","endpointId":"1","torrentDir":"/experiment/upload1","manifest":"manifest"},"02":{"stringId":"02","torrentName":"torrent2","endpointId":"1","torrentDir":"/experiment/upload2","manifest":"manifest"}}}

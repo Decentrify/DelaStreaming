@@ -20,7 +20,7 @@ package se.sics.nstream.report.event;
 
 import se.sics.kompics.KompicsEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.torrent.DataReport;
 import se.sics.nstream.torrent.transferTracking.DownloadReport;
@@ -42,7 +42,7 @@ public class TorrentTracking {
         }
 
         public DownloadStarting(Identifier overlayId, DataReport dataReport) {
-            this(UUIDIdentifier.randomId(), overlayId, dataReport);
+            this(UUIDId.randomId(), overlayId, dataReport);
         }
 
         @Override
@@ -69,7 +69,7 @@ public class TorrentTracking {
         }
 
         public DownloadDone(Identifier overlayId, DataReport dataReport) {
-            this(UUIDIdentifier.randomId(), overlayId, dataReport);
+            this(UUIDId.randomId(), overlayId, dataReport);
         }
 
         @Override

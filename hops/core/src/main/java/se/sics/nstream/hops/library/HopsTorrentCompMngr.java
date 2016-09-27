@@ -35,6 +35,7 @@ import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.idextractor.EventOverlayIdExtractor;
 import se.sics.ktoolbox.util.idextractor.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -88,7 +89,7 @@ public class HopsTorrentCompMngr {
         this.logPrefix = logPrefix;
     }
 
-    public void startDownload(Positive<TransferMngrPort> transferMngrPort, Identifier torrentId, List<KAddress> partners) {
+    public void startDownload(Positive<TransferMngrPort> transferMngrPort, OverlayId torrentId, List<KAddress> partners) {
         LOG.info("{}setting up torrent download {}", logPrefix, torrentId);
         Triplet<Component, Component, Component> torrentComp = setupTorrent(transferMngrPort, false, torrentId, (Optional) Optional.absent(), partners);
         proxy.trigger(Start.event, torrentComp.getValue0().control());
@@ -117,7 +118,7 @@ public class HopsTorrentCompMngr {
         proxy.trigger(Start.event, resourceMngr.control());
     }
 
-    public void startUpload(Positive<TransferMngrPort> transferMngrPort, Identifier torrentId, HDFSEndpoint hdfsEndpoint, MyTorrent torrentDef) {
+    public void startUpload(Positive<TransferMngrPort> transferMngrPort, OverlayId torrentId, HDFSEndpoint hdfsEndpoint, MyTorrent torrentDef) {
         LOG.info("{}setting up torrent upload {}", logPrefix, torrentId);
         Triplet<Component, Component, Component> torrentComp = setupTorrent(transferMngrPort, true, torrentId, Optional.of(torrentDef), new ArrayList<KAddress>());
         LOG.info("{}setting up hdfs {}", logPrefix, torrentId);
@@ -133,7 +134,7 @@ public class HopsTorrentCompMngr {
         proxy.trigger(Start.event, resourceMngr.control());
     }
 
-    private Triplet<Component, Component, Component> setupTorrent(Positive<TransferMngrPort> transferMngrPort, boolean upload, Identifier torrentId,
+    private Triplet<Component, Component, Component> setupTorrent(Positive<TransferMngrPort> transferMngrPort, boolean upload, OverlayId torrentId,
             Optional<MyTorrent> torrentDef, List<KAddress> partners) {
         Component networkRetryComp = proxy.create(BestEffortNetworkComp.class, new BestEffortNetworkComp.Init(selfAdr));
         networkRetry.put(torrentId, networkRetryComp);

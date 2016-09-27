@@ -21,7 +21,7 @@ package se.sics.nstream.library.event.system;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 
@@ -37,7 +37,7 @@ public class SystemAddressEvent {
         }
         
         public Request() {
-            this(UUIDIdentifier.randomId());
+            this(UUIDId.randomId());
         }
         
         public Response success(KAddress systemAdr) {

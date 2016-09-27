@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.hops.hdfs;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.util.StreamResource;
 
 /**
@@ -28,9 +28,9 @@ public class HDFSResource implements StreamResource {
 
     public final String dirPath;
     public final String fileName;
-    public final Identifier resourceId;
+    public final OverlayId resourceId;
 
-    public HDFSResource(String dirPath, String fileName, Identifier resourceId) {
+    public HDFSResource(String dirPath, String fileName, OverlayId resourceId) {
         this.dirPath = dirPath;
         this.fileName = fileName;
         this.resourceId = resourceId;
@@ -42,7 +42,7 @@ public class HDFSResource implements StreamResource {
     }
 
     @Override
-    public Identifier getResourceId() {
+    public OverlayId getResourceId() {
         return resourceId;
     }
 }

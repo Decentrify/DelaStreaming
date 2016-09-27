@@ -20,8 +20,9 @@ package se.sics.nstream.report.event;
 
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.StreamEvent;
 
@@ -31,15 +32,15 @@ import se.sics.nstream.StreamEvent;
 public class StatusSummaryEvent {
     public static class Request extends Direct.Request<Response> implements StreamEvent, OverlayEvent {
         public final Identifier eventId;
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
         
-        public Request(Identifier eventId, Identifier torrentId) {
+        public Request(Identifier eventId, OverlayId torrentId) {
             this.eventId = eventId;
             this.torrentId = torrentId;
         }
         
-        public Request(Identifier torrentId) {
-            this(UUIDIdentifier.randomId(), torrentId);
+        public Request(OverlayId torrentId) {
+            this(BasicIdentifiers.eventId(), torrentId);
         }
         
         @Override
@@ -48,7 +49,7 @@ public class StatusSummaryEvent {
         }
         
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return torrentId;
         }
         
@@ -72,7 +73,7 @@ public class StatusSummaryEvent {
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return req.overlayId();
         }
     }

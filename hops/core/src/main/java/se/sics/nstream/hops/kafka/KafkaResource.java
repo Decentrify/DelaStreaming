@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.hops.kafka;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.util.StreamResource;
 
 /**
@@ -27,9 +27,9 @@ import se.sics.nstream.util.StreamResource;
 public class KafkaResource implements StreamResource {
     public final String sessionId;
     public final String topicName;
-    public final Identifier resourceId;
+    public final OverlayId resourceId;
 
-    public KafkaResource(String sessionId, String topicName, Identifier resourceId) {
+    public KafkaResource(String sessionId, String topicName, OverlayId resourceId) {
         this.sessionId = sessionId;
         this.topicName = topicName;
         this.resourceId = resourceId;
@@ -41,7 +41,7 @@ public class KafkaResource implements StreamResource {
     }
 
     @Override
-    public Identifier getResourceId() {
+    public OverlayId getResourceId() {
         return resourceId;
     }
 }

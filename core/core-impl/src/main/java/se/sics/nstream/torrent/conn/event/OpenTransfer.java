@@ -21,7 +21,7 @@ package se.sics.nstream.torrent.conn.event;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.torrent.util.TorrentConnId;
 
@@ -37,7 +37,7 @@ public class OpenTransfer {
         public final KAddress peer;
 
         public LeecherRequest(KAddress peer, TorrentConnId connId) {
-            this.eventId = UUIDIdentifier.randomId();
+            this.eventId = UUIDId.randomId();
             this.connId = connId;
             this.peer = peer;
         }
@@ -97,7 +97,7 @@ public class OpenTransfer {
         public final KAddress peer;
 
         public SeederRequest(KAddress peer, TorrentConnId connId) {
-            this.eventId = UUIDIdentifier.randomId();
+            this.eventId = UUIDId.randomId();
             this.connId = connId;
             this.peer = peer;
         }

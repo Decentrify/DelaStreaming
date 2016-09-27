@@ -22,7 +22,7 @@ import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 
 /**
  *
@@ -43,13 +43,13 @@ public class FileIdentifierSerializer implements Serializer {
     @Override
     public void toBinary(Object o, ByteBuf buf) {
         FileIdentifier obj = (FileIdentifier)o;
-        Serializers.toBinary(obj.overlayId, buf);
+        Serializers.lookupSerializer(OverlayId.class).toBinary(obj.overlayId, buf);
         buf.writeInt(obj.fileId);
     }
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-        Identifier overlayId = (Identifier)Serializers.fromBinary(buf, hint);
+        OverlayId overlayId = (OverlayId)Serializers.lookupSerializer(OverlayId.class).fromBinary(buf, hint);
         int fileId = buf.readInt();
         return new FileIdentifier(overlayId, fileId);
     }

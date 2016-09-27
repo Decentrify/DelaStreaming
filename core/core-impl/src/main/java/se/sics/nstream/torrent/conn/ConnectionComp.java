@@ -36,6 +36,7 @@ import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
@@ -70,7 +71,7 @@ public class ConnectionComp extends ComponentDefinition {
     Positive<Network> networkPort = requires(Network.class);
     Positive<Timer> timerPort = requires(Timer.class);
     //**************************************************************************
-    private final Identifier torrentId;
+    private final OverlayId torrentId;
     private final KAddress selfAdr;
     //**************************************************************************
     private final NetworkQueueLoadProxy networkQueueLoad;
@@ -275,11 +276,11 @@ public class ConnectionComp extends ComponentDefinition {
     //**************************************************************************
     public static class Init extends se.sics.kompics.Init<ConnectionComp> {
 
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
         public final KAddress selfAdr;
         public final Optional<ManifestDef> manifestDef;
 
-        public Init(Identifier torrentId, KAddress selfAdr, Optional<ManifestDef> manifestDef) {
+        public Init(OverlayId torrentId, KAddress selfAdr, Optional<ManifestDef> manifestDef) {
             this.torrentId = torrentId;
             this.selfAdr = selfAdr;
             this.manifestDef = manifestDef;

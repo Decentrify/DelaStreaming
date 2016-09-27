@@ -23,8 +23,10 @@ import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
@@ -42,13 +44,13 @@ public class HopsTorrentDownloadEvent {
     public static class StartRequest extends Direct.Request<StartResponse> implements StreamEvent {
 
         public final Identifier eventId;
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
         public final String torrentName;
         public final HDFSEndpoint hdfsEndpoint;
         public final HDFSResource manifest;
         public final List<KAddress> partners;
 
-        public StartRequest(Identifier eventId, Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
+        public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
             this.eventId = eventId;
             this.torrentId = torrentId;
             this.torrentName = torrentName;
@@ -57,8 +59,8 @@ public class HopsTorrentDownloadEvent {
             this.partners = partners;
         }
 
-        public StartRequest(Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
-            this(UUIDIdentifier.randomId(), torrentId, torrentName, hdfsEndpoint, manifest, partners);
+        public StartRequest(OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
+            this(BasicIdentifiers.eventId(), torrentId, torrentName, hdfsEndpoint, manifest, partners);
         }
 
         @Override
@@ -129,7 +131,7 @@ public class HopsTorrentDownloadEvent {
 
         public AdvanceRequest(Identifier torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint, 
                 Result<Map<String, FileExtendedDetails>> extendedDetails) {
-            this(UUIDIdentifier.randomId(), torrentId, hdfsEndpoint, kafkaEndpoint, extendedDetails);
+            this(UUIDId.randomId(), torrentId, hdfsEndpoint, kafkaEndpoint, extendedDetails);
         }
 
         @Override

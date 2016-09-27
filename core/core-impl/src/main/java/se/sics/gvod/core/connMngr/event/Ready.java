@@ -21,7 +21,7 @@ package se.sics.gvod.core.connMngr.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -31,7 +31,7 @@ public class Ready implements GVoDEvent {
     public final int slots;
     
     public Ready(int slots) {
-        this.id = UUIDIdentifier.randomId();
+        this.id = UUIDId.randomId();
         this.slots = slots;
     }
 

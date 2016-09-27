@@ -21,7 +21,7 @@ package se.sics.nstream.storage;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.nstream.util.StreamResource;
 
 /**
@@ -33,7 +33,7 @@ public class StorageControl {
         public final StreamResource resource;
         
         public OpenRequest(StreamResource resource) {
-            this.eventId = UUIDIdentifier.randomId();
+            this.eventId = UUIDId.randomId();
             this.resource = resource;
         }
 
@@ -65,7 +65,7 @@ public class StorageControl {
         public final StreamResource resource;
         
         public CloseRequest(StreamResource resource) {
-            this.eventId = UUIDIdentifier.randomId();
+            this.eventId = UUIDId.randomId();
             this.resource = resource;
         }
         

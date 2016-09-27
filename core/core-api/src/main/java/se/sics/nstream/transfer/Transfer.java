@@ -19,8 +19,9 @@
 package se.sics.nstream.transfer;
 
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
@@ -32,19 +33,19 @@ import se.sics.nstream.transfer.MyTorrent.Manifest;
 public class Transfer {
     public static class DownloadRequest extends Direct.Request<DownloadResponse> implements StreamEvent, OverlayEvent {
 
-        public final Identifier eventId;
-        public final Identifier torrentId;
+        public final Identifier msgId;
+        public final OverlayId torrentId;
         public final Result<Manifest> manifest;
 
-        public DownloadRequest(Identifier torrentId, Result<Manifest> manifest) {
-            this.eventId = UUIDIdentifier.randomId();
+        public DownloadRequest(OverlayId torrentId, Result<Manifest> manifest) {
+            this.msgId = BasicIdentifiers.msgId();
             this.torrentId = torrentId;
             this.manifest = manifest;
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
         
         public DownloadResponse answer(MyTorrent torrent) {
@@ -52,12 +53,12 @@ public class Transfer {
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return torrentId;
         }
     }
     
-    public static class DownloadResponse implements Direct.Response, StreamEvent {
+    public static class DownloadResponse implements Direct.Response, StreamEvent, OverlayEvent {
         public final DownloadRequest req;
         public final MyTorrent torrent;
         
@@ -69,6 +70,11 @@ public class Transfer {
         @Override
         public Identifier getId() {
             return req.getId();
+        }
+
+        @Override
+        public OverlayId overlayId() {
+            return req.overlayId();
         }
     }
 }

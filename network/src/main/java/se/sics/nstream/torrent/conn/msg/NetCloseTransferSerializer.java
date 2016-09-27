@@ -22,7 +22,9 @@ import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.nstream.torrent.FileIdentifier;
 
 /**
@@ -31,9 +33,11 @@ import se.sics.nstream.torrent.FileIdentifier;
  */
 public class NetCloseTransferSerializer implements Serializer {
     private final int id;
+    private final Class msgIdType;
     
     public NetCloseTransferSerializer(int id) {
         this.id = id;
+        this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
     }
     
     @Override
@@ -44,16 +48,16 @@ public class NetCloseTransferSerializer implements Serializer {
     @Override
     public void toBinary(Object o, ByteBuf buf) {
         NetCloseTransfer obj = (NetCloseTransfer)o;
-        Serializers.toBinary(obj.eventId, buf);
+        Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
         Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
         buf.writeBoolean(obj.leecher);
     }
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-        Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
+        Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
         FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
         boolean leecher = buf.readBoolean();
-        return new NetCloseTransfer(eventId, fileId, leecher);
+        return new NetCloseTransfer(msgId, fileId, leecher);
     }
 }

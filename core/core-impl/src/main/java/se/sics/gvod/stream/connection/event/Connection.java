@@ -23,7 +23,7 @@ import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.nstream.StreamEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
@@ -39,7 +39,7 @@ public class Connection {
         }
         
         public Request() {
-            this(UUIDIdentifier.randomId());
+            this(UUIDId.randomId());
         }
             
         public Response answer(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
@@ -69,7 +69,7 @@ public class Connection {
         }
 
         public Indication(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
-            this(UUIDIdentifier.randomId(), connections, descriptors);
+            this(UUIDId.randomId(), connections, descriptors);
         }
 
         @Override

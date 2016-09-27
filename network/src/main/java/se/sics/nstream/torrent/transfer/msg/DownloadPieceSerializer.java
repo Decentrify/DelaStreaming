@@ -23,7 +23,9 @@ import io.netty.buffer.ByteBuf;
 import org.javatuples.Pair;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.nstream.torrent.FileIdentifier;
@@ -35,9 +37,11 @@ import se.sics.nstream.torrent.FileIdentifier;
 public class DownloadPieceSerializer {
     public static class Request implements Serializer {
         private final int id;
+        private final Class msgIdType;
         
         public Request(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
         }
 
         @Override
@@ -48,7 +52,7 @@ public class DownloadPieceSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             DownloadPiece.Request obj = (DownloadPiece.Request)o;
-            Serializers.toBinary(obj.eventId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
             Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
             buf.writeInt(obj.piece.getValue0());
             buf.writeInt(obj.piece.getValue1());
@@ -56,19 +60,21 @@ public class DownloadPieceSerializer {
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
+            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
             FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
             int blockNr = buf.readInt();
             int pieceNr = buf.readInt();
-            return new DownloadPiece.Request(eventId, fileId, Pair.with(blockNr, pieceNr));
+            return new DownloadPiece.Request(msgId, fileId, Pair.with(blockNr, pieceNr));
         }
     }
     
     public static class Response implements Serializer {
         private final int id;
+        private final Class msgIdType;
         
         public Response(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
         }
 
         @Override
@@ -79,7 +85,7 @@ public class DownloadPieceSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             DownloadPiece.Response obj = (DownloadPiece.Response)o;
-            Serializers.toBinary(obj.eventId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
             Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
             buf.writeInt(obj.piece.getValue0());
             buf.writeInt(obj.piece.getValue1());
@@ -101,7 +107,7 @@ public class DownloadPieceSerializer {
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
+            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
             FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
             int blockNr = buf.readInt();
             int pieceNr = buf.readInt();
@@ -109,7 +115,7 @@ public class DownloadPieceSerializer {
             int pieceSize = buf.readInt();
             byte[] piece = new byte[pieceSize];
             buf.readBytes(piece);
-            return new DownloadPiece.Response(eventId, fileId, Pair.with(blockNr, pieceNr), piece);
+            return new DownloadPiece.Response(msgId, fileId, Pair.with(blockNr, pieceNr), piece);
         }
     }
 }

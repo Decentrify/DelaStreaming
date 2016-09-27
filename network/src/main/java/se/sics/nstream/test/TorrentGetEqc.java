@@ -30,7 +30,7 @@ public class TorrentGetEqc {
     public static class Request implements EqualComparator<TorrentGet.Request> {
         @Override
         public boolean isEqual(TorrentGet.Request o1, TorrentGet.Request o2) {
-            if(!o1.eventId.equals(o2.eventId)) {
+            if(!o1.msgId.equals(o2.msgId)) {
                 return false;
             }
             return true;
@@ -40,7 +40,7 @@ public class TorrentGetEqc {
     public static class Response implements EqualComparator<TorrentGet.Response> {
         @Override
         public boolean isEqual(TorrentGet.Response o1, TorrentGet.Response o2) {
-            if(!o1.eventId.equals(o2.eventId)) {
+            if(!o1.msgId.equals(o2.msgId)) {
                 return false;
             }
             if(!o1.status.equals(o2.status)) {

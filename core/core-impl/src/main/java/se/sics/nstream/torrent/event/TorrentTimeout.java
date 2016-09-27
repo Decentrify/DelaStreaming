@@ -21,10 +21,7 @@ package se.sics.nstream.torrent.event;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.ScheduleTimeout;
 import se.sics.kompics.timer.Timeout;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.StreamEvent;
 import se.sics.nstream.util.event.StreamMsg;
 
 /**
@@ -42,25 +39,15 @@ public class TorrentTimeout {
         }
 
         @Override
-        public Identifier getId() {
-            return new UUIDIdentifier(getTimeoutId());
-        }
-
-        @Override
         public KAddress getTarget() {
             return target;
         }
     }
     
-    public static class AdvanceDownload extends Timeout implements StreamEvent {
+    public static class AdvanceDownload extends Timeout {
 
         public AdvanceDownload(SchedulePeriodicTimeout st) {
             super(st);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return new UUIDIdentifier(getTimeoutId());
         }
     }
 
@@ -79,11 +66,6 @@ public class TorrentTimeout {
         public KAddress getTarget() {
             return target;
         }
-
-        @Override
-        public Identifier getId() {
-            return new UUIDIdentifier(getTimeoutId());
-        }
     }
     
     public static class Piece extends Timeout implements StreamMsg.Timeout {
@@ -100,11 +82,6 @@ public class TorrentTimeout {
         @Override
         public KAddress getTarget() {
             return target;
-        }
-
-        @Override
-        public Identifier getId() {
-            return new UUIDIdentifier(getTimeoutId());
         }
     }
 }

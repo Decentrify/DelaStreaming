@@ -20,7 +20,8 @@ package se.sics.nstream.storage;
 
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.util.StreamResource;
@@ -42,7 +43,7 @@ public class StorageRead {
         }
         
         public Request(StreamResource resource, KBlock readRange) {
-            this(UUIDIdentifier.randomId(), resource, readRange);
+            this(UUIDId.randomId(), resource, readRange);
         }
         
         @Override
@@ -51,7 +52,7 @@ public class StorageRead {
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return resource.getResourceId();
         }
         
@@ -75,7 +76,7 @@ public class StorageRead {
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return req.overlayId();
         }
     }

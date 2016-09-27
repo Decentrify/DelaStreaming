@@ -22,7 +22,7 @@ import se.sics.nstream.hops.hdfs.HDFSConnection;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.result.Result;
 
 /**
@@ -39,7 +39,7 @@ public class HDFSConnectionEvent {
         }
         
         public Request(HDFSConnection connection) {
-            this(UUIDIdentifier.randomId(), connection);
+            this(UUIDId.randomId(), connection);
         }
         
         @Override

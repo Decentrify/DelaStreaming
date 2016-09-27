@@ -35,7 +35,7 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.library.util.TorrentStatus;
 import se.sics.nstream.report.event.DownloadSummaryEvent;
 import se.sics.nstream.report.event.StatusSummaryEvent;
@@ -55,7 +55,7 @@ public class ReportComp extends ComponentDefinition {
     Positive<TransferStatusPort> torrentPort = requires(TransferStatusPort.class);
     Negative<ReportPort> reportPort = provides(ReportPort.class);
 
-    private final Identifier torrentId;
+    private final OverlayId torrentId;
     private final long reportDelay;
     private static final int pieceSize = 1024;
 
@@ -227,10 +227,10 @@ public class ReportComp extends ComponentDefinition {
 
     public static class Init extends se.sics.kompics.Init<ReportComp> {
 
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
         public final long reportDelay;
 
-        public Init(Identifier torrentId, long reportDelay) {
+        public Init(OverlayId torrentId, long reportDelay) {
             this.torrentId = torrentId;
             this.reportDelay = reportDelay;
         }

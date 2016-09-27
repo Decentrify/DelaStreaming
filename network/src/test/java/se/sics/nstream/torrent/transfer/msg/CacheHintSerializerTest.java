@@ -18,7 +18,6 @@
  */
 package se.sics.nstream.torrent.transfer.msg;
 
-import se.sics.nstream.torrent.transfer.msg.CacheHint;
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -30,7 +29,12 @@ import org.junit.Test;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.test.CacheHintRequestEC;
@@ -41,11 +45,20 @@ import se.sics.nstream.torrent.FileIdentifier;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class CacheHintSerializerTest {
-    @BeforeClass
+    private static OverlayIdFactory overlayIdFactory;
+    
+     @BeforeClass
     public static void setup() {
+        BasicIdentifiers.registerDefaults(1234l);
+        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory(), new OverlayId.BasicTypeComparator());
+        
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
         serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
+        
+        byte ownerId = 1;
+        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
     }
     
     @Test
@@ -59,7 +72,7 @@ public class CacheHintSerializerTest {
         blocks.add(0);
         blocks.add(1);
         KHint.Summary cacheHint = new KHint.Summary(1l, blocks);
-        original = new CacheHint.Request(new FileIdentifier(new IntIdentifier(1), 2), cacheHint);
+        original = new CacheHint.Request(new FileIdentifier(overlayIdFactory.randomId(), 2), cacheHint);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
@@ -82,7 +95,7 @@ public class CacheHintSerializerTest {
         blocks.add(0);
         blocks.add(1);
         KHint.Summary cacheHint = new KHint.Summary(1l, blocks);
-        CacheHint.Request request = new CacheHint.Request(new FileIdentifier(new IntIdentifier(1), 2), cacheHint);
+        CacheHint.Request request = new CacheHint.Request(new FileIdentifier(overlayIdFactory.randomId(), 2), cacheHint);
         original = request.success();
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);

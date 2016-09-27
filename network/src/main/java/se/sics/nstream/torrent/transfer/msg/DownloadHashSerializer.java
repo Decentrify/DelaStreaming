@@ -26,7 +26,9 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.nstream.torrent.FileIdentifier;
 
 /**
@@ -36,9 +38,11 @@ import se.sics.nstream.torrent.FileIdentifier;
 public class DownloadHashSerializer {
     public static class Request implements Serializer {
         private final int id;
+        private final Class msgIdType;
         
         public Request(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
         }
 
         @Override
@@ -49,7 +53,7 @@ public class DownloadHashSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             DownloadHash.Request obj = (DownloadHash.Request)o;
-            Serializers.toBinary(obj.eventId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
             Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
             buf.writeInt(obj.hashes.size());
             for(Integer h : obj.hashes) {
@@ -59,7 +63,7 @@ public class DownloadHashSerializer {
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
+            Identifier eventId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
             FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
             Set<Integer> hashes = new TreeSet();
             int hashSize = buf.readInt();
@@ -73,9 +77,11 @@ public class DownloadHashSerializer {
     
     public static class Response implements Serializer {
         private final int id;
+        private final Class msgIdType;
         
         public Response(int id) {
             this.id = id;
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
         }
 
         @Override
@@ -86,7 +92,7 @@ public class DownloadHashSerializer {
         @Override
         public void toBinary(Object o, ByteBuf buf) {
             DownloadHash.Response obj = (DownloadHash.Response)o;
-            Serializers.toBinary(obj.eventId, buf);
+            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
             Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
             buf.writeInt(obj.hashValues.size());
             for(Map.Entry<Integer, byte[]> hv : obj.hashValues.entrySet()) {
@@ -98,7 +104,7 @@ public class DownloadHashSerializer {
         
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
+            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
             FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
             int hashSize = buf.readInt();
             Map<Integer, byte[]> hashValues = new TreeMap<>();
@@ -110,7 +116,7 @@ public class DownloadHashSerializer {
                 buf.readBytes(hashValue);
                 hashValues.put(hashNr, hashValue);
             }
-            return new DownloadHash.Response(eventId, fileId, hashValues);
+            return new DownloadHash.Response(msgId, fileId, hashValues);
         }
     }
 }
