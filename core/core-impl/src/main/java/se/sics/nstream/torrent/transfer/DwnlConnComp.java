@@ -47,6 +47,7 @@ import se.sics.ledbat.core.AppCongestionWindow;
 import se.sics.ledbat.core.DownloadThroughput;
 import se.sics.ledbat.core.LedbatConfig;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
+import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.event.TorrentTimeout;
 import se.sics.nstream.torrent.old.TransferConfig;
 import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
@@ -59,7 +60,6 @@ import se.sics.nstream.torrent.transferTracking.DownloadConnectionClosed;
 import se.sics.nstream.torrent.transferTracking.DownloadTrackingReport;
 import se.sics.nstream.torrent.transferTracking.DownloadTrackingTrace;
 import se.sics.nstream.torrent.transferTracking.TransferTrackingPort;
-import se.sics.nstream.torrent.util.TorrentConnId;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nutil.ContentWrapperHelper;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
@@ -87,7 +87,7 @@ public class DwnlConnComp extends ComponentDefinition {
     Positive<Network> networkPort = requires(Network.class);
     Positive<Timer> timerPort = requires(Timer.class);
     //**************************************************************************
-    private final TorrentConnId connId;
+    private final ConnId connId;
     private final KAddress self;
     private final KAddress target;
     //**************************************************************************
@@ -334,13 +334,13 @@ public class DwnlConnComp extends ComponentDefinition {
     //**************************************************************************
     public static class Init extends se.sics.kompics.Init<DwnlConnComp> {
 
-        public final TorrentConnId connId;
+        public final ConnId connId;
         public final KAddress self;
         public final KAddress target;
         public final BlockDetails defaultBlockDetails;
         public final boolean withHashes;
 
-        public Init(TorrentConnId connId, KAddress self, KAddress target, BlockDetails defaultBlockDetails, boolean withHashes) {
+        public Init(ConnId connId, KAddress self, KAddress target, BlockDetails defaultBlockDetails, boolean withHashes) {
             this.connId = connId;
             this.self = self;
             this.target = target;

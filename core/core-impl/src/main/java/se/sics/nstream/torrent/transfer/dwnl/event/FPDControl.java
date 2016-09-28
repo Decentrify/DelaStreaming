@@ -18,11 +18,11 @@
  */
 package se.sics.nstream.torrent.transfer.dwnl.event;
 
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
+import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
-import se.sics.nstream.torrent.util.TorrentConnId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -30,18 +30,18 @@ import se.sics.nstream.torrent.util.TorrentConnId;
 public class FPDControl implements TorrentConnEvent {
 
     public final Identifier eventId;
-    public final TorrentConnId connId;
+    public final ConnId connId;
     public final double appCwndAdjustment;
 
-    public FPDControl(TorrentConnId connId, double appCwndAdjustment) {
-        this.eventId = UUIDId.randomId();
+    public FPDControl(ConnId connId, double appCwndAdjustment) {
+        this.eventId = BasicIdentifiers.eventId();
         this.connId = connId;
         this.appCwndAdjustment = appCwndAdjustment;
     }
 
     @Override
     public OverlayId overlayId() {
-        return connId.fileId.overlayId;
+        return connId.fileId.torrentId;
     }
 
     @Override

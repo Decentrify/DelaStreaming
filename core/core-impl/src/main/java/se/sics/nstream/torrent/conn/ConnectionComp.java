@@ -42,7 +42,9 @@ import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.ConnId;
+import se.sics.nstream.FileId;
+import se.sics.nstream.TorrentIds;
 import se.sics.nstream.torrent.conn.event.CloseTransfer;
 import se.sics.nstream.torrent.conn.event.DetailedState;
 import se.sics.nstream.torrent.conn.event.OpenTransfer;
@@ -51,7 +53,6 @@ import se.sics.nstream.torrent.conn.msg.NetCloseTransfer;
 import se.sics.nstream.torrent.conn.msg.NetConnect;
 import se.sics.nstream.torrent.conn.msg.NetDetailedState;
 import se.sics.nstream.torrent.conn.msg.NetOpenTransfer;
-import se.sics.nstream.torrent.util.TorrentConnId;
 import se.sics.nstream.transfer.MyTorrent.ManifestDef;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
@@ -258,14 +259,14 @@ public class ConnectionComp extends ComponentDefinition {
                     seederConnState.openTransferResp(content.getId(), content.result);
                 }
             };
-    
+
     ClassMatchedHandler handleNetCloseTransfer
             = new ClassMatchedHandler<NetCloseTransfer, KContentMsg<KAddress, KHeader<KAddress>, NetCloseTransfer>>() {
                 @Override
                 public void handle(NetCloseTransfer content, KContentMsg<KAddress, KHeader<KAddress>, NetCloseTransfer> context) {
                     LOG.trace("{}received:{}", logPrefix, context);
                     KAddress peer = context.getHeader().getSource();
-                    if(content.leecher) {
+                    if (content.leecher) {
                         leecherConnState.remoteClose(content.fileId, peer.getId());
                     } else {
                         seederConnState.remoteClose(content.fileId, peer.getId());
@@ -314,8 +315,8 @@ public class ConnectionComp extends ComponentDefinition {
             answerNetwork(msg, req.success(manifestDef));
         }
 
-        public void openTransfer(KAddress peer, FileIdentifier fileId, KContentMsg msg) {
-            TorrentConnId connId = new TorrentConnId(peer.getId(), fileId, false);
+        public void openTransfer(KAddress peer, FileId fileId, KContentMsg msg) {
+            ConnId connId = TorrentIds.connId(fileId, peer.getId(), false);
             OpenTransfer.SeederRequest localReq = new OpenTransfer.SeederRequest(peer, connId);
             pendingOpenTransfer.put(localReq.getId(), msg);
             trigger(localReq, connPort);
@@ -326,15 +327,16 @@ public class ConnectionComp extends ComponentDefinition {
             answerNetwork(msg, msg.getContent().answer(resp.result));
         }
 
-        public void localClose(TorrentConnId connId) {
-            KAddress peer = connected.get(connId.targetId);
+        public void localClose(ConnId connId) {
+            KAddress peer = connected.get(connId.peerId);
             if (peer != null) {
                 simpleUDPSend(new NetCloseTransfer(connId.fileId, !connId.leecher), peer);
             }
         }
-        
-        public void remoteClose(FileIdentifier fileId, Identifier peerId) {
-            trigger(new CloseTransfer.Indication(new TorrentConnId(peerId, fileId, true)), connPort);
+
+        public void remoteClose(FileId fileId, Identifier peerId) {
+            ConnId connId = TorrentIds.connId(fileId, peerId, true);
+            trigger(new CloseTransfer.Indication(connId), connPort);
         }
     }
 
@@ -461,15 +463,16 @@ public class ConnectionComp extends ComponentDefinition {
             answer(req, req.timeout());
         }
 
-        public void localClose(TorrentConnId connId) {
-            KAddress peer = connected.get(connId.targetId);
+        public void localClose(ConnId connId) {
+            KAddress peer = connected.get(connId.peerId);
             if (peer != null) {
                 simpleUDPSend(new NetCloseTransfer(connId.fileId, !connId.leecher), peer);
             }
         }
-        
-        public void remoteClose(FileIdentifier fileId, Identifier peerId) {
-            trigger(new CloseTransfer.Indication(new TorrentConnId(peerId, fileId, false)), connPort);
+
+        public void remoteClose(FileId fileId, Identifier peerId) {
+            ConnId connId = TorrentIds.connId(fileId, peerId, false);
+            trigger(new CloseTransfer.Indication(connId), connPort);
         }
     }
 }

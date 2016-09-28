@@ -22,9 +22,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
-import se.sics.nstream.util.BlockHelper;
+import se.sics.nstream.FileId;
+import se.sics.nstream.TorrentIds;
 import se.sics.nstream.util.BlockDetails;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 
 /**
@@ -106,14 +109,19 @@ public class ManifestJSON {
         this.metaDataJsons = metaDataJsons;
     }
 
-    public static Map<String, FileBaseDetails> getBaseDetails(ManifestJSON manifest, BlockDetails defaultBlock) {
-        Map<String, FileBaseDetails> baseDetails = new HashMap<>();
+    public static Pair<Map<String, FileId>, Map<FileId, FileBaseDetails>> getBaseDetails(OverlayId torrentId, ManifestJSON manifest, BlockDetails defaultBlock) {
+        Map<String, FileId> nameToId = new HashMap<>();
+        Map<FileId, FileBaseDetails> baseDetails = new HashMap<>();
+        int fileNr = 0;
         for(FileInfoJSON fileInfo : manifest.fileInfos) {
+            fileNr++; //start from 1 - 0 is for the definition of the torrent
+            FileId fileId = TorrentIds.fileId(torrentId, fileNr);
+            nameToId.put(fileInfo.getFileName(), fileId);
             String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
             Pair<Integer, BlockDetails> fileDetails = BlockHelper.getFileDetails(fileInfo.getLength(), defaultBlock);
             FileBaseDetails fbd = new FileBaseDetails(fileInfo.getLength(), fileDetails.getValue0(), defaultBlock, fileDetails.getValue1(), hashAlg);
-            baseDetails.put(fileInfo.getFileName(), fbd);
+            baseDetails.put(fileId, fbd);
         }
-        return baseDetails;
+        return Pair.with(nameToId, baseDetails);
     }
 }

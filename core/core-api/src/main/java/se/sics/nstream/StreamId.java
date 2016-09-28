@@ -16,37 +16,48 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.util;
+package se.sics.nstream;
 
 import java.util.Objects;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.torrent.FileIdentifier;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentConnId implements Identifier {
-    public final Identifier targetId;
-    public final FileIdentifier fileId;
-    public final boolean leecher;
+public class StreamId implements Identifier {
+    public final Identifier endpointId;
+    public final FileId fileId;
     
-    public TorrentConnId(Identifier targetId, FileIdentifier fileId, boolean leecher) {
-        this.targetId = targetId;
+    StreamId(Identifier endpointId, FileId fileId) {
+        this.endpointId = endpointId;
         this.fileId = fileId;
-        this.leecher = leecher;
+    } 
+
+    @Override
+    public int partition(int nrPartitions) {
+        assert nrPartitions < Integer.MAX_VALUE / 2;
+        int aux1 = endpointId.partition(nrPartitions);
+        int aux2 = endpointId.partition(nrPartitions);
+        int partition = (aux1 + aux2) % nrPartitions;
+        return partition;
     }
-    
-    public TorrentConnId reverse() {
-        return new TorrentConnId(targetId, fileId, !leecher);
+
+    @Override
+    public int compareTo(Identifier o) {
+        StreamId that = (StreamId)o;
+        int result = endpointId.compareTo(that.endpointId);
+        if(result != 0) {
+            return result;
+        }
+        result = fileId.compareTo(that.fileId);
+        return result;
     }
-    
+
     @Override
     public int hashCode() {
         int hash = 3;
-        hash = 79 * hash + Objects.hashCode(this.targetId);
-        hash = 79 * hash + Objects.hashCode(this.fileId);
-        hash = 79 * hash + (this.leecher ? 1 : 0);
+        hash = 41 * hash + Objects.hashCode(this.endpointId);
+        hash = 41 * hash + Objects.hashCode(this.fileId);
         return hash;
     }
 
@@ -58,37 +69,18 @@ public class TorrentConnId implements Identifier {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final TorrentConnId other = (TorrentConnId) obj;
-        if (!Objects.equals(this.targetId, other.targetId)) {
+        final StreamId other = (StreamId) obj;
+        if (!Objects.equals(this.endpointId, other.endpointId)) {
             return false;
         }
         if (!Objects.equals(this.fileId, other.fileId)) {
             return false;
         }
-        if (this.leecher != other.leecher) {
-            return false;
-        }
         return true;
-    }
-
-    @Override
-    public int partition(int nrPartitions) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public int compareTo(Identifier o) {
-        TorrentConnId that = (TorrentConnId)o;
-        int result = this.fileId.compareTo(that.fileId);
-        if(result != 0) {
-            return result;
-        }
-        result = this.targetId.compareTo(that.targetId);
-        return result;
     }
     
     @Override
     public String toString() {
-        return "<nid:" + targetId + ",fid:" + fileId + ">";
+        return "e:" + endpointId.toString() + "," + fileId.toString();
     }
 }

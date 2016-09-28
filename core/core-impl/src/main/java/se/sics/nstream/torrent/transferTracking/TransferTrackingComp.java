@@ -33,11 +33,10 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.torrent.FileIdentifier;
-import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.ConnId;
+import se.sics.nstream.FileId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TransferTrackingComp extends ComponentDefinition {
@@ -51,7 +50,7 @@ public class TransferTrackingComp extends ComponentDefinition {
     private final Positive<TransferTrackingPort> trackingPort = requires(TransferTrackingPort.class);
     private final Positive<Timer> timerPort = requires(Timer.class);
     //**************************************************************************
-    private final Map<TorrentConnId, ConnTracking> seederConnections = new HashMap<>();
+    private final Map<ConnId, ConnTracking> seederConnections = new HashMap<>();
     //**************************************************************************
     private UUID reportTId;
 
@@ -83,16 +82,16 @@ public class TransferTrackingComp extends ComponentDefinition {
             LOG.trace("{}reporting", logPrefix);
             DownloadTrackingTrace.CrossConnectionAccumulator totalAcc = new DownloadTrackingTrace.CrossConnectionAccumulator();
             Map<Identifier, DownloadTrackingTrace.CrossConnectionAccumulator> peerAccs = new HashMap<>();
-            Map<FileIdentifier, DownloadTrackingTrace.CrossConnectionAccumulator> fileAccs = new HashMap<>();
+            Map<FileId, DownloadTrackingTrace.CrossConnectionAccumulator> fileAccs = new HashMap<>();
             for (ConnTracking conn : seederConnections.values()) {
                 conn.tick();
                 DownloadTrackingTrace connReport = conn.report();
                 totalAcc.accumulate(connReport);
                 
-                DownloadTrackingTrace.CrossConnectionAccumulator peerAcc = peerAccs.get(conn.connId.targetId);
+                DownloadTrackingTrace.CrossConnectionAccumulator peerAcc = peerAccs.get(conn.connId.peerId);
                 if(peerAcc == null) {
                     peerAcc = new DownloadTrackingTrace.CrossConnectionAccumulator();
-                    peerAccs.put(conn.connId.targetId, peerAcc);
+                    peerAccs.put(conn.connId.peerId, peerAcc);
                 }
                 peerAcc.accumulate(connReport);
                 
@@ -105,11 +104,11 @@ public class TransferTrackingComp extends ComponentDefinition {
             }
             
             Map<Identifier, DownloadTrackingTrace> peerReport = new HashMap<>();
-            Map<FileIdentifier, DownloadTrackingTrace> fileReport = new HashMap<>();
+            Map<FileId, DownloadTrackingTrace> fileReport = new HashMap<>();
             for(Map.Entry<Identifier, DownloadTrackingTrace.CrossConnectionAccumulator> acc : peerAccs.entrySet()) {
                 peerReport.put(acc.getKey(), acc.getValue().build());
             } 
-            for(Map.Entry<FileIdentifier, DownloadTrackingTrace.CrossConnectionAccumulator> acc : fileAccs.entrySet()) {
+            for(Map.Entry<FileId, DownloadTrackingTrace.CrossConnectionAccumulator> acc : fileAccs.entrySet()) {
                 fileReport.put(acc.getKey(), acc.getValue().build());
             } 
             trigger(new TransferTrackingReport(new DownloadReport(totalAcc.build(), fileReport, peerReport)), reportPort);

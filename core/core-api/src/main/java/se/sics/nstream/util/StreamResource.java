@@ -18,12 +18,9 @@
  */
 package se.sics.nstream.util;
 
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface StreamResource {
     public String getSinkName();
-    public OverlayId getResourceId();
 }

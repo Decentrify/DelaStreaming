@@ -23,8 +23,9 @@ import java.util.Set;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.nstream.torrent.FileIdentifier;
-import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.ConnId;
+import se.sics.nstream.FileId;
+import se.sics.nstream.TorrentIds;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -32,16 +33,16 @@ import se.sics.nstream.torrent.util.TorrentConnId;
 public class DownloadHash {
     public static class Request implements ConnectionMsg {
         public final Identifier msgId;
-        public final FileIdentifier fileId;
+        public final FileId fileId;
         public final Set<Integer> hashes;
         
-        protected Request(Identifier msgId, FileIdentifier fileId, Set<Integer> hashes) {
+        protected Request(Identifier msgId, FileId fileId, Set<Integer> hashes) {
             this.msgId = msgId;
             this.fileId = fileId;
             this.hashes = hashes;
         }
 
-        public Request(FileIdentifier fileId, Set<Integer> hashes) {
+        public Request(FileId fileId, Set<Integer> hashes) {
             this(BasicIdentifiers.eventId(), fileId, hashes);
         }
         
@@ -52,12 +53,12 @@ public class DownloadHash {
 
         @Override
         public OverlayId overlayId() {
-            return fileId.overlayId;
+            return fileId.torrentId;
         }
         
         @Override
-        public TorrentConnId getConnectionId(Identifier target) {
-            return new TorrentConnId(target, fileId, false);
+        public ConnId getConnectionId(Identifier peer) {
+            return TorrentIds.connId(fileId, peer, false);
         }
         
         public Response success(Map<Integer, byte[]> hashValues) {
@@ -67,10 +68,10 @@ public class DownloadHash {
     
     public static class Response implements ConnectionMsg {
         public final Identifier msgId;
-        public final FileIdentifier fileId;
+        public final FileId fileId;
         public final Map<Integer, byte[]> hashValues;
         
-        protected Response(Identifier msgId, FileIdentifier fileId, Map<Integer, byte[]> hashValues) {
+        protected Response(Identifier msgId, FileId fileId, Map<Integer, byte[]> hashValues) {
             this.msgId = msgId;
             this.fileId = fileId;
             this.hashValues = hashValues;
@@ -87,12 +88,12 @@ public class DownloadHash {
         
         @Override
         public OverlayId overlayId() {
-            return fileId.overlayId;
+            return fileId.torrentId;
         }
 
         @Override
-        public TorrentConnId getConnectionId(Identifier target) {
-            return new TorrentConnId(target, fileId, true);
+        public ConnId getConnectionId(Identifier peer) {
+            return TorrentIds.connId(fileId, peer, true);
         }
     }
 }

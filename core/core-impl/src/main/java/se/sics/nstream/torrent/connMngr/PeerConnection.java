@@ -19,19 +19,18 @@
 package se.sics.nstream.torrent.connMngr;
 
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface PeerConnection {
 
     public KAddress getPeer();
 
-    public boolean available(FileIdentifier fileId);
+    public boolean available(FileId fileId);
     
-    public void addFilePeerConnection(FileIdentifier fileId, FilePeerConnection fpc);
+    public void addFilePeerConnection(FileId fileId, FilePeerConnection fpc);
     
-    public FilePeerConnection removeFileConnection(FileIdentifier fileId);
+    public FilePeerConnection removeFileConnection(FileId fileId);
 }

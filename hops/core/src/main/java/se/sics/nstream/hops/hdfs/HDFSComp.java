@@ -34,8 +34,7 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.StorageInitBuilder;
 import se.sics.nstream.storage.StorageRead;
 import se.sics.nstream.storage.StorageWrite;
-import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -79,7 +78,7 @@ public class HDFSComp extends ComponentDefinition {
         @Override
         public void handle(StorageRead.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, (HDFSResource) req.resource, req.readRange);
+            Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, (HDFSResource) req.stream.resource, req.readRange);
             StorageRead.Response resp = req.respond(readResult);
             LOG.trace("{}answering:{}", logPrefix, resp);
             answer(req, resp);
@@ -91,9 +90,9 @@ public class HDFSComp extends ComponentDefinition {
         public void handle(StorageWrite.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
             if (req.pos == 0) {
-                HDFSHelper.simpleCreate(ugi, hdfsEndpoint, (HDFSResource) req.resource);
+                HDFSHelper.simpleCreate(ugi, hdfsEndpoint, (HDFSResource) req.stream.resource);
             }
-            Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, (HDFSResource) req.resource, req.value);
+            Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, (HDFSResource) req.stream.resource, req.value);
             StorageWrite.Response resp = req.respond(writeResult);
             LOG.trace("{}answering:{}", logPrefix, resp);
             answer(req, resp);
@@ -105,8 +104,8 @@ public class HDFSComp extends ComponentDefinition {
         public final HDFSEndpoint endpoint;
         public final HDFSResource resource;
 
-        public Init(HDFSEndpoint rndpoint, HDFSResource resource) {
-            this.endpoint = rndpoint;
+        public Init(HDFSEndpoint endpoint, HDFSResource resource) {
+            this.endpoint = endpoint;
             this.resource = resource;
         }
     }
@@ -114,8 +113,8 @@ public class HDFSComp extends ComponentDefinition {
     public static class InitBuilder implements StorageInitBuilder {
 
         @Override
-        public Init buildWith(StreamEndpoint endpoint, StreamResource resource) {
-            return new HDFSComp.Init((HDFSEndpoint) endpoint, (HDFSResource) resource);
+        public Init buildWith(MyStream stream) {
+            return new HDFSComp.Init((HDFSEndpoint) stream.endpoint, (HDFSResource) stream.resource);
         }
     }
 }

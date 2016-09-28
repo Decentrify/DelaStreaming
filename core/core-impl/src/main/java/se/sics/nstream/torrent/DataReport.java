@@ -20,23 +20,24 @@ package se.sics.nstream.torrent;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import org.javatuples.Pair;
+import se.sics.nstream.FileId;
+import se.sics.nstream.transfer.MyTorrent;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DataReport {
-    public final TreeMap<Integer, String> fileNames;
+    public final MyTorrent torrent;
     //<MaxSize, CurrentSize>
     public final Pair<Long, Long> totalSize;
-    public final Map<Integer, Pair<Long, Long>> ongoing;
-    public final Set<Integer> completed;
-    public final Set<Integer> pending;
+    public final Map<FileId, Pair<Long, Long>> ongoing;
+    public final Set<FileId> completed;
+    public final Set<FileId> pending;
     
-    public DataReport(TreeMap<Integer, String> fileNames, Pair<Long, Long> totalSize, Set<Integer> completed, Map<Integer, Pair<Long, Long>> ongoing, Set<Integer> pending) {
-        this.fileNames = fileNames;
+    public DataReport(MyTorrent torrent, Pair<Long, Long> totalSize, Set<FileId> completed, Map<FileId, Pair<Long, Long>> ongoing, Set<FileId> pending) {
+        this.torrent = torrent;
         this.totalSize = totalSize;
         this.completed = completed;
         this.ongoing = ongoing;

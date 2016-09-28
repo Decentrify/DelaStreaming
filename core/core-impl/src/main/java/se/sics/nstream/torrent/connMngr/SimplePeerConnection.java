@@ -21,14 +21,14 @@ package se.sics.nstream.torrent.connMngr;
 import java.util.HashMap;
 import java.util.Map;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class SimplePeerConnection implements PeerConnection {
     private final KAddress peer;
-    private final Map<FileIdentifier, FilePeerConnection> fpcs = new HashMap<>();
+    private final Map<FileId, FilePeerConnection> fpcs = new HashMap<>();
     
     public SimplePeerConnection(KAddress peer) {
         this.peer = peer;
@@ -40,18 +40,18 @@ public class SimplePeerConnection implements PeerConnection {
     }
 
     @Override
-    public boolean available(FileIdentifier fileId) {
+    public boolean available(FileId fileId) {
         //manual or seeder imposed limitations - none atm
         return true;
     }
 
     @Override
-    public void addFilePeerConnection(FileIdentifier fileId, FilePeerConnection fpc) {
+    public void addFilePeerConnection(FileId fileId, FilePeerConnection fpc) {
         fpcs.put(fileId, fpc);
     }
 
     @Override
-    public FilePeerConnection removeFileConnection(FileIdentifier fileId) {
+    public FilePeerConnection removeFileConnection(FileId fileId) {
         return fpcs.remove(fileId);
     }
     

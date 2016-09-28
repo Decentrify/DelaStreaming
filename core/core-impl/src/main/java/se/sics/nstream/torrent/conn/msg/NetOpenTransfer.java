@@ -18,11 +18,11 @@
  */
 package se.sics.nstream.torrent.conn.msg;
 
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
  *
@@ -33,15 +33,15 @@ public class NetOpenTransfer {
     public static class Request implements OverlayEvent {
 
         public final Identifier msgId;
-        public final FileIdentifier fileId;
+        public final FileId fileId;
 
-        protected Request(Identifier msgId, FileIdentifier fileId) {
+        protected Request(Identifier msgId, FileId fileId) {
             this.msgId = msgId;
             this.fileId = fileId;
         }
 
-        public Request(FileIdentifier fileId) {
-            this(UUIDId.randomId(), fileId);
+        public Request(FileId fileId) {
+            this(BasicIdentifiers.eventId(), fileId);
         }
         
         @Override
@@ -51,7 +51,7 @@ public class NetOpenTransfer {
 
         @Override
         public OverlayId overlayId() {
-            return fileId.overlayId;
+            return fileId.torrentId;
         }
         
         public Response answer(boolean result) {
@@ -62,10 +62,10 @@ public class NetOpenTransfer {
     public static class Response implements OverlayEvent {
 
         public final Identifier msgId;
-        public final FileIdentifier fileId;
+        public final FileId fileId;
         public final boolean result;
 
-        protected Response(Identifier msgId, FileIdentifier fileId, boolean result) {
+        protected Response(Identifier msgId, FileId fileId, boolean result) {
             this.msgId = msgId;
             this.fileId = fileId;
             this.result = result;
@@ -82,7 +82,7 @@ public class NetOpenTransfer {
 
         @Override
         public OverlayId overlayId() {
-            return fileId.overlayId;
+            return fileId.torrentId;
         }
     }
 }

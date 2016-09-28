@@ -19,12 +19,12 @@
 package se.sics.nstream.storage;
 
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.MyStream;
 import se.sics.nstream.util.range.KBlock;
 
 /**
@@ -33,17 +33,17 @@ import se.sics.nstream.util.range.KBlock;
 public class StorageRead {
     public static class Request extends Direct.Request<Response> implements OverlayEvent {
         public final Identifier eventId;
-        public final StreamResource resource;
+        public final MyStream stream;
         public final KBlock readRange;
         
-        protected Request(Identifier eventId, StreamResource resource, KBlock readRange) {
+        protected Request(Identifier eventId, MyStream stream, KBlock readRange) {
             this.eventId = eventId;
-            this.resource = resource;
+            this.stream = stream;
             this.readRange = readRange;
         }
         
-        public Request(StreamResource resource, KBlock readRange) {
-            this(UUIDId.randomId(), resource, readRange);
+        public Request(MyStream stream, KBlock readRange) {
+            this(BasicIdentifiers.eventId(), stream, readRange);
         }
         
         @Override
@@ -53,7 +53,7 @@ public class StorageRead {
 
         @Override
         public OverlayId overlayId() {
-            return resource.getResourceId();
+            return stream.streamId.fileId.torrentId;
         }
         
         public Response respond(Result<byte[]> result) {

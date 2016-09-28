@@ -21,13 +21,13 @@ package se.sics.nstream.torrent.transfer.upld.event;
 import java.util.Map;
 import java.util.Set;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.nstream.ConnId;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
-import se.sics.nstream.torrent.util.TorrentConnId;
 import se.sics.nstream.util.BlockDetails;
 
 /**
@@ -38,14 +38,14 @@ public class GetBlocks {
     public static class Request extends Direct.Request<Response> implements TorrentConnEvent {
 
         public final Identifier eventId;
-        public final TorrentConnId connId;
+        public final ConnId connId;
         public final Set<Integer> blocks;
         public final boolean withHashes;
         
         public final KHint.Summary cacheHint;
 
-        public Request(TorrentConnId connId, Set<Integer> blocks, boolean withHashes, KHint.Summary cacheHint) {
-            this.eventId = UUIDId.randomId();
+        public Request(ConnId connId, Set<Integer> blocks, boolean withHashes, KHint.Summary cacheHint) {
+            this.eventId = BasicIdentifiers.eventId();
             this.connId = connId;
             this.blocks = blocks;
             this.withHashes = withHashes;
@@ -59,7 +59,7 @@ public class GetBlocks {
 
         @Override
         public OverlayId overlayId() {
-            return connId.fileId.overlayId;
+            return connId.fileId.torrentId;
         }
 
         @Override
@@ -75,7 +75,7 @@ public class GetBlocks {
     public static class Response implements Direct.Response, TorrentConnEvent {
 
         public final Identifier eventId;
-        public final TorrentConnId connId;
+        public final ConnId connId;
         public final Map<Integer, byte[]> hashes;
         public final Map<Integer, BlockDetails> irregularBlocks;
         public final Map<Integer, KReference<byte[]>> blocks;
@@ -95,7 +95,7 @@ public class GetBlocks {
 
         @Override
         public OverlayId overlayId() {
-            return connId.fileId.overlayId;
+            return connId.fileId.torrentId;
         }
 
         @Override

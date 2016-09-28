@@ -67,7 +67,7 @@ public class KafkaProxy {
         @Override
         public void handle(StorageWrite.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            KafkaResource kafkaResource = (KafkaResource) req.resource;
+            KafkaResource kafkaResource = (KafkaResource) req.stream.resource;
             KafkaProducerMngr mngr = producers.get(kafkaResource.topicName);
             if (mngr == null) {
                 mngr = new KafkaProducerMngr(proxy, kafkaEndpoint, kafkaResource);

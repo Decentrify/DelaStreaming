@@ -28,7 +28,7 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
  *
@@ -53,7 +53,7 @@ public class DownloadPieceSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             DownloadPiece.Request obj = (DownloadPiece.Request)o;
             Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
+            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
             buf.writeInt(obj.piece.getValue0());
             buf.writeInt(obj.piece.getValue1());
         }
@@ -61,7 +61,7 @@ public class DownloadPieceSerializer {
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
+            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
             int blockNr = buf.readInt();
             int pieceNr = buf.readInt();
             return new DownloadPiece.Request(msgId, fileId, Pair.with(blockNr, pieceNr));
@@ -86,7 +86,7 @@ public class DownloadPieceSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             DownloadPiece.Response obj = (DownloadPiece.Response)o;
             Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
+            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
             buf.writeInt(obj.piece.getValue0());
             buf.writeInt(obj.piece.getValue1());
            
@@ -108,7 +108,7 @@ public class DownloadPieceSerializer {
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
+            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
             int blockNr = buf.readInt();
             int pieceNr = buf.readInt();
             

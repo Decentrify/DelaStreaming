@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentDefinition;
@@ -31,12 +30,13 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.nstream.FileId;
 import se.sics.nstream.storage.StorageControl;
 import se.sics.nstream.storage.StorageControlPort;
 import se.sics.nstream.torrent.StorageProvider;
 import se.sics.nstream.util.FileExtendedDetails;
-import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.MyStream;
 
 /**
  *
@@ -49,7 +49,7 @@ public class TorrentResourceMngrComp extends ComponentDefinition {
     private final Negative<TorrentResourceMngrPort> mngrPort = provides(TorrentResourceMngrPort.class);
     private final Map<Identifier, Positive> storageControlPorts = new HashMap<>();
     //**************************************************************************
-    private final Identifier torrentId;
+    private final OverlayId torrentId;
     //**************************************************************************
     private PrepareResources.Request prepare;
     private Set<Identifier> pendingResources = new HashSet<>();
@@ -86,25 +86,24 @@ public class TorrentResourceMngrComp extends ComponentDefinition {
                 throw new RuntimeException("ups");
             }
             prepare = req;
-            for(Map.Entry<String, FileExtendedDetails> e : req.torrent.extended.entrySet()) {
-                StreamEndpoint endpoint = e.getValue().getMainResource().getValue0();
-                StreamResource resource = e.getValue().getMainResource().getValue1();
-                prepareResource(e.getKey(), endpoint, resource);
-                for(Pair<StreamEndpoint, StreamResource> r : e.getValue().getSecondaryResource()){
-                    prepareResource(e.getKey(), r.getValue0(), r.getValue1());
+            for(Map.Entry<FileId, FileExtendedDetails> e : req.torrent.extended.entrySet()) {
+                MyStream mainStream = e.getValue().getMainStream();
+                prepareResource(e.getKey(), mainStream);
+                for(MyStream secondaryStreams : e.getValue().getSecondaryStreams()){
+                    prepareResource(e.getKey(), secondaryStreams);
                 }
             }
         }
     };
     
-    private void prepareResource(String fileName, StreamEndpoint endpoint, StreamResource resource) {
-        LOG.info("{}preparing file:{} resource:{} endpoint:{}", new Object[]{logPrefix, fileName, resource.getSinkName(), endpoint.getEndpointName()});
+    private void prepareResource(FileId fileId, MyStream stream) {
+        LOG.info("{}preparing file:{} resource:{} endpoint:{}", new Object[]{logPrefix, fileId, stream.resource.getSinkName(), stream.endpoint.getEndpointName()});
         
-        Positive storageControlPort = storageControlPorts.get(endpoint.getEndpointId());
+        Positive storageControlPort = storageControlPorts.get(stream.streamId.endpointId);
         if(storageControlPort == null) {
             throw new RuntimeException("ups");
         }
-        StorageControl.OpenRequest req = new StorageControl.OpenRequest(resource);
+        StorageControl.OpenRequest req = new StorageControl.OpenRequest(stream);
         pendingResources.add(req.getId());
         trigger(req, storageControlPort);
     } 
@@ -112,7 +111,7 @@ public class TorrentResourceMngrComp extends ComponentDefinition {
     Handler handleResourceReady = new Handler<StorageControl.OpenSuccess>() {
         @Override
         public void handle(StorageControl.OpenSuccess resp) {
-            LOG.info("{}prepared resource:{}", new Object[]{logPrefix, resp.req.resource.getSinkName()});
+            LOG.info("{}prepared resource:{}", new Object[]{logPrefix, resp.req.stream.resource.getSinkName()});
             if(!pendingResources.remove(resp.getId())) {
                 throw new RuntimeException("ups");
             }
@@ -124,10 +123,10 @@ public class TorrentResourceMngrComp extends ComponentDefinition {
     };
     
     public static class Init extends se.sics.kompics.Init<TorrentResourceMngrComp> {
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
         public final StorageProvider storageProvider;
         
-        public Init(Identifier torrentId, StorageProvider storageProvider) {
+        public Init(OverlayId torrentId, StorageProvider storageProvider) {
             this.torrentId = torrentId;
             this.storageProvider = storageProvider;
         }

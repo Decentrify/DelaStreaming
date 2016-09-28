@@ -19,16 +19,16 @@
 package se.sics.nstream.torrent.transferTracking;
 
 import se.sics.kompics.KompicsEvent;
-import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.ConnId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadTrackingReport implements KompicsEvent {
-    public final TorrentConnId connId;
+    public final ConnId connId;
     public final DownloadTrackingTrace trace;
     
-    public DownloadTrackingReport(TorrentConnId connId, DownloadTrackingTrace trace) {
+    public DownloadTrackingReport(ConnId connId, DownloadTrackingTrace trace) {
         this.connId = connId;
         this.trace = trace;
     }

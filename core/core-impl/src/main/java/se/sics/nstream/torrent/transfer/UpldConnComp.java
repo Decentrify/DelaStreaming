@@ -46,12 +46,12 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
+import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.msg.CacheHint;
 import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.transfer.upld.event.GetBlocks;
 import se.sics.nstream.torrent.transfer.upld.event.UpldConnReport;
-import se.sics.nstream.torrent.util.TorrentConnId;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.range.KPiece;
@@ -74,7 +74,7 @@ public class UpldConnComp extends ComponentDefinition {
     Positive<Network> networkPort = requires(Network.class);
     Positive<Timer> timerPort = requires(Timer.class);
     //**************************************************************************
-    private final TorrentConnId connId;
+    private final ConnId connId;
     private final KAddress self;
     private final BlockDetails defaultBlock;
     private final boolean withHashes;
@@ -242,12 +242,12 @@ public class UpldConnComp extends ComponentDefinition {
 
     public static class Init extends se.sics.kompics.Init<UpldConnComp> {
 
-        public final TorrentConnId connId;
+        public final ConnId connId;
         public final KAddress self;
         public final BlockDetails defaultBlock;
         public final boolean withHashes;
 
-        public Init(TorrentConnId connId, KAddress self, BlockDetails defaultBlock, boolean withHashes) {
+        public Init(ConnId connId, KAddress self, BlockDetails defaultBlock, boolean withHashes) {
             this.connId = connId;
             this.self = self;
             this.defaultBlock = defaultBlock;

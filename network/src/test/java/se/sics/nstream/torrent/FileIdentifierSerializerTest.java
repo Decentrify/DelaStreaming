@@ -30,10 +30,12 @@ import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
+import se.sics.nstream.FileId;
+import se.sics.nstream.TorrentIds;
 
 /**
  *
@@ -45,7 +47,7 @@ public class FileIdentifierSerializerTest {
      @BeforeClass
     public static void setup() {
         BasicIdentifiers.registerDefaults(1234l);
-        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory(), new OverlayId.BasicTypeComparator());
+        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte)0), new OverlayId.BasicTypeComparator());
         
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
@@ -58,17 +60,17 @@ public class FileIdentifierSerializerTest {
     
     @Test
     public void simpleTest() {
-        Serializer serializer = Serializers.lookupSerializer(FileIdentifier.class);
-        FileIdentifier original, copy;
+        Serializer serializer = Serializers.lookupSerializer(FileId.class);
+        FileId original, copy;
         ByteBuf serializedOriginal, serializedCopy;
         
-        original = new FileIdentifier(overlayIdFactory.randomId(), 1);
+        original = TorrentIds.fileId(overlayIdFactory.randomId(), 1);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (FileIdentifier) serializer.fromBinary(serializedCopy, Optional.absent());
+        copy = (FileId) serializer.fromBinary(serializedCopy, Optional.absent());
         
         Assert.assertEquals(original, copy);
         Assert.assertEquals(0, serializedCopy.readableBytes());

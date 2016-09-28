@@ -19,10 +19,10 @@
 package se.sics.nstream.storage;
 
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -30,11 +30,11 @@ import se.sics.nstream.util.StreamResource;
 public class StorageControl {
     public static class OpenRequest extends Direct.Request<OpenSuccess> implements Identifiable {
         public final Identifier eventId;
-        public final StreamResource resource;
+        public final MyStream stream;
         
-        public OpenRequest(StreamResource resource) {
-            this.eventId = UUIDId.randomId();
-            this.resource = resource;
+        public OpenRequest(MyStream stream) {
+            this.eventId = BasicIdentifiers.eventId();
+            this.stream = stream;
         }
 
         @Override
@@ -62,11 +62,11 @@ public class StorageControl {
     
     public static class CloseRequest extends Direct.Request<CloseSuccess> implements Identifiable {
         public final Identifier eventId;
-        public final StreamResource resource;
+        public final MyStream stream;
         
-        public CloseRequest(StreamResource resource) {
-            this.eventId = UUIDId.randomId();
-            this.resource = resource;
+        public CloseRequest(MyStream stream) {
+            this.eventId = BasicIdentifiers.eventId();
+            this.stream = stream;
         }
         
         @Override

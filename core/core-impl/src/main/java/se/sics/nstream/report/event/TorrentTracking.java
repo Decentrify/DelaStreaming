@@ -19,8 +19,9 @@
 package se.sics.nstream.report.event;
 
 import se.sics.kompics.KompicsEvent;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.torrent.DataReport;
 import se.sics.nstream.torrent.transferTracking.DownloadReport;
@@ -32,17 +33,17 @@ public class TorrentTracking {
 
     public static class DownloadStarting implements StreamEvent {
         public final Identifier eventId;
-        public final Identifier overlayId;
+        public final OverlayId overlayId;
         public final DataReport dataReport;
 
-        public DownloadStarting(Identifier eventId, Identifier overlayId, DataReport dataReport) {
+        public DownloadStarting(Identifier eventId, OverlayId overlayId, DataReport dataReport) {
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.dataReport = dataReport;
         }
 
-        public DownloadStarting(Identifier overlayId, DataReport dataReport) {
-            this(UUIDId.randomId(), overlayId, dataReport);
+        public DownloadStarting(OverlayId overlayId, DataReport dataReport) {
+            this(BasicIdentifiers.eventId(), overlayId, dataReport);
         }
 
         @Override
@@ -59,17 +60,17 @@ public class TorrentTracking {
     public static class DownloadDone implements StreamEvent {
 
         public final Identifier eventId;
-        public final Identifier overlayId;
+        public final OverlayId overlayId;
         public final DataReport dataReport;
 
-        public DownloadDone(Identifier eventId, Identifier overlayId, DataReport dataReport) {
+        public DownloadDone(Identifier eventId, OverlayId overlayId, DataReport dataReport) {
             this.eventId = eventId;
             this.overlayId = overlayId;
             this.dataReport = dataReport;
         }
 
-        public DownloadDone(Identifier overlayId, DataReport dataReport) {
-            this(UUIDId.randomId(), overlayId, dataReport);
+        public DownloadDone(OverlayId overlayId, DataReport dataReport) {
+            this(BasicIdentifiers.eventId(), overlayId, dataReport);
         }
 
         @Override

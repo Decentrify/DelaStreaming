@@ -29,10 +29,9 @@ import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadHashSerializer {
@@ -54,7 +53,7 @@ public class DownloadHashSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             DownloadHash.Request obj = (DownloadHash.Request)o;
             Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
+            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
             buf.writeInt(obj.hashes.size());
             for(Integer h : obj.hashes) {
                 buf.writeInt(h);
@@ -64,7 +63,7 @@ public class DownloadHashSerializer {
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier eventId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
+            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
             Set<Integer> hashes = new TreeSet();
             int hashSize = buf.readInt();
             while(hashSize > 0) {
@@ -93,7 +92,7 @@ public class DownloadHashSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             DownloadHash.Response obj = (DownloadHash.Response)o;
             Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
+            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
             buf.writeInt(obj.hashValues.size());
             for(Map.Entry<Integer, byte[]> hv : obj.hashValues.entrySet()) {
                 buf.writeInt(hv.getKey());
@@ -105,7 +104,7 @@ public class DownloadHashSerializer {
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
+            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
             int hashSize = buf.readInt();
             Map<Integer, byte[]> hashValues = new TreeMap<>();
             while(hashSize > 0) {

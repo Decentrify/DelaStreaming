@@ -31,7 +31,7 @@ public class TestKafkaResource extends KafkaResource {
     public final Schema schema;
     
     public TestKafkaResource(Schema schema) {
-        super(null, null, null);
+        super(null, null);
         this.schema = schema;
     }
 }

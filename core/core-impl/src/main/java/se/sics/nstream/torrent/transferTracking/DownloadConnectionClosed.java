@@ -19,16 +19,16 @@
 package se.sics.nstream.torrent.transferTracking;
 
 import se.sics.kompics.KompicsEvent;
-import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.ConnId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadConnectionClosed implements KompicsEvent {
 
-    public final TorrentConnId connId;
+    public final ConnId connId;
 
-    public DownloadConnectionClosed(TorrentConnId connId) {
+    public DownloadConnectionClosed(ConnId connId) {
         this.connId = connId;
     }
 }

@@ -19,13 +19,12 @@
 package se.sics.nstream.storage;
 
 import se.sics.kompics.Init;
-import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.MyStream;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface StorageInitBuilder {
-    public Init buildWith(StreamEndpoint endpoint, StreamResource resource);
+    public Init buildWith(MyStream stream);
 }

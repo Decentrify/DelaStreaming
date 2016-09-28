@@ -39,6 +39,7 @@ import se.sics.nstream.hops.kafka.test.TestKafkaEndpoint;
 import se.sics.nstream.hops.kafka.test.TestKafkaResource;
 import se.sics.nstream.storage.StorageWrite;
 import se.sics.nstream.test.StreamWriteRespEC;
+import se.sics.nstream.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -88,35 +89,37 @@ public class KafkaProxyTest {
 
         stream1.readerIndex(0);
         
+        
         KafkaEndpoint kafkaEndpoint = new TestKafkaEndpoint();
         KafkaResource kafkaResource = new TestKafkaResource(schema1);
+        MyStream stream = new MyStream(null, kafkaEndpoint, kafkaResource);
         MockComponentProxy proxy = new MockComponentProxy();
         Validator validator;
 
         byte[] v1 = new byte[18];
         stream1.readBytes(v1);
-        StorageWrite.Request req1 = new StorageWrite.Request(kafkaResource, 0, v1);
+        StorageWrite.Request req1 = new StorageWrite.Request(stream, 0, v1);
         byte[] v2 = new byte[2 * 18];
         stream1.readBytes(v2);
-        StorageWrite.Request req2 = new StorageWrite.Request(kafkaResource, 18, v2);
+        StorageWrite.Request req2 = new StorageWrite.Request(stream, 18, v2);
         byte[] v3 = new byte[10];
         stream1.readBytes(v3);
-        StorageWrite.Request req3 = new StorageWrite.Request(kafkaResource, 3 * 18, v3);
+        StorageWrite.Request req3 = new StorageWrite.Request(stream, 3 * 18, v3);
         byte[] v4 = new byte[5];
         stream1.readBytes(v4);
-        StorageWrite.Request req4 = new StorageWrite.Request(kafkaResource, 3 * 18 + 10, v4);
+        StorageWrite.Request req4 = new StorageWrite.Request(stream, 3 * 18 + 10, v4);
         byte[] v5 = new byte[3];
         stream1.readBytes(v5);
-        StorageWrite.Request req5 = new StorageWrite.Request(kafkaResource, 3 * 18 + 15, v5);
+        StorageWrite.Request req5 = new StorageWrite.Request(stream, 3 * 18 + 15, v5);
         byte[] v6 = new byte[21];
         stream1.readBytes(v6);
-        StorageWrite.Request req6 = new StorageWrite.Request(kafkaResource, 4 * 18, v6);
+        StorageWrite.Request req6 = new StorageWrite.Request(stream, 4 * 18, v6);
         byte[] v7 = new byte[18];
         stream1.readBytes(v7);
-        StorageWrite.Request req7 = new StorageWrite.Request(kafkaResource, 5 * 18+3, v7);
+        StorageWrite.Request req7 = new StorageWrite.Request(stream, 5 * 18+3, v7);
         byte[] v8 = new byte[15];
         stream1.readBytes(v8);
-        StorageWrite.Request req8 = new StorageWrite.Request(kafkaResource, 6 * 18+3, v8);
+        StorageWrite.Request req8 = new StorageWrite.Request(stream, 6 * 18+3, v8);
 
         KafkaProxy kafka = buildKafka(proxy, kafkaEndpoint);
         startKafka(proxy, kafka);

@@ -21,25 +21,19 @@ package se.sics.nstream.hops.hdfs;
 import java.io.File;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.StringByteId;
 import se.sics.nstream.util.StreamEndpoint;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HDFSEndpoint implements StreamEndpoint {
 
     public static final String HOPS_URL = "fs.defaultFS";
-    public final Identifier endpointId;
     public final Configuration hdfsConfig;
     public final String hopsURL;
     public final String user;
 
-    public HDFSEndpoint(Identifier endpointId, Configuration hdfsConfig, String user) {
-        assert endpointId instanceof StringByteId;
-        this.endpointId = endpointId;
+    public HDFSEndpoint(Configuration hdfsConfig, String user) {
         this.hdfsConfig = hdfsConfig;
         this.user = user;
         this.hopsURL = hdfsConfig.get(HOPS_URL);
@@ -60,25 +54,20 @@ public class HDFSEndpoint implements StreamEndpoint {
         return "hdfs";
     }
 
-    @Override
-    public Identifier getEndpointId() {
-        return endpointId;
-    }
-
-    public static HDFSEndpoint getBasic(Identifier endpointId, String user, String hopsIp, int hopsPort) {
+    public static HDFSEndpoint getBasic(String user, String hopsIp, int hopsPort) {
         Configuration hdfsConfig = new Configuration();
         String hopsURL = "hdfs://" + hopsIp + ":" + hopsPort;
         hdfsConfig.set(HOPS_URL, hopsURL);
-        return new HDFSEndpoint(endpointId, hdfsConfig, user);
+        return new HDFSEndpoint(hdfsConfig, user);
     }
     
-    public static HDFSEndpoint getXML(Identifier endpointId, String hdfsXMLPath, String user) {
+    public static HDFSEndpoint getXML(String hdfsXMLPath, String user) {
         Configuration hdfsConfig = new Configuration();
         File confFile = new File(hdfsXMLPath);
         if (!confFile.exists()) {
             throw new RuntimeException("conf file does not exist");
         }
         hdfsConfig.addResource(new Path(hdfsXMLPath));
-        return new HDFSEndpoint(endpointId, hdfsConfig, user);
+        return new HDFSEndpoint(hdfsConfig, user);
     }
 }

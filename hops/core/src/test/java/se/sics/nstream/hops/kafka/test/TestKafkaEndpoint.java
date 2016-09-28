@@ -30,7 +30,7 @@ import se.sics.nstream.hops.kafka.avro.LogProducer;
 public class TestKafkaEndpoint extends KafkaEndpoint {
 
     public TestKafkaEndpoint() {
-        super(null, null, null, null, null, null, null);
+        super(null, null, null, null, null, null);
     }
     
     @Override

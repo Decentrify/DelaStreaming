@@ -25,10 +25,9 @@ import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class NetOpenTransferSerializer {
@@ -50,13 +49,13 @@ public class NetOpenTransferSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             NetOpenTransfer.Request obj = (NetOpenTransfer.Request)o;
             Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
+            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
+            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
             return new NetOpenTransfer.Request(msgId, fileId);
         }
     }
@@ -79,14 +78,14 @@ public class NetOpenTransferSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             NetOpenTransfer.Response obj = (NetOpenTransfer.Response)o;
             Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
+            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
             buf.writeBoolean(obj.result);
         }
 
         @Override
         public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
             Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
+            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
             boolean result = buf.readBoolean();
             return new NetOpenTransfer.Response(msgId, fileId, result);
         }

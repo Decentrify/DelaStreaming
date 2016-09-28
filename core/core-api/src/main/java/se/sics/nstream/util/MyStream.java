@@ -16,23 +16,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.util;
+package se.sics.nstream.util;
+
+import se.sics.nstream.StreamId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class BufferName {
-    public final int fileId;
-    public final String fileName;
-    public final String sinkName;
+public class MyStream {
+    public final StreamId streamId;
+    public final StreamEndpoint endpoint;
+    public final StreamResource resource;
     
-    public BufferName(int fileId, String fileName, String sinkName) {
-        this.fileId = fileId;
-        this.fileName = fileName;
-        this.sinkName = sinkName;
-    }
-    
-    public String fullName() {
-        return "fileId_"+fileName+"_"+sinkName;
+    public MyStream(StreamId streamId, StreamEndpoint endpoint, StreamResource fileResource) {
+        this.streamId = streamId;
+        this.endpoint = endpoint;
+        this.resource = fileResource;
     }
 }

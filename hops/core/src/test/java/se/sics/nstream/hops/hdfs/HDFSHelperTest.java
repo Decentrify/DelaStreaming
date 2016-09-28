@@ -21,12 +21,6 @@ package se.sics.nstream.hops.hdfs;
 import java.util.Random;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
-import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.profiling.KProfiler;
 
 /**
@@ -37,13 +31,8 @@ public class HDFSHelperTest {
 
     @Test
     public void simpleAppend() throws InterruptedException {
-        //TODO Alex - new kind of overlay
-        IntIdFactory intIdFactory = new IntIdFactory(null);
-        HDFSEndpoint endpoint = HDFSEndpoint.getBasic(intIdFactory.rawId(1), "glassfish", "bbc1.sics.se", 26801);
-        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
-        byte owner = 1;
-        OverlayIdFactory overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, owner);
-        HDFSResource resource = new HDFSResource("/experiment/download/", "test", overlayIdFactory.randomId());
+        HDFSEndpoint endpoint = HDFSEndpoint.getBasic("glassfish", "bbc1.sics.se", 26801);
+        HDFSResource resource = new HDFSResource("/experiment/download/", "test");
         Random rand = new Random(123);
         byte[] data;
 

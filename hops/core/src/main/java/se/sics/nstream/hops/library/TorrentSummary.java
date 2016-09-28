@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.hops.library;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.hops.hdfs.HDFSResource;
 
 /**
@@ -29,16 +29,15 @@ public class TorrentSummary {
 
     private String stringId;
     private String torrentName;
-    private String endpointId;
     private String torrentDir;
     private String manifest;
-    
-    public TorrentSummary() {}
-    
-    private TorrentSummary(String stringId, String torrentName, String endpointId, String torrentDir, String manifest) {
+
+    public TorrentSummary() {
+    }
+
+    private TorrentSummary(String stringId, String torrentName, String torrentDir, String manifest) {
         this.stringId = stringId;
         this.torrentName = torrentName;
-        this.endpointId = endpointId;
         this.torrentDir = torrentDir;
         this.manifest = manifest;
     }
@@ -59,14 +58,6 @@ public class TorrentSummary {
         this.torrentName = torrentName;
     }
 
-    public String getEndpointId() {
-        return endpointId;
-    }
-
-    public void setEndpointId(String endpointId) {
-        this.endpointId = endpointId;
-    }
-
     public String getTorrentDir() {
         return torrentDir;
     }
@@ -82,7 +73,7 @@ public class TorrentSummary {
     public void setManifest(String manifest) {
         this.manifest = manifest;
     }
-    
+
     public HDFSResource getManifestResource() {
         throw new RuntimeException("fix me");
 //        Identifier manifestId = StringByteId.instance(stringId + "0");
@@ -90,11 +81,10 @@ public class TorrentSummary {
 //        return manifestResource;
     }
 
-    public static TorrentSummary getSummary(Identifier torrentId, String torrentName, Library.Torrent torrent) {
+    public static TorrentSummary getSummary(OverlayId torrentId, String torrentName, Library.Torrent torrent) {
         String sTorrentId = torrentId.toString();
-        String sEndpointId = torrent.hdfsEndpoint.endpointId.toString();
         String torrentDir = torrent.manifest.dirPath;
         String manifest = torrent.manifest.fileName;
-        return new TorrentSummary(sTorrentId, torrentName, sEndpointId, torrentDir, manifest);
+        return new TorrentSummary(sTorrentId, torrentName, torrentDir, manifest);
     }
 }

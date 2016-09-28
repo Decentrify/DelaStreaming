@@ -20,11 +20,11 @@ package se.sics.nstream.torrent.transfer.dwnl.event;
 
 import java.util.Map;
 import java.util.Set;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
+import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
-import se.sics.nstream.torrent.util.TorrentConnId;
 import se.sics.nstream.util.BlockDetails;
 
 /**
@@ -33,12 +33,12 @@ import se.sics.nstream.util.BlockDetails;
  */
 public class DownloadBlocks implements TorrentConnEvent {
     public final Identifier eventId;
-    public final TorrentConnId connId;
+    public final ConnId connId;
     public final Set<Integer> blocks;
     public final Map<Integer, BlockDetails> irregularBlocks;
     
-    public DownloadBlocks(TorrentConnId connId, Set<Integer> blocks, Map<Integer, BlockDetails> irregularBlocks) {
-        this.eventId = UUIDId.randomId();
+    public DownloadBlocks(ConnId connId, Set<Integer> blocks, Map<Integer, BlockDetails> irregularBlocks) {
+        this.eventId = BasicIdentifiers.eventId();
         this.connId = connId;
         this.blocks = blocks;
         this.irregularBlocks = irregularBlocks;
@@ -46,7 +46,7 @@ public class DownloadBlocks implements TorrentConnEvent {
     
     @Override
     public OverlayId overlayId() {
-        return connId.fileId.overlayId;
+        return connId.fileId.torrentId;
     }
 
     @Override

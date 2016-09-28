@@ -32,10 +32,11 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.ConnId;
+import se.sics.nstream.FileId;
+import se.sics.nstream.TorrentIds;
 import se.sics.nstream.torrent.conn.event.OpenTransfer;
 import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
-import se.sics.nstream.torrent.util.TorrentConnId;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 
@@ -52,7 +53,7 @@ public class TorrentConnMngr {
     private final ComponentLoadTracking loadTracking;
     //**************************************************************************
     private final Map<Identifier, PeerConnection> peerConnections = new HashMap<>();
-    private final Map<FileIdentifier, FileConnection> fileConnections = new HashMap<>();
+    private final Map<FileId, FileConnection> fileConnections = new HashMap<>();
     private final TreeMap<Identifier, KAddress> connected = new TreeMap<>();
     private final LinkedList<KAddress> connCandidates = new LinkedList<>();
 
@@ -82,15 +83,15 @@ public class TorrentConnMngr {
         return connected.firstEntry().getValue();
     }
 
-    public int canAdvanceFile() {
+    public FileId canAdvanceFile() {
         Iterator<FileConnection> it = fileConnections.values().iterator();
         while (it.hasNext()) {
             FileConnection fileConnection = it.next();
             if (fileConnection.available()) {
-                return fileConnection.getId().fileId;
+                return fileConnection.getId();
             }
         }
-        return -1;
+        return null;
     }
 
     public boolean canStartNewFile() {
@@ -100,17 +101,17 @@ public class TorrentConnMngr {
         return false;
     }
 
-    public void newFileConnection(FileIdentifier fileId) {
+    public void newFileConnection(FileId fileId) {
         FileConnection fileConnection = new SimpleFileConnection(fileId, loadTracking, MAX_FILE_BUF);
         fileConnections.put(fileId, fileConnection);
     }
     
-    public Set<Identifier> closeFileConnection(FileIdentifier fileId) {
+    public Set<Identifier> closeFileConnection(FileId fileId) {
         FileConnection fc = fileConnections.remove(fileId);
         return fc.closeAll();
     }
 
-    public ConnResult attemptSlot(FileIdentifier fileId, int blockNr, Optional<BlockDetails> irregularBlock) {
+    public ConnResult attemptSlot(FileId fileId, int blockNr, Optional<BlockDetails> irregularBlock) {
         FileConnection fileConnection = fileConnections.get(fileId);
         if (fileConnection == null) {
             throw new RuntimeException("ups");
@@ -124,7 +125,7 @@ public class TorrentConnMngr {
         for (FilePeerConnection fpc : fileConnEstablished) {
             KAddress peer = fpc.getPeerConnection().getPeer();
             if (fileConnection.available(peer.getId()) && fpc.getPeerConnection().available(fileId)) {
-                return new UseFileConnection(new TorrentConnId(peer.getId(), fileId, true), peer, blockNr, irregularBlock);
+                return new UseFileConnection(TorrentIds.connId(fileId, peer.getId(), true), peer, blockNr, irregularBlock);
             }
             checked.add(peer.getId());
         }
@@ -133,7 +134,7 @@ public class TorrentConnMngr {
         for (Identifier peerId : peerConnEstablished) {
             PeerConnection peerConnection = peerConnections.get(peerId);
             if (peerConnection.available(fileId)) {
-                return new NewFileConnection(new TorrentConnId(peerId, fileId, true), peerConnection.getPeer(), blockNr, irregularBlock);
+                return new NewFileConnection(TorrentIds.connId(fileId, peerId, true), peerConnection.getPeer(), blockNr, irregularBlock);
             }
             checked.add(peerId);
         }
@@ -141,16 +142,16 @@ public class TorrentConnMngr {
         //establish a connection to a candidate peer
         if (!connCandidates.isEmpty()) {
             KAddress peer = connCandidates.poll();
-            return new NewPeerConnection(new TorrentConnId(peer.getId(), fileId, true), peer, blockNr, irregularBlock);
+            return new NewPeerConnection(TorrentIds.connId(fileId, peer.getId(), true), peer, blockNr, irregularBlock);
         }
         return new NoConnections();
     }
 
-    public void connectPeerFile(TorrentConnId connId) {
+    public void connectPeerFile(ConnId connId) {
         FileConnection fc = fileConnections.get(connId.fileId);
-        PeerConnection pc = peerConnections.get(connId.targetId);
+        PeerConnection pc = peerConnections.get(connId.peerId);
         FilePeerConnection fpc = new SimpleFilePeerConnection(fc, pc);
-        fc.addFilePeerConnection(connId.targetId, fpc);
+        fc.addFilePeerConnection(connId.peerId, fpc);
         pc.addFilePeerConnection(connId.fileId, fpc);
     }
 
@@ -166,12 +167,12 @@ public class TorrentConnMngr {
         fpc.useSlot(conn.blockNr);
     }
 
-    public void releaseSlot(TorrentConnId connId, int blockNr) {
+    public void releaseSlot(ConnId connId, int blockNr) {
         FileConnection fc = fileConnections.get(connId.fileId);
         if (fc == null) {
             throw new RuntimeException("ups");
         }
-        FilePeerConnection fpc = fc.getFilePeerConnection(connId.targetId);
+        FilePeerConnection fpc = fc.getFilePeerConnection(connId.peerId);
         if (fpc == null) {
             throw new RuntimeException("ups");
         }
@@ -192,12 +193,12 @@ public class TorrentConnMngr {
 
     public static abstract class SuccConnection implements ConnResult {
 
-        public final TorrentConnId connId;
+        public final ConnId connId;
         public final KAddress peer;
         public final int blockNr;
         protected final Optional<BlockDetails> irregularBlock;
 
-        public SuccConnection(TorrentConnId connId, KAddress peer, int blockNr, Optional<BlockDetails> irregularBlock) {
+        public SuccConnection(ConnId connId, KAddress peer, int blockNr, Optional<BlockDetails> irregularBlock) {
             this.connId = connId;
             this.peer = peer;
             this.blockNr = blockNr;
@@ -207,7 +208,7 @@ public class TorrentConnMngr {
 
     public static class UseFileConnection extends SuccConnection {
 
-        public UseFileConnection(TorrentConnId connId, KAddress peer, int blockNr, Optional<BlockDetails> irregularBlock) {
+        public UseFileConnection(ConnId connId, KAddress peer, int blockNr, Optional<BlockDetails> irregularBlock) {
             super(connId, peer, blockNr, irregularBlock);
         }
 
@@ -224,7 +225,7 @@ public class TorrentConnMngr {
 
     public static class NewFileConnection extends SuccConnection {
 
-        public NewFileConnection(TorrentConnId connId, KAddress peer, int blockNr, Optional<BlockDetails> irregularBlock) {
+        public NewFileConnection(ConnId connId, KAddress peer, int blockNr, Optional<BlockDetails> irregularBlock) {
             super(connId, peer, blockNr, irregularBlock);
         }
 
@@ -239,7 +240,7 @@ public class TorrentConnMngr {
 
     public static class NewPeerConnection extends SuccConnection {
 
-        public NewPeerConnection(TorrentConnId connId, KAddress peer, int blockNr, Optional<BlockDetails> irregularBlock) {
+        public NewPeerConnection(ConnId connId, KAddress peer, int blockNr, Optional<BlockDetails> irregularBlock) {
             super(connId, peer, blockNr, irregularBlock);
         }
 

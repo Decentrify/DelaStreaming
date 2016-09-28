@@ -24,7 +24,7 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -32,19 +32,19 @@ import se.sics.nstream.util.StreamResource;
 public class StorageWrite {
     public static class Request extends Direct.Request<Response> implements OverlayEvent {
         public final Identifier eventId;
-        public final StreamResource resource;
+        public final MyStream stream;
         public final long pos;
         public final byte[] value;
         
-        public Request(Identifier eventId, StreamResource resource, long pos, byte[] value) {
+        public Request(Identifier eventId, MyStream stream, long pos, byte[] value) {
             this.eventId = eventId;
-            this.resource = resource;
+            this.stream = stream;
             this.pos = pos;
             this.value = value;
         }
         
-        public Request(StreamResource resource, long pos, byte[] value) {
-            this(BasicIdentifiers.eventId(), resource, pos, value);
+        public Request(MyStream stream, long pos, byte[] value) {
+            this(BasicIdentifiers.eventId(), stream, pos, value);
         }
         
         @Override
@@ -54,7 +54,7 @@ public class StorageWrite {
         
         @Override
         public OverlayId overlayId() {
-            return resource.getResourceId();
+            return stream.streamId.fileId.torrentId;
         }
         
         public Response respond(Result<Boolean> result) {

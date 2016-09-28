@@ -18,18 +18,17 @@
  */
 package se.sics.nstream.torrent.transferTracking;
 
-import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.ConnId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class UploadTrackingReport {
-    public final TorrentConnId connId;
+    public final ConnId connId;
     public final long instUploadSpeed; //B/s
     public final int servedBlocks;
     
-    public UploadTrackingReport(TorrentConnId connId, long instUploadSpeed, int servedBlocks) {
+    public UploadTrackingReport(ConnId connId, long instUploadSpeed, int servedBlocks) {
         this.connId = connId;
         this.instUploadSpeed = instUploadSpeed;
         this.servedBlocks = servedBlocks;

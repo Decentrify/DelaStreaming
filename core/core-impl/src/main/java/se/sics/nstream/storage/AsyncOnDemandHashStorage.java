@@ -31,6 +31,7 @@ import se.sics.nstream.storage.buffer.WriteResult;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
+import se.sics.nstream.util.MyStream;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
 import se.sics.nstream.util.result.ReadCallback;
@@ -42,16 +43,18 @@ import se.sics.nstream.util.result.WriteCallback;
 public class AsyncOnDemandHashStorage implements AsyncStorage {
 
     private final FileBaseDetails fileDetails;
+    private final MyStream stream;
     private final DelayedExceptionSyncHandler exSyncHandler;
     private final Map<Integer, KReference<byte[]>> hashes = new HashMap<>();
     private final AsyncStorage storage; //someone else is controlling it, I am merely piggy backing
     public final boolean onDemand;
 
-    public AsyncOnDemandHashStorage(FileBaseDetails fileDetails, DelayedExceptionSyncHandler exSyncHandler, AsyncStorage storage, boolean onDemand) {
+    public AsyncOnDemandHashStorage(FileBaseDetails fileDetails, DelayedExceptionSyncHandler exSyncHandler, AsyncStorage storage, boolean onDemand, MyStream stream) {
         this.fileDetails = fileDetails;
         this.exSyncHandler = exSyncHandler;
         this.storage = storage;
         this.onDemand = onDemand;
+        this.stream = stream;
     }
 
     @Override
@@ -121,6 +124,6 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
     public void write(KBlock writeRange, KReference<byte[]> val, WriteCallback writeResult) {
         val.retain();
         hashes.put(writeRange.parentBlock(), val);
-        writeResult.success(Result.success(new WriteResult(writeRange.lowerAbsEndpoint(), val.getValue().get().length, "hashes")));
+        writeResult.success(Result.success(new WriteResult(stream, writeRange.lowerAbsEndpoint(), val.getValue().get().length)));
     }
 }

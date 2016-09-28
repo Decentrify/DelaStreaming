@@ -19,17 +19,17 @@
 package se.sics.nstream.torrent.transferTracking;
 
 import java.util.LinkedList;
-import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.ConnId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ConnTracking {
-    public TorrentConnId connId;
+    public final ConnId connId;
     private final DownloadTraceSummary trace = new DownloadTraceSummary();
     private final LinkedList<DownloadTrackingTrace> window = new LinkedList<>();
     
-    public ConnTracking(TorrentConnId connId) {
+    public ConnTracking(ConnId connId) {
         this.connId = connId;
     }
     

@@ -31,15 +31,15 @@ import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
+import se.sics.nstream.TorrentIds;
 import se.sics.nstream.test.DownloadPieceRequestEC;
 import se.sics.nstream.test.DownloadPieceResponseEC;
-import se.sics.nstream.torrent.FileIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -51,7 +51,7 @@ public class DownloadPieceSerializerTest {
     @BeforeClass
     public static void setup() {
         BasicIdentifiers.registerDefaults(1234l);
-        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory(), new OverlayId.BasicTypeComparator());
+        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte)0), new OverlayId.BasicTypeComparator());
 
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
@@ -69,7 +69,7 @@ public class DownloadPieceSerializerTest {
         DownloadPiece.Request original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        original = new DownloadPiece.Request(new FileIdentifier(overlayIdFactory.randomId(), 2), Pair.with(1, 2));
+        original = new DownloadPiece.Request(TorrentIds.fileId(overlayIdFactory.randomId(), 2), Pair.with(1, 2));
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
@@ -88,7 +88,7 @@ public class DownloadPieceSerializerTest {
         DownloadPiece.Response original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        DownloadPiece.Request request = new DownloadPiece.Request(new FileIdentifier(overlayIdFactory.randomId(), 2), Pair.with(1, 2));
+        DownloadPiece.Request request = new DownloadPiece.Request(TorrentIds.fileId(overlayIdFactory.randomId(), 2), Pair.with(1, 2));
         byte[] piece = new byte[]{1, 2, 3, 4};
         KReference<byte[]> ref = KReferenceFactory.getReference(piece);
         ref.retain(); //serializer releases the ref and we cannot compare with it anymore

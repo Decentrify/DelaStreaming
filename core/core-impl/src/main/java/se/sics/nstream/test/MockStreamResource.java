@@ -18,7 +18,6 @@
  */
 package se.sics.nstream.test;
 
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.util.StreamResource;
 
 /**
@@ -26,20 +25,13 @@ import se.sics.nstream.util.StreamResource;
  */
 public class MockStreamResource implements StreamResource {
     private final String resourceName;
-    private final OverlayId resourceId;
     
-    public MockStreamResource(String resourceName, OverlayId resourceId) {
+    public MockStreamResource(String resourceName) {
         this.resourceName = resourceName;
-        this.resourceId = resourceId;
     }
 
     @Override
     public String getSinkName() {
         return resourceName;
-    }
-
-    @Override
-    public OverlayId getResourceId() {
-        return resourceId;
     }
 }

@@ -25,8 +25,7 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
 import se.sics.nstream.storage.StorageInitBuilder;
-import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -72,8 +71,8 @@ public class KafkaComp extends ComponentDefinition {
     public static class InitBuilder implements StorageInitBuilder {
 
         @Override
-        public Init buildWith(StreamEndpoint endpoint, StreamResource resource) {
-            return new Init((KafkaEndpoint) endpoint, (KafkaResource) resource);
+        public Init buildWith(MyStream stream) {
+            return new Init((KafkaEndpoint) stream.endpoint, (KafkaResource) stream.resource);
         }
     }
 }

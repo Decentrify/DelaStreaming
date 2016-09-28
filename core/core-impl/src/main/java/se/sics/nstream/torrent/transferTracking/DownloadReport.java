@@ -20,17 +20,17 @@ package se.sics.nstream.torrent.transferTracking;
 
 import java.util.Map;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadReport {
     public final DownloadTrackingTrace total;
-    public final Map<FileIdentifier, DownloadTrackingTrace> files;
+    public final Map<FileId, DownloadTrackingTrace> files;
     public final Map<Identifier, DownloadTrackingTrace> peers;
     
-    public DownloadReport(DownloadTrackingTrace total, Map<FileIdentifier, DownloadTrackingTrace> files, Map<Identifier, DownloadTrackingTrace> peers) {
+    public DownloadReport(DownloadTrackingTrace total, Map<FileId, DownloadTrackingTrace> files, Map<Identifier, DownloadTrackingTrace> peers) {
         this.total = total;
         this.files = files;
         this.peers = peers;

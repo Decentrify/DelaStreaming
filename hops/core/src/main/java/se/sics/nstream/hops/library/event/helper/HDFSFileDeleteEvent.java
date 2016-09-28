@@ -20,8 +20,8 @@ package se.sics.nstream.hops.library.event.helper;
 
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
@@ -44,7 +44,7 @@ public class HDFSFileDeleteEvent {
         }
 
         public Request(HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
-            this(UUIDId.randomId(), hdfsEndpoint, hdfsResource);
+            this(BasicIdentifiers.eventId(), hdfsEndpoint, hdfsResource);
         }
 
         @Override

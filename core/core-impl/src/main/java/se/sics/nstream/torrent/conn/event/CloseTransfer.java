@@ -19,22 +19,21 @@
 package se.sics.nstream.torrent.conn.event;
 
 import se.sics.kompics.KompicsEvent;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
-import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.ConnId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class CloseTransfer {
     public static abstract class Base implements KompicsEvent, Identifiable {
         public final Identifier eventId;
-        public final TorrentConnId connId;
+        public final ConnId connId;
 
-        public Base(TorrentConnId connId) {
-            this.eventId = UUIDId.randomId();
+        public Base(ConnId connId) {
+            this.eventId = BasicIdentifiers.eventId();
             this.connId = connId;
         }
 
@@ -45,13 +44,13 @@ public class CloseTransfer {
     }
     
     public static class Request extends Base {
-        public Request(TorrentConnId connId) {
+        public Request(ConnId connId) {
             super(connId);
         }
     }
     
     public static class Indication extends Base {
-        public Indication(TorrentConnId connId) {
+        public Indication(ConnId connId) {
             super(connId);
         }
     }

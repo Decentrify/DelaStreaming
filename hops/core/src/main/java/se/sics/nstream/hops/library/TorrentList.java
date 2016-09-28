@@ -102,17 +102,12 @@ public class TorrentList {
 
     public static class Content {
 
-        private Map<String, String> endpoints = new HashMap<>();
-        private Map<String, String> users = new HashMap<>();
         private Map<String, TorrentSummary> files = new HashMap<>();
 
         public Content() {
         }
         
         public void addTorrent(TorrentSummary torrent, String endpointAddress, String user) {
-            endpoints.put(torrent.getEndpointId(), endpointAddress);
-            //TODO Alex - currently users are linked to endpoints, but they should be linked to resources.
-            users.put(torrent.getEndpointId(), user);
             if(files.containsKey(torrent.getStringId())) {
                 throw new RuntimeException("duplicate");
             }
@@ -125,22 +120,6 @@ public class TorrentList {
 
         public void setFiles(Map<String, TorrentSummary> files) {
             this.files = files;
-        }
-
-        public Map<String, String> getEndpoints() {
-            return endpoints;
-        }
-
-        public void setEndpoints(Map<String, String> endpoints) {
-            this.endpoints = endpoints;
-        }
-
-        public Map<String, String> getUsers() {
-            return users;
-        }
-
-        public void setUsers(Map<String, String> users) {
-            this.users = users;
         }
     }
 }

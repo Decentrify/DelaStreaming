@@ -21,13 +21,13 @@ package se.sics.nstream.torrent.connMngr;
 import java.util.Collection;
 import java.util.Set;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface FileConnection {
-    public FileIdentifier getId();
+    public FileId getId();
     
     public boolean available();
     

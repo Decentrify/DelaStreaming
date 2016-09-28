@@ -33,8 +33,14 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.FileId;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.TorrentIds;
+import se.sics.nstream.hops.HopsFED;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSHelper;
 import se.sics.nstream.hops.hdfs.HDFSResource;
@@ -55,6 +61,7 @@ import se.sics.nstream.transfer.TransferMngrPort;
 import se.sics.nstream.util.CoreExtPorts;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.FileExtendedDetails;
+import se.sics.nstream.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -78,9 +85,9 @@ public class HopsLibraryMngr {
     private Library library;
     private HopsTorrentCompMngr components;
     //**************************************************************************
-    private Map<Identifier, HopsTorrentDownloadEvent.StartRequest> pendingExtDwnl = new HashMap<>();
-    private Map<Identifier, Transfer.DownloadRequest> pendingIntDwnl = new HashMap<>();
-    private Map<Identifier, TorrentExtendedStatusEvent.Request> pendingRequests = new HashMap<>();
+    private Map<OverlayId, HopsTorrentDownloadEvent.StartRequest> pendingExtDwnl = new HashMap<>();
+    private Map<OverlayId, Transfer.DownloadRequest> pendingIntDwnl = new HashMap<>();
+    private Map<OverlayId, TorrentExtendedStatusEvent.Request> pendingRequests = new HashMap<>();
 
     public HopsLibraryMngr(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, CoreExtPorts extPorts) {
         this.proxy = proxy;
@@ -95,6 +102,7 @@ public class HopsLibraryMngr {
         transferMngrPort = proxy.getPositive(TransferMngrPort.class).getPair();
         reportPort = proxy.getNegative(ReportPort.class).getPair();
 
+        IntIdFactory endpointIdFactory = new IntIdFactory(null);
         proxy.subscribe(handleHopsTorrentUpload, torrentPort);
         proxy.subscribe(handleHopsTorrentDownload, torrentPort);
         proxy.subscribe(handleTransferDetailsReq, transferMngrPort);
@@ -112,7 +120,7 @@ public class HopsLibraryMngr {
     public void close() {
     }
 
-    public void cleanAndDestroy(Identifier torrentId) {
+    public void cleanAndDestroy(OverlayId torrentId) {
         components.destroy(torrentId);
         library.destroyed(torrentId);
     }
@@ -147,10 +155,11 @@ public class HopsLibraryMngr {
                     Result<ManifestJSON> manifest = HDFSHelper.readManifest(ugi, req.hdfsEndpoint, req.manifestResource);
                     if (manifest.isSuccess()) {
                         byte[] torrentByte = HDFSHelper.getManifestByte(manifest.getValue());
-                        Map<String, FileBaseDetails> baseDetails = ManifestJSON.getBaseDetails(manifest.getValue(), MyTorrent.defaultDataBlock);
-                        Map<String, FileExtendedDetails> extendedDetails = getUploadExtendedDetails(req.hdfsEndpoint, req.manifestResource, baseDetails);
+                        Pair<Map<String, FileId>, Map<FileId, FileBaseDetails>> baseDetails = ManifestJSON.getBaseDetails(req.torrentId, manifest.getValue(), MyTorrent.defaultDataBlock);
+                        Identifier hdfsEndpointId = HopsStorageProvider.hdfsIdentifier;
+                        Map<FileId, FileExtendedDetails> extendedDetails = getUploadExtendedDetails(hdfsEndpointId, req.hdfsEndpoint, req.manifestResource, baseDetails.getValue0());
                         MyTorrent.Manifest torrentManifest = MyTorrent.buildDefinition(torrentByte);
-                        MyTorrent torrent = new MyTorrent(torrentManifest, baseDetails, extendedDetails);
+                        MyTorrent torrent = new MyTorrent(torrentManifest, baseDetails.getValue0(), baseDetails.getValue1(), extendedDetails);
                         Library.Torrent libTorrent = new Library.Torrent(req.hdfsEndpoint, req.manifestResource, torrent);
                         library.upload(req.torrentId, req.torrentName, libTorrent);
                         components.startUpload(transferMngrPort.getPair(), req.torrentId, req.hdfsEndpoint, torrent);
@@ -173,14 +182,14 @@ public class HopsLibraryMngr {
         }
     };
 
-    private Map<String, FileExtendedDetails> getUploadExtendedDetails(HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource, Map<String, FileBaseDetails> baseDetails) {
-        Map<String, FileExtendedDetails> extendedDetails = new HashMap<>();
-        for (String fileName : baseDetails.keySet()) {
-            //TODO Alex - maybe special kind of overlay
-            throw new RuntimeException("fix me");
-//            Identifier randomlyAssignedResourceId = UUIDId.randomId();
-//            FileExtendedDetails fed = new HopsFED(Pair.with(hdfsEndpoint, new HDFSResource(manifestResource.dirPath, fileName, randomlyAssignedResourceId)));
-//            extendedDetails.put(fileName, fed);
+    private Map<FileId, FileExtendedDetails> getUploadExtendedDetails(Identifier hdfsEndpointId, HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource, Map<String, FileId> nameToId) {
+        Map<FileId, FileExtendedDetails> extendedDetails = new HashMap<>();
+        for (Map.Entry<String, FileId> file : nameToId.entrySet()) {
+            HDFSResource hdfsResource = new HDFSResource(manifestResource.dirPath, file.getKey());
+            StreamId streamId = TorrentIds.streamId(hdfsEndpointId, file.getValue());
+            MyStream stream = new MyStream(streamId, hdfsEndpoint, hdfsResource);
+            FileExtendedDetails fed = new HopsFED(stream);
+            extendedDetails.put(file.getValue(), fed);
         }
         return extendedDetails;
     }
@@ -245,7 +254,7 @@ public class HopsLibraryMngr {
             HopsTorrentDownloadEvent.StartRequest hopsReq = pendingExtDwnl.remove(req.torrentId);
             if (req.manifest.isSuccess()) {
                 ManifestJSON manifest = HDFSHelper.getManifestJSON(req.manifest.getValue().manifestByte);
-                Map<String, FileBaseDetails> baseDetails = ManifestJSON.getBaseDetails(manifest, MyTorrent.defaultDataBlock);
+                Pair<Map<String, FileId>, Map<FileId, FileBaseDetails>> baseDetails = ManifestJSON.getBaseDetails(req.torrentId, manifest, MyTorrent.defaultDataBlock);
                 Pair<String, Library.TorrentBuilder> torrentBuilder = library.getTorrentBuilder(req.torrentId);
                 String user = torrentBuilder.getValue1().hdfsEndpoint.user;
                 HDFSEndpoint hdfsEndpoint = torrentBuilder.getValue1().hdfsEndpoint;
@@ -254,7 +263,7 @@ public class HopsLibraryMngr {
                 Result<Boolean> manifestResult = HDFSHelper.writeManifest(ugi, hdfsEndpoint, manifestResource, manifest);
                 if (manifestResult.isSuccess()) {
                     pendingIntDwnl.put(req.torrentId, req);
-                    library.download2(req.torrentId, req.manifest.getValue(), baseDetails);
+                    library.download2(req.torrentId, req.manifest.getValue(), baseDetails.getValue0(), baseDetails.getValue1());
                     if (hopsReq != null) {
                         HopsTorrentDownloadEvent.StartResponse hopsResp = hopsReq.starting(Result.success(true));
                         LOG.trace("{}sending:{}", logPrefix, hopsResp);
@@ -286,8 +295,8 @@ public class HopsLibraryMngr {
         public void handle(HopsTorrentDownloadEvent.AdvanceRequest req) {
             LOG.trace("{}received:{}", logPrefix, req);
             Transfer.DownloadRequest nstreamReq = pendingIntDwnl.remove(req.torrentId);
-            if (req.extendedDetails.isSuccess()) {
-                MyTorrent torrent = library.download3(req.torrentId, req.extendedDetails.getValue());
+            if (req.result.isSuccess()) {
+                MyTorrent torrent = library.download3(req.torrentId, req.hdfsEndpoint, req.kafkaEndpoint, req.hdfsDetails, req.kafkaDetails);
                 if (nstreamReq != null) {
                     components.advanceDownload(req.torrentId, req.hdfsEndpoint, req.kafkaEndpoint);
                     Transfer.DownloadResponse nstreamResp = nstreamReq.answer(torrent);
@@ -336,7 +345,7 @@ public class HopsLibraryMngr {
         @Override
         public void handle(TorrentExtendedStatusEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            pendingRequests.put(req.eventId, req);
+            pendingRequests.put(req.torrentId, req);
             proxy.trigger(new StatusSummaryEvent.Request(req.eventId, req.torrentId), reportPort);
         }
     };
@@ -344,7 +353,7 @@ public class HopsLibraryMngr {
         @Override
         public void handle(StatusSummaryEvent.Response resp) {
             LOG.trace("{}received:{}", logPrefix, resp);
-            TorrentExtendedStatusEvent.Request req = pendingRequests.remove(resp.getId());
+            TorrentExtendedStatusEvent.Request req = pendingRequests.remove(resp.req.torrentId);
             proxy.answer(req, req.succes(resp.result));
         }
     };

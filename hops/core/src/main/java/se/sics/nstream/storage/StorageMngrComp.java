@@ -30,13 +30,13 @@ import se.sics.kompics.Kill;
 import se.sics.kompics.Killed;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.idextractor.EventOverlayIdExtractor;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
+import se.sics.nstream.StreamId;
 import se.sics.nstream.util.StreamEndpoint;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class StorageMngrComp extends ComponentDefinition {
@@ -53,11 +53,11 @@ public class StorageMngrComp extends ComponentDefinition {
     private final StreamEndpoint endpoint;
     //**************************************************************************
     //<resourceId,>
-    private final Map<Identifier, Component> storageComps = new HashMap<>();
+    private final Map<StreamId, Component> storageComps = new HashMap<>();
     private final Map<UUID, StorageControl.CloseRequest> pendingClose = new HashMap<>();
 
     public StorageMngrComp(Init init) {
-        logPrefix = "<" + init.endpoint.getEndpointName() + ":" + init.overlayId + ">";
+        logPrefix = "<" + init.endpoint.getEndpointName() + ":" + init.torrentId + ">";
 
         storageControlPort = provides(init.endpoint.getControlPortType());
         storagePort = provides(init.endpoint.getStoragePortType());
@@ -87,12 +87,12 @@ public class StorageMngrComp extends ComponentDefinition {
             if(req == null) {
                 throw new RuntimeException("ups");
             }
-            Component storageComp = storageComps.remove(req.resource.getResourceId());
+            Component storageComp = storageComps.remove(req.stream.streamId);
             if(storageComp == null) {
                 throw new RuntimeException("ups");
             }
-            storageChannel.removeChannel(req.resource.getResourceId(), storageComp.getPositive(endpoint.getStoragePortType()));
-            LOG.info("{}closed storage for:{}", new Object[]{logPrefix, req.resource.getResourceId()});
+            storageChannel.removeChannel(req.stream.streamId, storageComp.getPositive(endpoint.getStoragePortType()));
+            LOG.info("{}closed storage for:{}", new Object[]{logPrefix, req.stream.streamId});
             answer(req, req.success());
         }
     };
@@ -100,12 +100,12 @@ public class StorageMngrComp extends ComponentDefinition {
     Handler handleOpen = new Handler<StorageControl.OpenRequest>() {
         @Override
         public void handle(StorageControl.OpenRequest req) {
-            LOG.info("{}starting storage for:{}", new Object[]{logPrefix, req.resource.getResourceId()});
-            Component storageComp = create(storageClass, storageInit.buildWith(endpoint, req.resource));
-            storageChannel.addChannel(req.resource.getResourceId(), storageComp.getPositive(endpoint.getStoragePortType()));
+            LOG.info("{}starting storage for:{}", new Object[]{logPrefix, req.stream.streamId});
+            Component storageComp = create(storageClass, storageInit.buildWith(req.stream));
+            storageChannel.addChannel(req.stream.streamId, storageComp.getPositive(endpoint.getStoragePortType()));
             trigger(Start.event, storageComp.control());
             
-            storageComps.put(req.resource.getResourceId(), storageComp);
+            storageComps.put(req.stream.streamId, storageComp);
             answer(req, req.success());
         }
     };
@@ -113,8 +113,8 @@ public class StorageMngrComp extends ComponentDefinition {
     Handler handleClose = new Handler<StorageControl.CloseRequest>() {
         @Override
         public void handle(StorageControl.CloseRequest req) {
-            LOG.info("{}closing storage for:{}", new Object[]{logPrefix, req.resource.getResourceId()});
-            Component storageComp = storageComps.get(req.resource.getResourceId());
+            LOG.info("{}closing storage for:{}", new Object[]{logPrefix, req.stream.streamId});
+            Component storageComp = storageComps.get(req.stream.streamId);
             if(storageComp == null) {
                 throw new RuntimeException("ups");
             }
@@ -128,13 +128,13 @@ public class StorageMngrComp extends ComponentDefinition {
         public final Class storageClass;
         public final StorageInitBuilder storageInit;
         public final StreamEndpoint endpoint;
-        public final Identifier overlayId;
+        public final OverlayId torrentId;
 
-        public Init(Class storageClass, StorageInitBuilder storageInit, StreamEndpoint endpoint, Identifier overlayId) {
+        public Init(Class storageClass, StorageInitBuilder storageInit, StreamEndpoint endpoint, OverlayId torrentId) {
             this.storageClass = storageClass;
             this.storageInit = storageInit;
             this.endpoint = endpoint;
-            this.overlayId = overlayId;
+            this.torrentId = torrentId;
         }
     }
 }

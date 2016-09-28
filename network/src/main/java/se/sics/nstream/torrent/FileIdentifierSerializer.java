@@ -23,6 +23,8 @@ import io.netty.buffer.ByteBuf;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.nstream.FileId;
+import se.sics.nstream.TorrentIds;
 
 /**
  *
@@ -42,15 +44,15 @@ public class FileIdentifierSerializer implements Serializer {
 
     @Override
     public void toBinary(Object o, ByteBuf buf) {
-        FileIdentifier obj = (FileIdentifier)o;
-        Serializers.lookupSerializer(OverlayId.class).toBinary(obj.overlayId, buf);
-        buf.writeInt(obj.fileId);
+        FileId obj = (FileId)o;
+        Serializers.lookupSerializer(OverlayId.class).toBinary(obj.torrentId, buf);
+        buf.writeInt(obj.fileNr);
     }
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-        OverlayId overlayId = (OverlayId)Serializers.lookupSerializer(OverlayId.class).fromBinary(buf, hint);
-        int fileId = buf.readInt();
-        return new FileIdentifier(overlayId, fileId);
+        OverlayId torrentId = (OverlayId)Serializers.lookupSerializer(OverlayId.class).fromBinary(buf, hint);
+        int fileNr = buf.readInt();
+        return TorrentIds.fileId(torrentId, fileNr);
     }
 }

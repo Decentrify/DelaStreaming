@@ -19,9 +19,9 @@
 package se.sics.nstream.torrent.conn.event;
 
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.transfer.MyTorrent.ManifestDef;
 
@@ -34,7 +34,7 @@ public class DetailedState {
         public final Identifier eventId;
 
         public Request(KAddress target) {
-            this.eventId = UUIDId.randomId();
+            this.eventId = BasicIdentifiers.eventId();
         }
         
         @Override

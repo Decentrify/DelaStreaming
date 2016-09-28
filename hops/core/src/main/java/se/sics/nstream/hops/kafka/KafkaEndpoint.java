@@ -18,7 +18,6 @@
  */
 package se.sics.nstream.hops.kafka;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.hops.kafka.avro.AvroMsgProducer;
 import se.sics.nstream.hops.kafka.avro.KafkaProducer;
 import se.sics.nstream.util.StreamEndpoint;
@@ -28,7 +27,6 @@ import se.sics.nstream.util.StreamEndpoint;
  */
 public class KafkaEndpoint implements StreamEndpoint {
 
-    public final Identifier endpointId;
     public final String brokerEndpoint;
     public final String restEndpoint;
     public final String domain;
@@ -36,8 +34,7 @@ public class KafkaEndpoint implements StreamEndpoint {
     public final String keyStore;
     public final String trustStore;
 
-    public KafkaEndpoint(Identifier endpointId, String brokerEndpoint, String restEndpoint, String domain, String projectId, String keyStore, String trustStore) {
-        this.endpointId = endpointId;
+    public KafkaEndpoint(String brokerEndpoint, String restEndpoint, String domain, String projectId, String keyStore, String trustStore) {
         this.brokerEndpoint = brokerEndpoint;
         this.restEndpoint = restEndpoint;
         this.domain = domain;
@@ -63,10 +60,5 @@ public class KafkaEndpoint implements StreamEndpoint {
     @Override
     public String getEndpointName() {
         return "kafka";
-    }
-
-    @Override
-    public Identifier getEndpointId() {
-        return endpointId;
     }
 }

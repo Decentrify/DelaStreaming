@@ -22,6 +22,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 import org.javatuples.Pair;
+import se.sics.nstream.FileId;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
@@ -37,16 +38,19 @@ public class MyTorrent {
     public static final BlockDetails defaultDefBlock = new BlockDetails(BLOCK_SIZE * PIECE_SIZE, BLOCK_SIZE, PIECE_SIZE, PIECE_SIZE);
     public static final BlockDetails defaultDataBlock = new BlockDetails(BLOCK_SIZE * PIECE_SIZE, BLOCK_SIZE, PIECE_SIZE, PIECE_SIZE);
 
+    
     public final Manifest manifest;
-    public final Map<String, FileBaseDetails> base;
-    public final Map<String, FileExtendedDetails> extended;
+    public final Map<String, FileId> nameToId;
+    public final Map<FileId, FileBaseDetails> base;
+    public final Map<FileId, FileExtendedDetails> extended;
 
-    public MyTorrent(Manifest manifest, Map<String, FileBaseDetails> base, Map<String, FileExtendedDetails> extended) {
+    public MyTorrent(Manifest manifest, Map<String, FileId> nameToId, Map<FileId, FileBaseDetails> base, Map<FileId, FileExtendedDetails> extended) {
         this.manifest = manifest;
+        this.nameToId = nameToId;
         this.base = base;
         this.extended = extended;
     }
-
+    
     public static Manifest buildDefinition(byte[] manifestBytes) {
         Pair<Integer, BlockDetails> details = BlockHelper.getFileDetails(manifestBytes.length, defaultDefBlock);
         int lastBlockNr = details.getValue0() - 1; //nr manifestBlocks -1
@@ -142,8 +146,9 @@ public class MyTorrent {
     public static class Builder {
 
         public final ManifestBuilder manifestBuilder;
-        private Map<String, FileBaseDetails> base;
-        private Map<String, FileExtendedDetails> extended;
+        private Map<String, FileId> nameToId;
+        private Map<FileId, FileBaseDetails> base;
+        private Map<FileId, FileExtendedDetails> extended;
 
         public Builder(int nrBlocks, BlockDetails lastBlock) {
             this.manifestBuilder = new ManifestBuilder(nrBlocks, lastBlock);
@@ -153,16 +158,21 @@ public class MyTorrent {
             this(manifestDef.nrBlocks, manifestDef.lastBlock);
         }
 
-        public void setBase(Map<String, FileBaseDetails> base) {
+        public void setBase(Map<String, FileId> nameToId, Map<FileId, FileBaseDetails> base) {
+            this.nameToId = nameToId;
             this.base = base;
         }
+        
+        public Map<String, FileId> getNameToId() {
+            return nameToId;
+        }
 
-        public void setExtended(Map<String, FileExtendedDetails> extended) {
+        public void setExtended(Map<FileId, FileExtendedDetails> extended) {
             this.extended = extended;
         }
 
         public MyTorrent build() {
-            return new MyTorrent(manifestBuilder.build(), base, extended);
+            return new MyTorrent(manifestBuilder.build(), nameToId, base, extended);
         }
     }
 }

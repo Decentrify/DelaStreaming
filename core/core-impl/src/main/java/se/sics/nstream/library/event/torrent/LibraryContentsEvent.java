@@ -22,8 +22,8 @@ import java.util.List;
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.result.Result;
 
 /**
@@ -38,7 +38,7 @@ public class LibraryContentsEvent {
         }
         
         public Request() {
-            this(UUIDId.randomId());
+            this(BasicIdentifiers.eventId());
         }
         
         public Response success(List<TorrentExtendedStatus> content) {

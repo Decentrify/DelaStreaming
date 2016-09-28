@@ -19,11 +19,11 @@
 package se.sics.nstream.torrent.transfer.upld.event;
 
 import org.javatuples.Pair;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
+import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
-import se.sics.nstream.torrent.util.TorrentConnId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -31,12 +31,12 @@ import se.sics.nstream.torrent.util.TorrentConnId;
 public class UpldConnReport implements TorrentConnEvent {
 
     public final Identifier eventId;
-    public final TorrentConnId connId;
+    public final ConnId connId;
     public final Pair<Integer, Integer> queueDelay;
     public final double queueAdjustment;
 
-    public UpldConnReport(TorrentConnId connId, Pair<Integer, Integer> queueDelay, double queueAdjustment) {
-        this.eventId = UUIDId.randomId();
+    public UpldConnReport(ConnId connId, Pair<Integer, Integer> queueDelay, double queueAdjustment) {
+        this.eventId = BasicIdentifiers.eventId();
         this.connId = connId;
         this.queueDelay = queueDelay;
         this.queueAdjustment = queueAdjustment;
@@ -49,7 +49,7 @@ public class UpldConnReport implements TorrentConnEvent {
 
     @Override
     public OverlayId overlayId() {
-        return connId.fileId.overlayId;
+        return connId.fileId.torrentId;
     }
 
     @Override

@@ -19,9 +19,9 @@
 package se.sics.nstream.torrent.resourceMngr;
 
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.nstream.transfer.MyTorrent;
 
 /**
@@ -34,7 +34,7 @@ public class PrepareResources {
         public final MyTorrent torrent;
         
         public Request(MyTorrent torrent) {
-            this.eventId = UUIDId.randomId();
+            this.eventId = BasicIdentifiers.eventId();
             this.torrent = torrent;
         }
 

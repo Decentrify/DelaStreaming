@@ -21,9 +21,9 @@ package se.sics.gvod.network;
 
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
+import se.sics.nstream.FileId;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.cache.KHintSummarySerializer;
-import se.sics.nstream.torrent.FileIdentifier;
 import se.sics.nstream.torrent.FileIdentifierSerializer;
 import se.sics.nstream.torrent.conn.msg.NetCloseTransfer;
 import se.sics.nstream.torrent.conn.msg.NetCloseTransferSerializer;
@@ -51,7 +51,7 @@ public class GVoDSerializerSetup {
     public static int serializerIds = 16;
     
     public static enum GVoDSerializers {
-        FileIdentifier(FileIdentifier.class, "nStreamFileIdentifier"),
+        FileIdentifier(FileId.class, "nStreamFileIdentifier"),
         NetConnectRequest(NetConnect.Request.class, "nStreamNetConnRequest"),
         NetConnectResponse(NetConnect.Response.class, "nStreamNetConnResponse"),
         BlockDetails(BlockDetails.class, "nstreamBlockDetails"),

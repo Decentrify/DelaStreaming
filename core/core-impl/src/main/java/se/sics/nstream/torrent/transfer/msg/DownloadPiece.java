@@ -24,8 +24,9 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.reference.KReference;
-import se.sics.nstream.torrent.FileIdentifier;
-import se.sics.nstream.torrent.util.TorrentConnId;
+import se.sics.nstream.ConnId;
+import se.sics.nstream.FileId;
+import se.sics.nstream.TorrentIds;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -33,16 +34,16 @@ import se.sics.nstream.torrent.util.TorrentConnId;
 public class DownloadPiece {
     public static class Request implements ConnectionMsg {
         public final Identifier msgId;
-        public final FileIdentifier fileId;
+        public final FileId fileId;
         public final Pair<Integer, Integer> piece;
         
-        protected Request(Identifier msgId, FileIdentifier fileId, Pair<Integer, Integer> piece) {
+        protected Request(Identifier msgId, FileId fileId, Pair<Integer, Integer> piece) {
             this.msgId = msgId;
             this.fileId = fileId;
             this.piece = piece;
         }
 
-        public Request(FileIdentifier fileId, Pair<Integer, Integer> piece) {
+        public Request(FileId fileId, Pair<Integer, Integer> piece) {
             this(BasicIdentifiers.msgId(), fileId, piece);
         }
         
@@ -53,12 +54,12 @@ public class DownloadPiece {
 
         @Override
         public OverlayId overlayId() {
-            return fileId.overlayId;
+            return fileId.torrentId;
         }
         
         @Override
-        public TorrentConnId getConnectionId(Identifier target) {
-            return new TorrentConnId(target, fileId, false);
+        public ConnId getConnectionId(Identifier peer) {
+            return TorrentIds.connId(fileId, peer, false);
         }
         
         public Response success(KReference<byte[]> val) {
@@ -73,11 +74,11 @@ public class DownloadPiece {
     
     public static class Response implements ConnectionMsg {
         public final Identifier msgId;
-        public final FileIdentifier fileId;
+        public final FileId fileId;
         public final Pair<Integer, Integer> piece;
         public final Either<KReference<byte[]>, byte[]> val;
         
-        private Response(Identifier msgId, FileIdentifier fileId, Pair<Integer, Integer> piece, Either val) {
+        private Response(Identifier msgId, FileId fileId, Pair<Integer, Integer> piece, Either val) {
             this.msgId = msgId;
             this.fileId = fileId;
             this.piece = piece;
@@ -88,7 +89,7 @@ public class DownloadPiece {
             this(req.msgId, req.fileId, req.piece, Either.left(val));
         }
         
-        protected Response(Identifier eventId, FileIdentifier fileId, Pair<Integer, Integer> piece, byte[] val) {
+        protected Response(Identifier eventId, FileId fileId, Pair<Integer, Integer> piece, byte[] val) {
             this(eventId, fileId, piece, Either.right(val));
         }
         
@@ -99,12 +100,12 @@ public class DownloadPiece {
         
         @Override
         public OverlayId overlayId() {
-            return fileId.overlayId;
+            return fileId.torrentId;
         }
 
         @Override
-        public TorrentConnId getConnectionId(Identifier target) {
-            return new TorrentConnId(target, fileId, true);
+        public ConnId getConnectionId(Identifier peer) {
+            return TorrentIds.connId(fileId, peer, true);
         }
         
         @Override

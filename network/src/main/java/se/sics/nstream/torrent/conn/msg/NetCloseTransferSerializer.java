@@ -25,7 +25,7 @@ import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
  *
@@ -49,14 +49,14 @@ public class NetCloseTransferSerializer implements Serializer {
     public void toBinary(Object o, ByteBuf buf) {
         NetCloseTransfer obj = (NetCloseTransfer)o;
         Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-        Serializers.lookupSerializer(FileIdentifier.class).toBinary(obj.fileId, buf);
+        Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
         buf.writeBoolean(obj.leecher);
     }
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
         Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-        FileIdentifier fileId = (FileIdentifier)Serializers.lookupSerializer(FileIdentifier.class).fromBinary(buf, hint);
+        FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
         boolean leecher = buf.readBoolean();
         return new NetCloseTransfer(msgId, fileId, leecher);
     }

@@ -36,6 +36,7 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.nstream.FileId;
 import se.sics.nstream.library.util.TorrentStatus;
 import se.sics.nstream.report.event.DownloadSummaryEvent;
 import se.sics.nstream.report.event.StatusSummaryEvent;
@@ -189,7 +190,7 @@ public class ReportComp extends ComponentDefinition {
     private void dataValues(DataReport report) {
         try {
             dataFile.write("" + 100 * ((double) report.totalSize.getValue1()) / report.totalSize.getValue0());
-            for (Integer fileId : report.fileNames.keySet()) {
+            for (FileId fileId : report.torrent.base.keySet()) {
                 if (report.pending.contains(fileId)) {
                     dataFile.write(",0");
                     continue;

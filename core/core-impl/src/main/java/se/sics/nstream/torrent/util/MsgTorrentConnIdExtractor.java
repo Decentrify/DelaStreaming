@@ -21,13 +21,13 @@ package se.sics.nstream.torrent.util;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
+import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.msg.ConnectionMsg;
 import se.sics.nutil.ContentWrapper;
 import se.sics.nutil.ContentWrapperHelper;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class MsgTorrentConnIdExtractor extends ChannelIdExtractor<KContentMsg, Identifier>{
@@ -45,7 +45,7 @@ public class MsgTorrentConnIdExtractor extends ChannelIdExtractor<KContentMsg, I
             return null;
         }
         Object baseContent = msg.getContent();
-        TorrentConnId connId = null;
+        ConnId connId = null;
         if(baseContent instanceof ContentWrapper) {
             baseContent = ContentWrapperHelper.getBaseContent((ContentWrapper)baseContent, Object.class);
         }

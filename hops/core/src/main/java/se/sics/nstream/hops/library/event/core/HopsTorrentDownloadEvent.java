@@ -26,15 +26,14 @@ import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
+import se.sics.nstream.hops.kafka.KafkaResource;
 import se.sics.nstream.hops.library.Library;
-import se.sics.nstream.util.FileExtendedDetails;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -115,23 +114,27 @@ public class HopsTorrentDownloadEvent {
     public static class AdvanceRequest extends Direct.Request<AdvanceResponse> implements StreamEvent {
 
         public final Identifier eventId;
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
+        public final Result<Boolean> result;
         public final HDFSEndpoint hdfsEndpoint;
         public final Optional<KafkaEndpoint> kafkaEndpoint;
-        public final Result<Map<String, FileExtendedDetails>> extendedDetails;
+        public final Map<String, HDFSResource> hdfsDetails;
+        public final Map<String, KafkaResource> kafkaDetails;
 
-        public AdvanceRequest(Identifier eventId, Identifier torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
-                Result<Map<String, FileExtendedDetails>> extendedDetails) {
+        public AdvanceRequest(Identifier eventId, OverlayId torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
+                Map<String, HDFSResource> hdfsDetails, Map<String, KafkaResource> kafkaDetails) {
             this.eventId = eventId;
             this.torrentId = torrentId;
+            this.result = Result.success(true);
             this.hdfsEndpoint = hdfsEndpoint;
             this.kafkaEndpoint = kafkaEndpoint;
-            this.extendedDetails = extendedDetails;
+            this.hdfsDetails = hdfsDetails;
+            this.kafkaDetails = kafkaDetails;
         }
 
-        public AdvanceRequest(Identifier torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint, 
-                Result<Map<String, FileExtendedDetails>> extendedDetails) {
-            this(UUIDId.randomId(), torrentId, hdfsEndpoint, kafkaEndpoint, extendedDetails);
+        public AdvanceRequest(OverlayId torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
+                Map<String, HDFSResource> hdfsDetails, Map<String, KafkaResource> kafkaDetails) {
+            this(BasicIdentifiers.eventId(), torrentId, hdfsEndpoint, kafkaEndpoint, hdfsDetails, kafkaDetails);
         }
 
         @Override

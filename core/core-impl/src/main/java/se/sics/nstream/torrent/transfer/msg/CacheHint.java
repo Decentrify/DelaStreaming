@@ -21,9 +21,10 @@ package se.sics.nstream.torrent.transfer.msg;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.nstream.ConnId;
+import se.sics.nstream.FileId;
+import se.sics.nstream.TorrentIds;
 import se.sics.nstream.storage.cache.KHint;
-import se.sics.nstream.torrent.FileIdentifier;
-import se.sics.nstream.torrent.util.TorrentConnId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -33,16 +34,16 @@ public class CacheHint {
     public static class Request implements ConnectionMsg {
 
         public final Identifier msgId;
-        public final FileIdentifier fileId;
+        public final FileId fileId;
         public final KHint.Summary requestCache;
 
-        protected Request(Identifier msgId, FileIdentifier fileId, KHint.Summary requestCache) {
+        protected Request(Identifier msgId, FileId fileId, KHint.Summary requestCache) {
             this.msgId = msgId;
             this.fileId = fileId;
             this.requestCache = requestCache;
         }
 
-        public Request(FileIdentifier fileId, KHint.Summary requestCache) {
+        public Request(FileId fileId, KHint.Summary requestCache) {
             this(BasicIdentifiers.msgId(), fileId, requestCache);
         }
 
@@ -53,12 +54,12 @@ public class CacheHint {
 
         @Override
         public OverlayId overlayId() {
-            return fileId.overlayId;
+            return fileId.torrentId;
         }
 
         @Override
-        public TorrentConnId getConnectionId(Identifier target) {
-            return new TorrentConnId(target, fileId, false);
+        public ConnId getConnectionId(Identifier peer) {
+            return TorrentIds.connId(fileId, peer, false);
         }
 
         public Response success() {
@@ -74,9 +75,9 @@ public class CacheHint {
     public static class Response implements ConnectionMsg {
 
         public final Identifier msgId;
-        public final FileIdentifier fileId;
+        public final FileId fileId;
 
-        protected Response(Identifier msgId, FileIdentifier fileId) {
+        protected Response(Identifier msgId, FileId fileId) {
             this.msgId = msgId;
             this.fileId = fileId;
         }
@@ -87,7 +88,7 @@ public class CacheHint {
 
         @Override
         public OverlayId overlayId() {
-            return fileId.overlayId;
+            return fileId.torrentId;
         }
 
         @Override
@@ -96,8 +97,8 @@ public class CacheHint {
         }
 
         @Override
-        public TorrentConnId getConnectionId(Identifier target) {
-            return new TorrentConnId(target, fileId, true);
+        public ConnId getConnectionId(Identifier peer) {
+            return TorrentIds.connId(fileId, peer, true);
         }
         
          @Override

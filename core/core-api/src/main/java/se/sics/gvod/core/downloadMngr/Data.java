@@ -22,8 +22,8 @@ package se.sics.gvod.core.downloadMngr;
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -37,7 +37,7 @@ public class Data {
         public final int readBlockSize;
 
         public Request(Identifier overlayId, long readPos, int readBlockSize) {
-            this.id = UUIDId.randomId();
+            this.id = BasicIdentifiers.eventId();
             this.overlayId = overlayId;
             this.readPos = readPos;
             this.readBlockSize = readBlockSize;

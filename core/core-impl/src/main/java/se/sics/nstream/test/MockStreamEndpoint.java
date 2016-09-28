@@ -48,9 +48,4 @@ public class MockStreamEndpoint implements StreamEndpoint {
     public String getEndpointName() {
         return "mock";
     }
-
-    @Override
-    public Identifier getEndpointId() {
-        return endpointId;
-    }
 }

@@ -18,17 +18,19 @@
  */
 package se.sics.nstream.storage.buffer;
 
+import se.sics.nstream.util.MyStream;
+
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class WriteResult {
+    public final MyStream stream;
     public final long fromPos;
     public final int written;
-    public final String resourceName;
     
-    public WriteResult(long fromPos, int written, String resourceName) {
+    public WriteResult(MyStream stream, long fromPos, int written) {
+        this.stream = stream;
         this.fromPos = fromPos;
         this.written = written;
-        this.resourceName = resourceName;
     }
 }

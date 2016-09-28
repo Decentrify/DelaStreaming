@@ -24,7 +24,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 
 /**
@@ -32,7 +32,7 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
  */
 public class SimpleFileConnection implements FileConnection {
 
-    private final FileIdentifier fileId;
+    private final FileId fileId;
     //**************************************************************************
     private final ComponentLoadTracking loadTracking;
     private final int maxBufSize;
@@ -40,14 +40,14 @@ public class SimpleFileConnection implements FileConnection {
     //**************************************************************************
     private final Map<Identifier, FilePeerConnection> fpcs = new HashMap<>();
 
-    public SimpleFileConnection(FileIdentifier fileId, ComponentLoadTracking loadTracking, int maxBufSize) {
+    public SimpleFileConnection(FileId fileId, ComponentLoadTracking loadTracking, int maxBufSize) {
         this.fileId = fileId;
         this.loadTracking = loadTracking;
         this.maxBufSize = maxBufSize;
     }
 
     @Override
-    public FileIdentifier getId() {
+    public FileId getId() {
         return fileId;
     }
 
@@ -74,7 +74,7 @@ public class SimpleFileConnection implements FileConnection {
     }
 
     private boolean availableBufferSpace() {
-        int bufSize = loadTracking.getMaxBufferSize(fileId.fileId);
+        int bufSize = loadTracking.getMaxBufferSize(fileId);
         int usedTransferSize = bufSize == -1 ? totalSlots : totalSlots + bufSize;
         if(usedTransferSize < maxBufSize) {
             return true;

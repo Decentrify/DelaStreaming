@@ -20,11 +20,11 @@ package se.sics.gvod.stream.connection.event;
 
 import java.util.Map;
 import se.sics.gvod.common.util.VodDescriptor;
-import se.sics.nstream.StreamEvent;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.StreamEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -39,7 +39,7 @@ public class Connection {
         }
         
         public Request() {
-            this(UUIDId.randomId());
+            this(BasicIdentifiers.eventId());
         }
             
         public Response answer(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
@@ -69,7 +69,7 @@ public class Connection {
         }
 
         public Indication(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
-            this(UUIDId.randomId(), connections, descriptors);
+            this(BasicIdentifiers.eventId(), connections, descriptors);
         }
 
         @Override

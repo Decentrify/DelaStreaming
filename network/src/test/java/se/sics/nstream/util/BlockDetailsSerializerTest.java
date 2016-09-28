@@ -27,6 +27,9 @@ import org.junit.Test;
 import se.sics.gvod.network.GVoDSerializerSetup;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.test.BlockDetailsEqc;
 
@@ -38,18 +41,21 @@ public class BlockDetailsSerializerTest {
 
     @BeforeClass
     public static void setup() {
+        BasicIdentifiers.registerDefaults(1234l);
+        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
+
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
         serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
     }
-    
+
     @Test
     public void simpleTest() {
         Serializer serializer = Serializers.lookupSerializer(BlockDetails.class);
         BlockDetailsEqc eqc = new BlockDetailsEqc();
         BlockDetails original, copy;
         ByteBuf serializedOriginal, serializedCopy;
-        
+
         original = new BlockDetails(10, 10, 10, 10);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
@@ -57,7 +63,7 @@ public class BlockDetailsSerializerTest {
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
         copy = (BlockDetails) serializer.fromBinary(serializedCopy, Optional.absent());
-        
+
         Assert.assertTrue(eqc.isEqual(original, copy));
         Assert.assertEquals(0, serializedCopy.readableBytes());
     }

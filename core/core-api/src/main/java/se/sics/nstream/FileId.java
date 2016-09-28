@@ -16,8 +16,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent;
+package se.sics.nstream;
 
+import com.google.common.primitives.Ints;
 import java.util.Objects;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -25,33 +26,39 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class FileIdentifier implements Identifier {
-
-    public final OverlayId overlayId;
-    public final int fileId;
-
-    public FileIdentifier(OverlayId overlayId, int fileId) {
-        this.overlayId = overlayId;
-        this.fileId = fileId;
+public class FileId implements Identifier {
+    public final OverlayId torrentId;
+    public final int fileNr;
+    
+    FileId(OverlayId torrentId, int fileNr) {
+        this.torrentId = torrentId;
+        this.fileNr = fileNr;
     }
-
     @Override
     public int partition(int nrPartitions) {
         assert nrPartitions < Integer.MAX_VALUE / 2;
-        int overlayPartition = overlayId.partition(nrPartitions);
-        int filePartition = fileId % nrPartitions;
-        return (overlayPartition + filePartition) % 2;
+        int aux1 = torrentId.partition(nrPartitions);
+        int aux2 = fileNr % nrPartitions;
+        int partition = (aux1 + aux2) % nrPartitions;
+        return partition;
     }
 
     @Override
     public int compareTo(Identifier o) {
-        FileIdentifier that = (FileIdentifier) o;
-        int aux = this.overlayId.compareTo(that.overlayId);
-        if (aux == 0) {
-            return Integer.compare(this.fileId, that.fileId);
-        } else {
-            return aux;
+        FileId that = (FileId)o;
+        int result = torrentId.compareTo(that.torrentId);
+        if(result != 0) {
+            return result;
         }
+        return Ints.compare(fileNr, that.fileNr);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 53 * hash + Objects.hashCode(this.torrentId);
+        hash = 53 * hash + this.fileNr;
+        return hash;
     }
 
     @Override
@@ -62,26 +69,18 @@ public class FileIdentifier implements Identifier {
         if (getClass() != obj.getClass()) {
             return false;
         }
-        final FileIdentifier that = (FileIdentifier) obj;
-        if (!Objects.equals(this.overlayId, that.overlayId)) {
+        final FileId other = (FileId) obj;
+        if (!Objects.equals(this.torrentId, other.torrentId)) {
             return false;
         }
-        if (this.fileId != that.fileId) {
+        if (this.fileNr != other.fileNr) {
             return false;
         }
         return true;
     }
-
+    
     @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 97 * hash + Objects.hashCode(this.overlayId);
-        hash = 97 * hash + this.fileId;
-        return hash;
-    }
-
-    @Override 
     public String toString() {
-        return "<oid:" + overlayId.toString() + ",fid:" + fileId +">";
+        return "t:" + torrentId.toString() + ",f:" + fileNr; 
     }
 }

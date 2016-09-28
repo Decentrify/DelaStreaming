@@ -22,7 +22,7 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
-import se.sics.nstream.torrent.FileIdentifier;
+import se.sics.nstream.FileId;
 
 /**
  *
@@ -31,16 +31,16 @@ import se.sics.nstream.torrent.FileIdentifier;
 public class NetCloseTransfer implements OverlayEvent {
 
     public final Identifier msgId;
-    public final FileIdentifier fileId;
+    public final FileId fileId;
     public final boolean leecher;
 
-    protected NetCloseTransfer(Identifier msgId, FileIdentifier fileId, boolean leecher) {
+    protected NetCloseTransfer(Identifier msgId, FileId fileId, boolean leecher) {
         this.msgId = msgId;
         this.fileId = fileId;
         this.leecher = leecher;
     }
     
-    public NetCloseTransfer(FileIdentifier fileId, boolean leecher) {
+    public NetCloseTransfer(FileId fileId, boolean leecher) {
         this(BasicIdentifiers.msgId(), fileId, leecher);
     }
 
@@ -51,6 +51,6 @@ public class NetCloseTransfer implements OverlayEvent {
 
     @Override
     public OverlayId overlayId() {
-        return fileId.overlayId;
+        return fileId.torrentId;
     }
 }
