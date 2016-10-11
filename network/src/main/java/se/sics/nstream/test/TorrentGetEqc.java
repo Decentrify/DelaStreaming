@@ -20,10 +20,9 @@ package se.sics.nstream.test;
 
 import java.util.Arrays;
 import se.sics.ktoolbox.util.test.EqualComparator;
-import se.sics.nstream.torrent.event.TorrentGet;
+import se.sics.nstream.old.torrent.event.TorrentGet;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentGetEqc {

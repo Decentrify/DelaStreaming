@@ -10,7 +10,7 @@
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more defLastBlock.
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
@@ -19,963 +19,125 @@
 package se.sics.nstream.torrent;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Table;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-import java.util.UUID;
-import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
-import se.sics.kompics.Kill;
-import se.sics.kompics.Killed;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
-import se.sics.kompics.timer.CancelPeriodicTimeout;
-import se.sics.kompics.timer.SchedulePeriodicTimeout;
-import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.idextractor.MsgOverlayIdExtractor;
-import se.sics.ktoolbox.util.idextractor.SourceHostIdExtractor;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
-import se.sics.ktoolbox.util.network.ports.One2NChannel;
-import se.sics.ktoolbox.util.reference.KReference;
-import se.sics.ktoolbox.util.reference.KReferenceException;
-import se.sics.ktoolbox.util.reference.KReferenceFactory;
-import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
-import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.ConnId;
-import se.sics.nstream.FileId;
-import se.sics.nstream.StreamId;
-import se.sics.nstream.TorrentIds;
-import se.sics.nstream.report.TransferStatusPort;
-import se.sics.nstream.report.event.TorrentTracking;
-import se.sics.nstream.storage.StoragePort;
-import se.sics.nstream.torrent.conn.ConnectionComp;
-import se.sics.nstream.torrent.conn.ConnectionPort;
-import se.sics.nstream.torrent.conn.event.CloseTransfer;
-import se.sics.nstream.torrent.conn.event.DetailedState;
-import se.sics.nstream.torrent.conn.event.OpenTransfer;
-import se.sics.nstream.torrent.conn.event.Seeder;
-import se.sics.nstream.torrent.connMngr.TorrentConnMngr;
-import se.sics.nstream.torrent.connMngr.TorrentConnMngr.ConnResult;
-import se.sics.nstream.torrent.fileMngr.TFileRead;
-import se.sics.nstream.torrent.fileMngr.TFileWrite;
-import se.sics.nstream.torrent.fileMngr.TorrentFileMngr;
-import se.sics.nstream.torrent.old.TorrentConfig;
-import se.sics.nstream.torrent.resourceMngr.PrepareResources;
-import se.sics.nstream.torrent.resourceMngr.TorrentResourceMngrPort;
-import se.sics.nstream.torrent.transfer.DwnlConnComp;
-import se.sics.nstream.torrent.transfer.DwnlConnPort;
-import se.sics.nstream.torrent.transfer.UpldConnComp;
-import se.sics.nstream.torrent.transfer.UpldConnPort;
-import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
-import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
-import se.sics.nstream.torrent.transfer.upld.event.GetBlocks;
-import se.sics.nstream.torrent.transferTracking.TransferReportPort;
-import se.sics.nstream.torrent.transferTracking.TransferTrackingComp;
-import se.sics.nstream.torrent.transferTracking.TransferTrackingPort;
-import se.sics.nstream.torrent.transferTracking.TransferTrackingReport;
-import se.sics.nstream.torrent.util.EventTorrentConnIdExtractor;
-import se.sics.nstream.torrent.util.MsgTorrentConnIdExtractor;
+import se.sics.nstream.storage.durable.DStoragePort;
+import se.sics.nstream.torrent.core.TransferComp;
+import se.sics.nstream.torrent.resourceMngr.ResourceMngrPort;
+import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
+import se.sics.nstream.torrent.tracking.TorrentStatusPort;
+import se.sics.nstream.torrent.tracking.TorrentTrackingPort;
 import se.sics.nstream.transfer.MyTorrent;
-import se.sics.nstream.transfer.MyTorrent.Manifest;
-import se.sics.nstream.transfer.MyTorrent.ManifestDef;
-import se.sics.nstream.transfer.Transfer;
-import se.sics.nstream.transfer.TransferMngrPort;
-import se.sics.nstream.util.BlockDetails;
-import se.sics.nstream.util.MyStream;
-import se.sics.nstream.util.actuator.ComponentLoadTracking;
-import se.sics.nstream.util.result.HashReadCallback;
-import se.sics.nstream.util.result.ReadCallback;
-import se.sics.nutil.tracking.load.QueueLoadConfig;
+import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentComp extends ComponentDefinition {
 
+    public static final long REPORT_DELAY = 1000;
+
     private static final Logger LOG = LoggerFactory.getLogger(TorrentComp.class);
-    private String logPrefix;
+    private final String logPrefix;
 
-    private static final int DEF_FILE_NR = 0;
-    private static final long ADVANCE_PERIOD = 1000;
-
-    private final TorrentConfig torrentConfig;
-    private final OverlayId torrentId;
+    //**************************EXTERNAL_CONNECT_TO*****************************
+    private final Positive<Timer> timerPort = requires(Timer.class);
+    private final Positive<Network> networkPort = requires(Network.class);
+    private final Positive<ResourceMngrPort> resourceMngrPort = requires(ResourceMngrPort.class);
+    private final Positive<DStoragePort> storagePort = requires(DStoragePort.class);
+    private final Negative<TorrentStatusPort> reportPort = provides(TorrentStatusPort.class);
+    //**************************************************************************
     private final KAddress selfAdr;
-    private boolean seeder;
+    private final OverlayId torrentId;
+    private final List<KAddress> partners;
+    private final boolean upload;
+    private final Optional<MyTorrent> torrent;
     //**************************************************************************
-    Positive<Network> networkPort = requires(Network.class);
-    //**************************************************************************
-    Positive<Timer> timerPort = requires(Timer.class);
-    //resources port
-    Positive<TorrentResourceMngrPort> resourcePort = requires(TorrentResourceMngrPort.class);
-    //transfer ports
-    Positive<TransferReportPort> transferReportPort = requires(TransferReportPort.class);
-    Positive<DwnlConnPort> dwnlConnPort = requires(DwnlConnPort.class);
-    Positive<UpldConnPort> upldConnPort = requires(UpldConnPort.class);
-    //conn ports
-    Positive<ConnectionPort> connPort = requires(ConnectionPort.class);
-    //other
-    Positive<TransferMngrPort> detailsPort = requires(TransferMngrPort.class);
-    Negative<TransferStatusPort> statusPort = provides(TransferStatusPort.class);
-    //local multiplexing channels
-    private One2NChannel<Network> connNetworkChannel;
-    private One2NChannel<Network> transferNetworkChannel;
-    private One2NChannel<DwnlConnPort> dwnlConnChannel;
-    private One2NChannel<UpldConnPort> upldConnChannel;
-    //**************************************************************************
-    private final ComponentLoadTracking componentTracking;
-    private TorrentFileMngr fileMngr;
-    private final TorrentConnMngr connMngr;
-    //**************************************************************************
-    private ConnectionState connState;
-    private ServeDefinitionState serveDefState;
-    private GetDefinitionState getDefState;
-    private ServeFilesState serveFilesState;
-    private GetFilesState getFilesState;
-    private Component transferTrackingComp;
-    //**************************************************************************
-    private UUID advanceTid;
+    private Component networkRetryComp;
+    private Component transferComp;
+    private Component reportComp;
 
     public TorrentComp(Init init) {
-        torrentId = init.torrentId;
         selfAdr = init.selfAdr;
-        logPrefix = "<nid:" + selfAdr.getId() + ",oid:" + torrentId + ">";
-        torrentConfig = new TorrentConfig();
+        torrentId = init.torrentId;
+        logPrefix = "<nid:" + selfAdr.getId() + ",tid:" + torrentId + ">";
+        LOG.info("{}initiating...", logPrefix);
 
-        seeder = init.upload;
-        componentTracking = new ComponentLoadTracking("torrent", this.proxy, new QueueLoadConfig(config()));
-        buildChannels();
-        storageProvider(init.storageProvider);
-
-        Optional<MyTorrent.ManifestDef> manifest = Optional.absent();
-        if (init.torrentDef.isPresent()) {
-            serveDefState = new ServeDefinitionState(init.torrentDef.get());
-            manifest = Optional.of(init.torrentDef.get().manifest.getDef());
-        }
-        connState = new ConnectionState(manifest);
-        connMngr = new TorrentConnMngr(componentTracking, init.partners);
-
+        partners = init.partners;
+        upload = init.upload;
+        torrent = init.torrent;
         subscribe(handleStart, control);
-        subscribe(handleKilled, control);
-
-        subscribe(handleAdvance, timerPort);
-
-        subscribe(handleResourcesPrepared, resourcePort);
-        subscribe(handleTransferReport, transferReportPort);
-
-        subscribe(handleSeederConnectSuccess, connPort);
-        subscribe(handleSeederConnectTimeout, connPort);
-        subscribe(handleSeederConnectSuspect, connPort);
-        subscribe(handleDetailedStateSuccess, connPort);
-        subscribe(handleDetailedStateTimeout, connPort);
-        subscribe(handleDetailedStateNone, connPort);
-        subscribe(handleOpenTransferLeecherResp, connPort);
-        subscribe(handleOpenTransferLeecherTimeout, connPort);
-        subscribe(handleOpenTransferSeeder, connPort);
-        subscribe(handleCloseTransfer, connPort);
-
-        subscribe(handleGetBlocks, upldConnPort);
-        subscribe(handleCompletedBlocks, dwnlConnPort);
-        subscribe(handleTransferDetails, detailsPort);
-    }
-
-    private void buildChannels() {
-        ChannelIdExtractor<?, Identifier> overlayIdExtractor = new MsgOverlayIdExtractor();
-        connNetworkChannel = One2NChannel.getChannel("torrentConnNetwork", networkPort, overlayIdExtractor, TorrentCompFilters.connInclusionFilter);
-        ChannelIdExtractor<?, Identifier> connIdExtractor = new MsgTorrentConnIdExtractor(new SourceHostIdExtractor());
-        transferNetworkChannel = One2NChannel.getChannel("torrentPeerFileNetwork", networkPort, connIdExtractor, TorrentCompFilters.transferInclusionFilter);
-        dwnlConnChannel = One2NChannel.getChannel("torrentDwnlConn", (Negative) dwnlConnPort.getPair(), new EventTorrentConnIdExtractor());
-        upldConnChannel = One2NChannel.getChannel("torrentUpldConn", (Negative) upldConnPort.getPair(), new EventTorrentConnIdExtractor());
-    }
-
-    private void storageProvider(StorageProvider storageProvider) {
-        for (Class<? extends StoragePort> r : storageProvider.requiredStoragePorts()) {
-            requires(r);
-        }
-    }
-
-    private void initializeTorrent(MyTorrent torrent) {
-        DelayedExceptionSyncHandler deh = new DelayedExceptionSyncHandler() {
-
-            @Override
-            public boolean fail(Result<Object> result) {
-                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            }
-        };
-        fileMngr = new TorrentFileMngr(config(), proxy, deh, componentTracking, torrent, seeder);
-        //transfer report
-        transferTrackingComp = create(TransferTrackingComp.class, new TransferTrackingComp.Init(torrentId));
-        connect(transferTrackingComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-        connect(transferTrackingComp.getPositive(TransferReportPort.class), transferReportPort.getPair(), Channel.TWO_WAY);
-    }
-
-    private void startTorrent(MyTorrent torrent) {
-        trigger(Start.event, transferTrackingComp.control());
-        trigger(new PrepareResources.Request(torrent), resourcePort);
     }
 
     Handler handleStart = new Handler<Start>() {
-
         @Override
         public void handle(Start event) {
-            LOG.info("{}starting", logPrefix);
-            if (seeder) {
-                initializeTorrent(serveDefState.td);
-                startTorrent(serveDefState.td);
-            }
-            if (connState != null) {
-                connState.connectComp();
-                connState.start();
-            }
+            LOG.info("{}starting...", logPrefix);
+            connectComp();
+            startComp();
         }
     };
+    
+    private void connectComp() {
+        networkRetryComp = create(BestEffortNetworkComp.class, new BestEffortNetworkComp.Init(selfAdr));
+        connect(networkRetryComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+        connect(networkRetryComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
 
-    @Override
-    public void tearDown() {
+        transferComp = create(TransferComp.class, new TransferComp.Init(selfAdr, torrentId, partners, upload, torrent));
+        connect(transferComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+        connect(transferComp.getNegative(Network.class), networkRetryComp.getPositive(Network.class), Channel.TWO_WAY);
+        connect(transferComp.getNegative(ResourceMngrPort.class), resourceMngrPort, Channel.TWO_WAY);
+        connect(transferComp.getNegative(DStoragePort.class), storagePort, Channel.TWO_WAY);
+
+        reportComp = create(TorrentTrackingComp.class, new TorrentTrackingComp.Init(torrentId, REPORT_DELAY));
+        connect(reportComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+        connect(reportComp.getNegative(TorrentTrackingPort.class), transferComp.getPositive(TorrentTrackingPort.class), Channel.TWO_WAY);
+
+        connect(reportPort, reportComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
     }
 
-    Handler handleKilled = new Handler<Killed>() {
-        @Override
-        public void handle(Killed event) {
-            if (connState != null) {
-                connState.handleKilled(event);
-            }
-            if (serveDefState != null) {
-                serveDefState.handleKilled(event);
-            }
-            if (getDefState != null) {
-                getDefState.handleKilled(event);
-            }
-        }
-    };
-
-    //**************************************************************************
-    Handler handleResourcesPrepared = new Handler<PrepareResources.Success>() {
-        @Override
-        public void handle(PrepareResources.Success resp) {
-            LOG.info("{}received:{}", logPrefix, resp);
-            LOG.info("{}resources prepared", logPrefix);
-            serveFilesState = new ServeFilesState();
-            if (!seeder) {
-                getFilesState = new GetFilesState();
-                scheduleAdvance();
-                tryAdvance();
-            }
-        }
-    };
-    //**************************************************************************
-    Handler handleTransferReport = new Handler<TransferTrackingReport>() {
-        @Override
-        public void handle(TransferTrackingReport event) {
-            LOG.info("{}transfer report", logPrefix);
-            TorrentTracking.Indication report = new TorrentTracking.Indication(fileMngr.report(), event.downloadReport);
-            trigger(report, statusPort);
-        }
-    };
-    //**************************************************************************
-    Handler handleAdvance = new Handler<AdvanceTimeout>() {
-        @Override
-        public void handle(AdvanceTimeout event) {
-            LOG.debug("{}advance", logPrefix);
-            tryAdvance();
-        }
-    };
-
-    private void tryAdvance() {
-        if (fileMngr == null) {
-            return;
-        }
-        if (fileMngr.complete()) {
-            cancelAdvance();
-            trigger(new TorrentTracking.DownloadDone(torrentId, fileMngr.report()), statusPort);
-        }
-
-        FileId fileId = connMngr.canAdvanceFile();
-        if (fileId != null) {
-            TFileWrite fileWriter = fileMngr.writeTo(fileId);
-            if (fileWriter.isComplete()) {
-                LOG.info("{}file:{} completed", new Object[]{logPrefix, fileId});
-                fileMngr.complete(fileId);
-                Set<Identifier> closeConn = connMngr.closeFileConnection(fileId);
-                getFilesState.killInstances(fileId, closeConn);
-                return;
-            }
-            int batchSize = 2;
-            Pair<Integer, Optional<BlockDetails>> block = nextBlock(fileWriter);
-            while (block != null && batchSize > 0) {
-                batchSize--;
-                if (!advanceConn(fileId, block.getValue0(), block.getValue1())) {
-                    break;
-                }
-                block = nextBlock(fileWriter);
-            }
-            if (block != null) {
-                fileWriter.resetBlock(block.getValue0());
-            }
-            if (batchSize == 0) {
-                return;
-            }
-        }
-        if (connMngr.canStartNewFile()) {
-            if (fileMngr.hasPending()) {
-                Pair<FileId, Map<StreamId, MyStream>> resource = fileMngr.nextPending();
-                fileId = resource.getValue0();
-                LOG.debug("{}advance new file:{}", logPrefix, fileId);
-                connMngr.newFileConnection(fileId);
-                return;
-            }
-        }
-        LOG.warn("{}nothing", logPrefix);
-    }
-
-    private Pair<Integer, Optional<BlockDetails>> nextBlock(TFileWrite fileWriter) {
-        fileWriter.hasHashes();
-        if (fileWriter.hasBlocks()) {
-            //for the moment we get hashes with blocks - same management
-            return fileWriter.requestBlock();
-        }
-        return null;
-    }
-
-    private boolean advanceConn(FileId fileId, int blockNr, Optional<BlockDetails> irregularBlock) {
-        ConnResult result = connMngr.attemptSlot(fileId, blockNr, irregularBlock);
-        if (result instanceof TorrentConnMngr.FailConnection) {
-            return false;
-        } else if (result instanceof TorrentConnMngr.UseFileConnection) {
-            TorrentConnMngr.UseFileConnection openedConn = (TorrentConnMngr.UseFileConnection) result;
-            getFilesState.useFileConnection(openedConn);
-            return true;
-        } else if (result instanceof TorrentConnMngr.NewFileConnection) {
-            TorrentConnMngr.NewFileConnection newConn = (TorrentConnMngr.NewFileConnection) result;
-            getFilesState.newFileConnection(newConn);
-            return true;
-        } else if (result instanceof TorrentConnMngr.NewPeerConnection) {
-            TorrentConnMngr.NewPeerConnection newConn = (TorrentConnMngr.NewPeerConnection) result;
-            getFilesState.newPeerConnection(newConn);
-            return true;
-        } else {
-            throw new RuntimeException("ups");
-        }
-    }
-
-    //**************************************************************************
-    Handler handleSeederConnectSuccess = new Handler<Seeder.Success>() {
-        @Override
-        public void handle(Seeder.Success resp) {
-            LOG.info("{}connect to:{} success", logPrefix, resp.target);
-            connMngr.connected(resp.target);
-            if (serveDefState == null && getDefState == null) {
-                trigger(new DetailedState.Request(connMngr.randomPeer()), connPort);
-            }
-            if (getFilesState != null) {
-                getFilesState.peerConnected(resp.target);
-            }
-        }
-    };
-
-    Handler handleSeederConnectTimeout = new Handler<Seeder.Timeout>() {
-        @Override
-        public void handle(Seeder.Timeout resp) {
-            LOG.warn("{}connect timeout", logPrefix);
-            throw new RuntimeException("ups");
-        }
-    };
-
-    Handler handleSeederConnectSuspect = new Handler<Seeder.Suspect>() {
-        @Override
-        public void handle(Seeder.Suspect event) {
-            LOG.warn("{}connect suspect", logPrefix);
-            throw new RuntimeException("ups");
-        }
-    };
-
-    Handler handleDetailedStateSuccess = new Handler<DetailedState.Success>() {
-        @Override
-        public void handle(DetailedState.Success event) {
-            LOG.info("{}detailed state - success", logPrefix);
-            if (serveDefState == null && getDefState == null) {
-                KAddress peer = connMngr.randomPeer();
-                FileId fileId = TorrentIds.fileId(torrentId, DEF_FILE_NR);
-                ConnId connId = TorrentIds.connId(fileId, peer.getId(), true);
-                trigger(new OpenTransfer.LeecherRequest(peer, connId), connPort);
-                getDefState = new GetDefinitionState(event.manifestDef);
-            }
-        }
-    };
-
-    Handler handleDetailedStateTimeout = new Handler<DetailedState.Timeout>() {
-        @Override
-        public void handle(DetailedState.Timeout event) {
-            LOG.warn("{}detailed state - timeout", logPrefix);
-        }
-    };
-
-    Handler handleDetailedStateNone = new Handler<DetailedState.None>() {
-        @Override
-        public void handle(DetailedState.None event) {
-            LOG.warn("{}detailed state - none", logPrefix);
-        }
-    };
-
-    Handler handleOpenTransferLeecherResp = new Handler<OpenTransfer.LeecherResponse>() {
-        @Override
-        public void handle(OpenTransfer.LeecherResponse resp) {
-            LOG.info("{}open transfer - leecher response", logPrefix);
-            if (resp.connId.fileId.fileNr == DEF_FILE_NR) {
-                //def phase
-                getDefState.startInstance(connMngr.randomPeer());
-            } else {
-                getFilesState.fileConnected(resp.connId, resp.peer);
-            }
-        }
-    };
-
-    Handler handleOpenTransferLeecherTimeout = new Handler<OpenTransfer.LeecherTimeout>() {
-        @Override
-        public void handle(OpenTransfer.LeecherTimeout resp) {
-            LOG.warn("{}transfer definition - leecher timeout", logPrefix);
-            throw new RuntimeException("ups");
-        }
-    };
-
-    Handler handleOpenTransferSeeder = new Handler<OpenTransfer.SeederRequest>() {
-        @Override
-        public void handle(OpenTransfer.SeederRequest req) {
-            LOG.info("{}transfer definition - seeder request", logPrefix);
-            if (req.connId.fileId.fileNr == DEF_FILE_NR) {
-                serveDefState.startInstance(req.peer);
-                answer(req, req.answer(true));
-            } else {
-                serveFilesState.startInstance(req.connId, req.peer, MyTorrent.defaultDataBlock);
-                answer(req, req.answer(true));
-            }
-        }
-    };
-
-    Handler handleCloseTransfer = new Handler<CloseTransfer.Indication>() {
-        @Override
-        public void handle(CloseTransfer.Indication event) {
-            if (event.connId.leecher) {
-                LOG.warn("{}close transfer - conn:{} as leecher", new Object[]{logPrefix, event.connId});
-                throw new RuntimeException("ups");
-            } else {
-                LOG.info("{}close transfer - conn:{} as seeder", new Object[]{logPrefix, event.connId});
-                serveDefState.killInstance(event.connId.peerId);
-            }
-        }
-    };
-
-    //**************************************************************************
-    Handler handleTransferDetails = new Handler<Transfer.DownloadResponse>() {
-        @Override
-        public void handle(Transfer.DownloadResponse resp) {
-            LOG.info("{}starting transfer", logPrefix);
-            initializeTorrent(resp.torrent);
-            startTorrent(resp.torrent);
-            trigger(new TorrentTracking.DownloadStarting(torrentId, fileMngr.report()), statusPort);
-        }
-    };
-    //**************************************************************************
-    Handler handleGetBlocks = new Handler<GetBlocks.Request>() {
-        @Override
-        public void handle(GetBlocks.Request req) {
-            LOG.debug("{}conn:{} req blocks:{}", new Object[]{logPrefix, req.connId, req.blocks});
-            if (req.connId.fileId.fileNr == DEF_FILE_NR) {
-                serveDefState.getBlocks(req);
-            } else {
-                new GetBlocksHandler(req).handle();
-            }
-        }
-    };
-
-    private class GetBlocksHandler {
-
-        final GetBlocks.Request req;
-        final Map<Integer, byte[]> hashes = new HashMap<>();
-        final Map<Integer, KReference<byte[]>> blocks = new HashMap<>();
-
-        GetBlocksHandler(GetBlocks.Request req) {
-            this.req = req;
-        }
-
-        //once all defBlocks/hashes are retrived, it will answer back
-        void handle() {
-            final TFileRead fileReader = fileMngr.readFrom(req.connId.fileId);
-            fileReader.setCacheHint(req.connId.peerId, req.cacheHint);
-            for (final Integer blockNr : req.blocks) {
-                fileReader.readBlock(blockNr, new ReadCallback() {
-
-                    @Override
-                    public boolean fail(Result<KReference<byte[]>> result) {
-                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-                    }
-
-                    @Override
-                    public boolean success(Result<KReference<byte[]>> result) {
-                        blocks.put(blockNr, result.getValue());
-                        if (done()) {
-                            answer(req, req.success(hashes, blocks, fileReader.getIrregularBlocks()));
-                        }
-                        return true;
-                    }
-                });
-                fileReader.readHash(blockNr, new HashReadCallback() {
-
-                    @Override
-                    public boolean fail(Result<KReference<byte[]>> result) {
-                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-                    }
-
-                    @Override
-                    public boolean success(Result<KReference<byte[]>> result) {
-                        hashes.put(blockNr, result.getValue().getValue().get());
-                        if (done()) {
-                            answer(req, req.success(hashes, blocks, fileReader.getIrregularBlocks()));
-                        }
-                        return true;
-                    }
-                });
-            }
-        }
-
-        public boolean done() {
-            return hashes.size() == req.blocks.size() && blocks.size() == req.blocks.size();
-        }
-    }
-    //**************************************************************************
-
-    Handler handleCompletedBlocks = new Handler<CompletedBlocks>() {
-        @Override
-        public void handle(CompletedBlocks event) {
-            LOG.info("{}conn:{} completed blocks:{} hashes:{}", new Object[]{logPrefix, event.connId, event.blocks.keySet(), event.hashes.keySet()});
-            if (event.connId.fileId.fileNr == DEF_FILE_NR) {
-                if (getDefState == null) {
-                    throw new RuntimeException("ups");
-                }
-                getDefState.handleBlockCompleted(event);
-            } else {
-                writeToFile(event.connId.fileId, event.blocks, event.hashes);
-                updateConn(event.connId, event.blocks);
-                tryAdvance();
-            }
-        }
-    };
-
-    private void writeToFile(FileId fileId, Map<Integer, byte[]> blocks, Map<Integer, byte[]> hashes) {
-        TFileWrite fileWriter = fileMngr.writeTo(fileId);
-        fileWriter.hashes(hashes, new HashSet<Integer>());
-        for (Map.Entry<Integer, byte[]> block : blocks.entrySet()) {
-            KReference<byte[]> ref = KReferenceFactory.getReference(block.getValue());
-            fileWriter.block(block.getKey(), ref);
-            try {
-                ref.release();
-            } catch (KReferenceException ex) {
-                throw new RuntimeException(ex);
-            }
-        }
-    }
-
-    private void updateConn(ConnId connId, Map<Integer, byte[]> blocks) {
-        for (Integer blockNr : blocks.keySet()) {
-            connMngr.releaseSlot(connId, blockNr);
-        }
-    }
-
-    //*********************************STATES***********************************
-    private void completeGetDefinitionState(MyTorrent torrentDef) {
-        getDefState = null;
-        if (serveDefState == null) {
-            throw new RuntimeException("ups");
-        }
-    }
-
-    public class ConnectionState {
-
-        private final Optional<MyTorrent.ManifestDef> manifestDef;
-        private Component connComp;
-
-        public ConnectionState(Optional<MyTorrent.ManifestDef> manifestDef) {
-            this.manifestDef = manifestDef;
-        }
-
-        public void connectComp() {
-            connComp = create(ConnectionComp.class, new ConnectionComp.Init(torrentId, selfAdr, manifestDef));
-            connect(connComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-            connNetworkChannel.addChannel(torrentId, connComp.getNegative(Network.class));
-            connect(connComp.getPositive(ConnectionPort.class), connPort.getPair(), Channel.TWO_WAY);
-        }
-
-        public void start() {
-            trigger(Start.event, connComp.control());
-            if (connMngr.hasConnCandidates()) {
-                trigger(new Seeder.Connect(connMngr.getConnCandidate()), connPort);
-            }
-        }
-
-        public void handleKilled(Killed event) {
-            if (connComp != null && event.component.id().equals(connComp.id())) {
-                connNetworkChannel.removeChannel(torrentId, connComp.getNegative(Network.class));
-            }
-        }
-    }
-
-    public class GetDefinitionState {
-
-        private final MyTorrent.Builder tdBuilder;
-        //**********************************************************************
-        private Component leecherComp;
-        private ConnId connId;
-
-        public GetDefinitionState(ManifestDef manifestDef) {
-            this.tdBuilder = new MyTorrent.Builder(manifestDef);
-        }
-
-        public void startInstance(KAddress peer) {
-            FileId fileId = TorrentIds.fileId(torrentId, DEF_FILE_NR);
-            connId = TorrentIds.connId(fileId, peer.getId(), true);
-            LOG.info("{}get definition - start connection:{}", logPrefix, connId);
-
-            leecherComp = create(DwnlConnComp.class, new DwnlConnComp.Init(connId, selfAdr, peer, MyTorrent.defaultDefBlock, false));
-            connect(leecherComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-            transferNetworkChannel.addChannel(connId, leecherComp.getNegative(Network.class));
-            dwnlConnChannel.addChannel(connId, leecherComp.getPositive(DwnlConnPort.class));
-            trigger(Start.event, leecherComp.control());
-
-            Set<Integer> blocks = new HashSet<>();
-            Map<Integer, BlockDetails> irregularBlockDetails = new HashMap<>();
-            int lastBlockNr = tdBuilder.manifestBuilder.nrBlocks - 1;
-            for (int i = 0; i <= lastBlockNr; i++) {
-                blocks.add(i);
-            }
-            irregularBlockDetails.put(lastBlockNr, tdBuilder.manifestBuilder.lastBlock);
-            trigger(new DownloadBlocks(connId, blocks, irregularBlockDetails), dwnlConnPort);
-        }
-
-        private void killInstance() {
-            if (leecherComp == null) {
-                return;
-            }
-            LOG.info("{}get definition - killing connection:{}", logPrefix, connId);
-            trigger(Kill.event, leecherComp.control());
-        }
-
-        public void handleKilled(Killed event) {
-            if (leecherComp == null || !leecherComp.id().equals(event.component.id())) {
-                return;
-            }
-            LOG.info("{}get definition - killed connection:{}", logPrefix, connId);
-
-            transferNetworkChannel.removeChannel(connId, leecherComp.getNegative(Network.class));
-            dwnlConnChannel.removeChannel(connId, leecherComp.getPositive(DwnlConnPort.class));
-            leecherComp = null;
-            connId = null;
-        }
-
-        public void handleBlockCompleted(CompletedBlocks event) {
-            if (!event.connId.equals(connId)) {
-                throw new RuntimeException("ups");
-            }
-
-            tdBuilder.manifestBuilder.addBlocks(event.blocks);
-
-            if (tdBuilder.manifestBuilder.blocksComplete()) {
-                interpretManifest(tdBuilder.manifestBuilder.build());
-            }
-        }
-
-        private void interpretManifest(Manifest manifest) {
-            trigger(new Transfer.DownloadRequest(torrentId, Result.success(manifest)), detailsPort);
-            trigger(new CloseTransfer.Request(connId), connPort);
-            killInstance();
-        }
-
-        public void handleTransferDetails(Transfer.DownloadResponse resp) {
-            tdBuilder.setBase(resp.torrent.nameToId, resp.torrent.base);
-            tdBuilder.setExtended(resp.torrent.extended);
-            tearDown();
-            completeGetDefinitionState(tdBuilder.build());
-        }
-    }
-
-    public class ServeDefinitionState {
-
-        private final MyTorrent td;
-        //<peerId, compId, comp>
-        private final Table<Identifier, UUID, Pair<Component, ConnId>> seederComponents = HashBasedTable.create();
-
-        public ServeDefinitionState(MyTorrent td) {
-            this.td = td;
-        }
-
-        public void startInstance(KAddress peer) {
-            FileId fileId = TorrentIds.fileId(torrentId, DEF_FILE_NR);
-            ConnId connId = TorrentIds.connId(fileId, peer.getId(), false);
-            LOG.info("{}serve definition - start connection:{}", logPrefix, connId);
-
-            Component transferComp = create(UpldConnComp.class, new UpldConnComp.Init(connId, selfAdr, td.manifest.defaultBlock, false));
-            connect(transferComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-            transferNetworkChannel.addChannel(connId, transferComp.getNegative(Network.class));
-            upldConnChannel.addChannel(connId, transferComp.getPositive(UpldConnPort.class));
-
-            seederComponents.put(peer.getId(), transferComp.id(), Pair.with(transferComp, connId));
-            trigger(Start.event, transferComp.control());
-        }
-
-        public void killInstance(Identifier peerId) {
-            Map<UUID, Pair<Component, ConnId>> aux = seederComponents.row(peerId);
-            if (aux.isEmpty()) {
-                return;
-            }
-            if (aux.size() > 1) {
-                throw new RuntimeException("ups");
-            }
-            Pair<Component, ConnId> aux2 = aux.entrySet().iterator().next().getValue();
-            ConnId connId = aux2.getValue1();
-            Component transferComp = aux2.getValue0();
-            LOG.info("{}serve definition - killing connection:{}", logPrefix, connId);
-            trigger(Kill.event, transferComp.control());
-        }
-
-        public void handleKilled(Killed event) {
-            Map<Identifier, Pair<Component, ConnId>> aux = seederComponents.column(event.component.id());
-            if (aux.isEmpty()) {
-                return;
-            }
-            if (aux.size() > 1) {
-                throw new RuntimeException("ups");
-            }
-            Map.Entry<Identifier, Pair<Component, ConnId>> aux2 = aux.entrySet().iterator().next();
-            Identifier peerId = aux2.getKey();
-            ConnId connId = aux2.getValue().getValue1();
-            Component transferComp = aux2.getValue().getValue0();
-            LOG.info("{}serve definition - killed connection:{}", logPrefix, connId);
-
-            transferNetworkChannel.removeChannel(connId, transferComp.getNegative(Network.class));
-            upldConnChannel.removeChannel(connId, transferComp.getPositive(UpldConnPort.class));
-            seederComponents.remove(peerId, transferComp.id());
-        }
-
-        public void getBlocks(GetBlocks.Request req) {
-            Map<Integer, BlockDetails> irregularBlocks = new TreeMap<>();
-            Map<Integer, KReference<byte[]>> blockValues = new TreeMap<>();
-            int lastBlockNr = td.manifest.nrBlocks - 1;
-            if (req.blocks.contains(lastBlockNr)) {
-                irregularBlocks.put(lastBlockNr, td.manifest.lastBlock);
-            }
-            for (Integer blockNr : req.blocks) {
-                KReference<byte[]> ref = KReferenceFactory.getReference(td.manifest.manifestBlocks.get(blockNr));
-                blockValues.put(blockNr, ref);
-            }
-            if (req.withHashes) {
-                throw new RuntimeException("ups");
-            }
-            answer(req, req.success(new HashMap<Integer, byte[]>(), blockValues, irregularBlocks));
-        }
-    }
-
-    public class GetFilesState {
-
-        private final Map<UUID, ConnId> compIdToLeecherId = new HashMap<>();
-        private final Map<ConnId, Component> leechers = new HashMap<>();
-        //<peerId, >
-        private final Map<Identifier, List<TorrentConnMngr.NewPeerConnection>> pendingPeerConnection = new HashMap<>();
-        //<connId, >
-        private final Map<ConnId, List<TorrentConnMngr.NewFileConnection>> pendingFileConnection = new HashMap<>();
-
-        public void newPeerConnection(TorrentConnMngr.NewPeerConnection peerConnect) {
-            LOG.info("{}get files - file:{} waiting connect to peer:{}", new Object[]{logPrefix, peerConnect.connId.fileId, peerConnect.peer});
-            List<TorrentConnMngr.NewPeerConnection> pc = pendingPeerConnection.get(peerConnect.peer.getId());
-            if (pc == null) {
-                pc = new LinkedList<>();
-                pendingPeerConnection.put(peerConnect.peer.getId(), pc);
-                LOG.info("{}get files - connecting to peer:{}", logPrefix, peerConnect.peer);
-                trigger(new Seeder.Connect(peerConnect.peer), connPort);
-            }
-            pc.add(peerConnect);
-            LOG.info("{}get files - waiting to establish peer connection:{}", logPrefix, peerConnect.peer);
-        }
-
-        public void peerConnected(KAddress peer) {
-            LOG.info("{}get files - connected to peer:{}", logPrefix, peer);
-            connMngr.connected(peer);
-            List<TorrentConnMngr.NewPeerConnection> pc = pendingPeerConnection.remove(peer.getId());
-            if (pc == null) {
-                throw new RuntimeException("ups");
-            }
-            for (TorrentConnMngr.NewPeerConnection conn : pc) {
-                newFileConnection(conn.advance());
-            }
-        }
-
-        public void newFileConnection(TorrentConnMngr.NewFileConnection conn) {
-            List<TorrentConnMngr.NewFileConnection> fc = pendingFileConnection.get(conn.connId);
-            if (fc == null) {
-                fc = new LinkedList<>();
-                pendingFileConnection.put(conn.connId, fc);
-                LOG.info("{}get files - establishing file connection:{}", logPrefix, conn.connId);
-                trigger(conn.getMsg(), connPort);
-            }
-            fc.add(conn);
-            LOG.info("{}get files - waiting to establish file connection:{}", logPrefix, conn.connId);
-        }
-
-        public void fileConnected(ConnId connId, KAddress peer) {
-            LOG.info("{}get files - established file connection:{}", logPrefix, connId);
-            List<TorrentConnMngr.NewFileConnection> fcs = pendingFileConnection.remove(connId);
-            if (fcs == null) {
-                throw new RuntimeException("ups");
-            }
-
-            Component leecherComp = create(DwnlConnComp.class, new DwnlConnComp.Init(connId, selfAdr, peer, MyTorrent.defaultDataBlock, true));
-            connect(leecherComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-            connect(leecherComp.getPositive(TransferTrackingPort.class), transferTrackingComp.getNegative(TransferTrackingPort.class), Channel.TWO_WAY);
-            transferNetworkChannel.addChannel(connId, leecherComp.getNegative(Network.class));
-            dwnlConnChannel.addChannel(connId, leecherComp.getPositive(DwnlConnPort.class));
-            trigger(Start.event, leecherComp.control());
-            leechers.put(connId, leecherComp);
-            compIdToLeecherId.put(leecherComp.id(), connId);
-
-            connMngr.connectPeerFile(connId);
-            for (TorrentConnMngr.NewFileConnection fc : fcs) {
-                useFileConnection(fc.advance());
-            }
-        }
-
-        public void useFileConnection(TorrentConnMngr.UseFileConnection conn) {
-            LOG.debug("{}get files - conn:{} block:{}", new Object[]{logPrefix, conn.connId, conn.blockNr});
-            connMngr.useSlot(conn);
-            trigger(conn.getMsg(), dwnlConnPort);
-        }
-
-        public void killInstances(FileId fileId, Set<Identifier> peerIds) {
-            for (Identifier peerId : peerIds) {
-                ConnId connId = TorrentIds.connId(fileId, peerId, true);
-                killInstance(connId);
-            }
-        }
-
-        private void killInstance(ConnId connId) {
-            Component leecherComp = leechers.get(connId);
-            if (leecherComp == null) {
-                throw new RuntimeException("ups");
-            }
-            LOG.info("{}get files - killing leecher connection:{}", logPrefix, connId);
-            trigger(Kill.event, leecherComp.control());
-        }
-
-        public void handleKilled(Killed event) {
-            ConnId connId = compIdToLeecherId.remove(event.component.id());
-            if (connId == null) {
-                return;
-            }
-            Component leecherComp = leechers.remove(connId);
-            if (leecherComp == null) {
-                throw new RuntimeException("ups");
-            }
-            LOG.info("{}get files - killed leecher connection:{}", logPrefix, connId);
-
-            transferNetworkChannel.removeChannel(connId, leecherComp.getNegative(Network.class));
-            dwnlConnChannel.removeChannel(connId, leecherComp.getPositive(DwnlConnPort.class));
-        }
-    }
-
-    public class ServeFilesState {
-
-        private final Map<UUID, ConnId> compIdToSeederId = new HashMap<>();
-        private final Map<ConnId, Component> seeders = new HashMap<>();
-
-        public void startInstance(ConnId connId, KAddress peer, BlockDetails defaultBlock) {
-            LOG.info("{}get files - start seeder connection:{}", logPrefix, connId);
-            Component seederComp = create(UpldConnComp.class, new UpldConnComp.Init(connId, selfAdr, defaultBlock, true));
-            connect(seederComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-            transferNetworkChannel.addChannel(connId, seederComp.getNegative(Network.class));
-            upldConnChannel.addChannel(connId, seederComp.getPositive(UpldConnPort.class));
-            trigger(Start.event, seederComp.control());
-
-            seeders.put(connId, seederComp);
-            compIdToSeederId.put(seederComp.id(), connId);
-        }
-
-        private void killInstance(ConnId connId) {
-            Component seederComp = seeders.get(connId);
-            if (seederComp == null) {
-                throw new RuntimeException("ups");
-            }
-            LOG.info("{}get files - killing seeder connection:{}", logPrefix, connId);
-            trigger(Kill.event, seederComp.control());
-        }
-
-        public void handleKilled(Killed event) {
-            ConnId connId = compIdToSeederId.remove(event.component.id());
-            if (connId == null) {
-                return;
-            }
-            Component seederComp = seeders.remove(connId);
-            if (seederComp == null) {
-                throw new RuntimeException("ups");
-            }
-            LOG.info("{}get files - killed seeder connection:{}", logPrefix, connId);
-
-            transferNetworkChannel.removeChannel(connId, seederComp.getNegative(Network.class));
-            upldConnChannel.removeChannel(connId, seederComp.getPositive(UpldConnPort.class));
-        }
+    private void startComp() {
+        trigger(Start.event, networkRetryComp.control());
+        trigger(Start.event, transferComp.control());
+        trigger(Start.event, reportComp.control());
     }
 
     public static class Init extends se.sics.kompics.Init<TorrentComp> {
 
         public final KAddress selfAdr;
         public final OverlayId torrentId;
-        public final StorageProvider storageProvider;
-        public List<KAddress> partners;
+        public final List<KAddress> partners;
         public final boolean upload;
-        public final Optional<MyTorrent> torrentDef;
+        public final Optional<MyTorrent> torrent;
 
-        public Init(KAddress selfAdr, OverlayId torrentId, StorageProvider storageProvider, List<KAddress> partners,
-                boolean upload, Optional<MyTorrent> torrentDef) {
+        public Init(KAddress selfAdr, OverlayId torrentId, List<KAddress> partners, boolean upload, Optional<MyTorrent> torrent) {
             this.selfAdr = selfAdr;
             this.torrentId = torrentId;
-            this.storageProvider = storageProvider;
-            this.upload = upload;
-            this.torrentDef = torrentDef;
             this.partners = partners;
+            this.upload = upload;
+            this.torrent = torrent;
         }
-    }
 
-    private void scheduleAdvance() {
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(ADVANCE_PERIOD, ADVANCE_PERIOD);
-        AdvanceTimeout tt = new AdvanceTimeout(spt);
-        spt.setTimeoutEvent(tt);
-        advanceTid = tt.getTimeoutId();
-        trigger(spt, timerPort);
-    }
-
-    private void cancelAdvance() {
-        CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(advanceTid);
-        trigger(cpd, timerPort);
-        advanceTid = null;
-    }
-
-    public static class AdvanceTimeout extends Timeout {
-
-        public AdvanceTimeout(SchedulePeriodicTimeout spt) {
-            super(spt);
+        public static Init download(KAddress selfAdr, OverlayId torrentId, List<KAddress> partners) {
+            Optional<MyTorrent> torrent = Optional.absent();
+            return new Init(selfAdr, torrentId, partners, false, torrent);
+        }
+        
+        public static Init upload(KAddress selfAdr, OverlayId torrentId, MyTorrent torrent) {
+            return new Init(selfAdr, torrentId, new ArrayList<KAddress>(), true, Optional.of(torrent));
         }
     }
 }

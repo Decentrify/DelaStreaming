@@ -27,7 +27,8 @@ import se.sics.ktoolbox.util.predict.ExpMovingAvg;
 import se.sics.ktoolbox.util.predict.STGMAvg;
 import se.sics.ktoolbox.util.predict.SimpleSmoothing;
 import se.sics.nstream.FileId;
-import se.sics.nstream.util.MyStream;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nutil.tracking.load.QueueLoadConfig;
 
 /**
@@ -39,7 +40,8 @@ public class ComponentLoadTracking {
     private int instBufferLoad;
 
     private final Map<String, Integer> transferSize = new HashMap<>();
-    private final Map<String, Pair<MyStream, Integer>> bufferSize = new HashMap<>();
+    private final Map<String, Pair<StreamId, MyStream>> streams = new HashMap<>();
+    private final Map<String, Integer> bufferSize = new HashMap<>();
     private final Map<String, Pair<Integer, Integer>> cacheSize = new HashMap<>();
 
     public ComponentLoadTracking(String componentName, ComponentProxy proxy, QueueLoadConfig queueLoadConfig) {
@@ -47,20 +49,23 @@ public class ComponentLoadTracking {
         this.instBufferLoad = 0;
     }
 
-    public void setBufferSize(MyStream stream, int size) {
-        bufferSize.put(stream.resource.getSinkName(), Pair.with(stream, size));
+    public void setBufferSize(Pair<StreamId, MyStream> stream, int size) {
+        String sinkName = stream.getValue1().resource.getSinkName();
+        streams.put(sinkName, stream);
+        bufferSize.put(sinkName, size);
     }
     
     public int getMaxBufferSize(FileId fileId) {
-        Iterator<Pair<MyStream, Integer>> it = bufferSize.values().iterator();
+        Iterator<Pair<StreamId, MyStream>> it = streams.values().iterator();
         int maxSize = -1;
         while(it.hasNext()) {
-            Pair<MyStream, Integer> next = it.next();
-            if(!next.getValue0().streamId.fileId.equals(fileId)) {
+            Pair<StreamId, MyStream> next = it.next();
+            if(!next.getValue0().fileId.equals(fileId)) {
                 continue;
             }
-            if(maxSize < next.getValue1()) {
-                maxSize = next.getValue1();
+            int nextSize = bufferSize.get(next.getValue1().resource.getSinkName());
+            if(maxSize < nextSize) {
+                maxSize = nextSize;
             }
         }
         return maxSize;
@@ -70,8 +75,10 @@ public class ComponentLoadTracking {
         transferSize.put(fileName, size);
     }
 
-    public void setCacheSize(MyStream stream, int normalCacheSize, int extendedCacheSize) {
-        cacheSize.put(stream.resource.getSinkName(), Pair.with(normalCacheSize, extendedCacheSize));
+    public void setCacheSize(Pair<StreamId, MyStream> stream, int normalCacheSize, int extendedCacheSize) {
+        String sinkName = stream.getValue1().resource.getSinkName();
+        streams.put(sinkName, stream);
+        cacheSize.put(sinkName, Pair.with(normalCacheSize, extendedCacheSize));
     }
 
     public double adjustment() {

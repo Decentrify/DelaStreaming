@@ -23,10 +23,10 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.javatuples.Pair;
 import se.sics.nstream.FileId;
+import se.sics.nstream.storage.durable.util.FileExtendedDetails;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
-import se.sics.nstream.util.FileExtendedDetails;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

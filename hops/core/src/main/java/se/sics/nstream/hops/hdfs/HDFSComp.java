@@ -21,6 +21,7 @@ package se.sics.nstream.hops.hdfs;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Component;
@@ -31,10 +32,12 @@ import se.sics.kompics.Start;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.storage.StorageInitBuilder;
-import se.sics.nstream.storage.StorageRead;
-import se.sics.nstream.storage.StorageWrite;
-import se.sics.nstream.util.MyStream;
+import se.sics.nstream.storage.durable.DStoragePort;
+import se.sics.nstream.storage.durable.DurableStorageProvider;
+import se.sics.nstream.storage.durable.events.DStorageRead;
+import se.sics.nstream.storage.durable.events.DStorageWrite;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
+import se.sics.nstream.storage.durable.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -44,17 +47,19 @@ public class HDFSComp extends ComponentDefinition {
     private final static Logger LOG = LoggerFactory.getLogger(HDFSComp.class);
     private String logPrefix = "";
 
-    Negative<HDFSPort> resourcePort = provides(HDFSPort.class);
+    Negative<DStoragePort> resourcePort = provides(DStoragePort.class);
     One2NChannel resourceChannel;
 
     private Map<Identifier, Component> components = new HashMap<>();
     private final HDFSEndpoint hdfsEndpoint;
+    private final HDFSResource hdfsResource;
     private final UserGroupInformation ugi;
 
     public HDFSComp(Init init) {
         LOG.info("{}init", logPrefix);
 
         hdfsEndpoint = init.endpoint;
+        hdfsResource = init.resource;
         ugi = UserGroupInformation.createRemoteUser(hdfsEndpoint.user);
 
         subscribe(handleStart, control);
@@ -74,26 +79,26 @@ public class HDFSComp extends ComponentDefinition {
     public void tearDown() {
     }
     //**************************************************************************
-    Handler handleReadRequest = new Handler<StorageRead.Request>() {
+    Handler handleReadRequest = new Handler<DStorageRead.Request>() {
         @Override
-        public void handle(StorageRead.Request req) {
+        public void handle(DStorageRead.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, (HDFSResource) req.stream.resource, req.readRange);
-            StorageRead.Response resp = req.respond(readResult);
+            Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, hdfsResource, req.readRange);
+            DStorageRead.Response resp = req.respond(readResult);
             LOG.trace("{}answering:{}", logPrefix, resp);
             answer(req, resp);
         }
     };
 
-    Handler handleWriteRequest = new Handler<StorageWrite.Request>() {
+    Handler handleWriteRequest = new Handler<DStorageWrite.Request>() {
         @Override
-        public void handle(StorageWrite.Request req) {
+        public void handle(DStorageWrite.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
             if (req.pos == 0) {
-                HDFSHelper.simpleCreate(ugi, hdfsEndpoint, (HDFSResource) req.stream.resource);
+                HDFSHelper.simpleCreate(ugi, hdfsEndpoint, hdfsResource);
             }
-            Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, (HDFSResource) req.stream.resource, req.value);
-            StorageWrite.Response resp = req.respond(writeResult);
+            Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, hdfsResource, req.value);
+            DStorageWrite.Response resp = req.respond(writeResult);
             LOG.trace("{}answering:{}", logPrefix, resp);
             answer(req, resp);
         }
@@ -110,11 +115,35 @@ public class HDFSComp extends ComponentDefinition {
         }
     }
 
-    public static class InitBuilder implements StorageInitBuilder {
+    public static class StorageProvider implements DurableStorageProvider<HDFSComp> {
+
+        public final Identifier self;
+        public final HDFSEndpoint endpoint;
+
+        public StorageProvider(Identifier self, HDFSEndpoint endpoint) {
+            this.self = self;
+            this.endpoint = endpoint;
+        }
 
         @Override
-        public Init buildWith(MyStream stream) {
-            return new HDFSComp.Init((HDFSEndpoint) stream.endpoint, (HDFSResource) stream.resource);
+        public Pair<HDFSComp.Init, Long> initiate(StreamResource resource) {
+            HDFSResource hdfsResource = (HDFSResource) resource;
+            throw new UnsupportedOperationException("not yet");
+        }
+
+        @Override
+        public String getName() {
+            return "hdfs";
+        }
+
+        @Override
+        public Class<HDFSComp> getStorageDefinition() {
+            return HDFSComp.class;
+        }
+
+        @Override
+        public StreamEndpoint getEndpoint() {
+            return endpoint;
         }
     }
 }

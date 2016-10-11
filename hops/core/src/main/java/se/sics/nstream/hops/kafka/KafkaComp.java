@@ -18,14 +18,18 @@
  */
 package se.sics.nstream.hops.kafka;
 
+import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
-import se.sics.nstream.storage.StorageInitBuilder;
-import se.sics.nstream.util.MyStream;
+import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.nstream.storage.durable.DStoragePort;
+import se.sics.nstream.storage.durable.DurableStorageProvider;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
+import se.sics.nstream.storage.durable.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -35,12 +39,12 @@ public class KafkaComp extends ComponentDefinition {
     private final static Logger LOG = LoggerFactory.getLogger(KafkaComp.class);
     private String logPrefix = "";
 
-    Negative<KafkaPort> streamPort = provides(KafkaPort.class);
+    Negative<DStoragePort> streamPort = provides(DStoragePort.class);
     KafkaProxy kafka;
     
     public KafkaComp(Init init) {
         LOG.info("{}init", logPrefix);
-        kafka = new KafkaProxy(proxy, init.endpoint);
+        kafka = new KafkaProxy(proxy, init.endpoint, init.resource);
         proxy.subscribe(handleStart, control);
     }
 
@@ -68,11 +72,35 @@ public class KafkaComp extends ComponentDefinition {
         }
     }
     
-    public static class InitBuilder implements StorageInitBuilder {
+     public static class StorageProvider implements DurableStorageProvider<KafkaComp> {
+
+        public final Identifier self;
+        public final KafkaEndpoint endpoint;
+
+        public StorageProvider(Identifier self, KafkaEndpoint endpoint) {
+            this.self = self;
+            this.endpoint = endpoint;
+        }
 
         @Override
-        public Init buildWith(MyStream stream) {
-            return new Init((KafkaEndpoint) stream.endpoint, (KafkaResource) stream.resource);
+        public Pair<KafkaComp.Init, Long> initiate(StreamResource resource) {
+            KafkaResource kafkaResource = (KafkaResource) resource;
+            throw new UnsupportedOperationException("not yet");
+        }
+
+        @Override
+        public String getName() {
+            return "hdfs";
+        }
+
+        @Override
+        public Class<KafkaComp> getStorageDefinition() {
+            return KafkaComp.class;
+        }
+
+        @Override
+        public StreamEndpoint getEndpoint() {
+            return endpoint;
         }
     }
 }

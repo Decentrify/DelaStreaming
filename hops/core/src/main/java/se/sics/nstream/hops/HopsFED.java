@@ -21,33 +21,35 @@ package se.sics.nstream.hops;
 import com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.List;
-import se.sics.nstream.util.FileExtendedDetails;
-import se.sics.nstream.util.MyStream;
+import org.javatuples.Pair;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.util.FileExtendedDetails;
+import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsFED implements FileExtendedDetails {
-    public final MyStream hdfsStream;
-    public final Optional<MyStream> kafkaStream;
+    public final Pair<StreamId, MyStream> hdfsStream;
+    public final Optional<Pair<StreamId, MyStream>> kafkaStream;
     
-    public HopsFED(MyStream hdfsStream, Optional<MyStream> kafkaStream) {
+    public HopsFED(Pair<StreamId, MyStream> hdfsStream, Optional<Pair<StreamId, MyStream>> kafkaStream) {
         this.hdfsStream = hdfsStream;
         this.kafkaStream = kafkaStream;
     }
     
-    public HopsFED(MyStream hdfsStream) {
+    public HopsFED(Pair<StreamId, MyStream> hdfsStream) {
         this(hdfsStream, (Optional)Optional.absent());
     }
     
     @Override
-    public MyStream getMainStream() {
+    public Pair<StreamId, MyStream> getMainStream() {
         return hdfsStream;
     }
 
     @Override
-    public List<MyStream> getSecondaryStreams() {
-        List<MyStream> sr = new ArrayList<>();
+    public List<Pair<StreamId, MyStream>> getSecondaryStreams() {
+        List<Pair<StreamId, MyStream>> sr = new ArrayList<>();
         if(kafkaStream.isPresent()) {
             sr.add(kafkaStream.get());
         }

@@ -18,12 +18,12 @@
  */
 package se.sics.nstream.torrent.transfer;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
+import se.sics.nstream.ConnId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface TorrentConnEvent extends OverlayEvent {
-    public Identifier connId();
+    public ConnId connId();
 }

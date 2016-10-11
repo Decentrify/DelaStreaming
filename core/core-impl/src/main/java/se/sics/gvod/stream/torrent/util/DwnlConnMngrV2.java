@@ -26,7 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.stream.congestion.PLedbatState;
-import se.sics.nstream.report.ReportComp;
+import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
 import se.sics.gvod.stream.util.ConnectionStatus;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntId;
@@ -37,7 +37,7 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public class DwnlConnMngrV2 {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ReportComp.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TorrentTrackingComp.class);
 
     private final HostParam hostParam;
     private final ConnectionParam connParam;

@@ -21,7 +21,7 @@ package se.sics.nstream.hops.hdfs;
 import java.io.File;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import se.sics.nstream.util.StreamEndpoint;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -40,18 +40,8 @@ public class HDFSEndpoint implements StreamEndpoint {
     }
 
     @Override
-    public Class<HDFSControlPort> getControlPortType() {
-        return HDFSControlPort.class;
-    }
-
-    @Override
-    public Class<HDFSPort> getStoragePortType() {
-        return HDFSPort.class;
-    }
-
-    @Override
     public String getEndpointName() {
-        return "hdfs";
+        return hopsURL;
     }
 
     public static HDFSEndpoint getBasic(String user, String hopsIp, int hopsPort) {

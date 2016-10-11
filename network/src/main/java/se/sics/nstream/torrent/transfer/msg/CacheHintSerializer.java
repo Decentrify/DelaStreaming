@@ -38,7 +38,7 @@ public class CacheHintSerializer {
         
         public Request(int id) {
             this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
         }
 
         @Override
@@ -69,7 +69,7 @@ public class CacheHintSerializer {
         
         public Response(int id) {
             this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
         }
         
         @Override

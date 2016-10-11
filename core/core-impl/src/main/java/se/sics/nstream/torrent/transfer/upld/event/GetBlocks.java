@@ -63,7 +63,7 @@ public class GetBlocks {
         }
 
         @Override
-        public Identifier connId() {
+        public ConnId connId() {
             return connId;
         }
 
@@ -99,7 +99,7 @@ public class GetBlocks {
         }
 
         @Override
-        public Identifier connId() {
+        public ConnId connId() {
             return connId;
         }
     }

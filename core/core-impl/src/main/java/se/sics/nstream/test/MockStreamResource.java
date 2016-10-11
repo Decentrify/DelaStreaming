@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.test;
 
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.storage.durable.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

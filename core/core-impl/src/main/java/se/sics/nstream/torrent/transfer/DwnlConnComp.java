@@ -48,18 +48,18 @@ import se.sics.ledbat.core.DownloadThroughput;
 import se.sics.ledbat.core.LedbatConfig;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 import se.sics.nstream.ConnId;
-import se.sics.nstream.torrent.event.TorrentTimeout;
+import se.sics.nstream.old.torrent.event.TorrentTimeout;
 import se.sics.nstream.torrent.old.TransferConfig;
+import se.sics.nstream.torrent.transfer.tracking.DownloadTrackingReport;
+import se.sics.nstream.torrent.transfer.tracking.DownloadTrackingTrace;
+import se.sics.nstream.torrent.transfer.tracking.TransferTrackingPort;
+import se.sics.nstream.torrent.transfer.tracking.event.TrackingConnection;
 import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.FPDControl;
 import se.sics.nstream.torrent.transfer.msg.CacheHint;
 import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
-import se.sics.nstream.torrent.transferTracking.DownloadConnectionClosed;
-import se.sics.nstream.torrent.transferTracking.DownloadTrackingReport;
-import se.sics.nstream.torrent.transferTracking.DownloadTrackingTrace;
-import se.sics.nstream.torrent.transferTracking.TransferTrackingPort;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nutil.ContentWrapperHelper;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
@@ -141,7 +141,7 @@ public class DwnlConnComp extends ComponentDefinition {
         networkQueueLoad.tearDown();
         cancelAdvanceDownload();
         cancelReport();
-        trigger(new DownloadConnectionClosed(connId), reportPort);
+        trigger(new TrackingConnection.Close(connId), reportPort);
     }
 
     Handler handleReport = new Handler<ReportTimeout>() {

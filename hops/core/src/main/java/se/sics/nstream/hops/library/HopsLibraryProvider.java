@@ -25,7 +25,6 @@ import se.sics.kompics.PortType;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.LibraryProvider;
-import se.sics.nstream.util.CoreExtPorts;
 
 /**
  *
@@ -44,9 +43,9 @@ public class HopsLibraryProvider implements LibraryProvider {
     }
     
     @Override
-    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, CoreExtPorts extPorts) {
+    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr) {
         hopsHelper = new HopsHelperMngr(proxy, logPrefix);
-        hopsTorrent = new HopsLibraryMngr(proxy, config, logPrefix, selfAdr, extPorts);
+        hopsTorrent = new HopsLibraryMngr(proxy, config, logPrefix, selfAdr);
     }
     
     @Override

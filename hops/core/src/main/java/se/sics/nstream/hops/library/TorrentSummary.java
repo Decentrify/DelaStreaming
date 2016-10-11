@@ -18,7 +18,6 @@
  */
 package se.sics.nstream.hops.library;
 
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.hops.hdfs.HDFSResource;
 
 /**
@@ -81,10 +80,10 @@ public class TorrentSummary {
 //        return manifestResource;
     }
 
-    public static TorrentSummary getSummary(OverlayId torrentId, String torrentName, Library.Torrent torrent) {
-        String sTorrentId = torrentId.toString();
-        String torrentDir = torrent.manifest.dirPath;
-        String manifest = torrent.manifest.fileName;
-        return new TorrentSummary(sTorrentId, torrentName, torrentDir, manifest);
-    }
+//    public static TorrentSummary getSummary(OverlayId torrentId, String torrentName, Library.Torrent torrent) {
+//        String sTorrentId = torrentId.toString();
+//        String torrentDir = torrent.manifest.dirPath;
+//        String manifest = torrent.manifest.fileName;
+//        return new TorrentSummary(sTorrentId, torrentName, torrentDir, manifest);
+//    }
 }

@@ -30,7 +30,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.kafka.avro.AvroMsgProducer;
 import se.sics.nstream.hops.kafka.avro.AvroParser;
-import se.sics.nstream.storage.StorageWrite;
+import se.sics.nstream.storage.durable.events.DStorageWrite;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -44,7 +44,7 @@ public class KafkaProducerMngr {
 
     private final AvroMsgProducer producer;
     public int producedMsgs = 0;
-    private final List<StorageWrite.Request> waitingOnLeftover = new LinkedList<>();
+    private final List<DStorageWrite.Request> waitingOnLeftover = new LinkedList<>();
     private ByteBuf leftover;
 
     public KafkaProducerMngr(ComponentProxy proxy, KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
@@ -53,7 +53,7 @@ public class KafkaProducerMngr {
         leftover = Unpooled.buffer();
     }
 
-    public void write(StorageWrite.Request req) {
+    public void write(DStorageWrite.Request req) {
         Schema schema = producer.getSchema();
         leftover.writeBytes(req.value);
         getRidOfLeftovers(schema);
@@ -66,8 +66,8 @@ public class KafkaProducerMngr {
             if (record != null) {
                 producedMsgs++;
                 producer.append(record);
-                for (StorageWrite.Request req : waitingOnLeftover) {
-                    StorageWrite.Response resp = req.respond(Result.success(true));
+                for (DStorageWrite.Request req : waitingOnLeftover) {
+                    DStorageWrite.Response resp = req.respond(Result.success(true));
                     LOG.trace("{}answering:{}", logPrefix, resp);
                     proxy.answer(req, resp);
                 }
@@ -76,7 +76,7 @@ public class KafkaProducerMngr {
         }
     }
 
-    private void parseWithLeftovers(Schema schema, StorageWrite.Request req) {
+    private void parseWithLeftovers(Schema schema, DStorageWrite.Request req) {
         while (true) {
             GenericRecord record = AvroParser.blobToAvro(schema, leftover);
             if (record != null) {
@@ -95,7 +95,7 @@ public class KafkaProducerMngr {
                     waitingOnLeftover.add(req);
                 } else {
                     leftover = Unpooled.buffer();
-                    StorageWrite.Response resp = req.respond(Result.success(true));
+                    DStorageWrite.Response resp = req.respond(Result.success(true));
                     LOG.trace("{}answering:{}", logPrefix, resp);
                     proxy.answer(req, resp);
                 }

@@ -18,8 +18,7 @@
  */
 package se.sics.nstream.storage.buffer;
 
-import se.sics.nstream.storage.buffer.SimpleAppendKBuffer;
-import se.sics.nstream.storage.StorageWrite;
+import se.sics.nstream.storage.durable.events.DStorageWrite;
 
 
 /**
@@ -31,7 +30,7 @@ public class SimpleAppendKBufferTest {
         this.buf = buf;
     }
 
-    public void handleWriteResp(StorageWrite.Response resp) {
+    public void handleWriteResp(DStorageWrite.Response resp) {
         buf.handleWriteResp.handle(resp);
     }
 }

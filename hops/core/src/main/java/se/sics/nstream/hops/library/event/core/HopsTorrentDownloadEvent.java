@@ -67,24 +67,24 @@ public class HopsTorrentDownloadEvent {
             return eventId;
         }
 
-        public StartResponse alreadyExists(Result<Pair<String, Library.Torrent>> result) {
-            return new AlreadyExists(this, result);
+        public StartResponse failed(Result<Pair<String, Library.Torrent>> result) {
+            return new Failed(this, result);
         }
 
-        public StartResponse starting(Result<Boolean> result) {
-            return new Starting(this, result);
+        public StartResponse success(Result<Boolean> result) {
+            return new Success(this, result);
         }
     }
 
     public static interface StartResponse extends Direct.Response, StreamEvent {
     }
 
-    public static class Starting implements StartResponse {
+    public static class Success implements StartResponse {
 
         public final StartRequest req;
         public final Result<Boolean> result;
 
-        public Starting(StartRequest req, Result<Boolean> result) {
+        public Success(StartRequest req, Result<Boolean> result) {
             this.req = req;
             this.result = result;
         }
@@ -95,12 +95,12 @@ public class HopsTorrentDownloadEvent {
         }
     }
 
-    public static class AlreadyExists implements StartResponse {
+    public static class Failed implements StartResponse {
 
         public final StartRequest req;
         public final Result<Pair<String, Library.Torrent>> result;
 
-        public AlreadyExists(StartRequest req, Result<Pair<String, Library.Torrent>> result) {
+        public Failed(StartRequest req, Result<Pair<String, Library.Torrent>> result) {
             this.req = req;
             this.result = result;
         }
@@ -142,7 +142,11 @@ public class HopsTorrentDownloadEvent {
             return eventId;
         }
 
-        public AdvanceResponse answer(Result<Boolean> result) {
+        public AdvanceResponse success(Result<Boolean> result) {
+            return new AdvanceResponse(this, result);
+        }
+        
+        public AdvanceResponse fail(Result result) {
             return new AdvanceResponse(this, result);
         }
     }

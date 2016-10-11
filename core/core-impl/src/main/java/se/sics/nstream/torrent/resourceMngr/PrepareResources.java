@@ -22,6 +22,7 @@ import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.transfer.MyTorrent;
 
 /**
@@ -31,10 +32,12 @@ import se.sics.nstream.transfer.MyTorrent;
 public class PrepareResources {
     public static class Request extends Direct.Request<Success> implements Identifiable {
         public final Identifier eventId;
+        public final OverlayId torrentId;
         public final MyTorrent torrent;
         
-        public Request(MyTorrent torrent) {
+        public Request(OverlayId torrentId, MyTorrent torrent) {
             this.eventId = BasicIdentifiers.eventId();
+            this.torrentId = torrentId;
             this.torrent = torrent;
         }
 

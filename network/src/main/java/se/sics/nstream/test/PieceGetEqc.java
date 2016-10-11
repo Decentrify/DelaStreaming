@@ -19,7 +19,7 @@
 package se.sics.nstream.test;
 
 import se.sics.ktoolbox.util.test.EqualComparator;
-import se.sics.nstream.torrent.event.PieceGet;
+import se.sics.nstream.old.torrent.event.PieceGet;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

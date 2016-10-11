@@ -45,9 +45,10 @@ import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.storage.StoragePort;
-import se.sics.nstream.storage.StorageRead;
-import se.sics.nstream.util.MyStream;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.DStoragePort;
+import se.sics.nstream.storage.durable.events.DStorageRead;
+import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KPiece;
@@ -64,9 +65,9 @@ public class SimpleKCache implements KCache {
     private String logPrefix = "";
 
     private final KCacheConfig cacheConfig;
-    private final MyStream stream;
+    private final Pair<StreamId, MyStream> stream;
     //**************************************************************************
-    private final Positive<StoragePort> readPort;
+    private final Positive<DStoragePort> readPort;
     private final Positive<Timer> timerPort;
     private final ComponentProxy proxy;
     private final DelayedExceptionSyncHandler syncExHandling;
@@ -86,13 +87,13 @@ public class SimpleKCache implements KCache {
     private UUID extendedCacheCleanTid;
 
     public SimpleKCache(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExHandling, ComponentLoadTracking loadTracker,
-            MyStream stream) {
+            Pair<StreamId, MyStream> stream) {
         this.cacheConfig = new KCacheConfig(config);
         this.proxy = proxy;
         this.stream = stream;
         this.syncExHandling = syncExHandling;
         this.loadTracker = loadTracker;
-        this.readPort = proxy.getNegative(stream.endpoint.getStoragePortType()).getPair();
+        this.readPort = proxy.getNegative(DStoragePort.class).getPair();
         this.timerPort = proxy.getNegative(Timer.class).getPair();
         this.proxy.subscribe(handleExtendedCacheClean, timerPort);
         this.proxy.subscribe(handleReadResp, readPort);
@@ -205,7 +206,7 @@ public class SimpleKCache implements KCache {
             cacheFetch = Pair.with(blockRange, rhList);
             pendingCacheFetch.put(blockPos, cacheFetch);
             //read from external resource
-            proxy.trigger(new StorageRead.Request(stream, blockRange), readPort);
+            proxy.trigger(new DStorageRead.Request(stream.getValue0(), blockRange), readPort);
         }
         cacheFetch.getValue1().add(reader);
     }
@@ -312,9 +313,9 @@ public class SimpleKCache implements KCache {
         }
     };
 
-    Handler handleReadResp = new Handler<StorageRead.Response>() {
+    Handler handleReadResp = new Handler<DStorageRead.Response>() {
         @Override
-        public void handle(StorageRead.Response resp) {
+        public void handle(DStorageRead.Response resp) {
             LOG.debug("{}received:{}", logPrefix, resp);
             loadTracker.setCacheSize(stream, cacheRef.size(), systemRef.size());
             if (resp.result.isSuccess()) {

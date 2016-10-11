@@ -34,9 +34,10 @@ import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.storage.StoragePort;
-import se.sics.nstream.storage.StorageWrite;
-import se.sics.nstream.util.MyStream;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.DStoragePort;
+import se.sics.nstream.storage.durable.events.DStorageWrite;
+import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.WriteCallback;
@@ -54,9 +55,9 @@ public class SimpleAppendKBuffer implements KBuffer {
     private String logPrefix = "";
 
     private final KBufferConfig bufferConfig;
-    private final MyStream stream;
+    private final Pair<StreamId, MyStream> stream;
     //**************************************************************************
-    private final Positive<StoragePort> writePort;
+    private final Positive<DStoragePort> writePort;
     private final ComponentProxy proxy;
     private final DelayedExceptionSyncHandler syncExHandling;
     private final ComponentLoadTracking loadTracker;
@@ -69,12 +70,12 @@ public class SimpleAppendKBuffer implements KBuffer {
     //**************************************************************************
 
     public SimpleAppendKBuffer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExceptionHandling, ComponentLoadTracking loadTracker,
-            MyStream stream, long appendPos) {
+            Pair<StreamId, MyStream> stream, long appendPos) {
         this.bufferConfig = new KBufferConfig(config);
         this.stream = stream;
         this.proxy = proxy;
         this.syncExHandling = syncExceptionHandling;
-        this.writePort = proxy.getNegative(stream.endpoint.getStoragePortType()).getPair();
+        this.writePort = proxy.getNegative(DStoragePort.class).getPair();
         this.loadTracker = loadTracker;
         this.appendPos = appendPos;
         this.blockPos = 0;
@@ -121,7 +122,7 @@ public class SimpleAppendKBuffer implements KBuffer {
             if (next == null) {
                 break;
             }
-            StorageWrite.Request req = new StorageWrite.Request(stream, appendPos, next.getValue0().getValue().get());
+            DStorageWrite.Request req = new DStorageWrite.Request(stream.getValue0(), appendPos, next.getValue0().getValue().get());
             pendingWriteReqs.add(req.eventId);
             proxy.trigger(req, writePort);
             appendPos += next.getValue0().getValue().get().length;
@@ -129,9 +130,9 @@ public class SimpleAppendKBuffer implements KBuffer {
         }
     }
 
-    Handler handleWriteResp = new Handler<StorageWrite.Response>() {
+    Handler handleWriteResp = new Handler<DStorageWrite.Response>() {
         @Override
-        public void handle(StorageWrite.Response resp) {
+        public void handle(DStorageWrite.Response resp) {
             if(!pendingWriteReqs.remove(resp.getId())) {
                 //not mine
                 return;

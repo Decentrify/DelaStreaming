@@ -58,12 +58,12 @@ public class HopsTorrentUploadEvent {
             return eventId;
         }
 
-        public Response alreadyExists(Result<Boolean> result) {
-            return new AlreadyExists(this, result);
+        public Response failed(Result<Boolean> result) {
+            return new Failed(this, result);
         }
         
-        public Response uploading(Result<Boolean> result) {
-            return new Uploading(this, result);
+        public Response success(Result<Boolean> result) {
+            return new Success(this, result);
         }
     }
 
@@ -83,14 +83,14 @@ public class HopsTorrentUploadEvent {
         }
     }
     
-    public static class Uploading extends Response {
-        public Uploading(Request req, Result<Boolean> result) {
+    public static class Success extends Response {
+        public Success(Request req, Result<Boolean> result) {
             super(req, result);
         }
     }
     
-    public static class AlreadyExists extends Response {
-        public AlreadyExists(Request req, Result<Boolean> result) {
+    public static class Failed extends Response {
+        public Failed(Request req, Result<Boolean> result) {
             super(req, result);
         }
     }

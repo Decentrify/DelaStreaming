@@ -21,6 +21,7 @@ package se.sics.nstream.storage.cache;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
+import org.javatuples.Pair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -52,12 +53,12 @@ import se.sics.ktoolbox.util.test.Validator;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.TorrentIds;
-import se.sics.nstream.storage.StorageRead;
+import se.sics.nstream.storage.durable.events.DStorageRead;
+import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.test.DStorageReadReqEC;
 import se.sics.nstream.test.MockStreamEndpoint;
 import se.sics.nstream.test.MockStreamPort;
 import se.sics.nstream.test.MockStreamResource;
-import se.sics.nstream.test.StreamReadReqEC;
-import se.sics.nstream.util.MyStream;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KBlockImpl;
@@ -73,7 +74,7 @@ public class TestSimpleKCache {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestSimpleKCache.class);
 
-    private static MyStream readStream;
+    private static Pair<StreamId, MyStream> readStream;
     private static Identifier readerId;
 
     private static KBlock b0, b1, b2;
@@ -84,13 +85,13 @@ public class TestSimpleKCache {
     private static SimpleKCache.ExtendedCacheClean timeout;
     private static byte[] r = new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-    private static StreamReadReqEC comparator = new StreamReadReqEC();
-    private static StorageRead.Request req0;
-    private static StorageRead.Response resp0;
-    private static StorageRead.Request req1;
-    private static StorageRead.Response resp1;
-    private static StorageRead.Request req2;
-    private static StorageRead.Response resp2;
+    private static DStorageReadReqEC comparator = new DStorageReadReqEC();
+    private static DStorageRead.Request req0;
+    private static DStorageRead.Response resp0;
+    private static DStorageRead.Request req1;
+    private static DStorageRead.Response resp1;
+    private static DStorageRead.Request req2;
+    private static DStorageRead.Response resp2;
 
     @BeforeClass
     public static void setup() {
@@ -120,7 +121,7 @@ public class TestSimpleKCache {
 
         MockStreamEndpoint readEndpoint = new MockStreamEndpoint();
         MockStreamResource readResource = new MockStreamResource("mock1");
-        readStream = new MyStream(streamId, readEndpoint, readResource);
+        readStream = Pair.with(streamId, new MyStream(readEndpoint, readResource));
 
         SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(0, 0);
         timeout = new SimpleKCache.ExtendedCacheClean(spt);
@@ -134,11 +135,11 @@ public class TestSimpleKCache {
         hint1_2.put(b1.lowerAbsEndpoint(), b1);
         hint1_2.put(b2.lowerAbsEndpoint(), b2);
 
-        req0 = new StorageRead.Request(readStream, b0);
+        req0 = new DStorageRead.Request(readStream.getValue0(), b0);
         resp0 = req0.respond(Result.success(r));
-        req1 = new StorageRead.Request(readStream, b1);
+        req1 = new DStorageRead.Request(readStream.getValue0(), b1);
         resp1 = req1.respond(Result.success(r));
-        req2 = new StorageRead.Request(readStream, b2);
+        req2 = new DStorageRead.Request(readStream.getValue0(), b2);
         resp2 = req2.respond(Result.success(r));
     }
 

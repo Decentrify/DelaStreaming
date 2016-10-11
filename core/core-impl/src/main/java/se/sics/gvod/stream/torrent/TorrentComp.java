@@ -72,7 +72,7 @@
 //import se.sics.ktoolbox.util.profiling.KProfiler;
 //import se.sics.ktoolbox.util.profiling.KProfilerKConfig;
 //import se.sics.nstream.StreamEvent;
-//import se.sics.nstream.torrent.event.Download;
+//import se.sics.nstream.torrent.event.StartDownload;
 //import se.sics.nstream.torrent.event.TorrentGet;
 //
 ///**
@@ -368,7 +368,7 @@
 //            this.uploadOnly = uploadOnly;
 //        }
 //
-//        //TODO Alex fix me - setup and tear down of resources - Download/Upload phase
+//        //TODO Alex fix me - setup and tear down of resources - StartDownload/Upload phase
 //        @Override
 //        public void setup() {
 //            subscribe(handleTorrentRequest, networkPort);
@@ -408,10 +408,10 @@
 //                };
 //
 //        ClassMatchedHandler handleHashRequest
-//                = new ClassMatchedHandler<Download.HashRequest, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashRequest>>() {
+//                = new ClassMatchedHandler<Download.HashRequest, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, StartDownload.HashRequest>>() {
 //
 //                    @Override
-//                    public void handle(Download.HashRequest content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashRequest> container) {
+//                    public void handle(StartDownload.HashRequest content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, StartDownload.HashRequest> container) {
 //                        profiler.start("TorrentComp", "uploadHashRequest");
 //                        KAddress target = container.getHeader().getSource();
 //                        LOG.debug("{}received hashPos:{} request from:{}", new Object[]{logPrefix, content.targetPos, target.getId()});
@@ -422,10 +422,10 @@
 //                };
 //
 //        ClassMatchedHandler handlePieceRequest
-//                = new ClassMatchedHandler<Download.DataRequest, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataRequest>>() {
+//                = new ClassMatchedHandler<Download.DataRequest, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, StartDownload.DataRequest>>() {
 //
 //                    @Override
-//                    public void handle(Download.DataRequest content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataRequest> container) {
+//                    public void handle(StartDownload.DataRequest content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, StartDownload.DataRequest> container) {
 //                        profiler.start("TorrentComp", "uploadPieceRequest");
 //                        KAddress target = container.getHeader().getSource();
 //                        LOG.debug("{}received data:{} request from:{}", new Object[]{logPrefix, content.pieceId, target.getId()});
@@ -504,7 +504,7 @@
 //        public void report() {
 //            int pendingMsg = pendingPieces.size() + pendingHashes.size();
 ////            Pair<Integer, Integer> dwnlReport = dwnlConn.mngr.getLoad();
-//            LOG.info("{}TransferFSM Download TransferMngr:{},{}",
+//            LOG.info("{}TransferFSM StartDownload TransferMngr:{},{}",
 //                    new Object[]{logPrefix, transferMngr.contiguousBlocks(0), 100 * transferMngr.percentageComplete()});
 //            upload.report();
 //        }
@@ -527,10 +527,10 @@
 //        };
 //
 //        ClassMatchedHandler handleHashResponse
-//                = new ClassMatchedHandler<Download.HashResponse, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashResponse>>() {
+//                = new ClassMatchedHandler<Download.HashResponse, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, StartDownload.HashResponse>>() {
 //
 //                    @Override
-//                    public void handle(Download.HashResponse content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.HashResponse> container) {
+//                    public void handle(StartDownload.HashResponse content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, StartDownload.HashResponse> container) {
 //                        profiler.start("TorrentComp", "downloadHashResponse");
 //                        KAddress target = container.getHeader().getSource();
 //                        LOG.debug("{}received hashPos:{} response from:{}", new Object[]{logPrefix, content.targetPos, target.getId()});
@@ -561,10 +561,10 @@
 //                };
 //
 //        ClassMatchedHandler handlePieceResponse
-//                = new ClassMatchedHandler<Download.DataResponse, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataResponse>>() {
+//                = new ClassMatchedHandler<Download.DataResponse, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, StartDownload.DataResponse>>() {
 //
 //                    @Override
-//                    public void handle(Download.DataResponse content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, Download.DataResponse> container) {
+//                    public void handle(StartDownload.DataResponse content, BasicContentMsg<KAddress, DecoratedHeader<KAddress>, StartDownload.DataResponse> container) {
 //                        profiler.start("TorrentComp", "downloadPieceResponse");
 //                        KAddress target = container.getHeader().getSource();
 //                        LOG.debug("{}received data:{} response from:{}", new Object[]{logPrefix, content.pieceId, target.getId()});
@@ -629,7 +629,7 @@
 //                    int hashPos = Collections.min(hashes.get());
 //                    Optional<KAddress> dwnlSrc = dwnlConn.mngr.download(hashPos);
 //                    if (dwnlSrc.isPresent()) {
-//                        Download.HashRequest req = new Download.HashRequest(overlayId, hashPos, hashes.get(), transferMngr.bufferHint());
+//                        StartDownload.HashRequest req = new StartDownload.HashRequest(overlayId, hashPos, hashes.get(), transferMngr.bufferHint());
 //                        schedulePendingHashTimeout(req, dwnlSrc.get());
 //                        sendNetwork(dwnlSrc.get(), req);
 //                        continue;
@@ -643,7 +643,7 @@
 //                    Pair<Integer, Integer> blockDetails = ManagedStoreHelper.componentDetails(piece.get(), torrent.torrentInfo.piecesPerBlock);
 //                    Optional<KAddress> dwnlSrc = dwnlConn.mngr.download(blockDetails.getValue0());
 //                    if (dwnlSrc.isPresent()) {
-//                        Download.DataRequest req = new Download.DataRequest(overlayId, piece.get(), transferMngr.bufferHint());
+//                        StartDownload.DataRequest req = new StartDownload.DataRequest(overlayId, piece.get(), transferMngr.bufferHint());
 //                        schedulePendingPieceTimeout(req, dwnlSrc.get());
 //                        sendNetwork(dwnlSrc.get(), req);
 //                        continue;
@@ -690,7 +690,7 @@
 //            trigger(ct, timerPort);
 //        }
 //
-//        private void schedulePendingHashTimeout(Download.HashRequest request, KAddress target) {
+//        private void schedulePendingHashTimeout(StartDownload.HashRequest request, KAddress target) {
 //            ScheduleTimeout st = new ScheduleTimeout(defaultMsgTimeout);
 //            Timeout t = new PendingHashTimeout(st, request, target);
 //            st.setTimeoutEvent(t);
@@ -709,7 +709,7 @@
 //            return true;
 //        }
 //
-//        private void schedulePendingPieceTimeout(Download.DataRequest request, KAddress target) {
+//        private void schedulePendingPieceTimeout(StartDownload.DataRequest request, KAddress target) {
 //            ScheduleTimeout st = new ScheduleTimeout(defaultMsgTimeout);
 //            Timeout t = new PendingPieceTimeout(st, request, target);
 //            st.setTimeoutEvent(t);
@@ -801,10 +801,10 @@
 //
 //    static class PendingHashTimeout extends Timeout implements StreamEvent {
 //
-//        public final Download.HashRequest request;
+//        public final StartDownload.HashRequest request;
 //        public final KAddress target;
 //
-//        public PendingHashTimeout(ScheduleTimeout st, Download.HashRequest request, KAddress target) {
+//        public PendingHashTimeout(ScheduleTimeout st, StartDownload.HashRequest request, KAddress target) {
 //            super(st);
 //            this.request = request;
 //            this.target = target;
@@ -823,10 +823,10 @@
 //
 //    static class PendingPieceTimeout extends Timeout implements StreamEvent {
 //
-//        public final Download.DataRequest request;
+//        public final StartDownload.DataRequest request;
 //        public final KAddress target;
 //
-//        public PendingPieceTimeout(ScheduleTimeout st, Download.DataRequest request, KAddress target) {
+//        public PendingPieceTimeout(ScheduleTimeout st, StartDownload.DataRequest request, KAddress target) {
 //            super(st);
 //            this.request = request;
 //            this.target = target;

@@ -20,7 +20,7 @@ package se.sics.nstream.hops.kafka;
 
 import se.sics.nstream.hops.kafka.avro.AvroMsgProducer;
 import se.sics.nstream.hops.kafka.avro.KafkaProducer;
-import se.sics.nstream.util.StreamEndpoint;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -48,17 +48,7 @@ public class KafkaEndpoint implements StreamEndpoint {
     }
     
     @Override
-    public Class<KafkaControlPort> getControlPortType() {
-        return KafkaControlPort.class;
-    }
-    
-    @Override
-    public Class<KafkaPort> getStoragePortType() {
-        return KafkaPort.class;
-    }
-    
-    @Override
     public String getEndpointName() {
-        return "kafka";
+        return "kafka:" + domain + ":" + projectId;
     }
 }

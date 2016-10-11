@@ -18,17 +18,19 @@
  */
 package se.sics.nstream.storage.buffer;
 
-import se.sics.nstream.util.MyStream;
+import org.javatuples.Pair;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class WriteResult {
-    public final MyStream stream;
+    public final Pair<StreamId, MyStream> stream;
     public final long fromPos;
     public final int written;
     
-    public WriteResult(MyStream stream, long fromPos, int written) {
+    public WriteResult(Pair<StreamId, MyStream> stream, long fromPos, int written) {
         this.stream = stream;
         this.fromPos = fromPos;
         this.written = written;

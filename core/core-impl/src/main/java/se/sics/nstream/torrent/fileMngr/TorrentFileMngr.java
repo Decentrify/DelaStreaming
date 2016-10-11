@@ -37,14 +37,13 @@ import se.sics.nstream.storage.buffer.KBuffer;
 import se.sics.nstream.storage.buffer.MultiKBuffer;
 import se.sics.nstream.storage.buffer.SimpleAppendKBuffer;
 import se.sics.nstream.storage.cache.SimpleKCache;
+import se.sics.nstream.storage.durable.util.FileExtendedDetails;
+import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.storage.managed.CompleteFileMngr;
-import se.sics.nstream.torrent.DataReport;
+import se.sics.nstream.torrent.core.DataReport;
 import se.sics.nstream.transfer.MyTorrent;
-import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.FileBaseDetails;
-import se.sics.nstream.util.FileExtendedDetails;
-import se.sics.nstream.util.MyStream;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 
 /**
@@ -53,7 +52,6 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
 public class TorrentFileMngr {
 
     private final MyTorrent torrent;
-    private final Map<FileId, BlockDetails> defaultBlocks = new HashMap<>();
     private final Map<FileId, TFileComplete> completed = new HashMap<>();
     private final Map<FileId, TFileIncomplete> ongoing = new HashMap<>();
     private final TreeMap<FileId, TFileIncomplete> pending = new TreeMap<>();
@@ -63,28 +61,26 @@ public class TorrentFileMngr {
         this.torrent = torrent;
         for (Map.Entry<FileId, FileExtendedDetails> entry : torrent.extended.entrySet()) {
             FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
-            MyStream mainStream = entry.getValue().getMainStream();
-            List<MyStream> secondaryStreams = entry.getValue().getSecondaryStreams();
+            Pair<StreamId, MyStream> mainStream = entry.getValue().getMainStream();
+            List<Pair<StreamId, MyStream>> secondaryStreams = entry.getValue().getSecondaryStreams();
             if (complete) {
                 SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream);
                 AsyncCompleteStorage file = new AsyncCompleteStorage(cache);
                 AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, true, mainStream);
                 CompleteFileMngr fileMngr = new CompleteFileMngr(fileDetails, file, hash);
-                completed.put(mainStream.streamId.fileId, new TFileComplete(fileMngr, fileDetails));
-                defaultBlocks.put(mainStream.streamId.fileId, fileDetails.defaultBlock);
+                completed.put(mainStream.getValue0().fileId, new TFileComplete(fileMngr, fileDetails));
             } else {
                 SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream);
                 List<KBuffer> bufs = new ArrayList<>();
                 bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainStream, 0));
-                for (MyStream secondaryStream : secondaryStreams) {
+                for (Pair<StreamId, MyStream> secondaryStream : secondaryStreams) {
                     bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, secondaryStream, 0));
                 }
                 KBuffer buffer = new MultiKBuffer(bufs);
                 AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);
                 AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, false, mainStream);
                 AppendFileMngr fileMngr = new AppendFileMngr(fileDetails, file, hash);
-                pending.put(mainStream.streamId.fileId, new TFileIncomplete(fileMngr, fileDetails));
-                defaultBlocks.put(mainStream.streamId.fileId, fileDetails.defaultBlock);
+                pending.put(mainStream.getValue0().fileId, new TFileIncomplete(fileMngr, fileDetails));
             }
         }
     }
@@ -147,10 +143,6 @@ public class TorrentFileMngr {
         return !pending.isEmpty();
     }
 
-    public BlockDetails getDefaultBlock(FileId fileId) {
-        return defaultBlocks.get(fileId);
-    }
-
     public TFileRead readFrom(FileId fileId) {
         TFileRead transferMngr = completed.get(fileId);
         if (transferMngr == null) {
@@ -176,9 +168,10 @@ public class TorrentFileMngr {
             throw new RuntimeException("ups");
         }
         Map<StreamId, MyStream> result = new HashMap<>();
-        result.put(details.getMainStream().streamId, details.getMainStream());
-        for (MyStream secondaryStream : details.getSecondaryStreams()) {
-            result.put(secondaryStream.streamId, secondaryStream);
+        Pair<StreamId, MyStream> mainStream = details.getMainStream();
+        result.put(mainStream.getValue0(), mainStream.getValue1());
+        for (Pair<StreamId, MyStream> secondaryStream : details.getSecondaryStreams()) {
+            result.put(secondaryStream.getValue0(), secondaryStream.getValue1());
         }
         return result;
     }

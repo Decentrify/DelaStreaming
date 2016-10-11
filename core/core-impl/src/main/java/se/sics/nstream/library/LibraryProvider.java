@@ -23,7 +23,6 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.PortType;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.util.CoreExtPorts;
 
 /**
  *
@@ -31,7 +30,7 @@ import se.sics.nstream.util.CoreExtPorts;
  */
 public interface LibraryProvider {
     public List<Class<PortType>> providesPorts();
-    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, CoreExtPorts extPorts);
+    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr);
     public void start();
     public void close();
 }

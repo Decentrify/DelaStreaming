@@ -29,9 +29,9 @@ import se.sics.ledbat.core.AppCongestionWindow;
 import se.sics.ledbat.core.LedbatConfig;
 import se.sics.ledbat.core.util.ThroughputHandler;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
-import se.sics.nstream.torrent.ConnMngr;
-import se.sics.nstream.torrent.ConnMngrConfig;
-import se.sics.nstream.torrent.ConnMngrReport;
+import se.sics.nstream.torrent.core.ConnMngr;
+import se.sics.nstream.torrent.core.ConnMngrConfig;
+import se.sics.nstream.torrent.core.ConnMngrReport;
 
 /**
  *

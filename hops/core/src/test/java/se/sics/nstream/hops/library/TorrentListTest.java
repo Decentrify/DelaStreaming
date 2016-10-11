@@ -27,13 +27,8 @@ import java.nio.file.Path;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
-import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
-import se.sics.nstream.hops.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.hdfs.HDFSResource;
 
 /**
  *
@@ -77,20 +72,20 @@ public class TorrentListTest {
 
     @Test
     public void simpleTest() {
-        TorrentList tl = TorrentList.readTorrentList(torrentListPath);
+//        TorrentList tl = TorrentList.readTorrentList(torrentListPath);
+//
+//        HDFSEndpoint hdfsEndpoint = HDFSEndpoint.getBasic("user1", "bbc1.sics.se", 20000);
+//        HDFSResource m1 = new HDFSResource("/experiment/upload1", "manifest");
+//        Library.Torrent t1 = new Library.Torrent(hdfsEndpoint, m1, null);
+//        HDFSResource m2 = new HDFSResource("/experiment/upload2", "manifest");
+//        Library.Torrent t2 = new Library.Torrent(hdfsEndpoint, m2, null);
+//
+//        //TODO Alex - new kind of overlay
+//        IdentifierFactory baseIdFactory2 = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+//        byte owner2 = 2;
+//        OverlayIdFactory torrentIdFactory = new OverlayIdFactory(baseIdFactory2, OverlayId.BasicTypes.OTHER, owner2);
 
-        HDFSEndpoint hdfsEndpoint = HDFSEndpoint.getBasic("user1", "bbc1.sics.se", 20000);
-        HDFSResource m1 = new HDFSResource("/experiment/upload1", "manifest");
-        Library.Torrent t1 = new Library.Torrent(hdfsEndpoint, m1, null);
-        HDFSResource m2 = new HDFSResource("/experiment/upload2", "manifest");
-        Library.Torrent t2 = new Library.Torrent(hdfsEndpoint, m2, null);
-
-        //TODO Alex - new kind of overlay
-        IdentifierFactory baseIdFactory2 = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
-        byte owner2 = 2;
-        OverlayIdFactory torrentIdFactory = new OverlayIdFactory(baseIdFactory2, OverlayId.BasicTypes.OTHER, owner2);
-
-        tl.write(TorrentSummary.getSummary(torrentIdFactory.randomId(), "torrent1", t1), hdfsEndpoint.hopsURL, hdfsEndpoint.user);
-        tl.write(TorrentSummary.getSummary(torrentIdFactory.randomId(), "torrent2", t2), hdfsEndpoint.hopsURL, hdfsEndpoint.user);
+//        tl.write(TorrentSummary.getSummary(torrentIdFactory.randomId(), "torrent1", t1), hdfsEndpoint.hopsURL, hdfsEndpoint.user);
+//        tl.write(TorrentSummary.getSummary(torrentIdFactory.randomId(), "torrent2", t2), hdfsEndpoint.hopsURL, hdfsEndpoint.user);
     }
 }

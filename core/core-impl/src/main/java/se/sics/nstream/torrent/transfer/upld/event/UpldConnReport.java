@@ -53,7 +53,7 @@ public class UpldConnReport implements TorrentConnEvent {
     }
 
     @Override
-    public Identifier connId() {
+    public ConnId connId() {
         return connId;
     }
 }

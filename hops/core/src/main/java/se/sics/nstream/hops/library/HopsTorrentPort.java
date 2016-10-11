@@ -31,13 +31,13 @@ import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 public class HopsTorrentPort extends PortType {
     {
         request(HopsTorrentDownloadEvent.StartRequest.class);
-        indication(HopsTorrentDownloadEvent.Starting.class);
-        indication(HopsTorrentDownloadEvent.AlreadyExists.class);
+        indication(HopsTorrentDownloadEvent.Success.class);
+        indication(HopsTorrentDownloadEvent.Failed.class);
         request(HopsTorrentDownloadEvent.AdvanceRequest.class);
         indication(HopsTorrentDownloadEvent.AdvanceResponse.class);
         request(HopsTorrentUploadEvent.Request.class);
-        indication(HopsTorrentUploadEvent.Uploading.class);
-        indication(HopsTorrentUploadEvent.AlreadyExists.class);
+        indication(HopsTorrentUploadEvent.Success.class);
+        indication(HopsTorrentUploadEvent.Failed.class);
         request(HopsTorrentStopEvent.Request.class);
         indication(HopsTorrentStopEvent.Response.class);
         request(HopsContentsEvent.Request.class);

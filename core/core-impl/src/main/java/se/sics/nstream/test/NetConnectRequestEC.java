@@ -38,7 +38,7 @@ public class NetConnectRequestEC implements EqualComparator<NetConnect.Request>{
         if(!o1.msgId.equals(o2.msgId)) {
             return false;
         }
-        if(!o1.overlayId.equals(o2.overlayId)) {
+        if(!o1.torrentId.equals(o2.torrentId)) {
             return false;
         }
         return true;

@@ -49,7 +49,7 @@ public class NetConnectSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             NetConnect.Request obj = (NetConnect.Request)o;
             Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(OverlayId.class).toBinary(obj.overlayId, buf);
+            Serializers.lookupSerializer(OverlayId.class).toBinary(obj.torrentId, buf);
         }
 
         @Override
@@ -78,7 +78,7 @@ public class NetConnectSerializer {
         public void toBinary(Object o, ByteBuf buf) {
             NetConnect.Response obj = (NetConnect.Response)o;
             Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(OverlayId.class).toBinary(obj.overlayId, buf);
+            Serializers.lookupSerializer(OverlayId.class).toBinary(obj.torrentId, buf);
             buf.writeBoolean(obj.result);
         }
 

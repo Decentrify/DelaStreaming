@@ -41,7 +41,7 @@ public class DownloadHashSerializer {
         
         public Request(int id) {
             this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
         }
 
         @Override
@@ -80,7 +80,7 @@ public class DownloadHashSerializer {
         
         public Response(int id) {
             this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()).idType();
+            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
         }
 
         @Override

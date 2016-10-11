@@ -29,20 +29,20 @@ import se.sics.ktoolbox.util.overlays.OverlayEvent;
 public class NetConnect {
     public static class Request implements OverlayEvent {
         public final Identifier msgId;
-        public final OverlayId overlayId;
+        public final OverlayId torrentId;
         
-        protected Request(Identifier msgId, OverlayId overlayId) {
+        protected Request(Identifier msgId, OverlayId torrentId) {
             this.msgId = msgId;
-            this.overlayId = overlayId;
+            this.torrentId = torrentId;
         }
         
-        public Request(OverlayId overlayId) {
-            this(BasicIdentifiers.msgId(), overlayId);
+        public Request(OverlayId torrentId) {
+            this(BasicIdentifiers.msgId(), torrentId);
         }
         
         @Override
         public OverlayId overlayId() {
-            return overlayId;
+            return torrentId;
         }
 
         @Override
@@ -57,22 +57,22 @@ public class NetConnect {
     
     public static class Response implements OverlayEvent {
         public final Identifier msgId;
-        public final OverlayId overlayId;
+        public final OverlayId torrentId;
         public final boolean result;
         
-        protected Response(Identifier msgId, OverlayId overlayId, boolean result) {
+        protected Response(Identifier msgId, OverlayId torrentId, boolean result) {
             this.msgId = msgId;
-            this.overlayId = overlayId;
+            this.torrentId = torrentId;
             this.result = result;
         }
         
         private Response(Request req, boolean result) {
-            this(req.msgId, req.overlayId, result);
+            this(req.msgId, req.torrentId, result);
         }
 
         @Override
         public OverlayId overlayId() {
-            return overlayId;
+            return torrentId;
         }
 
         @Override
