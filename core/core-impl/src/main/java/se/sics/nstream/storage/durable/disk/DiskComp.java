@@ -52,6 +52,7 @@ public class DiskComp extends ComponentDefinition {
     private final Identifier self;
     //**************************************************************************
     private RandomAccessFile raf;
+    private long writePos;
 
     public DiskComp(Init init) {
         self = init.self;
@@ -59,6 +60,7 @@ public class DiskComp extends ComponentDefinition {
         LOG.info("{}init", logPrefix);
 
         raf = init.raf;
+        writePos = init.writePos;
 
         subscribe(handleStart, control);
         subscribe(handleRead, storagePort);
@@ -99,12 +101,29 @@ public class DiskComp extends ComponentDefinition {
         @Override
         public void handle(DStorageWrite.Request req) {
             LOG.info("{}write:{}", logPrefix, req);
+            if (writePos >= req.pos + req.value.length) {
+                LOG.info("{}write with pos:{} skipped", logPrefix, req.pos);
+                answer(req, req.respond(Result.success(true)));
+                return;
+            }
+            long pos = req.pos;
+            byte[] writeValue = req.value;
+            if (writePos > req.pos) {
+                pos = writePos;
+                int sourcePos = (int) (pos - writePos);
+                int writeAmount = req.value.length - sourcePos;
+                writeValue = new byte[writeAmount];
+                System.arraycopy(req.value, sourcePos, writeValue, 0, writeAmount);
+                LOG.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
+                        new Object[]{logPrefix, req.pos, pos, req.value.length, writeAmount});
+            }
             try {
                 raf.seek(req.pos);
                 raf.write(req.value);
             } catch (IOException ex) {
                 answer(req, req.respond(Result.internalFailure(ex)));
             }
+            writePos += writeValue.length;
             answer(req, req.respond(Result.success(true)));
         }
     };
@@ -114,11 +133,13 @@ public class DiskComp extends ComponentDefinition {
         public final Identifier self;
         public final String filePath;
         public final RandomAccessFile raf;
+        public final long writePos;
 
-        public Init(Identifier self, String filePath, RandomAccessFile raf) {
+        public Init(Identifier self, String filePath, RandomAccessFile raf, long writePos) {
             this.self = self;
             this.filePath = filePath;
             this.raf = raf;
+            this.writePos = writePos;
         }
     }
 
@@ -146,7 +167,7 @@ public class DiskComp extends ComponentDefinition {
                 throw new RuntimeException(ex);
             }
 
-            Init init = new Init(self, filePath, raf);
+            Init init = new Init(self, filePath, raf, filePos);
             return Pair.with(init, filePos);
         }
 

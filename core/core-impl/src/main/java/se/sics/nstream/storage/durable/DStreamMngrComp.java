@@ -100,8 +100,8 @@ public class DStreamMngrComp extends ComponentDefinition {
     Handler handleConnect = new Handler<DStreamConnect.Request>() {
         @Override
         public void handle(DStreamConnect.Request req) {
-            LOG.info("{}connecting stream:{}", logPrefix, req.stream.getValue0());
             Pair<Init, Long> init = storageProvider.initiate(req.stream.getValue1().resource);
+            LOG.info("{}connecting stream:{} pos:{}", logPrefix, req.stream.getValue0(), init.getValue1());
             Component streamStorageComp = create(storageProvider.getStorageDefinition(), init.getValue0());
             storageChannel.addChannel(req.stream.getValue0(), streamStorageComp.getPositive(DStoragePort.class));
 

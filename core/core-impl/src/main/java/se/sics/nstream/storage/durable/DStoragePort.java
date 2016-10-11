@@ -23,7 +23,6 @@ import se.sics.nstream.storage.durable.events.DStorageRead;
 import se.sics.nstream.storage.durable.events.DStorageWrite;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DStoragePort extends PortType {
