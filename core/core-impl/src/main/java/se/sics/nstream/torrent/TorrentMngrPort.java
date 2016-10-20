@@ -19,18 +19,14 @@
 package se.sics.nstream.torrent;
 
 import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.event.StartDownload;
-import se.sics.nstream.torrent.event.StartUpload;
+import se.sics.nstream.torrent.event.StartTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentMngrPort extends PortType {
     {
-        request(StartDownload.Request.class);
-        indication(StartDownload.Response.class);
-        
-        request(StartUpload.Request.class);
-        indication(StartUpload.Response.class);
+        request(StartTorrent.Request.class);
+        indication(StartTorrent.Response.class);
     }
 }

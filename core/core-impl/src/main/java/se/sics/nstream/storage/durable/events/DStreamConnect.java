@@ -61,11 +61,11 @@ public class DStreamConnect {
     
     public static class Success implements Direct.Response, Identifiable {
         public final Request req;
-        public final long filePos;
+        public final long streamPos;
         
-        private Success(Request req, long filePos) {
+        private Success(Request req, long streamPos) {
             this.req = req;
-            this.filePos = filePos;
+            this.streamPos = streamPos;
         }
 
         @Override

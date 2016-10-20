@@ -22,16 +22,22 @@ import com.google.common.primitives.Ints;
 import java.util.Random;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierBuilder;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.basic.StringByteIdFactory;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentIds {
+    
+    public static String TORRENT_OVERLAYS = "torrentOverlays";
 
     public static enum Types implements OverlayId.Type {
 
@@ -108,6 +114,16 @@ public class TorrentIds {
             return false;
         }
         return true;
+    }
+    
+    public static OverlayIdFactory torrentIdFactory() {
+        byte torrentOwnerId = OverlayRegistry.getPrefix(TORRENT_OVERLAYS);
+        IdentifierFactory torrentBaseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        return new OverlayIdFactory(torrentBaseIdFactory, TorrentIds.Types.TORRENT, torrentOwnerId);
+    }
+    
+    public static OverlayId torrentId(IdentifierBuilder idBuilder) {
+        return torrentIdFactory().id(idBuilder);
     }
 
     public static FileId fileId(OverlayId torrentId, int fileNr) {

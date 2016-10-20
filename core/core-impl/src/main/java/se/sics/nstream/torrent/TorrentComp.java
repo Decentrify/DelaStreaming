@@ -18,8 +18,6 @@
  */
 package se.sics.nstream.torrent;
 
-import com.google.common.base.Optional;
-import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,12 +33,13 @@ import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.storage.durable.DStoragePort;
-import se.sics.nstream.torrent.core.TransferComp;
 import se.sics.nstream.torrent.resourceMngr.ResourceMngrPort;
-import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
+import se.sics.nstream.torrent.status.event.TorrentReady;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
+import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
 import se.sics.nstream.torrent.tracking.TorrentTrackingPort;
-import se.sics.nstream.transfer.MyTorrent;
+import se.sics.nstream.torrent.transfer.TransferComp;
+import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
 
 /**
@@ -58,13 +57,12 @@ public class TorrentComp extends ComponentDefinition {
     private final Positive<Network> networkPort = requires(Network.class);
     private final Positive<ResourceMngrPort> resourceMngrPort = requires(ResourceMngrPort.class);
     private final Positive<DStoragePort> storagePort = requires(DStoragePort.class);
-    private final Negative<TorrentStatusPort> reportPort = provides(TorrentStatusPort.class);
+    private final Negative<TransferCtrlPort> transferCtrlPort = provides(TransferCtrlPort.class);
+    private final Negative<TorrentStatusPort> statusPort = provides(TorrentStatusPort.class);
     //**************************************************************************
     private final KAddress selfAdr;
     private final OverlayId torrentId;
     private final List<KAddress> partners;
-    private final boolean upload;
-    private final Optional<MyTorrent> torrent;
     //**************************************************************************
     private Component networkRetryComp;
     private Component transferComp;
@@ -77,8 +75,6 @@ public class TorrentComp extends ComponentDefinition {
         LOG.info("{}initiating...", logPrefix);
 
         partners = init.partners;
-        upload = init.upload;
-        torrent = init.torrent;
         subscribe(handleStart, control);
     }
 
@@ -88,6 +84,7 @@ public class TorrentComp extends ComponentDefinition {
             LOG.info("{}starting...", logPrefix);
             connectComp();
             startComp();
+            trigger(new TorrentReady(torrentId), statusPort);
         }
     };
     
@@ -96,17 +93,18 @@ public class TorrentComp extends ComponentDefinition {
         connect(networkRetryComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
         connect(networkRetryComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
 
-        transferComp = create(TransferComp.class, new TransferComp.Init(selfAdr, torrentId, partners, upload, torrent));
+        transferComp = create(TransferComp.class, new TransferComp.Init(selfAdr, torrentId, partners));
         connect(transferComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
         connect(transferComp.getNegative(Network.class), networkRetryComp.getPositive(Network.class), Channel.TWO_WAY);
         connect(transferComp.getNegative(ResourceMngrPort.class), resourceMngrPort, Channel.TWO_WAY);
         connect(transferComp.getNegative(DStoragePort.class), storagePort, Channel.TWO_WAY);
+        connect(transferComp.getPositive(TransferCtrlPort.class), transferCtrlPort, Channel.TWO_WAY);
 
         reportComp = create(TorrentTrackingComp.class, new TorrentTrackingComp.Init(torrentId, REPORT_DELAY));
         connect(reportComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
         connect(reportComp.getNegative(TorrentTrackingPort.class), transferComp.getPositive(TorrentTrackingPort.class), Channel.TWO_WAY);
 
-        connect(reportPort, reportComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
+        connect(statusPort, reportComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
     }
 
     private void startComp() {
@@ -120,24 +118,11 @@ public class TorrentComp extends ComponentDefinition {
         public final KAddress selfAdr;
         public final OverlayId torrentId;
         public final List<KAddress> partners;
-        public final boolean upload;
-        public final Optional<MyTorrent> torrent;
 
-        public Init(KAddress selfAdr, OverlayId torrentId, List<KAddress> partners, boolean upload, Optional<MyTorrent> torrent) {
+        public Init(KAddress selfAdr, OverlayId torrentId, List<KAddress> partners) {
             this.selfAdr = selfAdr;
             this.torrentId = torrentId;
             this.partners = partners;
-            this.upload = upload;
-            this.torrent = torrent;
-        }
-
-        public static Init download(KAddress selfAdr, OverlayId torrentId, List<KAddress> partners) {
-            Optional<MyTorrent> torrent = Optional.absent();
-            return new Init(selfAdr, torrentId, partners, false, torrent);
-        }
-        
-        public static Init upload(KAddress selfAdr, OverlayId torrentId, MyTorrent torrent) {
-            return new Init(selfAdr, torrentId, new ArrayList<KAddress>(), true, Optional.of(torrent));
         }
     }
 }

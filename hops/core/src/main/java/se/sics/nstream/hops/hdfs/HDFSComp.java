@@ -154,7 +154,7 @@ public class HDFSComp extends ComponentDefinition {
             if (!streamPos.isSuccess()) {
                 throw new RuntimeException(streamPos.getException());
             }
-            if (streamPos.getValue() == 0) {
+            if (streamPos.getValue() == -1) {
                 HDFSHelper.simpleCreate(ugi, endpoint, hdfsResource);
             }
             HDFSComp.Init init = new HDFSComp.Init(endpoint, hdfsResource, ugi, streamPos.getValue());
@@ -163,7 +163,7 @@ public class HDFSComp extends ComponentDefinition {
 
         @Override
         public String getName() {
-            return "hdfs";
+            return endpoint.getEndpointName();
         }
 
         @Override

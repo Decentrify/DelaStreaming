@@ -22,5 +22,5 @@ package se.sics.nstream.library.util;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public enum TorrentState {
-    NONE, UPLOADING, PRE_DOWNLOAD_1, PRE_DOWNLOAD_2, DOWNLOADING, DESTROYED;
+    NONE, PREPARE_UPLOAD, UPLOADING, PREPARE_DOWNLOAD, DOWNLOADING, DESTROYED;
 }

@@ -16,52 +16,61 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.event;
+package se.sics.nstream.torrent.transfer.event.ctrl;
 
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.overlays.OverlayEvent;
+import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.transfer.MyTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class StartUpload {
-    public static class Request extends Direct.Request<Response> implements Identifiable {
+public class GetRawTorrent {
+    public static class Request extends Direct.Request<Response> implements OverlayEvent {
         public final Identifier eventId;
         public final OverlayId torrentId;
-        public final MyTorrent torrent;
         
-        public Request(OverlayId torrentId, MyTorrent torrrent) {
-            this.eventId = BasicIdentifiers.eventId();
+        public Request(OverlayId torrentId) {
+            eventId = BasicIdentifiers.eventId();
             this.torrentId = torrentId;
-            this.torrent = torrrent;
         }
-
+        
         @Override
         public Identifier getId() {
             return eventId;
         }
         
-        public Response success() {
-            return new Response(this);
+        public Response complete(Result result) {
+            return new Response(this, result);
+        }
+
+        @Override
+        public OverlayId overlayId() {
+            return torrentId;
         }
     }
     
-    public static class Response implements Direct.Response, Identifiable {
-        public final Identifier eventId;
-        public final OverlayId torrentId;
+    public static class Response implements Direct.Response, OverlayEvent {
+        public final Request req;
+        public final Result<MyTorrent.Manifest> result;
         
-        public Response(Request e1) {
-            this.eventId = e1.eventId;
-            this.torrentId = e1.torrentId;
+        private Response(Request req, Result<MyTorrent.Manifest> result) {
+            this.req = req;
+            this.result = result;
+        }
+        
+        @Override
+        public Identifier getId() {
+            return req.getId();
         }
 
         @Override
-        public Identifier getId() {
-            return eventId;
+        public OverlayId overlayId() {
+            return req.overlayId();
         }
-    } 
+    }
 }

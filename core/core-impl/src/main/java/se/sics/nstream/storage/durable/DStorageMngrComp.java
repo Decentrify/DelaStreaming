@@ -46,7 +46,7 @@ public class DStorageMngrComp extends ComponentDefinition {
 
     private final Negative<DStoragePort> storagePort = provides(DStoragePort.class);
     private final Negative<DStreamControlPort> streamControlPort = provides(DStreamControlPort.class);
-    private final Negative<DEndpointControlPort> endpointControlPort = provides(DEndpointControlPort.class);
+    private final Negative<DEndpointCtrlPort> endpointControlPort = provides(DEndpointCtrlPort.class);
     private final One2NChannel streamControlChannel;
     private final One2NChannel storageChannel;
     //**************************************************************************

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.core;
+package se.sics.nstream.torrent.transfer;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.HashBasedTable;
@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import javassist.NotFoundException;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,12 +81,10 @@ import se.sics.nstream.torrent.resourceMngr.PrepareResources;
 import se.sics.nstream.torrent.resourceMngr.ResourceMngrPort;
 import se.sics.nstream.torrent.tracking.TorrentTrackingPort;
 import se.sics.nstream.torrent.tracking.event.TorrentTracking;
-import se.sics.nstream.torrent.transfer.DwnlConnComp;
-import se.sics.nstream.torrent.transfer.DwnlConnPort;
-import se.sics.nstream.torrent.transfer.UpldConnComp;
-import se.sics.nstream.torrent.transfer.UpldConnPort;
 import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
 import se.sics.nstream.torrent.transfer.dwnl.event.DownloadBlocks;
+import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
+import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
 import se.sics.nstream.torrent.transfer.tracking.TransferReportPort;
 import se.sics.nstream.torrent.transfer.tracking.TransferTrackingComp;
 import se.sics.nstream.torrent.transfer.tracking.TransferTrackingPort;
@@ -116,11 +115,11 @@ public class TransferComp extends ComponentDefinition {
     private final TorrentConfig torrentConfig;
     private final OverlayId torrentId;
     private final KAddress selfAdr;
-    private boolean seeder;
     //********************************CONNECT_TO********************************
     Positive<Network> networkPort = requires(Network.class);
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<ResourceMngrPort> resourceMngrPort = requires(ResourceMngrPort.class);
+    Negative<TransferCtrlPort> transferPort = provides(TransferCtrlPort.class);
     Positive<DStoragePort> storagePort = requires(DStoragePort.class);
     Negative<TorrentTrackingPort> statusPort = provides(TorrentTrackingPort.class);
     //*********************************INTERNAL*********************************
@@ -148,6 +147,9 @@ public class TransferComp extends ComponentDefinition {
     private Component transferTrackingComp;
     //**************************************************************************
     private UUID advanceTid;
+     //**************************************************************************
+    private GetRawTorrent.Request rawTorrentReq;
+    private SetupTransfer.Request setupTransferReq;
 
     public TransferComp(Init init) {
         torrentId = init.torrentId;
@@ -155,33 +157,23 @@ public class TransferComp extends ComponentDefinition {
         logPrefix = "<nid:" + selfAdr.getId() + ",oid:" + torrentId + ">";
         torrentConfig = new TorrentConfig();
 
-        seeder = init.upload;
         componentTracking = new ComponentLoadTracking("torrent", this.proxy, new QueueLoadConfig(config()));
         buildChannels();
-
-        Optional<MyTorrent.ManifestDef> manifest = Optional.absent();
-        if (init.torrentDef.isPresent()) {
-            serveDefState = new ServeDefinitionState(init.torrentDef.get());
-            manifest = Optional.of(init.torrentDef.get().manifest.getDef());
-        }
-        connState = new ConnectionState(manifest);
         connMngr = new TorrentConnMngr(componentTracking, init.partners);
 
         subscribe(handleStart, control);
         subscribe(handleKilled, control);
 
+        subscribe(handleGetRawTorrent, transferPort);
+        subscribe(handleSetupTransfer, transferPort);
         subscribe(handleAdvance, timerPort);
-
         subscribe(handleResourcesPrepared, resourceMngrPort);
-        subscribe(handleDownloadAdvance, statusPort);
         subscribe(handleTransferReport, transferReportPort);
 
         subscribe(handleSeederConnectSuccess, connPort);
         subscribe(handleSeederConnectTimeout, connPort);
         subscribe(handleSeederConnectSuspect, connPort);
-        subscribe(handleDetailedStateSuccess, connPort);
-        subscribe(handleDetailedStateTimeout, connPort);
-        subscribe(handleDetailedStateNone, connPort);
+        subscribe(handleDetailedState, connPort);
         subscribe(handleOpenTransferLeecherResp, connPort);
         subscribe(handleOpenTransferLeecherTimeout, connPort);
         subscribe(handleOpenTransferSeeder, connPort);
@@ -200,39 +192,14 @@ public class TransferComp extends ComponentDefinition {
         upldConnChannel = One2NChannel.getChannel("torrentUpldConn", (Negative) upldConnPort.getPair(), new EventTorrentConnIdExtractor());
     }
 
-    private void initializeTorrent(MyTorrent torrent) {
-        DelayedExceptionSyncHandler deh = new DelayedExceptionSyncHandler() {
-
-            @Override
-            public boolean fail(Result<Object> result) {
-                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-            }
-        };
-        fileMngr = new TorrentFileMngr(config(), proxy, deh, componentTracking, torrent, seeder);
-        //transfer report
-        transferTrackingComp = create(TransferTrackingComp.class, new TransferTrackingComp.Init(torrentId));
-        connect(transferTrackingComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-        connect(transferTrackingComp.getPositive(TransferReportPort.class), transferReportPort.getPair(), Channel.TWO_WAY);
-    }
-
-    private void startTorrent(MyTorrent torrent) {
-        trigger(Start.event, transferTrackingComp.control());
-        trigger(new PrepareResources.Request(torrentId, torrent), resourceMngrPort);
-    }
-
     Handler handleStart = new Handler<Start>() {
 
         @Override
         public void handle(Start event) {
             LOG.info("{}starting", logPrefix);
-            if (seeder) {
-                initializeTorrent(serveDefState.td);
-                startTorrent(serveDefState.td);
-            }
-            if (connState != null) {
-                connState.connectComp();
-                connState.start();
-            }
+            connState = new ConnectionState();
+            connState.connectComp();
+            connState.start();
         }
     };
 
@@ -254,21 +221,108 @@ public class TransferComp extends ComponentDefinition {
             }
         }
     };
-
     //**************************************************************************
-    Handler handleResourcesPrepared = new Handler<PrepareResources.Success>() {
+    Handler handleGetRawTorrent = new Handler<GetRawTorrent.Request>() {
         @Override
-        public void handle(PrepareResources.Success resp) {
-            LOG.info("{}received:{}", logPrefix, resp);
-            LOG.info("{}resources prepared", logPrefix);
-            serveFilesState = new ServeFilesState();
-            if (!seeder) {
-                getFilesState = new GetFilesState();
-                scheduleAdvance();
-                tryAdvance();
+        public void handle(GetRawTorrent.Request req) {
+            rawTorrentReq = req;
+            if (connMngr.hasConnCandidates()) {
+                trigger(new Seeder.Connect(connMngr.getConnCandidate()), connPort);
+            } else {
+                answer(req, req.complete(Result.timeout(new NotFoundException("no peers to download manifest def"))));
             }
         }
     };
+
+    Handler handleSeederConnectSuccess = new Handler<Seeder.Success>() {
+        @Override
+        public void handle(Seeder.Success resp) {
+            LOG.info("{}connect to:{} success", logPrefix, resp.target);
+            connMngr.connected(resp.target);
+            if (getFilesState != null) {
+                getFilesState.peerConnected(resp.target);
+            }
+        }
+    };
+
+    Handler handleSeederConnectTimeout = new Handler<Seeder.Timeout>() {
+        @Override
+        public void handle(Seeder.Timeout resp) {
+            LOG.warn("{}connect timeout", logPrefix);
+        }
+    };
+
+    Handler handleSeederConnectSuspect = new Handler<Seeder.Suspect>() {
+        @Override
+        public void handle(Seeder.Suspect event) {
+            LOG.warn("{}connect suspect", logPrefix);
+        }
+    };
+
+    Handler handleDetailedState = new Handler<DetailedState.Deliver>() {
+        @Override
+        public void handle(DetailedState.Deliver event) {
+            if (!event.manifestDef.isSuccess()) {
+                LOG.warn("{}manifest def - failed", logPrefix);
+                answer(rawTorrentReq, rawTorrentReq.complete(event.manifestDef));
+                return;
+            }
+            LOG.info("{}detailed state - success", logPrefix);
+
+            KAddress peer = connMngr.randomPeer();
+            FileId fileId = TorrentIds.fileId(torrentId, DEF_FILE_NR);
+            ConnId connId = TorrentIds.connId(fileId, peer.getId(), true);
+            trigger(new OpenTransfer.LeecherRequest(peer, connId), connPort);
+            getDefState = new GetDefinitionState(event.manifestDef.getValue());
+        }
+    };
+    
+    Handler handleSetupTransfer = new Handler<SetupTransfer.Request>() {
+        @Override
+        public void handle(SetupTransfer.Request req) {
+            LOG.info("{}transfer - setting up", logPrefix);
+            setupTransferReq = req;
+            serveDefState = new ServeDefinitionState(req.torrent);
+            if (getDefState == null) {
+                trigger(new DetailedState.Set(req.torrent.manifest.getDef()), connPort);
+            }
+            trigger(new PrepareResources.Request(torrentId, serveDefState.td), resourceMngrPort);
+        }
+    };
+
+    Handler handleResourcesPrepared = new Handler<PrepareResources.Success>() {
+        @Override
+        public void handle(PrepareResources.Success resp) {
+            LOG.info("{}resources prepared", logPrefix);
+            serveFilesState = new ServeFilesState();
+            getFilesState = new GetFilesState();
+
+            initializeTorrent(serveDefState.td, resp.streamsInfo);
+            trigger(Start.event, transferTrackingComp.control());
+
+            answer(setupTransferReq, setupTransferReq.complete(Result.success(true)));
+            trigger(new TorrentTracking.TransferSetUp(torrentId, fileMngr.report()), statusPort);
+            scheduleAdvance();
+            tryAdvance();
+        }
+    };
+
+    private void initializeTorrent(MyTorrent torrent, Map<StreamId, Long> streamsInfo) {
+        DelayedExceptionSyncHandler deh = new DelayedExceptionSyncHandler() {
+
+            @Override
+            public boolean fail(Result<Object> result) {
+                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            }
+        };
+        fileMngr = TorrentFileMngr.create(config(), proxy, deh, componentTracking, torrent, streamsInfo);
+
+        //transfer report
+        transferTrackingComp = create(TransferTrackingComp.class, new TransferTrackingComp.Init(torrentId));
+        connect(transferTrackingComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+        connect(transferTrackingComp.getPositive(TransferReportPort.class), transferReportPort.getPair(), Channel.TWO_WAY);
+    }
+
     //**************************************************************************
     Handler handleTransferReport = new Handler<TransferTrackingReport>() {
         @Override
@@ -365,64 +419,6 @@ public class TransferComp extends ComponentDefinition {
     }
 
     //**************************************************************************
-    Handler handleSeederConnectSuccess = new Handler<Seeder.Success>() {
-        @Override
-        public void handle(Seeder.Success resp) {
-            LOG.info("{}connect to:{} success", logPrefix, resp.target);
-            connMngr.connected(resp.target);
-            if (serveDefState == null && getDefState == null) {
-                trigger(new DetailedState.Request(connMngr.randomPeer()), connPort);
-            }
-            if (getFilesState != null) {
-                getFilesState.peerConnected(resp.target);
-            }
-        }
-    };
-
-    Handler handleSeederConnectTimeout = new Handler<Seeder.Timeout>() {
-        @Override
-        public void handle(Seeder.Timeout resp) {
-            LOG.warn("{}connect timeout", logPrefix);
-//            throw new RuntimeException("ups");
-        }
-    };
-
-    Handler handleSeederConnectSuspect = new Handler<Seeder.Suspect>() {
-        @Override
-        public void handle(Seeder.Suspect event) {
-            LOG.warn("{}connect suspect", logPrefix);
-            throw new RuntimeException("ups");
-        }
-    };
-
-    Handler handleDetailedStateSuccess = new Handler<DetailedState.Success>() {
-        @Override
-        public void handle(DetailedState.Success event) {
-            LOG.info("{}detailed state - success", logPrefix);
-            if (serveDefState == null && getDefState == null) {
-                KAddress peer = connMngr.randomPeer();
-                FileId fileId = TorrentIds.fileId(torrentId, DEF_FILE_NR);
-                ConnId connId = TorrentIds.connId(fileId, peer.getId(), true);
-                trigger(new OpenTransfer.LeecherRequest(peer, connId), connPort);
-                getDefState = new GetDefinitionState(event.manifestDef);
-            }
-        }
-    };
-
-    Handler handleDetailedStateTimeout = new Handler<DetailedState.Timeout>() {
-        @Override
-        public void handle(DetailedState.Timeout event) {
-            LOG.warn("{}detailed state - timeout", logPrefix);
-        }
-    };
-
-    Handler handleDetailedStateNone = new Handler<DetailedState.None>() {
-        @Override
-        public void handle(DetailedState.None event) {
-            LOG.warn("{}detailed state - none", logPrefix);
-        }
-    };
-
     Handler handleOpenTransferLeecherResp = new Handler<OpenTransfer.LeecherResponse>() {
         @Override
         public void handle(OpenTransfer.LeecherResponse resp) {
@@ -472,16 +468,6 @@ public class TransferComp extends ComponentDefinition {
     };
 
     //**************************************************************************
-    Handler handleDownloadAdvance = new Handler<TorrentTracking.DownloadAdvance>() {
-        @Override
-        public void handle(TorrentTracking.DownloadAdvance resp) {
-            LOG.info("{}starting transfer", logPrefix);
-            initializeTorrent(resp.torrent);
-            startTorrent(resp.torrent);
-            trigger(new TorrentTracking.DownloadStarting(torrentId, fileMngr.report()), statusPort);
-        }
-    };
-    //**************************************************************************
     Handler handleGetBlocks = new Handler<GetBlocks.Request>() {
         @Override
         public void handle(GetBlocks.Request req) {
@@ -490,6 +476,7 @@ public class TransferComp extends ComponentDefinition {
                 serveDefState.getBlocks(req);
             } else {
                 new GetBlocksHandler(req).handle();
+
             }
         }
     };
@@ -548,7 +535,7 @@ public class TransferComp extends ComponentDefinition {
             return hashes.size() == req.blocks.size() && blocks.size() == req.blocks.size();
         }
     }
-    //**************************************************************************
+//**************************************************************************
 
     Handler handleCompletedBlocks = new Handler<CompletedBlocks>() {
         @Override
@@ -584,28 +571,17 @@ public class TransferComp extends ComponentDefinition {
     private void updateConn(ConnId connId, Map<Integer, byte[]> blocks) {
         for (Integer blockNr : blocks.keySet()) {
             connMngr.releaseSlot(connId, blockNr);
+
         }
     }
 
     //*********************************STATES***********************************
-    private void completeGetDefinitionState(MyTorrent torrentDef) {
-        getDefState = null;
-        if (serveDefState == null) {
-            throw new RuntimeException("ups");
-        }
-    }
-
     public class ConnectionState {
 
-        private final Optional<MyTorrent.ManifestDef> manifestDef;
         private Component connComp;
 
-        public ConnectionState(Optional<MyTorrent.ManifestDef> manifestDef) {
-            this.manifestDef = manifestDef;
-        }
-
         public void connectComp() {
-            connComp = create(ConnectionComp.class, new ConnectionComp.Init(torrentId, selfAdr, manifestDef));
+            connComp = create(ConnectionComp.class, new ConnectionComp.Init(torrentId, selfAdr));
             connect(connComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
             connNetworkChannel.addChannel(torrentId, connComp.getNegative(Network.class));
             connect(connComp.getPositive(ConnectionPort.class), connPort.getPair(), Channel.TWO_WAY);
@@ -613,9 +589,7 @@ public class TransferComp extends ComponentDefinition {
 
         public void start() {
             trigger(Start.event, connComp.control());
-            if (connMngr.hasConnCandidates()) {
-                trigger(new Seeder.Connect(connMngr.getConnCandidate()), connPort);
-            }
+
         }
 
         public void handleKilled(Killed event) {
@@ -691,6 +665,7 @@ public class TransferComp extends ComponentDefinition {
 
         private void interpretManifest(Manifest manifest) {
             trigger(new TorrentTracking.DownloadedManifest(torrentId, Result.success(manifest)), statusPort);
+            answer(rawTorrentReq, rawTorrentReq.complete(Result.success(manifest)));
             trigger(new CloseTransfer.Request(connId), connPort);
             killInstance();
         }
@@ -925,15 +900,10 @@ public class TransferComp extends ComponentDefinition {
         public final KAddress selfAdr;
         public final OverlayId torrentId;
         public List<KAddress> partners;
-        public final boolean upload;
-        public final Optional<MyTorrent> torrentDef;
 
-        public Init(KAddress selfAdr, OverlayId torrentId, List<KAddress> partners,
-                boolean upload, Optional<MyTorrent> torrentDef) {
+        public Init(KAddress selfAdr, OverlayId torrentId, List<KAddress> partners) {
             this.selfAdr = selfAdr;
             this.torrentId = torrentId;
-            this.upload = upload;
-            this.torrentDef = torrentDef;
             this.partners = partners;
         }
     }
@@ -950,6 +920,7 @@ public class TransferComp extends ComponentDefinition {
         CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(advanceTid);
         trigger(cpd, timerPort);
         advanceTid = null;
+
     }
 
     public static class AdvanceTimeout extends Timeout {

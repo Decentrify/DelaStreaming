@@ -34,10 +34,9 @@ public class ConnectionPort extends PortType {
         indication(Seeder.Timeout.class);
         indication(Seeder.Suspect.class);
         
-        request(DetailedState.Request.class);
-        indication(DetailedState.Success.class);
-        indication(DetailedState.Timeout.class);
-        indication(DetailedState.None.class);
+        
+        request(DetailedState.Set.class);
+        indication(DetailedState.Deliver.class);
         
         request(OpenTransfer.LeecherRequest.class);
         indication(OpenTransfer.LeecherResponse.class);

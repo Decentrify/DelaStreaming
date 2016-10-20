@@ -28,6 +28,7 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.nstream.FileId;
 import se.sics.nstream.TorrentIds;
+import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
@@ -48,6 +49,10 @@ public class ManifestHelper {
         ManifestJSON manifest = gson.fromJson(jsonString, ManifestJSON.class);
         return manifest;
     }
+    
+    public static MyTorrent.Manifest getManifest(ManifestJSON manifestJSON) {
+        return MyTorrent.buildDefinition(getManifestByte(manifestJSON));
+    }
 
     public static byte[] getManifestByte(ManifestJSON manifest) {
         Gson gson = new GsonBuilder().create();
@@ -67,10 +72,9 @@ public class ManifestHelper {
     public static Pair<Map<String, FileId>, Map<FileId, FileBaseDetails>> getBaseDetails(OverlayId torrentId, ManifestJSON manifest, BlockDetails defaultBlock) {
         Map<String, FileId> nameToId = new HashMap<>();
         Map<FileId, FileBaseDetails> baseDetails = new HashMap<>();
-        int fileNr = 0;
+        int fileNr = 1; //start from 1 - 0 is for the definition of the torrent
         for (FileInfoJSON fileInfo : manifest.getFileInfos()) {
-            fileNr++; //start from 1 - 0 is for the definition of the torrent
-            FileId fileId = TorrentIds.fileId(torrentId, fileNr);
+            FileId fileId = TorrentIds.fileId(torrentId, fileNr++);
             nameToId.put(fileInfo.getFileName(), fileId);
             String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
             Pair<Integer, BlockDetails> fileDetails = BlockHelper.getFileDetails(fileInfo.getLength(), defaultBlock);

@@ -16,20 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.tracking;
-
-import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.tracking.event.TorrentTracking;
+package se.sics.nstream.library.disk;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentTrackingPort extends PortType {
+public class LibrarySummaryJSON {
+    private DiskLibrarySummaryJSON diskLibrary;
 
-    {
-        indication(TorrentTracking.DownloadedManifest.class);
-        indication(TorrentTracking.TransferSetUp.class);
-        indication(TorrentTracking.DownloadDone.class);
-        indication(TorrentTracking.Indication.class);
+    public DiskLibrarySummaryJSON getDiskLibrary() {
+        return diskLibrary;
+    }
+
+    public void setDiskLibrary(DiskLibrarySummaryJSON diskLibrary) {
+        this.diskLibrary = diskLibrary;
     }
 }

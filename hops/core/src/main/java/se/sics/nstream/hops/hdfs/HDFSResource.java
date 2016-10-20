@@ -32,6 +32,10 @@ public class HDFSResource implements StreamResource {
         this.dirPath = dirPath;
         this.fileName = fileName;
     }
+    
+    public HDFSResource withFile(String fileName) {
+        return new HDFSResource(dirPath, fileName);
+    }
 
     @Override
     public String getSinkName() {

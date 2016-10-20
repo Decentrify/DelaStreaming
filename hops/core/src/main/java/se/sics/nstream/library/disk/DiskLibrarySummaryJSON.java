@@ -16,36 +16,52 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage.durable.disk;
+package se.sics.nstream.library.disk;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.javatuples.Pair;
-import se.sics.nstream.StreamId;
-import se.sics.nstream.storage.durable.util.FileExtendedDetails;
-import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DiskFED implements FileExtendedDetails {
-    public final Pair<StreamId, MyStream> diskStream;
-    
-    public DiskFED(Pair<StreamId, MyStream> diskStream) {
-        this.diskStream = diskStream;
-    }
-    
-    public DiskFED(StreamId streamId, MyStream stream) {
-        this(Pair.with(streamId, stream));
-    }
-    
-    @Override
-    public Pair<StreamId, MyStream> getMainStream() {
-        return diskStream;
-    }
+public class DiskLibrarySummaryJSON {
+    private List<TorrentJSON> torrents = new ArrayList<>();
 
-    @Override
-    public List<Pair<StreamId, MyStream>> getSecondaryStreams() {
-        return new ArrayList<Pair<StreamId, MyStream>>();
+    public List<TorrentJSON> getTorrents() {
+        return torrents;
+    }
+    
+    public void setTorrents(List<TorrentJSON> torrents) {
+        this.torrents = torrents;
+    }
+    
+    public void addTorrent(TorrentJSON torrent) {
+        torrents.add(torrent);
+    }
+    
+    public boolean isEmpty() {
+        return torrents.isEmpty();
+    }
+    
+    public static class TorrentJSON {
+        private String baseId;
+        private String path;
+
+        public String getBaseId() {
+            return baseId;
+        }
+
+        public void setBaseId(String baseId) {
+            this.baseId = baseId;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public void setPath(String path) {
+            this.path = path;
+        }
     }
 }

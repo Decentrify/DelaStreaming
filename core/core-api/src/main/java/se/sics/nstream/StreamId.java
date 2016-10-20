@@ -32,6 +32,10 @@ public class StreamId implements Identifier {
         this.endpointId = endpointId;
         this.fileId = fileId;
     } 
+    
+    public StreamId withFile(FileId fileId) {
+        return new StreamId(endpointId, fileId);
+    }
 
     @Override
     public int partition(int nrPartitions) {

@@ -95,11 +95,15 @@ public class IncompleteTracker implements ComponentTracker {
         components.set(componentNr);
     }
 
-    public static IncompleteTracker create(int nrComponents) {
+    public static IncompleteTracker create(int nrComponents, int lastPreContainedBlock) {
         if (nrComponents > ManagedStoreHelper.MAX_BIT_SET_SIZE) {
             throw new RuntimeException("exceeding maximum block size:" + ManagedStoreHelper.MAX_BIT_SET_SIZE + " pieces");
         }
-        return new IncompleteTracker(nrComponents);
+        IncompleteTracker tracker = new IncompleteTracker(nrComponents);
+        for(int i = 0; i < lastPreContainedBlock; i++) {
+            tracker.addComponent(i);
+        }
+        return tracker;
     }
 
     @Override

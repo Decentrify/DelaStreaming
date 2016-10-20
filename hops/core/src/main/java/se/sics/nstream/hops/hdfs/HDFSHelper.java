@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.manifest.ManifestHelper;
@@ -40,7 +41,7 @@ import se.sics.nstream.util.range.KRange;
  */
 public class HDFSHelper {
 
-    private final static org.slf4j.Logger LOG = LoggerFactory.getLogger(HDFSHelper.class);
+    private final static Logger LOG = LoggerFactory.getLogger(HDFSHelper.class);
     private static String logPrefix = "";
 
     public static Result<Boolean> canConnect(final Configuration hdfsConfig) {
@@ -86,7 +87,7 @@ public class HDFSHelper {
 
     public static Result<Boolean> delete(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource) {
         final String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
-        LOG.debug("{}deleting file:{}", new Object[]{logPrefix, filePath});
+        LOG.info("{}deleting file:{}", new Object[]{logPrefix, filePath});
         try {
             Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
                 @Override
@@ -110,7 +111,7 @@ public class HDFSHelper {
 
     public static Result<Boolean> simpleCreate(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, final HDFSResource hdfsResource) {
         final String filePath = hdfsResource.dirPath + Path.SEPARATOR + hdfsResource.fileName;
-        LOG.debug("{}creating file:{}", new Object[]{logPrefix, filePath});
+        LOG.info("{}creating file:{}", new Object[]{logPrefix, filePath});
         try {
             Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
                 @Override

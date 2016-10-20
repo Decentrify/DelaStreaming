@@ -39,9 +39,9 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.FileId;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.torrent.core.DataReport;
-import se.sics.nstream.torrent.tracking.event.DownloadSummaryEvent;
+import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
 import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
-import se.sics.nstream.torrent.tracking.event.TorrentStatus;
+import se.sics.nstream.torrent.status.event.TorrentStatus;
 import se.sics.nstream.torrent.tracking.event.TorrentTracking;
 import se.sics.nstream.torrent.transfer.tracking.DownloadReport;
 
@@ -113,7 +113,6 @@ public class TorrentTrackingComp extends ComponentDefinition {
         subscribe(handleDownloadDone, trackingPort);
         subscribe(handleTorrentTrackingIndication, trackingPort);
         
-        subscribe(handleDownloadAdvance, statusPort);
         subscribe(handleStatusSummaryRequest, statusPort);
     }
 
@@ -146,17 +145,9 @@ public class TorrentTrackingComp extends ComponentDefinition {
         }
     };
     
-    Handler handleDownloadAdvance = new Handler<TorrentStatus.AdvanceDownload>() {
+    Handler handleDownloadStarting = new Handler<TorrentTracking.TransferSetUp>() {
         @Override
-        public void handle(TorrentStatus.AdvanceDownload resp) {
-            LOG.info("{}download - got advance", logPrefix);
-            answer(pendingAdvance, pendingAdvance.success(resp.torrent));
-        }
-    };
-    
-    Handler handleDownloadStarting = new Handler<TorrentTracking.DownloadStarting>() {
-        @Override
-        public void handle(TorrentTracking.DownloadStarting event) {
+        public void handle(TorrentTracking.TransferSetUp event) {
             LOG.info("{}download:{} starting", logPrefix, torrentId);
             startingTime = System.currentTimeMillis();
             status = TorrentState.DOWNLOADING;

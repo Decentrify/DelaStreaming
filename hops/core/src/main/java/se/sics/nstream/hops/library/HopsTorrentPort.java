@@ -31,8 +31,9 @@ import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 public class HopsTorrentPort extends PortType {
     {
         request(HopsTorrentDownloadEvent.StartRequest.class);
-        indication(HopsTorrentDownloadEvent.Success.class);
-        indication(HopsTorrentDownloadEvent.Failed.class);
+        indication(HopsTorrentDownloadEvent.StartSuccess.class);
+        indication(HopsTorrentDownloadEvent.StartFailed.class);
+        indication(HopsTorrentDownloadEvent.TorrentResult.class);
         request(HopsTorrentDownloadEvent.AdvanceRequest.class);
         indication(HopsTorrentDownloadEvent.AdvanceResponse.class);
         request(HopsTorrentUploadEvent.Request.class);

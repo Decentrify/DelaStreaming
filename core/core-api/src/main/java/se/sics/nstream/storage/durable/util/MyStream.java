@@ -32,4 +32,8 @@ public class MyStream {
         this.endpoint = endpoint;
         this.resource = fileResource;
     }
+    
+    public MyStream withResource(StreamResource resource) {
+        return new MyStream(endpoint, resource);
+    }
 }

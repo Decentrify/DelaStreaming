@@ -25,7 +25,7 @@ import se.sics.nstream.storage.durable.events.DEndpointDisconnect;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DEndpointControlPort extends PortType {
+public class DEndpointCtrlPort extends PortType {
     {
         request(DEndpointConnect.Request.class);
         indication(DEndpointConnect.Success.class);

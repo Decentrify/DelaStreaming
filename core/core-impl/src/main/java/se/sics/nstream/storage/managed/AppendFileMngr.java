@@ -49,12 +49,12 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
     private final AsyncOnDemandHashStorage hash;
     private final ComponentTracker hashTracker;
 
-    public AppendFileMngr(FileBaseDetails fileDetails, AsyncIncompleteStorage file, AsyncOnDemandHashStorage hash) {
+    public AppendFileMngr(FileBaseDetails fileDetails, AsyncIncompleteStorage file, AsyncOnDemandHashStorage hash, int lastContainedDataBlock, int lastContainedHashBlock) {
         this.fileDetails = fileDetails;
         this.file = file;
-        this.fileTracker = IncompleteTracker.create(fileDetails.nrBlocks);
+        this.fileTracker = IncompleteTracker.create(fileDetails.nrBlocks, lastContainedDataBlock);
         this.hash = hash;
-        this.hashTracker = IncompleteTracker.create(fileDetails.nrBlocks);
+        this.hashTracker = IncompleteTracker.create(fileDetails.nrBlocks, lastContainedHashBlock);
     }
 
     @Override

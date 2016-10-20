@@ -37,6 +37,8 @@ public class MyTorrent {
     private static final int BLOCK_SIZE = 1024;
     public static final BlockDetails defaultDefBlock = new BlockDetails(BLOCK_SIZE * PIECE_SIZE, BLOCK_SIZE, PIECE_SIZE, PIECE_SIZE);
     public static final BlockDetails defaultDataBlock = new BlockDetails(BLOCK_SIZE * PIECE_SIZE, BLOCK_SIZE, PIECE_SIZE, PIECE_SIZE);
+    public static final String MANIFEST_NAME = "manifest.json";
+    public static final int MANIFEST_ID = 0;
 
     
     public final Manifest manifest;

@@ -19,8 +19,9 @@
 package se.sics.nstream.torrent.tracking;
 
 import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.tracking.event.TorrentStatus;
-import se.sics.nstream.torrent.tracking.event.DownloadSummaryEvent;
+import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
+import se.sics.nstream.torrent.status.event.TorrentReady;
+import se.sics.nstream.torrent.status.event.TorrentStatus;
 import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 
 /**
@@ -29,11 +30,11 @@ import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
  */
 public class TorrentStatusPort extends PortType {
     {
+        indication(TorrentReady.class);
+        indication(TorrentStatus.DownloadedManifest.class);
+        
         request(StatusSummaryEvent.Request.class);
         indication(StatusSummaryEvent.Response.class);
         indication(DownloadSummaryEvent.class);
-        
-        indication(TorrentStatus.DownloadedManifest.class);
-        request(TorrentStatus.AdvanceDownload.class);
     }
 }

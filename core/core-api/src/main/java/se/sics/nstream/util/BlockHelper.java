@@ -53,6 +53,17 @@ public class BlockHelper {
         
         return Pair.with(nrBlocks, lastBlock);
     }
+    
+    public static int getBlockNrFromPos(long pos, FileBaseDetails fileDetails) {
+        int blockNr = (int)(pos / fileDetails.defaultBlock.blockSize);
+        if (blockNr == fileDetails.nrBlocks - 1) {
+            int lastBlockSize = (int)(pos % fileDetails.defaultBlock.blockSize);
+            if(lastBlockSize == fileDetails.lastBlock.blockSize) {
+                blockNr++;
+            }
+        }
+        return blockNr;
+    }
 
     public static int getBlockNr(long pieceNr, FileBaseDetails fileDetails) {
         int blockNr = (int) (pieceNr / fileDetails.defaultBlock.nrPieces);

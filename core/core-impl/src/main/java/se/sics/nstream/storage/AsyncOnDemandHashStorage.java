@@ -49,13 +49,12 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
     private final DelayedExceptionSyncHandler exSyncHandler;
     private final Map<Integer, KReference<byte[]>> hashes = new HashMap<>();
     private final AsyncStorage storage; //someone else is controlling it, I am merely piggy backing
-    public final boolean onDemand;
 
-    public AsyncOnDemandHashStorage(FileBaseDetails fileDetails, DelayedExceptionSyncHandler exSyncHandler, AsyncStorage storage, boolean onDemand, Pair<StreamId, MyStream> stream) {
+    public AsyncOnDemandHashStorage(FileBaseDetails fileDetails, DelayedExceptionSyncHandler exSyncHandler, AsyncStorage storage,
+            Pair<StreamId, MyStream> stream) {
         this.fileDetails = fileDetails;
         this.exSyncHandler = exSyncHandler;
         this.storage = storage;
-        this.onDemand = onDemand;
         this.stream = stream;
     }
 
@@ -98,10 +97,6 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
         if (hash != null) {
             delayedResult.success(Result.success(hash));
         } else {
-            if(!onDemand) {
-                delayedResult.fail(Result.internalStateFailure("read ahead hash from !ondemand"));
-                return;
-            }
             ReadCallback blockResult = new ReadCallback() {
 
                 @Override

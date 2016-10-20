@@ -16,31 +16,31 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.event;
+package se.sics.nstream.torrent.transfer.event.ctrl;
 
-import java.util.List;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.overlays.OverlayEvent;
+import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.transfer.MyTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class StartDownload {
+public class SetupTransfer {
 
-    public static class Request extends Direct.Request<Response> implements Identifiable {
+    public static class Request extends Direct.Request<Response> implements OverlayEvent {
 
         public final Identifier eventId;
         public final OverlayId torrentId;
-        public final List<KAddress> partners;
+        public final MyTorrent torrent;
 
-        public Request(OverlayId torrentId, List<KAddress> partners) {
-            this.eventId = BasicIdentifiers.eventId();
+        public Request(OverlayId torrentId, MyTorrent torrent) {
+            eventId = BasicIdentifiers.eventId();
             this.torrentId = torrentId;
-            this.partners = partners;
+            this.torrent = torrent;
         }
 
         @Override
@@ -48,24 +48,34 @@ public class StartDownload {
             return eventId;
         }
         
-        public Response success() {
-            return new Response(this);
+        @Override
+        public OverlayId overlayId() {
+            return torrentId;
+        }
+
+        public Response complete(Result<Boolean> result) {
+            return new Response(this, result);
         }
     }
 
-    public static class Response implements Direct.Response, Identifiable {
+    public static class Response implements Direct.Response, OverlayEvent {
 
-        public final Identifier eventId;
-        public final OverlayId torrentId;
+        public final Request req;
+        public final Result<Boolean> result;
 
-        private Response(Request req) {
-            this.eventId = req.eventId;
-            this.torrentId = req.torrentId;
+        private Response(Request req, Result<Boolean> result) {
+            this.req = req;
+            this.result = result;
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return req.getId();
+        }
+
+        @Override
+        public OverlayId overlayId() {
+            return req.overlayId();
         }
     }
 }

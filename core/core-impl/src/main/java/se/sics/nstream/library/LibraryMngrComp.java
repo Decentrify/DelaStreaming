@@ -30,9 +30,10 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.event.system.SystemAddressEvent;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
-import se.sics.nstream.storage.durable.DEndpointControlPort;
+import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.torrent.TorrentMngrPort;
+import se.sics.nstream.torrent.tracking.TorrentStatusPort;
+import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -44,9 +45,10 @@ public class LibraryMngrComp extends ComponentDefinition {
 
     //***************************CONNECTIONS************************************
     //**********************EXTERNAL_CONNECT_TO*********************************
-    Positive<DEndpointControlPort> endpointControlPort = requires(DEndpointControlPort.class);
-    Positive<TorrentStatusPort> reportPort = requires(TorrentStatusPort.class);
+    Positive<DEndpointCtrlPort> endpointControlPort = requires(DEndpointCtrlPort.class);
     Positive<TorrentMngrPort> torrentMngrPort = requires(TorrentMngrPort.class);
+    Positive<TransferCtrlPort> transferCtrl = requires(TransferCtrlPort.class);
+    Positive<TorrentStatusPort> reportPort = requires(TorrentStatusPort.class);
     
     Negative<SystemPort> systemPort = provides(SystemPort.class);
     List<Negative> providedPorts = new ArrayList<>();

@@ -18,11 +18,13 @@
  */
 package se.sics.nstream.torrent.resourceMngr;
 
+import java.util.Map;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.nstream.StreamId;
 import se.sics.nstream.transfer.MyTorrent;
 
 /**
@@ -46,16 +48,18 @@ public class PrepareResources {
             return eventId;
         }
         
-        public Success success() {
-            return new Success(this);
+        public Success success(Map<StreamId, Long> streamsInfo) {
+            return new Success(this, streamsInfo);
         }
     }
     
     public static class Success implements Direct.Response, Identifiable {
         public final Request req;
+        public final Map<StreamId, Long> streamsInfo;
         
-        public Success(Request req) {
+        public Success(Request req, Map<StreamId, Long> streamsInfo) {
             this.req = req;
+            this.streamsInfo = streamsInfo;
         }
         
         @Override

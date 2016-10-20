@@ -22,6 +22,7 @@ import com.google.common.base.Optional;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
+import javassist.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ClassMatchedHandler;
@@ -42,6 +43,7 @@ import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.ConnId;
 import se.sics.nstream.FileId;
 import se.sics.nstream.TorrentIds;
@@ -87,13 +89,10 @@ public class ConnectionComp extends ComponentDefinition {
 
         networkQueueLoad = new NetworkQueueLoadProxy("connection:" + logPrefix, proxy, new QueueLoadConfig(config()));
         seederConnState = new SeederConnectionState();
-        if (init.manifestDef.isPresent()) {
-            leecherConnState = new LeecherConnectionState(init.manifestDef.get());
-        }
 
         subscribe(handleStart, control);
         subscribe(handlePeerConnect, connPort);
-        subscribe(handleDetailedState, connPort);
+        subscribe(handleSetDetailedState, connPort);
         subscribe(handleOpenTransferLeecher, connPort);
         subscribe(handleOpenTransferSeeder, connPort);
         subscribe(handleCloseTransfer, connPort);
@@ -128,12 +127,14 @@ public class ConnectionComp extends ComponentDefinition {
             seederConnState.connect(req);
         }
     };
-    Handler handleDetailedState = new Handler<DetailedState.Request>() {
+
+    Handler handleSetDetailedState = new Handler<DetailedState.Set>() {
         @Override
-        public void handle(DetailedState.Request req) {
-            seederConnState.detailedState(req);
+        public void handle(DetailedState.Set req) {
+            leecherConnState = new LeecherConnectionState(req.manifestDef);
         }
     };
+
     Handler handleOpenTransferLeecher = new Handler<OpenTransfer.LeecherRequest>() {
         @Override
         public void handle(OpenTransfer.LeecherRequest req) {
@@ -235,8 +236,8 @@ public class ConnectionComp extends ComponentDefinition {
                     LOG.trace("{}received:{}", logPrefix, content);
                     if (leecherConnState == null) {
                         leecherConnState = new LeecherConnectionState(content.manifestDef);
+                        seederConnState.detailedStateResp(content.getId(), content.manifestDef);
                     }
-                    seederConnState.detailedStateResp(content.getId(), content.manifestDef);
                 }
             };
 
@@ -279,12 +280,10 @@ public class ConnectionComp extends ComponentDefinition {
 
         public final OverlayId torrentId;
         public final KAddress selfAdr;
-        public final Optional<ManifestDef> manifestDef;
 
-        public Init(OverlayId torrentId, KAddress selfAdr, Optional<ManifestDef> manifestDef) {
+        public Init(OverlayId torrentId, KAddress selfAdr) {
             this.torrentId = torrentId;
             this.selfAdr = selfAdr;
-            this.manifestDef = manifestDef;
         }
     }
 
@@ -347,7 +346,6 @@ public class ConnectionComp extends ComponentDefinition {
         private final Map<Identifier, Seeder.Connect> connectedReq = new HashMap<>();
         //**********************************************************************
         private final Map<Identifier, Seeder.Connect> pendingConnect = new HashMap<>();
-        private final Map<Identifier, DetailedState.Request> pendingDetailedState = new HashMap<>();
         private final Map<Identifier, OpenTransfer.LeecherRequest> pendingOpenTransfer = new HashMap<>();
 
         public void refreshConnections(Optional<KAddress> connectionCandidate) {
@@ -374,6 +372,9 @@ public class ConnectionComp extends ComponentDefinition {
                 connected.put(req.peer.getId(), req.peer);
                 connectedReq.put(req.peer.getId(), req);
                 answer(req, req.success());
+                if (leecherConnState == null) {
+                    detailedState();
+                }
             } else {
                 throw new RuntimeException("ups");
             }
@@ -390,35 +391,24 @@ public class ConnectionComp extends ComponentDefinition {
         }
 
         //**********************************************************************
-        public void detailedState(DetailedState.Request req) {
+        public void detailedState() {
             if (connected.isEmpty()) {
                 LOG.info("{}detailed state - no connection", logPrefix);
-                answer(req, req.none());
+                trigger(new DetailedState.Deliver(Result.timeout(new NotFoundException("manifest def not found"))), connPort);
                 return;
             }
             KAddress peer = connected.firstEntry().getValue();
             LOG.debug("{}detailed state - requesting from:{}", logPrefix, peer);
             NetDetailedState.Request netReq = new NetDetailedState.Request(torrentId);
-            pendingDetailedState.put(netReq.getId(), req);
             bestEffortUDPSend(netReq, peer, DEFAULT_RETRIES);
         }
 
         public void detailedStateResp(Identifier reqId, ManifestDef manifestDef) {
-            DetailedState.Request req = pendingDetailedState.remove(reqId);
-            if (req == null) {
-                LOG.trace("{}detailed state - late:{}", logPrefix, reqId);
-                return;
-            }
             LOG.info("{}detailed state - received", logPrefix);
-            answer(req, req.success(manifestDef));
+            trigger(new DetailedState.Deliver(Result.success(manifestDef)), connPort);
         }
 
         public void detailedStateTimeout(Identifier reqId, KAddress peer) {
-            DetailedState.Request req = pendingDetailedState.remove(reqId);
-            if (req == null) {
-                LOG.trace("{}late timeout:{}", logPrefix, reqId);
-                return;
-            }
             Seeder.Connect connectReq = connectedReq.get(peer.getId());
             if (connectReq != null) {
                 connected.remove(peer.getId());
@@ -426,7 +416,7 @@ public class ConnectionComp extends ComponentDefinition {
                 LOG.debug("{}suspect:{}", logPrefix, peer);
                 answer(connectReq, connectReq.suspect());
             }
-            detailedState(req);
+            detailedState();
         }
 
         //**********************************************************************

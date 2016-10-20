@@ -16,33 +16,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.tracking.event;
+package se.sics.nstream.torrent.event;
 
+import java.util.List;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.transfer.MyTorrent;
-import se.sics.nstream.transfer.MyTorrent.Manifest;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentStatus {
-    public static class DownloadedManifest extends Direct.Request<AdvanceDownload> implements OverlayEvent {
+public class StartTorrent {
+    public static class Request extends Direct.Request<Response> implements OverlayEvent {
+
         public final Identifier eventId;
         public final OverlayId torrentId;
-        public final Result<Manifest> manifest;
-        
-        public DownloadedManifest(TorrentTracking.DownloadedManifest req) {
+        public final List<KAddress> partners;
+
+        public Request(OverlayId torrentId, List<KAddress> partners) {
             this.eventId = BasicIdentifiers.eventId();
-            this.torrentId = req.torrentId;
-            this.manifest = req.manifest;
+            this.torrentId = torrentId;
+            this.partners = partners;
         }
-        
+
         @Override
         public Identifier getId() {
             return eventId;
@@ -53,24 +54,31 @@ public class TorrentStatus {
             return torrentId;
         }
         
-        public AdvanceDownload success(MyTorrent torrent) {
-            return new AdvanceDownload(this, torrent);
+        public Response success() {
+            return new Response(this, Result.success(true));
         }
-
     }
-    
-    public static class AdvanceDownload implements Direct.Response, Identifiable {
-        public final Identifier eventId;
-        public final MyTorrent torrent;
 
-        private AdvanceDownload(DownloadedManifest req, MyTorrent torrent) {
+    public static class Response implements Direct.Response, OverlayEvent {
+
+        public final Identifier eventId;
+        public final OverlayId torrentId;
+        public final Result<Boolean> result;
+
+        private Response(Request req, Result<Boolean> result) {
             this.eventId = req.eventId;
-            this.torrent = torrent;
+            this.torrentId = req.torrentId;
+            this.result = result;
         }
-        
+
         @Override
         public Identifier getId() {
             return eventId;
+        }
+
+        @Override
+        public OverlayId overlayId() {
+            return torrentId;
         }
     }
 }

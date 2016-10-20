@@ -38,4 +38,8 @@ public class DiskResource implements StreamResource {
     public String getSinkName() {
         return "file:/" + dirPath + "/" + fileName;
     }
+    
+    public DiskResource withFile(String fileName) {
+        return new DiskResource(dirPath, fileName);
+    }
 }

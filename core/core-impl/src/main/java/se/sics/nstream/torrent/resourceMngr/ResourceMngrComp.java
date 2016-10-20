@@ -75,6 +75,7 @@ public class ResourceMngrComp extends ComponentDefinition {
     Handler handlePrepare = new Handler<PrepareResources.Request>() {
         @Override
         public void handle(PrepareResources.Request req) {
+            LOG.info("{}preparing resources for torrent:{}", logPrefix, req.torrentId);
             Op op = new Op(req);
             preparingResources.put(op.getId(), op);
             
@@ -106,11 +107,11 @@ public class ResourceMngrComp extends ComponentDefinition {
                 LOG.warn("{}weird - investigate", logPrefix);
                 return;
             }
-            op.prepared(resp.getId());
+            op.prepared(resp.getId(), resp.req.stream.getValue0(), resp.streamPos);
             if(op.ready()) {
                 LOG.info("{}prepared all resources for:{}", logPrefix, op.getId());
                 preparingResources.remove(op.getId());
-                answer(op.req, op.req.success());
+                answer(op.req, op.req.success(op.streamsInfo));
             }
         }
     };
@@ -126,6 +127,7 @@ public class ResourceMngrComp extends ComponentDefinition {
     public static class Op {
         public final PrepareResources.Request req;
         public final Set<Identifier> preparingResources = new HashSet<>();
+        public final Map<StreamId, Long> streamsInfo = new HashMap<>();
         
         public Op(PrepareResources.Request req) {
             this.req = req;
@@ -139,8 +141,9 @@ public class ResourceMngrComp extends ComponentDefinition {
             preparingResources.add(eventId);
         }
         
-        public void prepared(Identifier eventId) {
+        public void prepared(Identifier eventId, StreamId stream, long streamPos) {
             preparingResources.remove(eventId);
+            streamsInfo.put(stream, streamPos);
         }
         
         public boolean ready() {

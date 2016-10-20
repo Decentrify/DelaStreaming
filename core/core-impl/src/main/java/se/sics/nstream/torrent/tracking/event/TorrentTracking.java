@@ -50,41 +50,20 @@ public class TorrentTracking {
         public Identifier getId() {
             return eventId;
         }
-        
-        public DownloadAdvance success(MyTorrent torrent) {
-            return new DownloadAdvance(this, torrent);
-        }
     }
     
-    public static class DownloadAdvance implements Direct.Response,  StreamEvent {
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        public final MyTorrent torrent;
-
-        DownloadAdvance(DownloadedManifest req, MyTorrent torrent) {
-            this.eventId = req.eventId;
-            this.torrentId = req.torrentId;
-            this.torrent = torrent;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-    }
-    
-     public static class DownloadStarting implements StreamEvent {
+     public static class TransferSetUp implements StreamEvent {
         public final Identifier eventId;
         public final OverlayId torrentId;
         public final DataReport dataReport;
 
-        public DownloadStarting(Identifier eventId, OverlayId torrentId, DataReport dataReport) {
+        public TransferSetUp(Identifier eventId, OverlayId torrentId, DataReport dataReport) {
             this.eventId = eventId;
             this.torrentId = torrentId;
             this.dataReport = dataReport;
         }
 
-        public DownloadStarting(OverlayId torrentId, DataReport dataReport) {
+        public TransferSetUp(OverlayId torrentId, DataReport dataReport) {
             this(BasicIdentifiers.eventId(), torrentId, dataReport);
         }
 

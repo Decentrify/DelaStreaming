@@ -16,47 +16,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.tracking.event;
+package se.sics.nstream.torrent.status.event;
 
+import se.sics.kompics.KompicsEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
-import se.sics.nstream.StreamEvent;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DownloadSummaryEvent implements StreamEvent, OverlayEvent {
+public class TorrentReady implements KompicsEvent, OverlayEvent {
     public final Identifier eventId;
     public final OverlayId torrentId;
-    public final long transferSize;
-    public final long transferTime;
-
-    public DownloadSummaryEvent(Identifier eventId, OverlayId torrentId, long transferSize, long transferTime) {
-        this.eventId = eventId;
-        this.transferSize = transferSize;
-        this.transferTime = transferTime;
+    
+    public TorrentReady(OverlayId torrentId) {
+        this.eventId = BasicIdentifiers.eventId();
         this.torrentId = torrentId;
     }
-    
-    public DownloadSummaryEvent(OverlayId torrentId, long transferSize, long transferTime) {
-        this(BasicIdentifiers.eventId(), torrentId, transferSize, transferTime);
-    }
-    
+
     @Override
     public Identifier getId() {
         return eventId;
     }
-    
+
     @Override
     public OverlayId overlayId() {
         return torrentId;
-    }
-    
-    @Override
-    public String toString() {
-        return "Download<" + overlayId() + ">SummaryEvent<" + getId() + ">";
     }
 }

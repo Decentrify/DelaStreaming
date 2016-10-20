@@ -16,20 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.tracking;
+package se.sics.nstream.torrent.transfer;
 
 import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.tracking.event.TorrentTracking;
+import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
+import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentTrackingPort extends PortType {
-
+public class TransferCtrlPort extends PortType {
     {
-        indication(TorrentTracking.DownloadedManifest.class);
-        indication(TorrentTracking.TransferSetUp.class);
-        indication(TorrentTracking.DownloadDone.class);
-        indication(TorrentTracking.Indication.class);
+        request(GetRawTorrent.Request.class);
+        indication(GetRawTorrent.Response.class);
+        request(SetupTransfer.Request.class);
+        indication(SetupTransfer.Response.class);
     }
 }

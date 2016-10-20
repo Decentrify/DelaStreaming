@@ -173,7 +173,7 @@ public class DiskComp extends ComponentDefinition {
 
         @Override
         public String getName() {
-            return "disk";
+            return endpoint.getEndpointName();
         }
 
         @Override

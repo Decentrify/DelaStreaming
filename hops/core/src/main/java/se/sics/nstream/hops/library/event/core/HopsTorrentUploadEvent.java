@@ -58,7 +58,7 @@ public class HopsTorrentUploadEvent {
             return eventId;
         }
 
-        public Response failed(Result<Boolean> result) {
+        public Response failed(Result result) {
             return new Failed(this, result);
         }
         

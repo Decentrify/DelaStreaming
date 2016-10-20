@@ -19,6 +19,7 @@
 package se.sics.nstream.torrent.fileMngr;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -30,7 +31,6 @@ import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
-import se.sics.nstream.storage.AsyncCompleteStorage;
 import se.sics.nstream.storage.AsyncIncompleteStorage;
 import se.sics.nstream.storage.AsyncOnDemandHashStorage;
 import se.sics.nstream.storage.buffer.KBuffer;
@@ -40,9 +40,9 @@ import se.sics.nstream.storage.cache.SimpleKCache;
 import se.sics.nstream.storage.durable.util.FileExtendedDetails;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.storage.managed.AppendFileMngr;
-import se.sics.nstream.storage.managed.CompleteFileMngr;
 import se.sics.nstream.torrent.core.DataReport;
 import se.sics.nstream.transfer.MyTorrent;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 
@@ -52,37 +52,54 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
 public class TorrentFileMngr {
 
     private final MyTorrent torrent;
-    private final Map<FileId, TFileComplete> completed = new HashMap<>();
-    private final Map<FileId, TFileIncomplete> ongoing = new HashMap<>();
-    private final TreeMap<FileId, TFileIncomplete> pending = new TreeMap<>();
+    private final Map<FileId, TFileComplete> completed;
+    private final Map<FileId, TFileIncomplete> ongoing;
+    private final TreeMap<FileId, TFileIncomplete> pending;
 
-    public TorrentFileMngr(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler, ComponentLoadTracking loadTracker,
-            MyTorrent torrent, boolean complete) {
+    public TorrentFileMngr(MyTorrent torrent, Map<FileId, TFileComplete> completed, Map<FileId, TFileIncomplete> ongoing, TreeMap<FileId, TFileIncomplete> pending) {
         this.torrent = torrent;
+        this.completed = completed;
+        this.ongoing = ongoing;
+        this.pending = pending;
+    }
+
+    public static TorrentFileMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler, ComponentLoadTracking loadTracker,
+            MyTorrent torrent, Map<StreamId, Long> streamsInfo) {
+        Map<FileId, TFileComplete> completed = new HashMap<>();
+        Map<FileId, TFileIncomplete> ongoing = new HashMap<>();
+        TreeMap<FileId, TFileIncomplete> pending = new TreeMap<>();
+
         for (Map.Entry<FileId, FileExtendedDetails> entry : torrent.extended.entrySet()) {
+            Map<StreamId, Long> fileStreams = new HashMap<>();
+
             FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
             Pair<StreamId, MyStream> mainStream = entry.getValue().getMainStream();
-            List<Pair<StreamId, MyStream>> secondaryStreams = entry.getValue().getSecondaryStreams();
-            if (complete) {
-                SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream);
-                AsyncCompleteStorage file = new AsyncCompleteStorage(cache);
-                AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, true, mainStream);
-                CompleteFileMngr fileMngr = new CompleteFileMngr(fileDetails, file, hash);
-                completed.put(mainStream.getValue0().fileId, new TFileComplete(fileMngr, fileDetails));
+            fileStreams.put(mainStream.getValue0(), streamsInfo.get(mainStream.getValue0()));
+            SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream);
+
+            List<KBuffer> bufs = new ArrayList<>();
+            bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainStream, 0));
+            for (Pair<StreamId, MyStream> secondaryStream : entry.getValue().getSecondaryStreams()) {
+                fileStreams.put(secondaryStream.getValue0(), streamsInfo.get(secondaryStream.getValue0()));
+                bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, secondaryStream, 0));
+            }
+            KBuffer buffer = new MultiKBuffer(bufs);
+            AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);
+            AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, mainStream);
+            
+            long minPos = Collections.min(fileStreams.values());
+            int minBlockNr = BlockHelper.getBlockNrFromPos(minPos, fileDetails);
+            AppendFileMngr fileMngr = new AppendFileMngr(fileDetails, file, hash, minBlockNr, minBlockNr);
+
+            if (fileMngr.isComplete()) {
+                completed.put(entry.getKey(), new TFileComplete(fileMngr.complete(), fileDetails));
+            } else if (fileMngr.hasBlock(0)) {
+                ongoing.put(entry.getKey(), new TFileIncomplete(fileMngr, fileDetails));
             } else {
-                SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream);
-                List<KBuffer> bufs = new ArrayList<>();
-                bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainStream, 0));
-                for (Pair<StreamId, MyStream> secondaryStream : secondaryStreams) {
-                    bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, secondaryStream, 0));
-                }
-                KBuffer buffer = new MultiKBuffer(bufs);
-                AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);
-                AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, false, mainStream);
-                AppendFileMngr fileMngr = new AppendFileMngr(fileDetails, file, hash);
-                pending.put(mainStream.getValue0().fileId, new TFileIncomplete(fileMngr, fileDetails));
+                pending.put(entry.getKey(), new TFileIncomplete(fileMngr, fileDetails));
             }
         }
+        return new TorrentFileMngr(torrent, completed, ongoing, pending);
     }
 
     public void start() {
@@ -180,7 +197,7 @@ public class TorrentFileMngr {
         long totalMaxSize = 0;
         long totalCurrentSize = 0;
         Map<FileId, Pair<Long, Long>> ongoingReport = new HashMap<>();
-        for(TFileComplete completedFile : completed.values()) {
+        for (TFileComplete completedFile : completed.values()) {
             Pair<Long, Long> size = completedFile.report();
             totalMaxSize += size.getValue0();
             totalCurrentSize += size.getValue1();

@@ -21,7 +21,6 @@ package se.sics.nstream.hops.library.event.core;
 import com.google.common.base.Optional;
 import java.util.List;
 import java.util.Map;
-import org.javatuples.Pair;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -33,7 +32,6 @@ import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
-import se.sics.nstream.hops.library.Library;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -67,24 +65,24 @@ public class HopsTorrentDownloadEvent {
             return eventId;
         }
 
-        public StartResponse failed(Result<Pair<String, Library.Torrent>> result) {
-            return new Failed(this, result);
+        public StartResponse failed(Result result) {
+            return new StartFailed(this, result);
         }
 
         public StartResponse success(Result<Boolean> result) {
-            return new Success(this, result);
+            return new StartSuccess(this, result);
         }
     }
 
     public static interface StartResponse extends Direct.Response, StreamEvent {
     }
 
-    public static class Success implements StartResponse {
+    public static class StartSuccess implements StartResponse {
 
         public final StartRequest req;
         public final Result<Boolean> result;
 
-        public Success(StartRequest req, Result<Boolean> result) {
+        public StartSuccess(StartRequest req, Result<Boolean> result) {
             this.req = req;
             this.result = result;
         }
@@ -95,12 +93,12 @@ public class HopsTorrentDownloadEvent {
         }
     }
 
-    public static class Failed implements StartResponse {
+    public static class StartFailed implements StartResponse {
 
         public final StartRequest req;
-        public final Result<Pair<String, Library.Torrent>> result;
+        public final Result result;
 
-        public Failed(StartRequest req, Result<Pair<String, Library.Torrent>> result) {
+        public StartFailed(StartRequest req, Result result) {
             this.req = req;
             this.result = result;
         }
@@ -108,6 +106,21 @@ public class HopsTorrentDownloadEvent {
         @Override
         public Identifier getId() {
             return req.eventId;
+        }
+    }
+    
+    public static class TorrentResult implements StartResponse {
+        public final StartRequest req;
+        public final Result<Boolean> manifest;
+        
+        TorrentResult(StartRequest req, Result<Boolean> manifest) {
+            this.req =req;
+            this.manifest = manifest;
+        }
+        
+        @Override
+        public Identifier getId() {
+            return req.getId();
         }
     }
 
