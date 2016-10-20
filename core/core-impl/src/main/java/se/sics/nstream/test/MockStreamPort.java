@@ -18,10 +18,10 @@
  */
 package se.sics.nstream.test;
 
-import se.sics.nstream.storage.StoragePort;
+import se.sics.nstream.storage.durable.DStoragePort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class MockStreamPort extends StoragePort {
+public class MockStreamPort extends DStoragePort {
 }

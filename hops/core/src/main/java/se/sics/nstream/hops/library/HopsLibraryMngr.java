@@ -19,90 +19,93 @@
 package se.sics.nstream.hops.library;
 
 import com.google.common.base.Optional;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.javatuples.Pair;
-import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.FileId;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.TorrentIds;
 import se.sics.nstream.hops.HopsFED;
+import se.sics.nstream.hops.hdfs.HDFSComp;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSHelper;
 import se.sics.nstream.hops.hdfs.HDFSResource;
+import se.sics.nstream.hops.kafka.KafkaEndpoint;
+import se.sics.nstream.hops.kafka.KafkaResource;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
-import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
+import se.sics.nstream.hops.manifest.DiskHelper;
+import se.sics.nstream.hops.manifest.ManifestHelper;
 import se.sics.nstream.hops.manifest.ManifestJSON;
-import se.sics.nstream.library.LibraryMngrComp;
-import se.sics.nstream.library.event.torrent.HopsContentsEvent;
-import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
-import se.sics.nstream.library.util.TorrentStatus;
-import se.sics.nstream.report.ReportPort;
-import se.sics.nstream.report.event.DownloadSummaryEvent;
-import se.sics.nstream.report.event.StatusSummaryEvent;
-import se.sics.nstream.transfer.Transfer;
-import se.sics.nstream.transfer.TransferMngrPort;
-import se.sics.nstream.util.CoreExtPorts;
-import se.sics.nstream.util.FileExtendedDetails;
-import se.sics.nstream.util.TorrentDetails;
-import se.sics.nstream.util.TransferDetails;
+import se.sics.nstream.library.Library;
+import se.sics.nstream.library.util.TorrentState;
+import se.sics.nstream.storage.durable.DEndpointCtrlPort;
+import se.sics.nstream.storage.durable.DurableStorageProvider;
+import se.sics.nstream.storage.durable.disk.DiskComp;
+import se.sics.nstream.storage.durable.disk.DiskEndpoint;
+import se.sics.nstream.storage.durable.disk.DiskFED;
+import se.sics.nstream.storage.durable.disk.DiskResource;
+import se.sics.nstream.storage.durable.events.DEndpointConnect;
+import se.sics.nstream.storage.durable.util.FileExtendedDetails;
+import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
+import se.sics.nstream.storage.durable.util.StreamResource;
+import se.sics.nstream.torrent.TorrentMngrPort;
+import se.sics.nstream.torrent.event.StartTorrent;
+import se.sics.nstream.torrent.tracking.TorrentStatusPort;
+import se.sics.nstream.torrent.transfer.TransferCtrlPort;
+import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
+import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
+import se.sics.nstream.transfer.MyTorrent;
+import se.sics.nstream.util.FileBaseDetails;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsLibraryMngr {
 
-    private static final Logger LOG = LoggerFactory.getLogger(LibraryMngrComp.class);
+    private static final Details.Types RUN_TYPE = Details.Types.HDFS;
+
+    private static final Logger LOG = LoggerFactory.getLogger(HopsLibraryMngr.class);
     private String logPrefix = "";
 
     private final Config config;
-    private final ComponentProxy proxy;
+    private final ComponentHelper componentHelper;
     private final KAddress selfAdr;
-    //**************************************************************************
-    private final CoreExtPorts extPorts;
-    private final Negative<HopsTorrentPort> torrentPort;
-    //**********************INTERNAL_DO_NOT_CONNECT_TO**************************
-    private final Negative<TransferMngrPort> transferMngrPort;
-    private final Positive<ReportPort> reportPort;
-    //**************************************************************************
-    private Library library = new Library();
-    private HopsTorrentCompMngr components;
-    //**************************************************************************
-    private Map<Identifier, HopsTorrentDownloadEvent.StartRequest> pendingExtDwnl = new HashMap<>();
-    private Map<Identifier, Transfer.DownloadRequest> pendingIntDwnl = new HashMap<>();
-    private Map<Identifier, TorrentExtendedStatusEvent.Request> pendingRequests = new HashMap<>();
+    private final Library library;
+    private final EndpointTracker endpointTracker;
+    private final TransferTracker transferTracker;
+    private final LibOpTracker libOpTracker;
 
-    public HopsLibraryMngr(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, CoreExtPorts extPorts) {
-        this.proxy = proxy;
+    public HopsLibraryMngr(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr) {
         this.logPrefix = logPrefix;
         this.config = config;
-        this.extPorts = extPorts;
         this.selfAdr = selfAdr;
-        components = new HopsTorrentCompMngr(selfAdr, proxy, extPorts, logPrefix);
-        torrentPort = proxy.getPositive(HopsTorrentPort.class).getPair();
-        transferMngrPort = proxy.getPositive(TransferMngrPort.class).getPair();
-        reportPort = proxy.getNegative(ReportPort.class).getPair();
-        
-        proxy.subscribe(handleHopsTorrentUpload, torrentPort);
-        proxy.subscribe(handleHopsTorrentDownload, torrentPort);
-        proxy.subscribe(handleTransferDetailsReq, transferMngrPort);
-        proxy.subscribe(handleTransferDetailsResp, torrentPort);
-        proxy.subscribe(handleHopsTorrentStop, torrentPort);
-        proxy.subscribe(handleContentsRequest, torrentPort);
-        proxy.subscribe(handleTorrentStatusRequest, torrentPort);
-        proxy.subscribe(handleTorrentStatusResponse, reportPort);
-        proxy.subscribe(handleDownloadCompleted, reportPort);
+
+        componentHelper = new ComponentHelper(proxy);
+        library = new Library();
+        endpointTracker = new EndpointTracker(logPrefix, componentHelper);
+        transferTracker = new TransferTracker(logPrefix, componentHelper);
+
+        libOpTracker = new LibOpTracker(logPrefix, componentHelper, endpointTracker, transferTracker, library, selfAdr.getId());
+//        restartTorrents();
     }
 
     public void start() {
@@ -111,229 +114,1090 @@ public class HopsLibraryMngr {
     public void close() {
     }
 
-    public void cleanAndDestroy(Identifier torrentId) {
-        components.destroy(torrentId);
+    public void cleanAndDestroy(OverlayId torrentId) {
         library.destroyed(torrentId);
     }
-    //**************************************************************************
 
-    //**********************************UPLOAD**********************************
-    Handler handleHopsTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
-        @Override
-        public void handle(HopsTorrentUploadEvent.Request req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            TorrentStatus status = library.getStatus(req.torrentId);
-            HopsTorrentUploadEvent.Response resp;
-            switch (status) {
-                case UPLOADING:
-                    if (compareUploadDetails(library.getManifest(req.torrentId), Pair.with(req.hdfsEndpoint, req.manifestResource))) {
-                        resp = req.alreadyExists(Result.success(true));
-                    } else {
-                        resp = req.alreadyExists(Result.badArgument("existing - upload details do not match"));
+//    private void restartTorrents() {
+//        if (RUN_TYPE.equals(Details.Types.DISK)) {
+//            DiskLibrarySummary librarySummary = TorrentList.readTorrentList(TORRENT_LIST);
+//            if (librarySummary.isEmpty()) {
+//                return;
+//            }
+//            Map<OverlayId, MyStream> torrents = new HashMap<>();
+//            Map<OverlayId, List<KAddress>> peers = new HashMap<>();
+//            for (Map.Entry<String, DiskLibrarySummary.Torrent> e : librarySummary.getTorrents().entrySet()) {
+//                OverlayId torrentId = torrentIdFactory.id(new BasicBuilders.StringBuilder(e.getKey()));
+//                StreamEndpoint manifestEndpoint = new DiskEndpoint();
+//                StreamResource manifestResource = new DiskResource(e.getValue().getTorrentPath(), MyTorrent.MANIFEST_NAME);
+//                MyStream manifestStream = new MyStream(manifestEndpoint, manifestResource);
+//                torrents.put(torrentId, manifestStream);
+//            }
+//            diskTorrentsRestart = new RestartTorrents(transferST, new DiskManifestHelper(), torrents, peers);
+//
+//            List<DurableStorageProvider> storageProviders = new ArrayList<>();
+//            storageProviders.add(new DiskComp.StorageProvider(selfAdr.getId()));
+//            endpointCT.registerEndpoints(storageProviders, new EndpointCallbackWrapper(diskTorrentsRestart));
+//        } else {
+//            return;
+//        }
+//    }
+    public static interface BasicCompleteCallback<V extends Object> {
+
+        public void ready(Result<V> result);
+    }
+
+    //**************************************************************************
+    public static class ComponentHelper {
+
+        private final ComponentProxy proxy;
+        //**************************************************************************
+        private final Negative<HopsTorrentPort> libraryCtrlPort;
+        private final Positive<DEndpointCtrlPort> endpointControlPort;
+        private final Positive<TorrentMngrPort> torrentMngrPort;
+        private final Positive<TransferCtrlPort> transferCtrlPort;
+        private final Positive<TorrentStatusPort> torrentStatusPort;
+
+        public ComponentHelper(ComponentProxy proxy) {
+            this.proxy = proxy;
+            libraryCtrlPort = proxy.getPositive(HopsTorrentPort.class).getPair();
+            endpointControlPort = proxy.getNegative(DEndpointCtrlPort.class).getPair();
+            torrentMngrPort = proxy.getNegative(TorrentMngrPort.class).getPair();
+            transferCtrlPort = proxy.getNegative(TransferCtrlPort.class).getPair();
+            torrentStatusPort = proxy.getNegative(TorrentStatusPort.class).getPair();
+        }
+    }
+
+    //**************************CONNECTING ENDPOINTS****************************
+    public static interface EndpointCallback extends BasicCompleteCallback<Boolean> {
+
+        public void setEndpoints(Map<String, Identifier> nameToId, Map<Identifier, StreamEndpoint> endpoints);
+    }
+
+    public static class EndpointTracker {
+
+        private final String logPrefix;
+        private final ComponentHelper helper;
+        private final EndpointIdRegistry endpointIdRegistry;
+        //**********************************************************************
+        private final Map<Identifier, List<EndpointCallbackWrapper>> pendingEndpoints = new HashMap<>();
+
+        public EndpointTracker(String logPrefix, ComponentHelper componentHelper) {
+            this.logPrefix = logPrefix;
+            this.helper = componentHelper;
+            this.endpointIdRegistry = new EndpointIdRegistry();
+
+            helper.proxy.subscribe(handleEndpointConnected, helper.endpointControlPort);
+        }
+
+        private void registerEndpoints(List<DurableStorageProvider> storageEndpoints, final EndpointCallback callback) {
+            EndpointCallbackWrapper callbackWrapper = new EndpointCallbackWrapper(callback);
+            for (DurableStorageProvider dsp : storageEndpoints) {
+                String endpointName = dsp.getName();
+                if (endpointIdRegistry.registered(endpointName)) {
+                    Identifier endpointId = endpointIdRegistry.lookup(endpointName);
+                    LOG.info("{}endpoint:{} already registered", logPrefix, endpointName);
+                    callbackWrapper.addConnected(endpointName, endpointId, dsp.getEndpoint());
+                } else {
+                    LOG.info("{}endpoint:{} waiting", logPrefix, endpointName);
+                    Identifier endpointId = endpointIdRegistry.register(endpointName);
+                    callbackWrapper.addWaiting(endpointName, endpointId, dsp.getEndpoint());
+                    List<EndpointCallbackWrapper> waiting = pendingEndpoints.get(endpointId);
+                    if (waiting == null) {
+                        waiting = new ArrayList<>();
+                        pendingEndpoints.put(endpointId, waiting);
                     }
-                    LOG.trace("{}answering:{}", logPrefix, resp);
-                    proxy.answer(req, resp);
-                    break;
-                case PENDING_DOWNLOAD:
+                    waiting.add(callbackWrapper);
+                    helper.proxy.trigger(new DEndpointConnect.Request(endpointId, dsp), helper.endpointControlPort);
+                }
+            }
+            callbackWrapper.setupComplete();
+        }
+
+        Handler handleEndpointConnected = new Handler<DEndpointConnect.Success>() {
+            @Override
+            public void handle(DEndpointConnect.Success resp) {
+                LOG.info("{}connected endpoint:{}", logPrefix, resp.req.endpointId);
+                List<EndpointCallbackWrapper> waiting = pendingEndpoints.remove(resp.req.endpointId);
+                if (waiting != null) {
+                    for (EndpointCallbackWrapper callbackWrapper : waiting) {
+                        callbackWrapper.connected(resp.req.endpointId);
+                    }
+                }
+            }
+        };
+    }
+
+    private static class EndpointCallbackWrapper {
+
+        private final Map<String, Identifier> nameToId = new HashMap<>();
+        private final Map<Identifier, StreamEndpoint> endpoints = new HashMap<>();
+        private final Set<Identifier> connecting = new HashSet<>();
+        private final EndpointCallback result;
+
+        public EndpointCallbackWrapper(EndpointCallback result) {
+            this.result = result;
+        }
+
+        public void addWaiting(String endpointName, Identifier endpointId, StreamEndpoint endpoint) {
+            nameToId.put(endpointName, endpointId);
+            endpoints.put(endpointId, endpoint);
+            connecting.add(endpointId);
+        }
+
+        public void addConnected(String endpointName, Identifier endpointId, StreamEndpoint endpoint) {
+            nameToId.put(endpointName, endpointId);
+            endpoints.put(endpointId, endpoint);
+        }
+
+        public void setupComplete() {
+            result.setEndpoints(nameToId, endpoints);
+            if (connecting.isEmpty()) {
+                result.ready(Result.success(true));
+            }
+        }
+
+        public void connected(Identifier endpointId) {
+            connecting.remove(endpointId);
+            if (connecting.isEmpty()) {
+                result.ready(Result.success(true));
+            }
+        }
+    }
+
+    //*****************************TRANSFER_START*******************************
+    public static interface TransferCallbackWrapper<V extends Object> extends BasicCompleteCallback<V> {
+
+        /**
+         * @param result
+         * @return false if should stop
+         */
+        public boolean started(Result<Boolean> result);
+
+        public boolean hasTorrent();
+
+        public MyTorrent getTorrent();
+
+        public List<KAddress> getPeers();
+
+        /**
+         * @param transferResult
+         * @return false if should stop
+         */
+        public boolean manifest(Result<MyTorrent.Manifest> transferResult, AdvanceTransferCallback callback);
+    }
+
+    public static class TransferTracker {
+
+        private final String logPrefix;
+        private final ComponentHelper helper;
+        //**********************************************************************
+        private final Map<OverlayId, TransferCallbackWrapper<Boolean>> pendingTransferStarts = new HashMap<>();
+
+        public TransferTracker(String logPrefix, ComponentHelper helper) {
+            this.logPrefix = logPrefix;
+            this.helper = helper;
+            helper.proxy.subscribe(handleTorrentStarted, helper.torrentMngrPort);
+            helper.proxy.subscribe(handleRawTorrent, helper.transferCtrlPort);
+            helper.proxy.subscribe(handleAdvanceTransfer, helper.transferCtrlPort);
+        }
+
+        public void startTransfer(OverlayId torrentId, TransferCallbackWrapper<Boolean> callback) {
+            LOG.info("{}torrent:{} - starting", logPrefix, torrentId);
+            StartTorrent.Request req = new StartTorrent.Request(torrentId, callback.getPeers());
+            pendingTransferStarts.put(torrentId, callback);
+            helper.proxy.trigger(req, helper.torrentMngrPort);
+        }
+
+        Handler handleTorrentStarted = new Handler<StartTorrent.Response>() {
+            @Override
+            public void handle(StartTorrent.Response resp) {
+                if (resp.result.isSuccess()) {
+                    LOG.debug("{}torrent:{} - started", logPrefix, resp.overlayId());
+                } else {
+                    LOG.debug("{}torrent:{} - start failed", logPrefix, resp.overlayId());
+                }
+
+                TransferCallbackWrapper callback = pendingTransferStarts.get(resp.torrentId);
+                if (!callback.started(resp.result)) {
+                    throw new RuntimeException("cleanup - todo");
+                }
+
+                if (callback.hasTorrent()) {
+                    advanceTransfer(resp.torrentId, callback.getTorrent());
+                } else {
+                    LOG.debug("{}torrent:{} - getting raw torrent", logPrefix, resp.torrentId);
+                    GetRawTorrent.Request req = new GetRawTorrent.Request(resp.torrentId);
+                    helper.proxy.trigger(req, helper.transferCtrlPort);
+                }
+            }
+        };
+
+        Handler handleRawTorrent = new Handler<GetRawTorrent.Response>() {
+            @Override
+            public void handle(final GetRawTorrent.Response resp) {
+                if (resp.result.isSuccess()) {
+                    LOG.debug("{}torrent:{} - get raw torrent - received, saving...", logPrefix, resp.overlayId());
+                } else {
+                    LOG.debug("{}torrent:{} - get raw torrent - failed", logPrefix, resp.overlayId());
+                }
+                TransferCallbackWrapper mainCallback = pendingTransferStarts.get(resp.overlayId());
+                AdvanceTransferCallback advanceCallback = new AdvanceTransferCallback() {
+                    @Override
+                    public void ready(MyTorrent torrent) {
+                        advanceTransfer(resp.overlayId(), torrent);
+                    }
+                };
+                if (!mainCallback.manifest(resp.result, advanceCallback)) {
+                    throw new RuntimeException("cleanup - todo");
+                }
+            }
+        };
+
+        public void advanceTransfer(OverlayId torrentId, MyTorrent torrent) {
+            LOG.debug("{}torrent:{} - transfer - setting up", logPrefix, torrentId);
+            SetupTransfer.Request req = new SetupTransfer.Request(torrentId, torrent);
+            helper.proxy.trigger(req, helper.transferCtrlPort);
+        }
+
+        Handler handleAdvanceTransfer = new Handler<SetupTransfer.Response>() {
+            @Override
+            public void handle(SetupTransfer.Response resp) {
+                TransferCallbackWrapper callback = pendingTransferStarts.get(resp.overlayId());
+                if (resp.result.isSuccess()) {
+                    LOG.debug("{}torrent:{} - transfer - set up", logPrefix, resp.overlayId());
+                } else {
+                    LOG.debug("{}torrent:{} - transfer - set up failed", logPrefix, resp.overlayId());
+                }
+                callback.ready(resp.result);
+            }
+        };
+    }
+
+    public static interface AdvanceTransferCallback {
+
+        public void ready(MyTorrent torrent);
+    }
+
+    public static class BasicTransfer implements TransferCallbackWrapper<Boolean> {
+
+        private final MyTorrent torrent;
+        private final List<KAddress> peers;
+        private final BasicCompleteCallback<Boolean> complete;
+
+        public BasicTransfer(MyTorrent torrent, List<KAddress> peers, BasicCompleteCallback<Boolean> complete) {
+            this.torrent = torrent;
+            this.peers = peers;
+            this.complete = complete;
+        }
+
+        @Override
+        public boolean started(Result<Boolean> result) {
+            return true;
+        }
+
+        @Override
+        public boolean hasTorrent() {
+            return true;
+        }
+
+        @Override
+        public MyTorrent getTorrent() {
+            return torrent;
+        }
+
+        @Override
+        public List<KAddress> getPeers() {
+            return peers;
+        }
+
+        @Override
+        public boolean manifest(Result<MyTorrent.Manifest> result, AdvanceTransferCallback callback) {
+            throw new UnsupportedOperationException("basic should not get here");
+        }
+
+        @Override
+        public void ready(Result<Boolean> result) {
+            complete.ready(result);
+        }
+    }
+
+    public static class ExtendedTransfer implements TransferCallbackWrapper<Boolean> {
+
+        private final MyExtendedHelper helper;
+        private final MyTorrentBuilder torrentBuilder;
+        private final List<KAddress> peers;
+        private final MyStream manifestStream;
+        private final BasicCompleteCallback<Boolean> complete;
+        //**********************************************************************
+        private MyTorrent torrent = null;
+
+        public ExtendedTransfer(MyExtendedHelper helper, MyTorrentBuilder torrentBuilder,
+                List<KAddress> peers, MyStream manifestStream, BasicCompleteCallback<Boolean> complete) {
+            this.helper = helper;
+            this.torrentBuilder = torrentBuilder;
+            this.peers = peers;
+            this.manifestStream = manifestStream;
+            this.complete = complete;
+        }
+
+        @Override
+        public boolean started(Result<Boolean> result) {
+            return true;
+        }
+
+        @Override
+        public boolean hasTorrent() {
+            return torrent != null;
+        }
+
+        @Override
+        public MyTorrent getTorrent() {
+            return torrent;
+        }
+
+        @Override
+        public List<KAddress> getPeers() {
+            return peers;
+        }
+
+        @Override
+        public boolean manifest(Result<MyTorrent.Manifest> transferResult, final AdvanceTransferCallback callback) {
+            if (!transferResult.isSuccess()) {
+                throw new RuntimeException("todo cleanup");
+            }
+            Result<Boolean> writeResult = helper.manifestHelper().writeManifest(manifestStream.endpoint, manifestStream.resource, transferResult.getValue());
+            if (!writeResult.isSuccess()) {
+                throw new RuntimeException("todo cleanup");
+            }
+            Either<MyTorrent.Manifest, ManifestJSON> manifestResult = Either.left(transferResult.getValue());
+            torrentBuilder.setManifest(manifestResult);
+            BasicCompleteCallback<Pair<KafkaEndpoint, Map<String, KafkaResource>>> extendedDetailsCallback
+                    = new BasicCompleteCallback<Pair<KafkaEndpoint, Map<String, KafkaResource>>>() {
+                        @Override
+                        public void ready(Result<Pair<KafkaEndpoint, Map<String, KafkaResource>>> kafkaDetails) {
+                            if (kafkaDetails.isSuccess()) {
+                                Map<FileId, FileExtendedDetails> extendedDetails
+                                = helper.manifestHelper().extendedDetails(torrentBuilder, kafkaDetails.getValue().getValue0(), kafkaDetails.getValue().getValue1());
+                                torrentBuilder.setExtendedDetails(extendedDetails);
+                                torrent = torrentBuilder.getTorrent();
+                            }
+                            callback.ready(torrent);
+                        }
+                    };
+            helper.extendedDetailsHelper().extendedDetails(extendedDetailsCallback);
+            return true;
+        }
+
+        @Override
+        public void ready(Result<Boolean> result) {
+            complete.ready(result);
+        }
+    }
+
+    public static interface MyManifestHelper {
+
+        public Result<ManifestJSON> readManifest(StreamEndpoint endpoint, StreamResource resource);
+
+        public Result<Boolean> writeManifest(StreamEndpoint endpoint, StreamResource resource, MyTorrent.Manifest result);
+
+        public Map<FileId, FileExtendedDetails> extendedDetails(MyTorrentBuilder torrentBuilder, KafkaEndpoint kafkaEndpoint, Map<String, KafkaResource> kafkaDetails);
+    }
+
+    public static interface MyExtendedDetailsHelper {
+
+        public void extendedDetails(BasicCompleteCallback<Pair<KafkaEndpoint, Map<String, KafkaResource>>> complete);
+    }
+
+    public static interface MyStorageHelper {
+
+        public DurableStorageProvider getStorageProvider(StreamEndpoint endpoint);
+    }
+
+    public static interface MyBasicHelper {
+
+        public MyStorageHelper storageHelper();
+
+        public MyManifestHelper manifestHelper();
+    }
+
+    public static interface MyExtendedHelper extends MyBasicHelper {
+
+        public MyExtendedDetailsHelper extendedDetailsHelper();
+    }
+
+    public static interface MyTorrentBuilder {
+
+        public void setEndpoints(Map<String, Identifier> endpointNameToId, Map<Identifier, StreamEndpoint> endpoints);
+
+        public void setManifestStream(StreamId streamId, MyStream stream);
+
+        public Pair<StreamId, MyStream> getManifestStream();
+
+        public void setManifest(Either<MyTorrent.Manifest, ManifestJSON> manifest);
+
+        public Map<String, FileId> getFiles();
+
+        public void setExtendedDetails(Map<FileId, FileExtendedDetails> extendedDetails);
+
+        public MyTorrent getTorrent();
+    }
+
+    public static class MyTorrentBuilderImpl implements MyTorrentBuilder {
+
+        public final OverlayId torrentId;
+
+        private Map<String, Identifier> endpointNameToId;
+        private Map<Identifier, StreamEndpoint> endpoints;
+        private Pair<StreamId, MyStream> manifestStream;
+        private MyTorrent.Manifest manifest;
+        private Map<String, FileId> fileNameToId;
+        private Map<FileId, FileBaseDetails> baseDetails;
+        private Map<FileId, FileExtendedDetails> extendedDetails = new HashMap<>();
+
+        public MyTorrentBuilderImpl(OverlayId torrentId) {
+            this.torrentId = torrentId;
+        }
+
+        @Override
+        public void setManifestStream(StreamId streamId, MyStream stream) {
+            manifestStream = Pair.with(streamId, stream);
+        }
+
+        @Override
+        public Pair<StreamId, MyStream> getManifestStream() {
+            return manifestStream;
+        }
+
+        @Override
+        public void setEndpoints(Map<String, Identifier> endpointNameToId, Map<Identifier, StreamEndpoint> endpoints) {
+            this.endpointNameToId = endpointNameToId;
+            this.endpoints = endpoints;
+        }
+
+        @Override
+        public void setManifest(Either<MyTorrent.Manifest, ManifestJSON> auxManifest) {
+            ManifestJSON manifestJSON;
+            if (auxManifest.isLeft()) {
+                manifest = auxManifest.getLeft();
+                manifestJSON = ManifestHelper.getManifestJSON(manifest.manifestByte);
+            } else {
+                manifestJSON = auxManifest.getRight();
+                manifest = ManifestHelper.getManifest(manifestJSON);
+            }
+            Pair< Map< String, FileId>, Map<FileId, FileBaseDetails>> aux = ManifestHelper.getBaseDetails(torrentId, manifestJSON, MyTorrent.defaultDataBlock);
+            fileNameToId = aux.getValue0();
+            baseDetails = aux.getValue1();
+        }
+
+        @Override
+        public Map<String, FileId> getFiles() {
+            return fileNameToId;
+        }
+
+        @Override
+        public void setExtendedDetails(Map<FileId, FileExtendedDetails> extendedDetails) {
+            this.extendedDetails = extendedDetails;
+        }
+
+        @Override
+        public MyTorrent getTorrent() {
+            if (endpointNameToId == null || endpoints == null || manifest == null || fileNameToId == null || baseDetails == null) {
+                throw new RuntimeException("cleanup - todo");
+            }
+
+            return new MyTorrent(manifest, fileNameToId, baseDetails, extendedDetails);
+        }
+    }
+
+    public static class BasicTorrent {
+
+        private final EndpointTracker endpointTracker;
+        private final TransferTracker transferTracker;
+        private final MyBasicHelper helper;
+        private final BasicCompleteCallback<Boolean> completeCallback;
+        //**********************************************************************
+        private final OverlayId torrentId;
+        private final MyStream manifestStream;
+        private final List<KAddress> torrentPeers;
+        private final MyTorrentBuilder torrentBuilder;
+
+        public BasicTorrent(EndpointTracker endpointTracker, TransferTracker transferTracker, MyBasicHelper helper, BasicCompleteCallback<Boolean> completeCallback,
+                OverlayId torrentId, MyStream manifestStream, List<KAddress> torrentPeers, MyTorrentBuilder torrentBuilder) {
+            this.endpointTracker = endpointTracker;
+            this.transferTracker = transferTracker;
+            this.helper = helper;
+            this.completeCallback = completeCallback;
+            this.torrentId = torrentId;
+            this.manifestStream = manifestStream;
+            this.torrentPeers = torrentPeers;
+            this.torrentBuilder = torrentBuilder;
+        }
+
+        public void start() {
+            setupEndpoints();
+        }
+
+        private void setupEndpoints() {
+            List<DurableStorageProvider> storageProviders = new ArrayList<>();
+            DurableStorageProvider storageProvider = helper.storageHelper().getStorageProvider(manifestStream.endpoint);
+            storageProviders.add(storageProvider);
+
+            EndpointCallback callback = new EndpointCallback() {
+                @Override
+                public void setEndpoints(Map<String, Identifier> nameToId, Map<Identifier, StreamEndpoint> endpoints) {
+                    torrentBuilder.setEndpoints(nameToId, endpoints);
+                    Identifier manifestEndpointId = nameToId.get(manifestStream.endpoint.getEndpointName());
+                    StreamId manifestStreamId = TorrentIds.streamId(manifestEndpointId, TorrentIds.fileId(torrentId, MyTorrent.MANIFEST_ID));
+                    torrentBuilder.setManifestStream(manifestStreamId, manifestStream);
+                }
+
+                @Override
+                public void ready(Result<Boolean> result) {
+                    if (result.isSuccess()) {
+                        setupTransfer();
+                    }
+                }
+            };
+            endpointTracker.registerEndpoints(storageProviders, callback);
+        }
+
+        private void setupTransfer() {
+            final Result<ManifestJSON> manifestJSON = helper.manifestHelper().readManifest(manifestStream.endpoint, manifestStream.resource);
+            if (!manifestJSON.isSuccess()) {
+                throw new RuntimeException("cleanup - todo");
+            }
+            Either<MyTorrent.Manifest, ManifestJSON> manifestResult = Either.right(manifestJSON.getValue());
+            torrentBuilder.setManifest(manifestResult);
+            Map<FileId, FileExtendedDetails> extendedDetails = helper.manifestHelper().extendedDetails(torrentBuilder, null, new HashMap<String, KafkaResource>());
+            torrentBuilder.setExtendedDetails(extendedDetails);
+            BasicCompleteCallback<Boolean> setupComplete = new BasicCompleteCallback<Boolean>() {
+                @Override
+                public void ready(Result<Boolean> result) {
+                    BasicTorrent.this.ready(result);
+                }
+            };
+            MyTorrent torrent = torrentBuilder.getTorrent();
+            TransferCallbackWrapper setupTransfer = new BasicTransfer(torrent, torrentPeers, setupComplete);
+            transferTracker.startTransfer(torrentId, setupTransfer);
+        }
+
+        private void ready(Result<Boolean> result) {
+            completeCallback.ready(result);
+        }
+    }
+
+    public static class ExtendedTorrent {
+
+        private final EndpointTracker endpointTracker;
+        private final TransferTracker transferTracker;
+        private final MyExtendedHelper helper;
+        private final BasicCompleteCallback<Boolean> completeCallback;
+        //**********************************************************************
+        private final OverlayId torrentId;
+        private final MyStream manifestStream;
+        private final List<KAddress> torrentPeers;
+        private final MyTorrentBuilder torrentBuilder;
+        //**********************************************************************
+        private StreamId manifestStreamId;
+
+        public ExtendedTorrent(EndpointTracker endpointTracker, TransferTracker transferTracker, MyExtendedHelper helper, BasicCompleteCallback<Boolean> completeCallback,
+                OverlayId torrentId, MyStream manifestStream, List<KAddress> torrentPeers, MyTorrentBuilder torrentBuilder) {
+            this.endpointTracker = endpointTracker;
+            this.transferTracker = transferTracker;
+            this.helper = helper;
+            this.completeCallback = completeCallback;
+            this.torrentId = torrentId;
+            this.manifestStream = manifestStream;
+            this.torrentPeers = torrentPeers;
+            this.torrentBuilder = torrentBuilder;
+        }
+
+        public void start() {
+            setupEndpoints();
+        }
+
+        private void setupEndpoints() {
+            List<DurableStorageProvider> storageProviders = new ArrayList<>();
+            DurableStorageProvider storageProvider = helper.storageHelper().getStorageProvider(manifestStream.endpoint);
+            storageProviders.add(storageProvider);
+
+            EndpointCallback callback = new EndpointCallback() {
+                @Override
+                public void setEndpoints(Map<String, Identifier> nameToId, Map<Identifier, StreamEndpoint> endpoints) {
+                    torrentBuilder.setEndpoints(nameToId, endpoints);
+                    Identifier manifestEndpointId = nameToId.get(manifestStream.endpoint.getEndpointName());
+                    StreamId manifestStreamId = TorrentIds.streamId(manifestEndpointId, TorrentIds.fileId(torrentId, MyTorrent.MANIFEST_ID));
+                    torrentBuilder.setManifestStream(manifestStreamId, manifestStream);
+                }
+
+                @Override
+                public void ready(Result<Boolean> result) {
+                    if (result.isSuccess()) {
+                        setupTransfer();
+                    }
+                }
+            };
+            endpointTracker.registerEndpoints(storageProviders, callback);
+        }
+
+        private void setupTransfer() {
+            BasicCompleteCallback<Boolean> setupComplete = new BasicCompleteCallback<Boolean>() {
+                @Override
+                public void ready(Result<Boolean> result) {
+                    ExtendedTorrent.this.ready(result);
+                }
+            };
+            ExtendedTransfer setupTransfer = new ExtendedTransfer(helper, torrentBuilder, torrentPeers, manifestStream, setupComplete);
+            transferTracker.startTransfer(torrentId, setupTransfer);
+        }
+
+        private void ready(Result<Boolean> result) {
+            completeCallback.ready(result);
+        }
+    }
+
+    public static class MyDiskHelper implements MyBasicHelper {
+
+        private final Identifier selfId;
+
+        public MyDiskHelper(Identifier selfId) {
+            this.selfId = selfId;
+        }
+
+        @Override
+        public MyStorageHelper storageHelper() {
+            return new MyStorageHelper() {
+                @Override
+                public DurableStorageProvider getStorageProvider(StreamEndpoint endpoint) {
+                    return new DiskComp.StorageProvider(selfId);
+                }
+            };
+        }
+
+        @Override
+        public MyManifestHelper manifestHelper() {
+            return new MyManifestHelper() {
+
+                @Override
+                public Result<ManifestJSON> readManifest(StreamEndpoint endpoint, StreamResource resource) {
+                    return DiskHelper.readManifest((DiskResource) resource);
+                }
+
+                @Override
+                public Result<Boolean> writeManifest(StreamEndpoint endpoint, StreamResource resource, MyTorrent.Manifest manifest) {
+                    ManifestJSON manifestJSON = ManifestHelper.getManifestJSON(manifest.manifestByte);
+                    Result<Boolean> result = DiskHelper.writeManifest((DiskResource) resource, manifestJSON);
+                    return result;
+                }
+
+                @Override
+                public Map<FileId, FileExtendedDetails> extendedDetails(MyTorrentBuilder torrentBuilder, KafkaEndpoint kafkaEndpoint, Map<String, KafkaResource> kafkaDetails) {
+                    Map<FileId, FileExtendedDetails> extendedDetails = new HashMap<>();
+                    Pair<StreamId, MyStream> manifestStream = torrentBuilder.getManifestStream();
+                    DiskResource manifestResource = (DiskResource) manifestStream.getValue1().resource;
+                    for (Map.Entry<String, FileId> file : torrentBuilder.getFiles().entrySet()) {
+                        StreamId fileStreamId = manifestStream.getValue0().withFile(file.getValue());
+                        DiskResource fileResource = manifestResource.withFile(file.getKey());
+                        MyStream fileStream = manifestStream.getValue1().withResource(fileResource);
+                        extendedDetails.put(file.getValue(), new DiskFED(fileStreamId, fileStream));
+                    }
+                    return extendedDetails;
+                }
+            };
+        }
+    }
+
+    public static class MyHDFSHelper implements MyBasicHelper {
+
+        private final Identifier selfId;
+
+        public MyHDFSHelper(Identifier selfId) {
+            this.selfId = selfId;
+
+        }
+
+        @Override
+        public MyStorageHelper storageHelper() {
+            return new MyStorageHelper() {
+                @Override
+                public DurableStorageProvider getStorageProvider(StreamEndpoint endpoint) {
+                    return new HDFSComp.StorageProvider(selfId, (HDFSEndpoint) endpoint);
+                }
+            };
+        }
+
+        @Override
+        public MyManifestHelper manifestHelper() {
+            return new MyManifestHelper() {
+
+                @Override
+                public Result<ManifestJSON> readManifest(StreamEndpoint endpoint, StreamResource resource) {
+                    HDFSEndpoint hdfsEndpoint = (HDFSEndpoint) endpoint;
+                    //TODO Alex - creating too many ugi's
+                    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(hdfsEndpoint.user);
+                    return HDFSHelper.readManifest(ugi, hdfsEndpoint, (HDFSResource) resource);
+                }
+
+                @Override
+                public Result<Boolean> writeManifest(StreamEndpoint endpoint, StreamResource resource, MyTorrent.Manifest manifest) {
+                    ManifestJSON manifestJSON = ManifestHelper.getManifestJSON(manifest.manifestByte);
+                    HDFSEndpoint hdfsEndpoint = (HDFSEndpoint) endpoint;
+                    //TODO Alex - creating too many ugi's
+                    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(hdfsEndpoint.user);
+                    Result<Boolean> result = HDFSHelper.writeManifest(ugi, hdfsEndpoint, (HDFSResource) resource, manifestJSON);
+                    return result;
+                }
+
+                @Override
+                public Map<FileId, FileExtendedDetails> extendedDetails(MyTorrentBuilder torrentBuilder, KafkaEndpoint kafkaEndpoint, Map<String, KafkaResource> kafkaDetails) {
+                    Map<FileId, FileExtendedDetails> extendedDetails = new HashMap<>();
+                    Pair<StreamId, MyStream> manifestStream = torrentBuilder.getManifestStream();
+                    HDFSResource manifestResource = (HDFSResource) manifestStream.getValue1().resource;
+                    for (Map.Entry<String, FileId> file : torrentBuilder.getFiles().entrySet()) {
+                        StreamId fileStreamId = manifestStream.getValue0().withFile(file.getValue());
+                        HDFSResource fileResource = manifestResource.withFile(file.getKey());
+                        MyStream fileStream = manifestStream.getValue1().withResource(fileResource);
+                        //TODO Alex - kafka
+                        Optional<Pair<StreamId, MyStream>> kafkaStream = Optional.absent();
+                        extendedDetails.put(file.getValue(), new HopsFED(Pair.with(fileStreamId, fileStream), kafkaStream));
+                    }
+                    return extendedDetails;
+                }
+            };
+        }
+    }
+
+    //**************************************************************************
+    public static class LibOpTracker {
+
+        private final String logPrefix;
+        private final ComponentHelper comp;
+        private final EndpointTracker endpointTracker;
+        private final TransferTracker transferTracker;
+        private final Library library;
+        private final Identifier selfId;
+        //**********************************************************************
+        private final Map<OverlayId, HopsTorrentUploadEvent.Request> pendingDiskUploads = new HashMap<>();
+        private final Map<OverlayId, HopsTorrentDownloadEvent.StartRequest> pendingDiskDownloads = new HashMap<>();
+        private final Map<OverlayId, HopsTorrentUploadEvent.Request> pendingHDFSUploads = new HashMap<>();
+        private final Map<OverlayId, HopsTorrentDownloadEvent.StartRequest> pendingHDFSStartDownloads = new HashMap<>();
+        private final Map<OverlayId, BasicCompleteCallback> pendingHDFSDownloadCallback = new HashMap<>();
+        private final Map<OverlayId, HopsTorrentDownloadEvent.AdvanceRequest> pendingHDFSAdvanceDownloads = new HashMap<>();
+
+        public LibOpTracker(String logPrefix, ComponentHelper comp, EndpointTracker endpointTracker, TransferTracker transferTracker,
+                Library library, Identifier selfId) {
+            this.logPrefix = logPrefix;
+            this.comp = comp;
+            this.endpointTracker = endpointTracker;
+            this.transferTracker = transferTracker;
+            this.library = library;
+            this.selfId = selfId;
+
+            if (RUN_TYPE.equals(Details.Types.DISK)) {
+                comp.proxy.subscribe(handleDiskTorrentUpload, comp.libraryCtrlPort);
+                comp.proxy.subscribe(handleDiskTorrentDownload, comp.libraryCtrlPort);
+            } else {
+                comp.proxy.subscribe(handleHDFSTorrentUpload, comp.libraryCtrlPort);
+                comp.proxy.subscribe(handleHDFSTorrentDownload, comp.libraryCtrlPort);
+                comp.proxy.subscribe(handleHDFSTorrentAdvanceDownload, comp.libraryCtrlPort);
+            }
+        }
+
+        Handler handleDiskTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
+            @Override
+            public void handle(final HopsTorrentUploadEvent.Request req) {
+                LOG.trace("{}received:{}", logPrefix, req);
+
+                Result<Boolean> validateResult = validatUploadRequest(req);
+                if (!validateResult.isSuccess()) {
+                    LOG.debug("{}validation error", logPrefix);
+                    comp.proxy.answer(req, req.failed(validateResult));
+                }
+                if (validateResult.getValue()) {
+                    LOG.debug("{}already uploading", logPrefix);
+                    comp.proxy.answer(req, req.success(validateResult));
+                }
+
+                library.prepareUpload(req.torrentId, req.torrentName);
+                OverlayId torrentId = req.torrentId;
+                final MyStream torrentStream = new MyStream(new DiskEndpoint(), new DiskResource(req.manifestResource.dirPath, req.manifestResource.fileName));
+                List<KAddress> torrentPeers = new ArrayList<>();
+                MyTorrentBuilder torrentBuilder = new MyTorrentBuilderImpl(torrentId);
+
+                MyBasicHelper torrentHelper = new MyDiskHelper(selfId);
+
+                BasicCompleteCallback<Boolean> completeCallback = new BasicCompleteCallback<Boolean>() {
+                    @Override
+                    public void ready(Result<Boolean> result) {
+                        pendingDiskUploads.remove(req.torrentId);
+                        library.upload(req.torrentId, torrentStream);
+                        comp.proxy.answer(req, req.success(result));
+                    }
+                };
+
+                BasicTorrent upload = new BasicTorrent(endpointTracker, transferTracker, torrentHelper, completeCallback, torrentId, torrentStream, torrentPeers, torrentBuilder);
+                pendingDiskUploads.put(req.torrentId, req);
+                upload.start();
+            }
+        };
+
+        Handler handleHDFSTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
+            @Override
+            public void handle(final HopsTorrentUploadEvent.Request req) {
+                LOG.trace("{}received:{}", logPrefix, req);
+
+                Result<Boolean> validateResult = validatUploadRequest(req);
+                if (!validateResult.isSuccess()) {
+                    LOG.debug("{}validation error", logPrefix);
+                    comp.proxy.answer(req, req.failed(validateResult));
+                }
+                if (validateResult.getValue()) {
+                    LOG.debug("{}already uploading", logPrefix);
+                    comp.proxy.answer(req, req.success(validateResult));
+                }
+
+                library.prepareUpload(req.torrentId, req.torrentName);
+                OverlayId torrentId = req.torrentId;
+                final MyStream torrentStream = new MyStream(req.hdfsEndpoint, req.manifestResource);
+                List<KAddress> torrentPeers = new ArrayList<>();
+                MyTorrentBuilder torrentBuilder = new MyTorrentBuilderImpl(torrentId);
+
+                MyBasicHelper torrentHelper = new MyHDFSHelper(selfId);
+
+                BasicCompleteCallback<Boolean> completeCallback = new BasicCompleteCallback<Boolean>() {
+                    @Override
+                    public void ready(Result<Boolean> result) {
+                        pendingHDFSUploads.remove(req.torrentId);
+                        library.upload(req.torrentId, torrentStream);
+                        comp.proxy.answer(req, req.success(result));
+                    }
+                };
+
+                BasicTorrent upload = new BasicTorrent(endpointTracker, transferTracker, torrentHelper, completeCallback, torrentId, torrentStream, torrentPeers, torrentBuilder);
+                pendingHDFSUploads.put(req.torrentId, req);
+                upload.start();
+            }
+        };
+
+        private Result<Boolean> validatUploadRequest(HopsTorrentUploadEvent.Request req) {
+            TorrentState status = library.getStatus(req.torrentId);
+            switch (status) {
+                case PREPARE_UPLOAD:
+                case UPLOADING:
+                    if (compareUploadDetails()) {
+                        return Result.success(true);
+                    } else {
+                        return Result.badArgument("existing - upload details do not match");
+                    }
+                case PREPARE_DOWNLOAD:
                 case DOWNLOADING:
-                    resp = req.alreadyExists(Result.badArgument("expected NONE/UPLOADING, found:" + status));
-                    LOG.trace("{}answering:{}", logPrefix, resp);
-                    proxy.answer(req, resp);
-                    break;
+                    return Result.badArgument("expected NONE/UPLOADING, found:" + status);
                 case DESTROYED:
                 case NONE:
-                    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.hdfsEndpoint.user);
-                    Result<ManifestJSON> manifest = HDFSHelper.readManifest(ugi, req.hdfsEndpoint, req.manifestResource);
-                    if (manifest.isSuccess()) {
-                        byte[] torrentByte = HDFSHelper.getManifestByte(manifest.getValue());
-                        TorrentDetails torrentDetails = ManifestJSON.getTorrentDetails(manifest.getValue());
-                        Map<String, FileExtendedDetails> extendedDetails = getUploadExtendedDetails(req.hdfsEndpoint, req.manifestResource, torrentDetails);
-                        TransferDetails transferDetails = new TransferDetails(torrentDetails, extendedDetails);
-                        library.upload(req.torrentId, req.torrentName, req.hdfsEndpoint, req.manifestResource, transferDetails);
-                        components.startUpload(transferMngrPort.getPair(), req.torrentId, req.hdfsEndpoint, Pair.with(torrentByte, transferDetails));
-
-                        HopsTorrentUploadEvent.Response hopsResp = req.uploading(Result.success(true));
-                        LOG.trace("{}sending:{}", logPrefix, hopsResp);
-                        proxy.answer(req, hopsResp);
-                    } else {
-                        resp = req.uploading(Result.failure(manifest.status, manifest.getException()));
-                        LOG.trace("{}answering:{}", logPrefix, resp);
-                        proxy.answer(req, resp);
-                    }
-                    break;
+                    return Result.success(false);
                 default:
-                    resp = req.alreadyExists(Result.internalStateFailure("missing logic"));
-                    LOG.trace("{}answering:{}", logPrefix, resp);
-                    proxy.answer(req, resp);
+                    return Result.internalStateFailure("missing logic");
             }
-
         }
-    };
 
-    private Map<String, FileExtendedDetails> getUploadExtendedDetails(HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource, TorrentDetails torrentDetails) {
-        Map<String, FileExtendedDetails> extendedDetails = new HashMap<>();
-        for (String fileName : torrentDetails.baseDetails.keySet()) {
-            FileExtendedDetails fed = new HopsFED(Pair.with(hdfsEndpoint, new HDFSResource(manifestResource.dirPath, fileName)));
-            extendedDetails.put(fileName, fed);
+        private boolean compareUploadDetails() {
+            return true;
         }
-        return extendedDetails;
-    }
 
-    private boolean compareUploadDetails(Triplet<String, HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
-        //TODO Alex - what needs to match?
-        return false;
-    }
+        Handler handleDiskTorrentDownload = new Handler<HopsTorrentDownloadEvent.StartRequest>() {
+            @Override
+            public void handle(final HopsTorrentDownloadEvent.StartRequest req) {
+                LOG.trace("{}received:{}", logPrefix, req);
 
-    //*******************************DOWNLOAD***********************************
-    Handler handleHopsTorrentDownload = new Handler<HopsTorrentDownloadEvent.StartRequest>() {
-        @Override
-        public void handle(HopsTorrentDownloadEvent.StartRequest req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            HopsTorrentDownloadEvent.StartResponse hopsResp;
-            TorrentStatus status = library.getStatus(req.torrentId);
+                Result<Boolean> validateResult = validateDownloadRequest(req);
+                if (!validateResult.isSuccess()) {
+                    LOG.debug("{}validation error", logPrefix);
+                    comp.proxy.answer(req, req.failed(validateResult));
+                }
+                if (validateResult.getValue()) {
+                    LOG.debug("{}already uploading", logPrefix);
+                    comp.proxy.answer(req, req.success(validateResult));
+                }
+
+                library.prepareDownload(req.torrentId, req.torrentName);
+                OverlayId torrentId = req.torrentId;
+                final MyStream torrentStream = new MyStream(new DiskEndpoint(), new DiskResource(req.manifest.dirPath, req.manifest.fileName));
+                List<KAddress> torrentPeers = req.partners;
+                MyTorrentBuilder torrentBuilder = new MyTorrentBuilderImpl(torrentId);
+
+                MyExtendedHelper torrentHelper = new MyExtendedHelper() {
+                    private final MyBasicHelper base = new MyDiskHelper(selfId);
+
+                    @Override
+                    public MyStorageHelper storageHelper() {
+                        return base.storageHelper();
+                    }
+
+                    @Override
+                    public MyManifestHelper manifestHelper() {
+                        return base.manifestHelper();
+                    }
+
+                    @Override
+                    public MyExtendedDetailsHelper extendedDetailsHelper() {
+                        return new MyExtendedDetailsHelper() {
+                            @Override
+                            public void extendedDetails(BasicCompleteCallback complete) {
+                                complete.ready(Result.success(new HashMap<String, KafkaResource>()));
+                            }
+                        };
+                    }
+                };
+
+                BasicCompleteCallback<Boolean> completeCallback = new BasicCompleteCallback<Boolean>() {
+                    @Override
+                    public void ready(Result<Boolean> result) {
+                        if (result.isSuccess()) {
+                            pendingDiskDownloads.remove(req.torrentId);
+                            library.download(req.torrentId, torrentStream);
+                            comp.proxy.answer(req, req.success(result));
+                        } else {
+                            throw new RuntimeException("todo - cleanup");
+                        }
+                    }
+                };
+
+                ExtendedTorrent upload = new ExtendedTorrent(endpointTracker, transferTracker, torrentHelper, completeCallback, torrentId, torrentStream, torrentPeers, torrentBuilder);
+                pendingDiskDownloads.put(req.torrentId, req);
+                upload.start();
+            }
+        };
+
+        Handler handleHDFSTorrentDownload = new Handler<HopsTorrentDownloadEvent.StartRequest>() {
+            @Override
+            public void handle(final HopsTorrentDownloadEvent.StartRequest req) {
+                LOG.trace("{}received:{}", logPrefix, req);
+
+                Result<Boolean> validateResult = validateDownloadRequest(req);
+                if (!validateResult.isSuccess()) {
+                    LOG.debug("{}validation error", logPrefix);
+                    comp.proxy.answer(req, req.failed(validateResult));
+                }
+                if (validateResult.getValue()) {
+                    LOG.debug("{}already uploading", logPrefix);
+                    comp.proxy.answer(req, req.success(validateResult));
+                }
+
+                library.prepareDownload(req.torrentId, req.torrentName);
+                OverlayId torrentId = req.torrentId;
+                final MyStream torrentStream = new MyStream(req.hdfsEndpoint, req.manifest);
+                List<KAddress> torrentPeers = req.partners;
+                MyTorrentBuilder torrentBuilder = new MyTorrentBuilderImpl(torrentId);
+
+                MyExtendedHelper torrentHelper = new MyExtendedHelper() {
+                    private final MyBasicHelper base = new MyHDFSHelper(selfId);
+
+                    @Override
+                    public MyStorageHelper storageHelper() {
+                        return base.storageHelper();
+                    }
+
+                    @Override
+                    public MyManifestHelper manifestHelper() {
+                        return base.manifestHelper();
+                    }
+
+                    @Override
+                    public MyExtendedDetailsHelper extendedDetailsHelper() {
+                        return new MyExtendedDetailsHelper() {
+                            @Override
+                            public void extendedDetails(BasicCompleteCallback complete) {
+                                pendingHDFSDownloadCallback.put(req.torrentId, complete);
+                                comp.proxy.answer(req, req.success(Result.success(true)));
+                                pendingHDFSStartDownloads.remove(req.torrentId);
+                            }
+                        };
+                    }
+                };
+
+                BasicCompleteCallback<Boolean> completeCallback = new BasicCompleteCallback<Boolean>() {
+                    @Override
+                    public void ready(Result<Boolean> result) {
+                        if (result.isSuccess()) {
+                            pendingHDFSAdvanceDownloads.remove(req.torrentId);
+                            library.download(req.torrentId, torrentStream);
+                            comp.proxy.answer(req, req.success(result));
+                        } else {
+                            throw new RuntimeException("todo - cleanup");
+                        }
+                    }
+                };
+
+                ExtendedTorrent upload = new ExtendedTorrent(endpointTracker, transferTracker, torrentHelper, completeCallback, torrentId, torrentStream, torrentPeers, torrentBuilder);
+                pendingHDFSStartDownloads.put(req.torrentId, req);
+                upload.start();
+            }
+        };
+
+        Handler handleHDFSTorrentAdvanceDownload = new Handler<HopsTorrentDownloadEvent.AdvanceRequest>() {
+            @Override
+            public void handle(HopsTorrentDownloadEvent.AdvanceRequest req) {
+                LOG.trace("{}received:{}", logPrefix, req);
+
+                BasicCompleteCallback<Pair<KafkaEndpoint, Map<String, KafkaResource>>> advanceCallback = pendingHDFSDownloadCallback.remove(req.torrentId);
+                KafkaEndpoint kafkaEndpoint = req.kafkaEndpoint.isPresent() ? req.kafkaEndpoint.get() : null;
+                Map<String, KafkaResource> kafkaResources = kafkaEndpoint != null ? req.kafkaDetails : new HashMap<String, KafkaResource>();
+                advanceCallback.ready(Result.success(Pair.with(kafkaEndpoint, kafkaResources)));
+            }
+        };
+
+        private Result<Boolean> validateDownloadRequest(HopsTorrentDownloadEvent.StartRequest req) {
+            TorrentState status = library.getStatus(req.torrentId);
             switch (status) {
+                case PREPARE_DOWNLOAD:
+                case DOWNLOADING:
+                    if (compareDownloadDetails()) {
+                        return Result.success(true);
+                    } else {
+                        return Result.badArgument("existing - download details do not match");
+                    }
+                case PREPARE_UPLOAD:
+                case UPLOADING:
+                    return Result.badArgument("expected NONE/DOWNLOADING, found:" + status);
                 case DESTROYED:
                 case NONE:
-                    library.startingDownload(req.torrentId, req.torrentName, req.hdfsEndpoint, req.manifest);
-                    components.startDownload(transferMngrPort.getPair(), req.torrentId, req.partners);
-                    pendingExtDwnl.put(req.torrentId, req);
-                    break;
-                case UPLOADING:
-                case DOWNLOADING:
-                    //TODO Alex - check manifests
-                    hopsResp = req.alreadyExists(Result.success(Pair.with(library.getManifest(req.torrentId), library.getExtendedDetails(req.torrentId))));
-                    LOG.trace("{}answering:{}", logPrefix, hopsResp);
-                    proxy.answer(req, hopsResp);
-                    break;
-                case PENDING_DOWNLOAD:
-                    //TODO Alex - check manifests
-                    Optional<TorrentDetails> torrentDetails = library.getTorrentDetails(req.torrentId);
-                    if (torrentDetails.isPresent()) {
-                        hopsResp = req.starting(Result.success(true));
-                        LOG.trace("{}answering:{}", logPrefix, hopsResp);
-                        proxy.answer(req, hopsResp);
-                    } else {
-                        pendingExtDwnl.put(req.torrentId, req);
-                    }
-                    break;
+                    return Result.success(false);
                 default:
-                    hopsResp = req.alreadyExists(Result.internalStateFailure("missing logic"));
-                    LOG.trace("{}answering:{}", logPrefix, hopsResp);
-                    proxy.answer(req, hopsResp);
+                    return Result.internalStateFailure("missing logic");
             }
         }
-    };
 
-    private boolean compareDownloadManifest(Triplet<String, HDFSEndpoint, HDFSResource> foundManifest, Pair<HDFSEndpoint, HDFSResource> expectedManifest) {
-        //TODO Alex - what needs to match?
-        return false;
+        private boolean compareDownloadDetails() {
+            return true;
+        }
     }
 
-    Handler handleTransferDetailsReq = new Handler<Transfer.DownloadRequest>() {
-        @Override
-        public void handle(Transfer.DownloadRequest req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            HopsTorrentDownloadEvent.StartRequest hopsReq = pendingExtDwnl.remove(req.torrentId);
-            if (req.torrentByte.isSuccess()) {
-                ManifestJSON manifest = HDFSHelper.getManifestJSON(req.torrentByte.getValue());
-                Triplet<String, HDFSEndpoint, HDFSResource> manifestResource = library.getManifest(req.torrentId);
-                UserGroupInformation ugi = UserGroupInformation.createRemoteUser(manifestResource.getValue1().user);
-                Result<Boolean> manifestResult = HDFSHelper.writeManifest(ugi, manifestResource.getValue1(), manifestResource.getValue2(), manifest);
-                if (manifestResult.isSuccess()) {
-                    TorrentDetails torrentDetails = ManifestJSON.getTorrentDetails(manifest);
-                    pendingIntDwnl.put(req.torrentId, req);
-                    library.pendingDownload(req.torrentId, torrentDetails);
-                    if (hopsReq != null) {
-                        HopsTorrentDownloadEvent.StartResponse hopsResp = hopsReq.starting(Result.success(true));
-                        LOG.trace("{}sending:{}", logPrefix, hopsResp);
-                        proxy.answer(hopsReq, hopsResp);
-                    }
-                } else {
-                    cleanAndDestroy(req.torrentId);
-                    if (hopsReq != null) {
-                        Result<Boolean> r = Result.failure(manifestResult.status, manifestResult.getException());
-                        HopsTorrentDownloadEvent.StartResponse hopsResp = hopsReq.starting(r);
-                        LOG.trace("{}sending:{}", logPrefix, hopsResp);
-                        proxy.answer(hopsReq, hopsResp);
-                    }
-                }
-            } else {
-                cleanAndDestroy(req.torrentId);
-                if (hopsReq != null) {
-                    Result<Boolean> failure = Result.failure(req.torrentByte.status, req.torrentByte.getException());
-                    HopsTorrentDownloadEvent.StartResponse hopsResp = hopsReq.starting(failure);
-                    LOG.trace("{}sending:{}", logPrefix, hopsResp);
-                    proxy.answer(hopsReq, hopsResp);
-                }
-            }
-        }
-    };
-
-    Handler handleTransferDetailsResp = new Handler<HopsTorrentDownloadEvent.AdvanceRequest>() {
-        @Override
-        public void handle(HopsTorrentDownloadEvent.AdvanceRequest req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            Transfer.DownloadRequest nstreamReq = pendingIntDwnl.remove(req.torrentId);
-            if (req.extendedDetails.isSuccess()) {
-                TransferDetails transferDetails = library.download(req.torrentId, req.extendedDetails.getValue());
-                if (nstreamReq != null) {
-                    components.advanceDownload(req.torrentId, req.hdfsEndpoint, req.kafkaEndpoint);
-                    Transfer.DownloadResponse nstreamResp = nstreamReq.answer(transferDetails);
-                    LOG.trace("{}sending:{}", logPrefix, nstreamResp);
-                    proxy.answer(nstreamReq, nstreamResp);
-                    proxy.answer(req, req.answer(Result.success(true)));
-                } else {
-                    throw new RuntimeException("unexpected");
-                }
-            } else {
-                cleanAndDestroy(req.torrentId);
-            }
-        }
-    };
-    //**************************************************************************
-
-    Handler handleHopsTorrentStop = new Handler<HopsTorrentStopEvent.Request>() {
-        @Override
-        public void handle(HopsTorrentStopEvent.Request req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            cleanAndDestroy(req.torrentId);
-            proxy.answer(req, req.success());
-        }
-    };
-
-    Handler handleContentsRequest = new Handler<HopsContentsEvent.Request>() {
-        @Override
-        public void handle(HopsContentsEvent.Request req) {
-            LOG.info("{}received:{}", logPrefix, req);
-            List<ElementSummary> summary = library.getSummary();
-            HopsContentsEvent.Response resp = req.success(summary);
-            LOG.info("{}answering:{}", logPrefix, resp);
-            proxy.answer(req, resp);
-        }
-    };
-
-    Handler handleDownloadCompleted = new Handler<DownloadSummaryEvent>() {
-        @Override
-        public void handle(DownloadSummaryEvent event) {
-            LOG.trace("{}received:{}", logPrefix, event);
-            library.finishDownload(event.torrentId);
-        }
-    };
-
-    Handler handleTorrentStatusRequest = new Handler<TorrentExtendedStatusEvent.Request>() {
-        @Override
-        public void handle(TorrentExtendedStatusEvent.Request req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            pendingRequests.put(req.eventId, req);
-            proxy.trigger(new StatusSummaryEvent.Request(req.eventId, req.torrentId), reportPort);
-        }
-    };
-    Handler handleTorrentStatusResponse = new Handler<StatusSummaryEvent.Response>() {
-        @Override
-        public void handle(StatusSummaryEvent.Response resp) {
-            LOG.trace("{}received:{}", logPrefix, resp);
-            TorrentExtendedStatusEvent.Request req = pendingRequests.remove(resp.getId());
-            proxy.answer(req, req.succes(resp.result));
-        }
-    };
+//    public static interface Op {
+//        public void execute(BasicCompleteCallback<Boolean> notifyComplete);
+//        
+//    }
+//    
+//    public static interface ParallelOpBuilder {
+//        public void with(Op op);
+//        public ParallelOp build();
+//    }
+//    
+//    public static interface ParallelOp extends Op {
+//        
+//    }
+//    
+//    public static class ParallelOpImpl implements ParallelOp {
+//        private final List<Op> baseOps;
+//        private final Set<Identifier> pendingOps = new HashSet<>();
+//        
+//        public ParallelOpImpl(List<Op> baseOps) {
+//            this.baseOps = baseOps;
+//        }
+//        
+//        @Override
+//        public void execute(BasicCompleteCallback<Boolean> notifyComplete) {
+//            
+//        }
+//    }
 }

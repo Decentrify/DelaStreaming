@@ -25,11 +25,11 @@ import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
-import se.sics.nstream.storage.StorageRead;
-import se.sics.nstream.storage.StorageWrite;
+import se.sics.nstream.storage.durable.DStoragePort;
+import se.sics.nstream.storage.durable.events.DStorageRead;
+import se.sics.nstream.storage.durable.events.DStorageWrite;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class KafkaProxy {
@@ -38,36 +38,37 @@ public class KafkaProxy {
     private String logPrefix = "";
 
     private final ComponentProxy proxy;
-    Negative<KafkaPort> streamPort;
+    Negative<DStoragePort> streamPort;
     //**************************************************************************
     private final KafkaEndpoint kafkaEndpoint;
+    private final KafkaResource kafkaResource;
     //<topic, producer>
     private final Map<String, KafkaProducerMngr> producers = new HashMap<>();
 
-    public KafkaProxy(ComponentProxy proxy, KafkaEndpoint kafkaEndpoint) {
+    public KafkaProxy(ComponentProxy proxy, KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
         LOG.info("{}init", logPrefix);
         this.proxy = proxy;
         this.kafkaEndpoint = kafkaEndpoint;
+        this.kafkaResource = kafkaResource;
         //proxy specific
-        streamPort = proxy.getPositive(KafkaPort.class).getPair();
+        streamPort = proxy.getPositive(DStoragePort.class).getPair();
         //proxy adapted
         proxy.subscribe(handleReadRequest, streamPort);
         proxy.subscribe(handleWriteRequest, streamPort);
     }
 
     //**************************************************************************
-    Handler handleReadRequest = new Handler<StorageRead.Request>() {
+    Handler handleReadRequest = new Handler<DStorageRead.Request>() {
         @Override
-        public void handle(StorageRead.Request req) {
+        public void handle(DStorageRead.Request req) {
             throw new RuntimeException("Kafka does not support reads");
         }
     };
 
-    Handler handleWriteRequest = new Handler<StorageWrite.Request>() {
+    Handler handleWriteRequest = new Handler<DStorageWrite.Request>() {
         @Override
-        public void handle(StorageWrite.Request req) {
+        public void handle(DStorageWrite.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            KafkaResource kafkaResource = (KafkaResource) req.resource;
             KafkaProducerMngr mngr = producers.get(kafkaResource.topicName);
             if (mngr == null) {
                 mngr = new KafkaProducerMngr(proxy, kafkaEndpoint, kafkaResource);

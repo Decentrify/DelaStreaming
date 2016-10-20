@@ -21,18 +21,17 @@ package se.sics.nstream.hops.library.event.core;
 import com.google.common.base.Optional;
 import java.util.List;
 import java.util.Map;
-import org.javatuples.Pair;
-import org.javatuples.Triplet;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
-import se.sics.nstream.util.FileExtendedDetails;
+import se.sics.nstream.hops.kafka.KafkaResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -42,13 +41,13 @@ public class HopsTorrentDownloadEvent {
     public static class StartRequest extends Direct.Request<StartResponse> implements StreamEvent {
 
         public final Identifier eventId;
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
         public final String torrentName;
         public final HDFSEndpoint hdfsEndpoint;
         public final HDFSResource manifest;
         public final List<KAddress> partners;
 
-        public StartRequest(Identifier eventId, Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
+        public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
             this.eventId = eventId;
             this.torrentId = torrentId;
             this.torrentName = torrentName;
@@ -57,8 +56,8 @@ public class HopsTorrentDownloadEvent {
             this.partners = partners;
         }
 
-        public StartRequest(Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
-            this(UUIDIdentifier.randomId(), torrentId, torrentName, hdfsEndpoint, manifest, partners);
+        public StartRequest(OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
+            this(BasicIdentifiers.eventId(), torrentId, torrentName, hdfsEndpoint, manifest, partners);
         }
 
         @Override
@@ -66,24 +65,24 @@ public class HopsTorrentDownloadEvent {
             return eventId;
         }
 
-        public StartResponse alreadyExists(Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result) {
-            return new AlreadyExists(this, result);
+        public StartResponse failed(Result result) {
+            return new StartFailed(this, result);
         }
 
-        public StartResponse starting(Result<Boolean> result) {
-            return new Starting(this, result);
+        public StartResponse success(Result<Boolean> result) {
+            return new StartSuccess(this, result);
         }
     }
 
     public static interface StartResponse extends Direct.Response, StreamEvent {
     }
 
-    public static class Starting implements StartResponse {
+    public static class StartSuccess implements StartResponse {
 
         public final StartRequest req;
         public final Result<Boolean> result;
 
-        public Starting(StartRequest req, Result<Boolean> result) {
+        public StartSuccess(StartRequest req, Result<Boolean> result) {
             this.req = req;
             this.result = result;
         }
@@ -94,12 +93,12 @@ public class HopsTorrentDownloadEvent {
         }
     }
 
-    public static class AlreadyExists implements StartResponse {
+    public static class StartFailed implements StartResponse {
 
         public final StartRequest req;
-        public final Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result;
+        public final Result result;
 
-        public AlreadyExists(StartRequest req, Result<Pair<Triplet<String, HDFSEndpoint, HDFSResource>, Map<String, FileExtendedDetails>>> result) {
+        public StartFailed(StartRequest req, Result result) {
             this.req = req;
             this.result = result;
         }
@@ -107,29 +106,48 @@ public class HopsTorrentDownloadEvent {
         @Override
         public Identifier getId() {
             return req.eventId;
+        }
+    }
+    
+    public static class TorrentResult implements StartResponse {
+        public final StartRequest req;
+        public final Result<Boolean> manifest;
+        
+        TorrentResult(StartRequest req, Result<Boolean> manifest) {
+            this.req =req;
+            this.manifest = manifest;
+        }
+        
+        @Override
+        public Identifier getId() {
+            return req.getId();
         }
     }
 
     public static class AdvanceRequest extends Direct.Request<AdvanceResponse> implements StreamEvent {
 
         public final Identifier eventId;
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
+        public final Result<Boolean> result;
         public final HDFSEndpoint hdfsEndpoint;
         public final Optional<KafkaEndpoint> kafkaEndpoint;
-        public final Result<Map<String, FileExtendedDetails>> extendedDetails;
+        public final Map<String, HDFSResource> hdfsDetails;
+        public final Map<String, KafkaResource> kafkaDetails;
 
-        public AdvanceRequest(Identifier eventId, Identifier torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
-                Result<Map<String, FileExtendedDetails>> extendedDetails) {
+        public AdvanceRequest(Identifier eventId, OverlayId torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
+                Map<String, HDFSResource> hdfsDetails, Map<String, KafkaResource> kafkaDetails) {
             this.eventId = eventId;
             this.torrentId = torrentId;
+            this.result = Result.success(true);
             this.hdfsEndpoint = hdfsEndpoint;
             this.kafkaEndpoint = kafkaEndpoint;
-            this.extendedDetails = extendedDetails;
+            this.hdfsDetails = hdfsDetails;
+            this.kafkaDetails = kafkaDetails;
         }
 
-        public AdvanceRequest(Identifier torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint, 
-                Result<Map<String, FileExtendedDetails>> extendedDetails) {
-            this(UUIDIdentifier.randomId(), torrentId, hdfsEndpoint, kafkaEndpoint, extendedDetails);
+        public AdvanceRequest(OverlayId torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
+                Map<String, HDFSResource> hdfsDetails, Map<String, KafkaResource> kafkaDetails) {
+            this(BasicIdentifiers.eventId(), torrentId, hdfsEndpoint, kafkaEndpoint, hdfsDetails, kafkaDetails);
         }
 
         @Override
@@ -137,7 +155,11 @@ public class HopsTorrentDownloadEvent {
             return eventId;
         }
 
-        public AdvanceResponse answer(Result<Boolean> result) {
+        public AdvanceResponse success(Result<Boolean> result) {
+            return new AdvanceResponse(this, result);
+        }
+        
+        public AdvanceResponse fail(Result result) {
             return new AdvanceResponse(this, result);
         }
     }

@@ -20,8 +20,9 @@ package se.sics.nstream.hops.library.event.core;
 
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
@@ -35,12 +36,12 @@ public class HopsTorrentUploadEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
         public final Identifier eventId;
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
         public final String torrentName;
         public final HDFSEndpoint hdfsEndpoint;
         public final HDFSResource manifestResource;
 
-        public Request(Identifier eventId, Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint,  HDFSResource manifestResource) {
+        public Request(Identifier eventId, OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint,  HDFSResource manifestResource) {
             this.eventId = eventId;
             this.torrentId = torrentId;
             this.torrentName = torrentName;
@@ -48,8 +49,8 @@ public class HopsTorrentUploadEvent {
             this.manifestResource = manifestResource;
         }
 
-        public Request(Identifier torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
-            this(UUIDIdentifier.randomId(), torrentId, torrentName, hdfsEndpoint, hdfsResource);
+        public Request(OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
+            this(BasicIdentifiers.eventId(), torrentId, torrentName, hdfsEndpoint, hdfsResource);
         }
 
         @Override
@@ -57,12 +58,12 @@ public class HopsTorrentUploadEvent {
             return eventId;
         }
 
-        public Response alreadyExists(Result<Boolean> result) {
-            return new AlreadyExists(this, result);
+        public Response failed(Result result) {
+            return new Failed(this, result);
         }
         
-        public Response uploading(Result<Boolean> result) {
-            return new Uploading(this, result);
+        public Response success(Result<Boolean> result) {
+            return new Success(this, result);
         }
     }
 
@@ -82,14 +83,14 @@ public class HopsTorrentUploadEvent {
         }
     }
     
-    public static class Uploading extends Response {
-        public Uploading(Request req, Result<Boolean> result) {
+    public static class Success extends Response {
+        public Success(Request req, Result<Boolean> result) {
             super(req, result);
         }
     }
     
-    public static class AlreadyExists extends Response {
-        public AlreadyExists(Request req, Result<Boolean> result) {
+    public static class Failed extends Response {
+        public Failed(Request req, Result<Boolean> result) {
             super(req, result);
         }
     }

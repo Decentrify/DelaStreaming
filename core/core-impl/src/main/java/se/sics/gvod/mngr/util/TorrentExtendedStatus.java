@@ -18,23 +18,22 @@
  */
 package se.sics.gvod.mngr.util;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.library.util.TorrentStatus;
-import se.sics.nstream.torrent.TransferSpeed;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.nstream.library.util.TorrentState;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentExtendedStatus {
-    public final Identifier torrentId;
-    public final TorrentStatus torrentStatus;
-    public final TransferSpeed transferSpeed;
+    public final OverlayId torrentId;
+    public final TorrentState torrentStatus;
+    public final double downloadSpeed;
     public final double percentageComplete;
     
-    public TorrentExtendedStatus(Identifier torrentId, TorrentStatus torrentStatus, TransferSpeed transferSpeed, double percentageComplete) {
+    public TorrentExtendedStatus(OverlayId torrentId, TorrentState torrentStatus, double downloadSpeed, double percentageComplete) {
         this.torrentStatus = torrentStatus;
         this.torrentId = torrentId;
-        this.transferSpeed = transferSpeed;
+        this.downloadSpeed = downloadSpeed;
         this.percentageComplete = percentageComplete;
     }
 }

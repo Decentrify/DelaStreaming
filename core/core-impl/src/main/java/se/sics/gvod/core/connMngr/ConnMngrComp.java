@@ -517,8 +517,8 @@
 //                }
 //                LOG.debug("{} sending hash request:{} to:{}",
 //                        new Object[]{logPrefix, requestContent.hashes, uploader.getId()});
-//                UUID tId = scheduleDownloadHashTimeout(requestContent.eventId, uploader.getId());
-//                uploaderQueue.put(requestContent.eventId, Pair.with(requestContent, tId));
+//                UUID tId = scheduleDownloadHashTimeout(requestContent.msgId, uploader.getId());
+//                uploaderQueue.put(requestContent.msgId, Pair.with(requestContent, tId));
 //                KHeader<KAddress> requestHeader
 //                        = new DecoratedHeader(new BasicHeader(selfAdr, uploader, Transport.UDP), overlayId);
 //                KContentMsg request = new BasicContentMsg(requestHeader, requestContent);
@@ -544,8 +544,8 @@
 //                }
 //                LOG.debug("{} sending data request:{} to:{}",
 //                        new Object[]{logPrefix, requestContent.pieceId, uploader.getId()});
-//                UUID tId = scheduleDownloadDataTimeout(requestContent.eventId, uploader.getId());
-//                uploaderQueue.put(requestContent.eventId, Pair.with(requestContent, tId));
+//                UUID tId = scheduleDownloadDataTimeout(requestContent.msgId, uploader.getId());
+//                uploaderQueue.put(requestContent.msgId, Pair.with(requestContent, tId));
 //                KHeader<KAddress> requestHeader
 //                        = new DecoratedHeader(new BasicHeader(selfAdr, uploader, Transport.UDP), overlayId);
 //                KContentMsg request = new BasicContentMsg(requestHeader, requestContent);
@@ -649,7 +649,7 @@
 //                            LOG.info("{} hash from:{} - posibly late", logPrefix, target.getId());
 //                            return;
 //                        }
-//                        Pair<Download.HashRequest, UUID> req = uploaderQueue.remove(content.eventId);
+//                        Pair<Download.HashRequest, UUID> req = uploaderQueue.remove(content.msgId);
 //                        if (req == null) {
 //                            LOG.debug("{} hash from:{} - posibly late", logPrefix, target.getId());
 //                            return;
@@ -678,7 +678,7 @@
 //                            LOG.info("{} data from:{} - posibly late", logPrefix, target.getId());
 //                            return;
 //                        }
-//                        Pair<Download.DataRequest, UUID> req = uploaderQueue.remove(content.eventId);
+//                        Pair<Download.DataRequest, UUID> req = uploaderQueue.remove(content.msgId);
 //                        if (req == null) {
 //                            LOG.info("{} data from:{} posibly late", logPrefix, target.getId());
 //                            return;
@@ -774,8 +774,8 @@
 //                            return;
 //                        }
 //
-//                        if (!pendingUploadingHash.containsKey(content.eventId)) {
-//                            pendingUploadingHash.put(content.eventId, target.getId());
+//                        if (!pendingUploadingHash.containsKey(content.msgId)) {
+//                            pendingUploadingHash.put(content.msgId, target.getId());
 //                            trigger(content, myPort);
 //                        } else {
 //                            LOG.warn("{} request already registered", logPrefix);
@@ -798,8 +798,8 @@
 //                            return;
 //                        }
 //
-//                        if (!pendingUploadingData.containsKey(content.eventId)) {
-//                            pendingUploadingData.put(content.eventId, target.getId());
+//                        if (!pendingUploadingData.containsKey(content.msgId)) {
+//                            pendingUploadingData.put(content.msgId, target.getId());
 //                            trigger(content, myPort);
 //                        } else {
 //                            LOG.warn("{} request already registered", logPrefix);
@@ -813,11 +813,11 @@
 //            public void handle(Download.HashResponse responseContent) {
 //                LOG.debug("{} received local hash response:{}", logPrefix, responseContent.targetPos);
 //
-//                if (!pendingUploadingHash.containsKey(responseContent.eventId)) {
+//                if (!pendingUploadingHash.containsKey(responseContent.msgId)) {
 //                    LOG.warn("{} late local hash response, inconsistency");
 //                    return;
 //                }
-//                KAddress target = connTracker.getUploadConn(pendingUploadingHash.remove(responseContent.eventId));
+//                KAddress target = connTracker.getUploadConn(pendingUploadingHash.remove(responseContent.msgId));
 //                if (target == null) {
 //                    LOG.warn("{} late local hash response, connection inconsistency");
 //                    return;
@@ -836,12 +836,12 @@
 //            public void handle(Download.DataResponse responseContent) {
 //                LOG.debug("{} received local data response:{}", logPrefix, responseContent.pieceId);
 //
-//                if (!pendingUploadingData.containsKey(responseContent.eventId)) {
+//                if (!pendingUploadingData.containsKey(responseContent.msgId)) {
 //                    LOG.warn("{} late local data response, inconsistency", logPrefix);
 //                    return;
 //                }
 //
-//                KAddress target = connTracker.getUploadConn(pendingUploadingData.remove(responseContent.eventId));
+//                KAddress target = connTracker.getUploadConn(pendingUploadingData.remove(responseContent.msgId));
 //                if (target == null) {
 //                    LOG.warn("{} late local data response, connection inconsistency");
 //                    return;

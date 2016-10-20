@@ -24,7 +24,6 @@ import java.util.Random;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.nstream.StreamEvent;
 import se.sics.gvod.stream.congestion.event.external.PLedbatConnection;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -37,7 +36,6 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
@@ -197,20 +195,15 @@ public class PullLedbatComp extends ComponentDefinition {
         roundTId = t.getTimeoutId();
     }
 
-    public static class RoundTimeout extends Timeout implements StreamEvent {
+    public static class RoundTimeout extends Timeout {
 
         public RoundTimeout(SchedulePeriodicTimeout spt) {
             super(spt);
         }
 
         @Override
-        public Identifier getId() {
-            return new UUIDIdentifier(getTimeoutId());
-        }
-
-        @Override
         public String toString() {
-            return "RoundTimeout<" + getId() + ">";
+            return "RoundTimeout<" + getTimeoutId()+ ">";
         }
     }
 }

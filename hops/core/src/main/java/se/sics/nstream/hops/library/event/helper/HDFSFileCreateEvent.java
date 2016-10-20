@@ -20,8 +20,8 @@ package se.sics.nstream.hops.library.event.helper;
 
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
@@ -46,7 +46,7 @@ public class HDFSFileCreateEvent {
         }
 
         public Request(HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource, long fileSize) {
-            this(UUIDIdentifier.randomId(), hdfsEndpoint, hdfsResource, fileSize);
+            this(BasicIdentifiers.eventId(), hdfsEndpoint, hdfsResource, fileSize);
         }
 
         @Override

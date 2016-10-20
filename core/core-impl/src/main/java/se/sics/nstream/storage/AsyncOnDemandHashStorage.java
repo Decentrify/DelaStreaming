@@ -20,6 +20,7 @@ package se.sics.nstream.storage;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.reference.KReference;
@@ -27,9 +28,11 @@ import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.buffer.WriteResult;
 import se.sics.nstream.storage.cache.KHint;
-import se.sics.nstream.transfer.BlockHelper;
+import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
@@ -42,16 +45,17 @@ import se.sics.nstream.util.result.WriteCallback;
 public class AsyncOnDemandHashStorage implements AsyncStorage {
 
     private final FileBaseDetails fileDetails;
+    private final Pair<StreamId, MyStream> stream;
     private final DelayedExceptionSyncHandler exSyncHandler;
     private final Map<Integer, KReference<byte[]>> hashes = new HashMap<>();
     private final AsyncStorage storage; //someone else is controlling it, I am merely piggy backing
-    public final boolean onDemand;
 
-    public AsyncOnDemandHashStorage(FileBaseDetails fileDetails, DelayedExceptionSyncHandler exSyncHandler, AsyncStorage storage, boolean onDemand) {
+    public AsyncOnDemandHashStorage(FileBaseDetails fileDetails, DelayedExceptionSyncHandler exSyncHandler, AsyncStorage storage,
+            Pair<StreamId, MyStream> stream) {
         this.fileDetails = fileDetails;
         this.exSyncHandler = exSyncHandler;
         this.storage = storage;
-        this.onDemand = onDemand;
+        this.stream = stream;
     }
 
     @Override
@@ -93,10 +97,6 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
         if (hash != null) {
             delayedResult.success(Result.success(hash));
         } else {
-            if(!onDemand) {
-                delayedResult.fail(Result.internalStateFailure("read ahead hash from !ondemand"));
-                return;
-            }
             ReadCallback blockResult = new ReadCallback() {
 
                 @Override
@@ -121,6 +121,6 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
     public void write(KBlock writeRange, KReference<byte[]> val, WriteCallback writeResult) {
         val.retain();
         hashes.put(writeRange.parentBlock(), val);
-        writeResult.success(Result.success(new WriteResult(writeRange.lowerAbsEndpoint(), val.getValue().get().length, "hashes")));
+        writeResult.success(Result.success(new WriteResult(stream, writeRange.lowerAbsEndpoint(), val.getValue().get().length)));
     }
 }

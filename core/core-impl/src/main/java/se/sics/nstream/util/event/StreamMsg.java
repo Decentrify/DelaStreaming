@@ -36,7 +36,7 @@ public class StreamMsg {
         public Result.Status getStatus();
     }
 
-    public static interface Timeout extends StreamEvent {
+    public static interface Timeout {
 
         public KAddress getTarget();
     }

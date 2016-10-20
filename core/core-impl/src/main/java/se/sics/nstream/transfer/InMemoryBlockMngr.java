@@ -36,8 +36,7 @@ public class InMemoryBlockMngr implements BlockMngr {
     public InMemoryBlockMngr(BlockDetails blockDetails) {
         this.blockDetails = blockDetails;
         this.storage = new RWByteBuffer(blockDetails.blockSize);
-        this.tracker = IncompleteTracker.create(blockDetails.nrPieces);
-        
+        this.tracker = IncompleteTracker.create(blockDetails.nrPieces, 0);
     }
 
     @Override

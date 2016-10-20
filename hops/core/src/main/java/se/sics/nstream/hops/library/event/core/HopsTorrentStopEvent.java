@@ -20,8 +20,9 @@ package se.sics.nstream.hops.library.event.core;
 
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 
 /**
@@ -33,15 +34,15 @@ public class HopsTorrentStopEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
         public final Identifier eventId;
-        public final Identifier torrentId;
+        public final OverlayId torrentId;
 
-        public Request(Identifier eventId, Identifier torrentId) {
+        public Request(Identifier eventId, OverlayId torrentId) {
             this.eventId = eventId;
             this.torrentId = torrentId;
         }
 
-        public Request(Identifier torrentId) {
-            this(UUIDIdentifier.randomId(), torrentId);
+        public Request(OverlayId torrentId) {
+            this(BasicIdentifiers.eventId(), torrentId);
         }
 
         @Override

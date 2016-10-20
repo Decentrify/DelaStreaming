@@ -22,7 +22,7 @@ import java.util.LinkedList;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.nstream.report.ReportComp;
+import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
 import se.sics.gvod.stream.util.ConnectionStatus;
 
 /**
@@ -30,7 +30,7 @@ import se.sics.gvod.stream.util.ConnectionStatus;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ConnectionStateV2 {
-    private static final Logger LOG = LoggerFactory.getLogger(ReportComp.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TorrentTrackingComp.class);
     private String logPrefix;
 
     public static final int HISTORY_SIZE = 100;

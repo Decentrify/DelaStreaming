@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.nstream.report.ReportPort;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -31,8 +30,10 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.event.system.SystemAddressEvent;
-import se.sics.nstream.transfer.TransferMngrPort;
-import se.sics.nstream.util.CoreExtPorts;
+import se.sics.nstream.storage.durable.DEndpointCtrlPort;
+import se.sics.nstream.torrent.TorrentMngrPort;
+import se.sics.nstream.torrent.tracking.TorrentStatusPort;
+import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -43,13 +44,14 @@ public class LibraryMngrComp extends ComponentDefinition {
     private String logPrefix = "";
 
     //***************************CONNECTIONS************************************
-    private final CoreExtPorts extPorts;
     //**********************EXTERNAL_CONNECT_TO*********************************
+    Positive<DEndpointCtrlPort> endpointControlPort = requires(DEndpointCtrlPort.class);
+    Positive<TorrentMngrPort> torrentMngrPort = requires(TorrentMngrPort.class);
+    Positive<TransferCtrlPort> transferCtrl = requires(TransferCtrlPort.class);
+    Positive<TorrentStatusPort> reportPort = requires(TorrentStatusPort.class);
+    
     Negative<SystemPort> systemPort = provides(SystemPort.class);
     List<Negative> providedPorts = new ArrayList<>();
-    //*******************INTERNAL_DO_NOT_CONNECT_TO*****************************
-    Negative<TransferMngrPort> transferMngrPort = provides(TransferMngrPort.class);
-    Positive<ReportPort> reportPort = requires(ReportPort.class);
     //**************************EXTERNAL_STATE**********************************
     private final KAddress selfAdr;
     //**************************INTERNAL_STATE**********************************
@@ -58,7 +60,6 @@ public class LibraryMngrComp extends ComponentDefinition {
     public LibraryMngrComp(Init init) {
         LOG.info("{}initiating...", logPrefix);
 
-        extPorts = init.extPorts;
         selfAdr = init.selfAddress;
         torrentProvider = init.libraryProvider;
         setupLibraryProvider();
@@ -72,7 +73,7 @@ public class LibraryMngrComp extends ComponentDefinition {
         for (Class<PortType> r : torrentProvider.providesPorts()) {
             providedPorts.add(provides(r));
         }
-        torrentProvider.create(proxy, config(), logPrefix, selfAdr, extPorts);
+        torrentProvider.create(proxy, config(), logPrefix, selfAdr);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -98,12 +99,10 @@ public class LibraryMngrComp extends ComponentDefinition {
 
     public static class Init extends se.sics.kompics.Init<LibraryMngrComp> {
 
-        public final CoreExtPorts extPorts;
         public final KAddress selfAddress;
         public final LibraryProvider libraryProvider;
 
-        public Init(CoreExtPorts extPorts, KAddress selfAddress, LibraryProvider libraryProvider) {
-            this.extPorts = extPorts;
+        public Init(KAddress selfAddress, LibraryProvider libraryProvider) {
             this.selfAddress = selfAddress;
             this.libraryProvider = libraryProvider;
         }

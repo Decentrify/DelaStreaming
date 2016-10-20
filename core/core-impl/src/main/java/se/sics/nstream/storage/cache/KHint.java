@@ -21,7 +21,8 @@ package se.sics.nstream.storage.cache;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import se.sics.nstream.transfer.BlockHelper;
+import java.util.TreeSet;
+import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
 
@@ -38,6 +39,10 @@ public class KHint {
         public Summary(long lStamp, Set<Integer> blocks) {
             this.lStamp = lStamp;
             this.blocks = blocks;
+        }
+        
+        public Summary copy() {
+            return new Summary(lStamp, new TreeSet<>(blocks));
         }
 
         public Expanded expand(FileBaseDetails baseDetails) {

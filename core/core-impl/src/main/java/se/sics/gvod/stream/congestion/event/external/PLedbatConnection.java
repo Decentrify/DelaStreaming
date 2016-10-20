@@ -20,8 +20,8 @@ package se.sics.gvod.stream.congestion.event.external;
 
 import se.sics.gvod.stream.congestion.PLedbatEvent;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
@@ -40,7 +40,7 @@ public class PLedbatConnection {
         }
         
         public TrackRequest(KAddress target) {
-            this(UUIDIdentifier.randomId(), target);
+            this(BasicIdentifiers.eventId(), target);
         }
 
         @Override

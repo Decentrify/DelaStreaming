@@ -21,42 +21,43 @@ package se.sics.nstream.hops.hdfs;
 import java.io.File;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import se.sics.nstream.util.StreamEndpoint;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HDFSEndpoint implements StreamEndpoint {
+
+    public static final String HOPS_URL = "fs.defaultFS";
     public final Configuration hdfsConfig;
+    public final String hopsURL;
     public final String user;
-    
+
     public HDFSEndpoint(Configuration hdfsConfig, String user) {
         this.hdfsConfig = hdfsConfig;
         this.user = user;
+        this.hopsURL = hdfsConfig.get(HOPS_URL);
     }
-    
-    public HDFSEndpoint(String hopsIp, int hopsPort, String user) {
-        this.hdfsConfig = new Configuration();
+
+    @Override
+    public String getEndpointName() {
+        return hopsURL;
+    }
+
+    public static HDFSEndpoint getBasic(String user, String hopsIp, int hopsPort) {
+        Configuration hdfsConfig = new Configuration();
         String hopsURL = "hdfs://" + hopsIp + ":" + hopsPort;
-        hdfsConfig.set("fs.defaultFS", hopsURL);
-        this.user = user;
+        hdfsConfig.set(HOPS_URL, hopsURL);
+        return new HDFSEndpoint(hdfsConfig, user);
     }
     
-    public HDFSEndpoint(String hdfsXMLPath, String user) {
-         this.hdfsConfig = new Configuration();
-        //TODO Alex - I know, shouldn't throw exceptions in constructors
-        //maybe later I will make it as a static method to do the checks before invoking constructor
+    public static HDFSEndpoint getXML(String hdfsXMLPath, String user) {
+        Configuration hdfsConfig = new Configuration();
         File confFile = new File(hdfsXMLPath);
-        if(!confFile.exists()) {
+        if (!confFile.exists()) {
             throw new RuntimeException("conf file does not exist");
         }
-        this.hdfsConfig.addResource(new Path(hdfsXMLPath));
-        this.user = user;
-    }
-    
-    @Override
-    public Class<HDFSPort> resourcePort() {
-        return HDFSPort.class;
+        hdfsConfig.addResource(new Path(hdfsXMLPath));
+        return new HDFSEndpoint(hdfsConfig, user);
     }
 }

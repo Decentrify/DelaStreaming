@@ -34,10 +34,10 @@ import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.storage.StoragePort;
-import se.sics.nstream.storage.StorageWrite;
-import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.DStoragePort;
+import se.sics.nstream.storage.durable.events.DStorageWrite;
+import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.result.WriteCallback;
@@ -55,9 +55,9 @@ public class SimpleAppendKBuffer implements KBuffer {
     private String logPrefix = "";
 
     private final KBufferConfig bufferConfig;
-    private final StreamResource writeResource;
+    private final Pair<StreamId, MyStream> stream;
     //**************************************************************************
-    private final Positive<StoragePort> writePort;
+    private final Positive<DStoragePort> writePort;
     private final ComponentProxy proxy;
     private final DelayedExceptionSyncHandler syncExHandling;
     private final ComponentLoadTracking loadTracker;
@@ -70,12 +70,12 @@ public class SimpleAppendKBuffer implements KBuffer {
     //**************************************************************************
 
     public SimpleAppendKBuffer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExceptionHandling, ComponentLoadTracking loadTracker,
-            StreamEndpoint writeEndpoint, StreamResource writeResource, long appendPos) {
+            Pair<StreamId, MyStream> stream, long appendPos) {
         this.bufferConfig = new KBufferConfig(config);
-        this.writeResource = writeResource;
+        this.stream = stream;
         this.proxy = proxy;
         this.syncExHandling = syncExceptionHandling;
-        this.writePort = proxy.getNegative(writeEndpoint.resourcePort()).getPair();
+        this.writePort = proxy.getNegative(DStoragePort.class).getPair();
         this.loadTracker = loadTracker;
         this.appendPos = appendPos;
         this.blockPos = 0;
@@ -110,7 +110,7 @@ public class SimpleAppendKBuffer implements KBuffer {
             return;
         }
         buffer.put(writeRange.lowerAbsEndpoint(), Pair.with(val, delayedWrite));
-        loadTracker.setBufferSize(writeResource.getResourceName(), buffer.size());
+        loadTracker.setBufferSize(stream, buffer.size());
         if (writeRange.lowerAbsEndpoint() == appendPos) {
             addNewTasks();
         }
@@ -122,7 +122,7 @@ public class SimpleAppendKBuffer implements KBuffer {
             if (next == null) {
                 break;
             }
-            StorageWrite.Request req = new StorageWrite.Request(writeResource, appendPos, next.getValue0().getValue().get());
+            DStorageWrite.Request req = new DStorageWrite.Request(stream.getValue0(), appendPos, next.getValue0().getValue().get());
             pendingWriteReqs.add(req.eventId);
             proxy.trigger(req, writePort);
             appendPos += next.getValue0().getValue().get().length;
@@ -130,9 +130,9 @@ public class SimpleAppendKBuffer implements KBuffer {
         }
     }
 
-    Handler handleWriteResp = new Handler<StorageWrite.Response>() {
+    Handler handleWriteResp = new Handler<DStorageWrite.Response>() {
         @Override
-        public void handle(StorageWrite.Response resp) {
+        public void handle(DStorageWrite.Response resp) {
             if(!pendingWriteReqs.remove(resp.getId())) {
                 //not mine
                 return;
@@ -146,13 +146,13 @@ public class SimpleAppendKBuffer implements KBuffer {
                     LOG.error("{}buf size:{}", logPrefix, buffer.size());
                     throw new RuntimeException("error");
                 }
-                loadTracker.setBufferSize(writeResource.getResourceName(), buffer.size());
+                loadTracker.setBufferSize(stream, buffer.size());
                 try {
                     ref.getValue0().release();
                 } catch (KReferenceException ex) {
                     fail(Result.internalFailure(ex));
                 }
-                WriteResult result = new WriteResult(resp.req.pos, resp.req.value.length, writeResource.getResourceName());
+                WriteResult result = new WriteResult(stream, resp.req.pos, resp.req.value.length);
                 ref.getValue1().success(Result.success(result));
                 addNewTasks();
             } else {

@@ -19,8 +19,11 @@
 package se.sics.nstream.storage.cache;
 
 import java.util.Map;
+import java.util.Random;
 import java.util.TreeMap;
+import org.javatuples.Pair;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +32,14 @@ import se.sics.kompics.config.TypesafeConfig;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdentifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
@@ -41,18 +50,22 @@ import se.sics.ktoolbox.util.test.MockComponentProxy;
 import se.sics.ktoolbox.util.test.MockExceptionHandler;
 import se.sics.ktoolbox.util.test.PortValidator;
 import se.sics.ktoolbox.util.test.Validator;
-import se.sics.ktoolbox.util.tracking.load.QueueLoadConfig;
-import se.sics.nstream.storage.StorageRead;
+import se.sics.nstream.FileId;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.TorrentIds;
+import se.sics.nstream.storage.durable.events.DStorageRead;
+import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.test.DStorageReadReqEC;
 import se.sics.nstream.test.MockStreamEndpoint;
 import se.sics.nstream.test.MockStreamPort;
 import se.sics.nstream.test.MockStreamResource;
-import se.sics.nstream.test.StreamReadReqEC;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KBlockImpl;
 import se.sics.nstream.util.range.KPieceImpl;
 import se.sics.nstream.util.range.KRange;
 import se.sics.nstream.util.result.ReadCallback;
+import se.sics.nutil.tracking.load.QueueLoadConfig;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -61,17 +74,55 @@ public class TestSimpleKCache {
 
     private static final Logger LOG = LoggerFactory.getLogger(TestSimpleKCache.class);
 
-    MockStreamEndpoint readEndpoint = new MockStreamEndpoint();
-    MockStreamResource readResource = new MockStreamResource("mock1");
-    Identifier reader = new IntIdentifier(0);
-    KBlock b0, b1, b2;
-    Map<Long, KBlock> hintE = new TreeMap<>();
-    Map<Long, KBlock> hint0 = new TreeMap<>();
-    Map<Long, KBlock> hint0_1 = new TreeMap<>();
-    Map<Long, KBlock> hint1_2 = new TreeMap<>();
-    SimpleKCache.ExtendedCacheClean timeout;
+    private static Pair<StreamId, MyStream> readStream;
+    private static Identifier readerId;
 
-    {
+    private static KBlock b0, b1, b2;
+    private static Map<Long, KBlock> hintE = new TreeMap<>();
+    private static Map<Long, KBlock> hint0 = new TreeMap<>();
+    private static Map<Long, KBlock> hint0_1 = new TreeMap<>();
+    private static Map<Long, KBlock> hint1_2 = new TreeMap<>();
+    private static SimpleKCache.ExtendedCacheClean timeout;
+    private static byte[] r = new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+
+    private static DStorageReadReqEC comparator = new DStorageReadReqEC();
+    private static DStorageRead.Request req0;
+    private static DStorageRead.Response resp0;
+    private static DStorageRead.Request req1;
+    private static DStorageRead.Response resp1;
+    private static DStorageRead.Request req2;
+    private static DStorageRead.Response resp2;
+
+    @BeforeClass
+    public static void setup() {
+        systemSetup();
+        experimentSetup();
+    }
+
+    private static void systemSetup() {
+        TorrentIds.registerDefaults(1234l);
+        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
+    }
+
+    private static void experimentSetup() {
+        IntIdFactory endpointIdFactory = new IntIdFactory(new Random(1234));
+        Identifier endpointId = endpointIdFactory.randomId();
+
+        IdentifierFactory nodeIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.NODE.toString());
+        readerId = nodeIdFactory.randomId();
+
+        byte owner = 1;
+        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        OverlayIdFactory overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, owner);
+
+        OverlayId torrentId = overlayIdFactory.randomId();
+        FileId fileId = TorrentIds.fileId(torrentId, 1);
+        StreamId streamId = TorrentIds.streamId(endpointId, fileId);
+
+        MockStreamEndpoint readEndpoint = new MockStreamEndpoint();
+        MockStreamResource readResource = new MockStreamResource("mock1");
+        readStream = Pair.with(streamId, new MyStream(readEndpoint, readResource));
+
         SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(0, 0);
         timeout = new SimpleKCache.ExtendedCacheClean(spt);
 
@@ -83,17 +134,14 @@ public class TestSimpleKCache {
         hint0_1.put(b1.lowerAbsEndpoint(), b1);
         hint1_2.put(b1.lowerAbsEndpoint(), b1);
         hint1_2.put(b2.lowerAbsEndpoint(), b2);
+
+        req0 = new DStorageRead.Request(readStream.getValue0(), b0);
+        resp0 = req0.respond(Result.success(r));
+        req1 = new DStorageRead.Request(readStream.getValue0(), b1);
+        resp1 = req1.respond(Result.success(r));
+        req2 = new DStorageRead.Request(readStream.getValue0(), b2);
+        resp2 = req2.respond(Result.success(r));
     }
-
-    byte[] r = new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-
-    StreamReadReqEC comparator = new StreamReadReqEC();
-    StorageRead.Request req0 = new StorageRead.Request(readResource, b0);
-    StorageRead.Response resp0 = req0.respond(Result.success(r));
-    StorageRead.Request req1 = new StorageRead.Request(readResource, b1);
-    StorageRead.Response resp1 = req1.respond(Result.success(r));
-    StorageRead.Request req2 = new StorageRead.Request(readResource, b2);
-    StorageRead.Response resp2 = req2.respond(Result.success(r));
 
     @Test
     public void simpleClose() {
@@ -144,7 +192,7 @@ public class TestSimpleKCache {
         //***********************PENDING_FETCH**********************************
         //hint0 - R0 fetch 
         proxy.expect(new EventContentValidator(comparator, req0));
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hint0));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hint0));
         validator = proxy.validateNext();
         Assert.assertTrue(validator.toString(), validator.isValid());
         checkCacheState(skCache, new CacheState(0, 0, 1, 0));
@@ -157,13 +205,13 @@ public class TestSimpleKCache {
         skCache.read(read.range, read);
         Assert.assertTrue(read.done);
         //hintE - R0 invalidated, move to system(there is a retain on it)
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hintE));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hintE));
         checkCacheState(skCache, new CacheState(0, 1, 0, 0));
         //*****************************CACHE************************************
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hint0));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hint0));
         checkCacheState(skCache, new CacheState(1, 0, 0, 0));
         //*****************************SYSTEM***********************************
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hintE));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hintE));
         checkCacheState(skCache, new CacheState(0, 1, 0, 0));
         //*************************SYSTEM_INVALID*******************************
         //release last retain - invalidating base ref
@@ -195,11 +243,11 @@ public class TestSimpleKCache {
         skCache.buffered(b0, baseRef);
         checkCacheState(skCache, new CacheState(0, 1, 0, 0));
         //********************************CACHE*********************************
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hint0));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hint0));
         checkCacheState(skCache, new CacheState(1, 0, 0, 0));
         //****************************CACHE_INVALID*****************************
         baseRef.release();
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hintE));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hintE));
         checkCacheState(skCache, new CacheState(0, 0, 0, 0));
         //**********************************************************************
         closeCache(skCache, proxy, syncExHandler);
@@ -215,10 +263,10 @@ public class TestSimpleKCache {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        
+
         Validator validator;
         MockDelayedRead read = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
-        
+
         //**********************************************************************
         int hintStamp = 1;
         SimpleKCache skCache = buildCache(config, proxy, syncExHandler);
@@ -226,7 +274,7 @@ public class TestSimpleKCache {
         //***********************PENDING_FETCH**********************************
         //hint0 - R0 fetch 
         proxy.expect(new EventContentValidator(comparator, req0));
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hint0));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hint0));
         validator = proxy.validateNext();
         Assert.assertTrue(validator.toString(), validator.isValid());
         checkCacheState(skCache, new CacheState(0, 0, 1, 0));
@@ -242,14 +290,15 @@ public class TestSimpleKCache {
         Assert.assertTrue(read.done);
         read.returned.release();
         //*******************************CLEAN**********************************
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hintE));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hintE));
         checkCacheState(skCache, new CacheState(0, 0, 0, 0));
         //**********************************************************************
         closeCache(skCache, proxy, syncExHandler);
     }
-    
+
     /**
-     * NONE->PENDING_FETCH->DELAYED_READ(REQ)(2 solved by 1 fetch)->PENDING_FETCH->CACHE->DELAYED_READ(RESP)->CLEAN->END
+     * NONE->PENDING_FETCH->DELAYED_READ(REQ)(2 solved by 1
+     * fetch)->PENDING_FETCH->CACHE->DELAYED_READ(RESP)->CLEAN->END
      */
     public void testChain4() throws KReferenceException {
         LOG.info("***********************************************************");
@@ -258,12 +307,11 @@ public class TestSimpleKCache {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        MockStreamResource readResource = new MockStreamResource("mock1");
-        
+
         Validator validator;
         MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
         MockDelayedRead read2 = new MockDelayedRead(new KPieceImpl(0, -1, 1l, 7l));
-        
+
         //**********************************************************************
         int hintStamp = 1;
         SimpleKCache skCache = buildCache(config, proxy, syncExHandler);
@@ -271,7 +319,7 @@ public class TestSimpleKCache {
         //***********************PENDING_FETCH**********************************
         //hint0 - R0 fetch 
         proxy.expect(new EventContentValidator(comparator, req0));
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hint0));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hint0));
         validator = proxy.validateNext();
         Assert.assertTrue(validator.toString(), validator.isValid());
         checkCacheState(skCache, new CacheState(0, 0, 1, 0));
@@ -291,14 +339,15 @@ public class TestSimpleKCache {
         read1.returned.release();
         read2.returned.release();
         //*******************************CLEAN**********************************
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hintE));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hintE));
         checkCacheState(skCache, new CacheState(0, 0, 0, 0));
         //**********************************************************************
         closeCache(skCache, proxy, syncExHandler);
     }
-    
+
     /**
-     * NONE->PENDING_FETCH->DELAYED_READ(REQ)(2 solved by 2 fetch)->PENDING_FETCH->CACHE->DELAYED_READ(RESP)->CLEAN->END
+     * NONE->PENDING_FETCH->DELAYED_READ(REQ)(2 solved by 2
+     * fetch)->PENDING_FETCH->CACHE->DELAYED_READ(RESP)->CLEAN->END
      */
     public void testChain5() throws KReferenceException {
         LOG.info("***********************************************************");
@@ -307,12 +356,11 @@ public class TestSimpleKCache {
         Config config = TypesafeConfig.load();
         MockComponentProxy proxy = new MockComponentProxy();
         MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        MockStreamResource readResource = new MockStreamResource("mock1");
-        
+
         Validator validator;
         MockDelayedRead read1 = new MockDelayedRead(new KPieceImpl(0, -1, 0l, 3l));
         MockDelayedRead read2 = new MockDelayedRead(new KPieceImpl(1, -1, 0l, 17l));
-        
+
         //**********************************************************************
         int hintStamp = 1;
         SimpleKCache skCache = buildCache(config, proxy, syncExHandler);
@@ -321,7 +369,7 @@ public class TestSimpleKCache {
         //hint0_1 - R0,R1 fetch 
         proxy.expect(new EventContentValidator(comparator, req0));
         proxy.expect(new EventContentValidator(comparator, req1));
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hint0_1));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hint0_1));
         validator = proxy.validateNext();
         Assert.assertTrue(validator.toString(), validator.isValid());
         Assert.assertTrue(validator.toString(), validator.isValid());
@@ -344,16 +392,19 @@ public class TestSimpleKCache {
         read1.returned.release();
         read2.returned.release();
         //*******************************CLEAN**********************************
-        skCache.setFutureReads(reader, new KHint.Expanded(hintStamp++, hintE));
+        skCache.setFutureReads(readerId, new KHint.Expanded(hintStamp++, hintE));
         checkCacheState(skCache, new CacheState(0, 0, 0, 0));
         //**********************************************************************
         closeCache(skCache, proxy, syncExHandler);
+
     }
-    
+
     private SimpleKCache buildCache(Config config, MockComponentProxy proxy, MockExceptionHandler syncExHandler) {
         proxy.expect(new PortValidator(MockStreamPort.class, false));
-        proxy.expect(new PortValidator(Timer.class, false));
-        SimpleKCache skCache = new SimpleKCache(config, proxy, syncExHandler, new ComponentLoadTracking("test", proxy, new QueueLoadConfig(config)), readEndpoint, readResource);
+        proxy.expect(
+                new PortValidator(Timer.class, false));
+        SimpleKCache skCache = new SimpleKCache(config, proxy, syncExHandler, new ComponentLoadTracking("test", proxy, new QueueLoadConfig(config)), readStream);
+
         Assert.assertTrue(proxy.validateNext().isValid());
         Assert.assertTrue(proxy.validateNext().isValid());
         Assert.assertEquals(0, syncExHandler.getExceptionCounter());
@@ -361,7 +412,7 @@ public class TestSimpleKCache {
     }
 
     private void startCache(SimpleKCache skCache, MockComponentProxy proxy, MockExceptionHandler syncExHandler) {
-        proxy.expect(new EventClassValidator(SimpleKCache.ExtendedCacheClean.class));
+        proxy.expect(new EventClassValidator(SchedulePeriodicTimeout.class));
         skCache.start();
         Assert.assertTrue(proxy.validateNext().isValid());
         Assert.assertEquals(0, syncExHandler.getExceptionCounter());

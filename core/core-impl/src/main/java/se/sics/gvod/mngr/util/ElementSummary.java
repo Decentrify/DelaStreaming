@@ -18,8 +18,8 @@
  */
 package se.sics.gvod.mngr.util;
 
-import se.sics.nstream.library.util.TorrentStatus;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.nstream.library.util.TorrentState;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -27,10 +27,10 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 public class ElementSummary {
 
     public final String fileName;
-    public final Identifier torrentId;
-    public final TorrentStatus status;
+    public final OverlayId torrentId;
+    public final TorrentState status;
 
-    public ElementSummary(String name, Identifier torrentId, TorrentStatus status) {
+    public ElementSummary(String name, OverlayId torrentId, TorrentState status) {
         this.fileName = name;
         this.torrentId = torrentId;
         this.status = status;

@@ -22,41 +22,36 @@ import com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.List;
 import org.javatuples.Pair;
-import se.sics.nstream.hops.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.hdfs.HDFSResource;
-import se.sics.nstream.hops.kafka.KafkaEndpoint;
-import se.sics.nstream.hops.kafka.KafkaResource;
-import se.sics.nstream.util.FileExtendedDetails;
-import se.sics.nstream.util.StreamEndpoint;
-import se.sics.nstream.util.StreamResource;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.util.FileExtendedDetails;
+import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsFED implements FileExtendedDetails {
-    public final Pair<HDFSEndpoint, HDFSResource> mainResource;
-    public final Optional<Pair<KafkaEndpoint, KafkaResource>> secondaryResource;
+    public final Pair<StreamId, MyStream> hdfsStream;
+    public final Optional<Pair<StreamId, MyStream>> kafkaStream;
     
-    public HopsFED(Pair<HDFSEndpoint, HDFSResource> mainResource, Optional<Pair<KafkaEndpoint, KafkaResource>> secondaryResource) {
-        this.mainResource = mainResource;
-        this.secondaryResource = secondaryResource;
+    public HopsFED(Pair<StreamId, MyStream> hdfsStream, Optional<Pair<StreamId, MyStream>> kafkaStream) {
+        this.hdfsStream = hdfsStream;
+        this.kafkaStream = kafkaStream;
     }
     
-    public HopsFED(Pair<HDFSEndpoint, HDFSResource> mainResource) {
-        this(mainResource, (Optional)Optional.absent());
+    public HopsFED(Pair<StreamId, MyStream> hdfsStream) {
+        this(hdfsStream, (Optional)Optional.absent());
     }
     
     @Override
-    public Pair<StreamEndpoint, StreamResource> getMainResource() {
-        return (Pair)mainResource;
+    public Pair<StreamId, MyStream> getMainStream() {
+        return hdfsStream;
     }
 
     @Override
-    public List<Pair<StreamEndpoint, StreamResource>> getSecondaryResource() {
-        List<Pair<StreamEndpoint, StreamResource>> sr = new ArrayList<>();
-        if(secondaryResource.isPresent()) {
-            sr.add((Pair)secondaryResource.get());
+    public List<Pair<StreamId, MyStream>> getSecondaryStreams() {
+        List<Pair<StreamId, MyStream>> sr = new ArrayList<>();
+        if(kafkaStream.isPresent()) {
+            sr.add(kafkaStream.get());
         }
         return sr;
     }

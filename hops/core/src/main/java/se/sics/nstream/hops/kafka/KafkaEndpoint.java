@@ -20,7 +20,7 @@ package se.sics.nstream.hops.kafka;
 
 import se.sics.nstream.hops.kafka.avro.AvroMsgProducer;
 import se.sics.nstream.hops.kafka.avro.KafkaProducer;
-import se.sics.nstream.util.StreamEndpoint;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -43,12 +43,12 @@ public class KafkaEndpoint implements StreamEndpoint {
         this.trustStore = trustStore;
     }
 
-    @Override
-    public Class<KafkaPort> resourcePort() {
-        return KafkaPort.class;
-    }
-    
     public AvroMsgProducer getProducer(KafkaResource resource) {
         return new KafkaProducer(this, resource);
+    }
+    
+    @Override
+    public String getEndpointName() {
+        return "kafka:" + domain + ":" + projectId;
     }
 }

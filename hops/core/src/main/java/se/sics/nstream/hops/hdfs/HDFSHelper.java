@@ -18,10 +18,7 @@
  */
 package se.sics.nstream.hops.hdfs;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 import org.apache.hadoop.conf.Configuration;
@@ -32,8 +29,10 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.hops.manifest.ManifestHelper;
 import se.sics.nstream.hops.manifest.ManifestJSON;
 import se.sics.nstream.util.range.KRange;
 
@@ -42,7 +41,7 @@ import se.sics.nstream.util.range.KRange;
  */
 public class HDFSHelper {
 
-    private final static org.slf4j.Logger LOG = LoggerFactory.getLogger(HDFSHelper.class);
+    private final static Logger LOG = LoggerFactory.getLogger(HDFSHelper.class);
     private static String logPrefix = "";
 
     public static Result<Boolean> canConnect(final Configuration hdfsConfig) {
@@ -88,7 +87,7 @@ public class HDFSHelper {
 
     public static Result<Boolean> delete(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource) {
         final String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
-        LOG.debug("{}deleting file:{}", new Object[]{logPrefix, filePath});
+        LOG.info("{}deleting file:{}", new Object[]{logPrefix, filePath});
         try {
             Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
                 @Override
@@ -112,7 +111,7 @@ public class HDFSHelper {
 
     public static Result<Boolean> simpleCreate(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, final HDFSResource hdfsResource) {
         final String filePath = hdfsResource.dirPath + Path.SEPARATOR + hdfsResource.fileName;
-        LOG.debug("{}creating file:{}", new Object[]{logPrefix, filePath});
+        LOG.info("{}creating file:{}", new Object[]{logPrefix, filePath});
         try {
             Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
                 @Override
@@ -254,7 +253,7 @@ public class HDFSHelper {
                             long manifestLength = fs.getLength(new Path(filePath));
                             byte[] manifestByte = new byte[(int) manifestLength];
                             in.readFully(manifestByte);
-                            ManifestJSON manifest = getManifestJSON(manifestByte);
+                            ManifestJSON manifest = ManifestHelper.getManifestJSON(manifestByte);
                             return Result.success(manifest);
                         }
                     } catch (IOException ex) {
@@ -286,7 +285,7 @@ public class HDFSHelper {
                             return Result.success(false);
                         }
                         try (FSDataOutputStream out = fs.create(new Path(filePath))) {
-                            byte[] manifestByte = getManifestByte(manifest);
+                            byte[] manifestByte = ManifestHelper.getManifestByte(manifest);
                             out.write(manifestByte);
                             out.flush();
                             return Result.success(true);
@@ -303,32 +302,5 @@ public class HDFSHelper {
             LOG.error("{}unexpected exception:{}", logPrefix, ex);
             return Result.externalUnsafeFailure(new HDFSException("hdfs file createWithLength", ex));
         }
-    }
-
-    public static ManifestJSON getManifestJSON(byte[] jsonByte) {
-        String jsonString;
-        try {
-            jsonString = new String(jsonByte, "UTF-8");
-        } catch (UnsupportedEncodingException ex) {
-            throw new RuntimeException(ex);
-        }
-        Gson gson = new GsonBuilder().create();
-        ManifestJSON manifest = gson.fromJson(jsonString, ManifestJSON.class);
-        return manifest;
-    }
-
-    public static byte[] getManifestByte(ManifestJSON manifest) {
-        Gson gson = new GsonBuilder().create();
-        String jsonString = gson.toJson(manifest);
-        byte[] jsonByte;
-        try {
-            jsonByte = jsonString.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException ex) {
-            throw new RuntimeException(ex);
-        }
-        if (jsonByte.length > 1200) {
-            throw new RuntimeException("manifest is too long");
-        }
-        return jsonByte;
     }
 }
