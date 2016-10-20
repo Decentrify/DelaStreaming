@@ -21,7 +21,7 @@ package se.sics.gvod.core.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.basic.UUIDId;
 import se.sics.ktoolbox.videostream.VideoStreamManager;
 
 /**

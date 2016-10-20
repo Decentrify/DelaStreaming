@@ -21,8 +21,9 @@ package se.sics.gvod.common.event.vod;
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
 import se.sics.gvod.common.util.VodDescriptor;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdentifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 
 /**
@@ -32,49 +33,49 @@ public class Connection {
 
     public static class Request implements GVoDEvent, OverlayEvent {
 
-        public final Identifier eventId;
-        public final Identifier overlayId;
+        public final Identifier msgId;
+        public final OverlayId overlayId;
         public final VodDescriptor desc;
 
-        public Request(Identifier eventId, Identifier overlayId, VodDescriptor desc) {
-            this.eventId = eventId;
+        public Request(Identifier msgId, OverlayId overlayId, VodDescriptor desc) {
+            this.msgId = msgId;
             this.overlayId = overlayId;
             this.desc = desc;
         }
         
-        public Request(Identifier overlayId, VodDescriptor desc) {
-            this(UUIDIdentifier.randomId(), overlayId, desc);
+        public Request(OverlayId overlayId, VodDescriptor desc) {
+            this(BasicIdentifiers.msgId(), overlayId, desc);
         }
 
         @Override
         public String toString() {
-            return "Connect.Request<" + overlayId + ", " + eventId + ">";
+            return "Connect.Request<" + overlayId + ", " + msgId + ">";
         }
 
         public Response accept(VodDescriptor desc) {
-            return new Response(eventId, overlayId, ReqStatus.SUCCESS, desc);
+            return new Response(msgId, overlayId, ReqStatus.SUCCESS, desc);
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return overlayId;
         }
     }
 
     public static class Response implements GVoDEvent, OverlayEvent {
 
-        public final Identifier eventId;
-        public final Identifier overlayId;
+        public final Identifier msgId;
+        public final OverlayId overlayId;
         public final ReqStatus status;
         public final VodDescriptor desc;
 
-        public Response(Identifier eventId, Identifier overlayId, ReqStatus status, VodDescriptor desc) {
-            this.eventId = eventId;
+        public Response(Identifier msgId, OverlayId overlayId, ReqStatus status, VodDescriptor desc) {
+            this.msgId = msgId;
             this.overlayId = overlayId;
             this.status = status;
             this.desc = desc;
@@ -82,50 +83,50 @@ public class Connection {
 
         @Override
         public String toString() {
-            return "Connect.Response<" + overlayId + ", " + eventId + "> " + status;
+            return "Connect.Response<" + overlayId + ", " + msgId + "> " + status;
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return overlayId;
         }
     }
 
     public static class Update implements GVoDEvent, OverlayEvent {
 
-        public final Identifier eventId;
-        public final Identifier overlayId;
+        public final Identifier msgId;
+        public final OverlayId overlayId;
         public final VodDescriptor desc;
         public final boolean downloadConnection;
 
-        public Update(Identifier eventId, Identifier overlayId, VodDescriptor desc, boolean downloadConnection) {
-            this.eventId = eventId;
+        public Update(Identifier msgId, OverlayId overlayId, VodDescriptor desc, boolean downloadConnection) {
+            this.msgId = msgId;
             this.overlayId = overlayId;
             this.desc = desc;
             this.downloadConnection = downloadConnection;
         }
         
-        public Update(Identifier overlayId, VodDescriptor desc, boolean downloadConnection) {
-            this(UUIDIdentifier.randomId(), overlayId, desc, downloadConnection);
+        public Update(OverlayId overlayId, VodDescriptor desc, boolean downloadConnection) {
+            this(BasicIdentifiers.msgId(), overlayId, desc, downloadConnection);
         }
 
         @Override
         public String toString() {
-            return "Connect.Update<" + overlayId + ", " + eventId + ">";
+            return "Connect.Update<" + overlayId + ", " + msgId + ">";
         }
 
         @Override
         public Identifier getId() {
-            return eventId;
+            return msgId;
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return overlayId;
         }
     }
@@ -133,17 +134,17 @@ public class Connection {
     public static class Close implements GVoDEvent, OverlayEvent {
 
         public final Identifier eventId;
-        public final Identifier overlayId;
+        public final OverlayId overlayId;
         public final boolean downloadConnection;
 
-        public Close(Identifier eventId, Identifier overlayId, boolean downloadConnection) {
-            this.eventId = eventId;
+        public Close(Identifier msgId, OverlayId overlayId, boolean downloadConnection) {
+            this.eventId = msgId;
             this.overlayId = overlayId;
             this.downloadConnection = downloadConnection;
         }
         
-        public Close(Identifier overlayId, boolean downloadConnection) {
-            this(UUIDIdentifier.randomId(), overlayId, downloadConnection);
+        public Close(OverlayId overlayId, boolean downloadConnection) {
+            this(BasicIdentifiers.msgId(), overlayId, downloadConnection);
         }
 
         @Override
@@ -157,7 +158,7 @@ public class Connection {
         }
 
         @Override
-        public Identifier overlayId() {
+        public OverlayId overlayId() {
             return overlayId;
         }
     }

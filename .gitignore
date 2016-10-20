@@ -9,3 +9,9 @@
 /network/target/
 
 /core/core-impl/src/test/resources/library2/status.file
+
+/simulator/target/
+/simulator/simulation*
+/system/simulation*
+/hops/network/target/
+/hops/core/target/

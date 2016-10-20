@@ -37,14 +37,9 @@
             <version>${project.version}</version>
         </dependency>
         
-         <dependency>
+        <dependency>
             <groupId>se.sics.ktoolbox.overlaymngr</groupId>
             <artifactId>api</artifactId>
-            <version>${ktoolbox.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>se.sics.ktoolbox.ipsolver</groupId>
-            <artifactId>core</artifactId>
             <version>${ktoolbox.version}</version>
         </dependency>
         <dependency>
@@ -80,74 +75,91 @@
             <artifactId>slf4j-log4j12</artifactId>
             <version>${logger.version}</version>
         </dependency>
+        
+        <dependency> 
+            <groupId>se.sics.ktoolbox</groupId>
+            <artifactId>hops</artifactId>
+            <version>${ktoolbox.version}</version>
+        </dependency>
     </dependencies>
         
     <build>
         <plugins>
             <plugin>
-                <artifactId>
-                    maven-assembly-plugin
-                </artifactId>
+                <inherited>true</inherited>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
                 <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <archive>
-                        <manifest>
-                            <mainClass>se.sics.gvod.system.Main</mainClass>
-                        </manifest>
-                    </archive>
+                    <encoding>UTF-8</encoding>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                    <debug>true</debug>
+                    <optimize>true</optimize>
+                    <showDeprecations>true</showDeprecations>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <version>2.3.4</version>
+                <extensions>true</extensions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>2.3</version>
+                <executions>
+                    <execution>
+                        <!--<phase>package</phase>//-->
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <id>shade-receiver</id>
+                        <configuration>
+                            <minimizeJar>false</minimizeJar>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>receiver</shadedClassifierName> <!-- Any name that makes sense -->
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <dependencyReducedPomLocation>
+                                ${java.io.tmpdir}/dependency-reduced-pom.xml
+                            </dependencyReducedPomLocation>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>se.sics.gvod.stream.system.hops.RunReceiver</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>**/reference.conf</resource>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!--<phase>package</phase>//-->
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <id>shade-sender</id>
+                        <configuration>
+                            <minimizeJar>false</minimizeJar>
+                            <shadedArtifactAttached>true</shadedArtifactAttached>
+                            <shadedClassifierName>sender</shadedClassifierName> <!-- Any name that makes sense -->
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <dependencyReducedPomLocation>
+                                ${java.io.tmpdir}/dependency-reduced-pom.xml
+                            </dependencyReducedPomLocation>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>se.sics.gvod.stream.system.hops.RunSender</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                                    <resource>**/reference.conf</resource>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
-    </build>
+        </build>
 </project>
-
-
-
-<!--old plugins-->
-<!--<plugin>
-    <inherited>true</inherited>
-    <groupId>org.apache.maven.plugins</groupId>
-    <artifactId>maven-compiler-plugin</artifactId>
-    <version>2.3.2</version>
-    <configuration>
-        <encoding>UTF-8</encoding>
-        <source>${java.compiler.version}</source>
-        <target>${java.compiler.version}</target>
-        <debug>true</debug>
-        <optimize>true</optimize>
-        <showDeprecations>true</showDeprecations>
-    </configuration>
-</plugin>
-<plugin>
-    <groupId>org.apache.felix</groupId>
-    <artifactId>maven-bundle-plugin</artifactId>
-    <version>2.3.4</version>
-    <extensions>true</extensions>
-</plugin>
-<plugin>
-    <artifactId>maven-assembly-plugin</artifactId>
-    <version>2.2</version>
-    <configuration>
-        <descriptors>
-            <descriptor>src/main/assembly/src.xml</descriptor>
-        </descriptors>
-        <finalName>gvod</finalName>
-        <appendAssemblyId>false</appendAssemblyId>
-        <archive>
-            <manifest>
-                <mainClass>se.sics.gvod.system.Main</mainClass>
-            </manifest>
-        </archive>
-    </configuration>
-    <executions>
-        <execution>
-            <id>make-assembly</id>  this is used for inheritance merges 
-            <phase>package</phase>  append to the packaging phase. 
-            <goals>
-                <goal>single</goal>  goals == mojos 
-            </goals>
-        </execution>
-    </executions>
-</plugin>-->
