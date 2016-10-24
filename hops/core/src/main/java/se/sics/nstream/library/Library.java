@@ -37,11 +37,14 @@ import se.sics.nstream.storage.durable.util.MyStream;
  */
 public class Library {
 
-    public static String LIBRARY_SUMMARY_FILE = "library.summary";
-
+    private final String librarySumaryFile;
     private final Map<OverlayId, Pair<String, TorrentState>> torrentStatus = new HashMap<>();
     private final Map<OverlayId, Torrent> torrents = new HashMap<>();
 
+    public Library(String librarySummaryFile) {
+        this.librarySumaryFile = librarySummaryFile;
+    }
+    
     public boolean containsTorrent(OverlayId torrentId) {
         return torrentStatus.containsKey(torrentId);
     }
@@ -94,7 +97,7 @@ public class Library {
 
     private void updateSummary() {
         LibrarySummaryJSON summaryResult = LibrarySummaryHelper.toSummary(torrents);
-        Result<Boolean> writeResult = LibrarySummaryHelper.writeTorrentList(LIBRARY_SUMMARY_FILE, summaryResult);
+        Result<Boolean> writeResult = LibrarySummaryHelper.writeTorrentList(librarySumaryFile, summaryResult);
         if(!writeResult.isSuccess()) {
             //TODO - try again next time?
         }

@@ -316,7 +316,8 @@ public class TransferComp extends ComponentDefinition {
             }
         };
         fileMngr = TorrentFileMngr.create(config(), proxy, deh, componentTracking, torrent, streamsInfo);
-
+        fileMngr.start();
+        
         //transfer report
         transferTrackingComp = create(TransferTrackingComp.class, new TransferTrackingComp.Init(torrentId));
         connect(transferTrackingComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);

@@ -24,6 +24,7 @@ package se.sics.nstream.library.disk;
  */
 public class LibrarySummaryJSON {
     private DiskLibrarySummaryJSON diskLibrary;
+    private HDFSLibrarySummaryJSON hdfsLibrary;
 
     public DiskLibrarySummaryJSON getDiskLibrary() {
         return diskLibrary;
@@ -31,5 +32,13 @@ public class LibrarySummaryJSON {
 
     public void setDiskLibrary(DiskLibrarySummaryJSON diskLibrary) {
         this.diskLibrary = diskLibrary;
+    }
+
+    public HDFSLibrarySummaryJSON getHdfsLibrary() {
+        return hdfsLibrary;
+    }
+
+    public void setHdfsLibrary(HDFSLibrarySummaryJSON hdfsLibrary) {
+        this.hdfsLibrary = hdfsLibrary;
     }
 }

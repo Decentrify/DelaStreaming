@@ -61,7 +61,7 @@ import se.sics.nstream.util.result.ReadCallback;
  */
 public class SimpleKCache implements KCache {
 
-    private static final Logger LOG = LoggerFactory.getLogger(KCache.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SimpleKCache.class);
     private String logPrefix = "";
 
     private final KCacheConfig cacheConfig;
@@ -97,11 +97,14 @@ public class SimpleKCache implements KCache {
         this.timerPort = proxy.getNegative(Timer.class).getPair();
         this.proxy.subscribe(handleExtendedCacheClean, timerPort);
         this.proxy.subscribe(handleReadResp, readPort);
+        this.logPrefix = "<" + stream.getValue1().endpoint.getEndpointName() + ":" + stream.getValue1().resource.getSinkName() + ">";
+        LOG.info("{}initiating...", logPrefix);
     }
 
     //********************************CONTROL***********************************
     @Override
     public void start() {
+        LOG.info("{}starting...", logPrefix);
         proxy.trigger(scheduleExtendedCacheClean(), timerPort);
     }
 
@@ -310,6 +313,7 @@ public class SimpleKCache implements KCache {
                     it1.remove();
                 }
             }
+            LOG.info("{}cache size - cache ref:{}, system ref:{}", new Object[]{logPrefix, cacheRef.size(), systemRef.size()});
         }
     };
 

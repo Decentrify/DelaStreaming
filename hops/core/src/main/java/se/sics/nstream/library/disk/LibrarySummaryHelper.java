@@ -33,6 +33,8 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.hops.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.hdfs.HDFSResource;
 import se.sics.nstream.library.Library;
 import se.sics.nstream.storage.durable.disk.DiskEndpoint;
 import se.sics.nstream.storage.durable.disk.DiskResource;
@@ -51,6 +53,8 @@ public class LibrarySummaryHelper {
         LibrarySummaryJSON library = new LibrarySummaryJSON();
         DiskLibrarySummaryJSON disk = new DiskLibrarySummaryJSON();
         library.setDiskLibrary(disk);
+        HDFSLibrarySummaryJSON hdfs = new HDFSLibrarySummaryJSON();
+        library.setHdfsLibrary(hdfs);
         
         for(Map.Entry<OverlayId, Library.Torrent> torrent : torrents.entrySet()) {
             Identifier torrentBaseId = torrent.getKey().baseId;
@@ -60,6 +64,17 @@ public class LibrarySummaryHelper {
                 torrentJSON.setBaseId(torrentBaseId.toString());
                 torrentJSON.setPath(((DiskResource)manifestStream.resource).dirPath);
                 disk.addTorrent(torrentJSON);
+            } else if(manifestStream.resource instanceof HDFSResource) {
+                HDFSLibrarySummaryJSON.TorrentJSON torrentJSON = new HDFSLibrarySummaryJSON.TorrentJSON();
+                torrentJSON.setBaseId(torrentBaseId.toString());
+                HDFSEndpoint hdfsEndpoint = (HDFSEndpoint)manifestStream.endpoint;
+                HDFSLibrarySummaryJSON.HDFSEndpointJSON endpoint = new HDFSLibrarySummaryJSON.HDFSEndpointJSON();
+                endpoint.setUrl(hdfsEndpoint.hopsURL);
+                endpoint.setUser(hdfsEndpoint.user);
+                torrentJSON.setEndpoint(endpoint);
+                HDFSResource hdfsResource = (HDFSResource)manifestStream.resource;
+                torrentJSON.setPath(hdfsResource.dirPath);
+                hdfs.addTorrent(torrentJSON);
             }
         }
         return library;
@@ -71,6 +86,13 @@ public class LibrarySummaryHelper {
             OverlayId torrentId = torrentIdFactory.id(new BasicBuilders.StringBuilder(torrent.getBaseId()));
             DiskResource manifestResource = new DiskResource(torrent.getPath(), MyTorrent.MANIFEST_NAME);
             MyStream manifestStream = new MyStream(new DiskEndpoint(), manifestResource);
+            library.put(torrentId, new Library.Torrent(manifestStream));
+        }
+        for(HDFSLibrarySummaryJSON.TorrentJSON torrent : summary.getHdfsLibrary().getTorrents()) {
+            OverlayId torrentId = torrentIdFactory.id(new BasicBuilders.StringBuilder(torrent.getBaseId()));
+            HDFSEndpoint endpoint = HDFSEndpoint.getBasic(torrent.getEndpoint().getUrl(), torrent.getEndpoint().getUser());
+            HDFSResource manifestResource = new HDFSResource(torrent.getPath(), MyTorrent.MANIFEST_NAME);
+            MyStream manifestStream = new MyStream(endpoint, manifestResource);
             library.put(torrentId, new Library.Torrent(manifestStream));
         }
         return library;
