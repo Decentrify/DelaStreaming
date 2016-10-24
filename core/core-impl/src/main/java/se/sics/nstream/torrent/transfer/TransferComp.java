@@ -506,6 +506,8 @@ public class TransferComp extends ComponentDefinition {
 
                     @Override
                     public boolean success(Result<KReference<byte[]>> result) {
+                        //retain block - to be relased in requester(UpldConnComp), when it is done with it
+                        result.getValue().retain();
                         blocks.put(blockNr, result.getValue());
                         if (done()) {
                             answer(req, req.success(hashes, blocks, fileReader.getIrregularBlocks()));
