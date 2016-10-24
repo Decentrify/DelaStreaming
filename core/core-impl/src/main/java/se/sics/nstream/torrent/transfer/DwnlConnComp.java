@@ -240,7 +240,7 @@ public class DwnlConnComp extends ComponentDefinition {
 
     private void sendSimpleLedbat(Identifiable content) {
         LedbatMsg.Request ledbatContent = new LedbatMsg.Request(content);
-        sendSimpleUDP(ledbatContent, 0, cwnd.getRTO());
+        sendSimpleUDP(ledbatContent, 0, 2*cwnd.getRTO());
     }
 
     ClassMatchedHandler handleCache

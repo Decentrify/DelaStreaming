@@ -222,6 +222,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
                 dataFile.write("," + 100 * ((double) progress.getValue1()) / progress.getValue0());
             }
             dataFile.write("\n");
+            dataFile.flush();
         } catch (IOException ex) {
             throw new RuntimeException("file report error");
         }
@@ -231,6 +232,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         try {
             downloadFile.write(report.total.throughput.inTimeThroughput / 1024 + "," + report.total.throughput.timedOutThroughput / 1024 + ","
                     + report.total.ongoingBlocks + "," + report.total.cwnd + "\n");
+            downloadFile.flush();
         } catch (IOException ex) {
             throw new RuntimeException("file report error");
         }
