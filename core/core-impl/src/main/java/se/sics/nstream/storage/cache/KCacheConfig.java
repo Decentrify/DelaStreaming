@@ -24,6 +24,6 @@ import se.sics.kompics.config.Config;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class KCacheConfig {
-    public final long extendedCacheCleanPeriod = 5000;
+    public final long extendedCacheCleanPeriod = 1000;
     public KCacheConfig(Config config) {}
 }

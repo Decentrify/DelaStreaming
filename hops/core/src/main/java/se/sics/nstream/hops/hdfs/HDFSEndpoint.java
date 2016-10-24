@@ -45,8 +45,12 @@ public class HDFSEndpoint implements StreamEndpoint {
     }
 
     public static HDFSEndpoint getBasic(String user, String hopsIp, int hopsPort) {
-        Configuration hdfsConfig = new Configuration();
         String hopsURL = "hdfs://" + hopsIp + ":" + hopsPort;
+        return getBasic(hopsURL, user);
+    }
+    
+    public static HDFSEndpoint getBasic(String hopsURL, String user) {
+        Configuration hdfsConfig = new Configuration();
         hdfsConfig.set(HOPS_URL, hopsURL);
         return new HDFSEndpoint(hdfsConfig, user);
     }

@@ -118,6 +118,7 @@ public class UpldConnComp extends ComponentDefinition {
         for (KReference<byte[]> block : servedBlocks.values()) {
             silentRelease(block);
         }
+        servedBlocks.clear();
     }
 
     Handler handleReport = new Handler<ReportTimeout>() {
@@ -202,11 +203,8 @@ public class UpldConnComp extends ComponentDefinition {
             LOG.error("{}block req:{} served blocks:{}", new Object[]{logPrefix, blockNr, servedBlocks.keySet()});
             throw new RuntimeException("bad cache-block logic");
         }
-        //retain block here - release in serializer
-        if (!block.retain()) {
-            throw new RuntimeException("bad ref logic");
-        }
         KPiece pieceRange = BlockHelper.getPieceRange(content.getWrappedContent().piece, blockDetails, defaultBlock);
+        //retain block here(range create) - release in serializer
         RangeKReference piece = RangeKReference.createInstance(block, BlockHelper.getBlockPos(blockNr, defaultBlock), pieceRange);
         LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(piece));
         answerMsg(msg, ledbatContent);

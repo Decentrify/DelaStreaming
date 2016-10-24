@@ -81,7 +81,7 @@ import se.sics.nstream.util.FileBaseDetails;
  */
 public class HopsLibraryMngr {
 
-    private static final Details.Types RUN_TYPE = Details.Types.HDFS;
+    private static final Details.Types RUN_TYPE = Details.Types.DISK;
 
     private static final Logger LOG = LoggerFactory.getLogger(HopsLibraryMngr.class);
     private String logPrefix = "";
@@ -100,12 +100,12 @@ public class HopsLibraryMngr {
         this.selfAdr = selfAdr;
 
         componentHelper = new ComponentHelper(proxy);
-        library = new Library();
+        library = new Library(config.getValue("library.summary", String.class));
         endpointTracker = new EndpointTracker(logPrefix, componentHelper);
         transferTracker = new TransferTracker(logPrefix, componentHelper);
 
         libOpTracker = new LibOpTracker(logPrefix, componentHelper, endpointTracker, transferTracker, library, selfAdr.getId());
-//        restartTorrents();
+        restartTorrents();
     }
 
     public void start() {
@@ -116,6 +116,10 @@ public class HopsLibraryMngr {
 
     public void cleanAndDestroy(OverlayId torrentId) {
         library.destroyed(torrentId);
+    }
+    
+    private void restartTorrents() {
+        
     }
 
 //    private void restartTorrents() {
@@ -910,16 +914,12 @@ public class HopsLibraryMngr {
                 LOG.trace("{}received:{}", logPrefix, req);
 
                 Result<Boolean> validateResult = validatUploadRequest(req);
-                if (!validateResult.isSuccess()) {
-                    LOG.debug("{}validation error", logPrefix);
+                if(!validateResult.isSuccess() || validateResult.getValue()) {
                     comp.proxy.answer(req, req.failed(validateResult));
-                }
-                if (validateResult.getValue()) {
-                    LOG.debug("{}already uploading", logPrefix);
-                    comp.proxy.answer(req, req.success(validateResult));
                 }
 
                 library.prepareUpload(req.torrentId, req.torrentName);
+                
                 OverlayId torrentId = req.torrentId;
                 final MyStream torrentStream = new MyStream(new DiskEndpoint(), new DiskResource(req.manifestResource.dirPath, req.manifestResource.fileName));
                 List<KAddress> torrentPeers = new ArrayList<>();
@@ -958,6 +958,7 @@ public class HopsLibraryMngr {
                 }
 
                 library.prepareUpload(req.torrentId, req.torrentName);
+                
                 OverlayId torrentId = req.torrentId;
                 final MyStream torrentStream = new MyStream(req.hdfsEndpoint, req.manifestResource);
                 List<KAddress> torrentPeers = new ArrayList<>();
@@ -1044,7 +1045,7 @@ public class HopsLibraryMngr {
                         return new MyExtendedDetailsHelper() {
                             @Override
                             public void extendedDetails(BasicCompleteCallback complete) {
-                                complete.ready(Result.success(new HashMap<String, KafkaResource>()));
+                                complete.ready(Result.success(Pair.with(null, new HashMap<String, KafkaResource>())));
                             }
                         };
                     }
@@ -1173,31 +1174,5 @@ public class HopsLibraryMngr {
         }
     }
 
-//    public static interface Op {
-//        public void execute(BasicCompleteCallback<Boolean> notifyComplete);
-//        
-//    }
-//    
-//    public static interface ParallelOpBuilder {
-//        public void with(Op op);
-//        public ParallelOp build();
-//    }
-//    
-//    public static interface ParallelOp extends Op {
-//        
-//    }
-//    
-//    public static class ParallelOpImpl implements ParallelOp {
-//        private final List<Op> baseOps;
-//        private final Set<Identifier> pendingOps = new HashSet<>();
-//        
-//        public ParallelOpImpl(List<Op> baseOps) {
-//            this.baseOps = baseOps;
-//        }
-//        
-//        @Override
-//        public void execute(BasicCompleteCallback<Boolean> notifyComplete) {
-//            
-//        }
-//    }
+    
 }
