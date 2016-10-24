@@ -40,8 +40,8 @@ import se.sics.nstream.FileId;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.torrent.core.DataReport;
 import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
-import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.status.event.TorrentStatus;
+import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.tracking.event.TorrentTracking;
 import se.sics.nstream.torrent.transfer.tracking.DownloadReport;
 
@@ -101,9 +101,9 @@ public class TorrentTrackingComp extends ComponentDefinition {
                 downloadFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(lf)));
                 fileCounter = 1000 * 1000;
             } catch (FileNotFoundException ex) {
-                throw new RuntimeException("file report error");
+                throw new RuntimeException(ex);
             } catch (IOException ex) {
-                throw new RuntimeException("file report error");
+                throw new RuntimeException(ex);
             }
         }
 
@@ -112,7 +112,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         subscribe(handleDownloadStarting, trackingPort);
         subscribe(handleDownloadDone, trackingPort);
         subscribe(handleTorrentTrackingIndication, trackingPort);
-        
+
         subscribe(handleStatusSummaryRequest, statusPort);
     }
 
@@ -144,7 +144,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
             trigger(new TorrentStatus.DownloadedManifest(req), statusPort);
         }
     };
-    
+
     Handler handleDownloadStarting = new Handler<TorrentTracking.TransferSetUp>() {
         @Override
         public void handle(TorrentTracking.TransferSetUp event) {
@@ -165,7 +165,9 @@ public class TorrentTrackingComp extends ComponentDefinition {
             LOG.info("{}download completed in:{} avg dwnl speed:{} B/s", new Object[]{logPrefix, transferTime, (double) dataReport.totalSize.getValue1() / transferTime});
             trigger(new DownloadSummaryEvent(torrentId, dataReport.totalSize.getValue1(), transferTime), statusPort);
             status = TorrentState.UPLOADING;
-            fileCounter = 0;
+            if (fileCounter > 0) {
+                fileCounter = 0;
+            }
         }
     };
 
@@ -228,7 +230,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     private void downloadValues(DownloadReport report) {
         try {
             downloadFile.write(report.total.throughput.inTimeThroughput / 1024 + "," + report.total.throughput.timedOutThroughput / 1024 + ","
-                    + report.total.ongoingBlocks + "," + report.total.cwnd +  "\n");
+                    + report.total.ongoingBlocks + "," + report.total.cwnd + "\n");
         } catch (IOException ex) {
             throw new RuntimeException("file report error");
         }
