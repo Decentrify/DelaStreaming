@@ -46,8 +46,8 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
  */
 public class TorrentConnMngr {
 
-    public static final int MAX_ONGOING_FILES = 5;
-    public static final int MAX_FILE_BUF = 100;
+    public static final int MAX_ONGOING_FILES = 10;
+    public static final int MAX_FILE_BUF = 10;
     //**************************************************************************
     //all control from fileConnection
     private final ComponentLoadTracking loadTracking;
