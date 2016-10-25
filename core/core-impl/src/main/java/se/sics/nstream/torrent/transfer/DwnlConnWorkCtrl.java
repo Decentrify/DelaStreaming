@@ -56,11 +56,11 @@ public class DwnlConnWorkCtrl {
     /**
      * stage 2. asked for caching - in flight - no answer yet
      */
-    private final LinkedList<Integer> pendingCacheBlocks = new LinkedList<>();
+    private final Set<Integer> pendingCacheBlocks = new HashSet<>();
     /**
      * stage 3. cache confirmed on seeder side
      */
-    private final LinkedList<Integer> awaitingHashes = new LinkedList<>();
+    private final TreeSet<Integer> awaitingHashes = new TreeSet<>();
     /**
      * stage 4. asked for hash - in flight - no answer yet
      */
@@ -68,7 +68,7 @@ public class DwnlConnWorkCtrl {
     /**
      * stage 5. blocks prepared for downloading
      */
-    private final Set<Integer> awaitingBlocks = new TreeSet<>();
+    private final TreeSet<Integer> awaitingBlocks = new TreeSet<>();
     /**
      * stage 6 - blocks being downloaded
      */
@@ -225,7 +225,7 @@ public class DwnlConnWorkCtrl {
     //**************************************************************************
     private void newWorkPieces() {
         if (!awaitingBlocks.isEmpty()) {
-            newPendingBlock(awaitingHashes.removeFirst());
+            newPendingBlock(awaitingBlocks.pollFirst());
         }
     }
 
