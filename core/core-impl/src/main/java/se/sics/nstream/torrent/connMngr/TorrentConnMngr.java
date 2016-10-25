@@ -46,9 +46,14 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
  */
 public class TorrentConnMngr {
 
+    // MAX_TORRNET_BUF > MAX_FILE_BUF + MAX_FILE_TRANSFER
+    // if sink is fast enough and connection is fast enough, a transfer connection will use up MAX_FILE_BUF+MAX_FILE_TRANSFER buffer slots.
+    // having the MAX_TORRENT_BUF bigger than the sum of the other two, we make sure at least two files are always active. 
+    // Ramping up a connection can be a bit slow, so we want to have one already ongoing when the previous one finishes.
+    // Ideally we would be able to appoint LEDBAT priority to them, so that main connection could get more bandwidth through LEDBAT.
     public static final int MAX_FILE_BUF = 10;
     public static final int MAX_FILE_TRANSFER = 90;
-    public static final int MAX_TORRENT_BUF = 100;
+    public static final int MAX_TORRENT_BUF = 150; 
     //**************************************************************************
     //all control from fileConnection
     private final ComponentLoadTracking loadTracking;
