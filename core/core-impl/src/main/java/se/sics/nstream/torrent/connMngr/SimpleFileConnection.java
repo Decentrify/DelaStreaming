@@ -36,14 +36,17 @@ public class SimpleFileConnection implements FileConnection {
     //**************************************************************************
     private final ComponentLoadTracking loadTracking;
     private final int maxBufSize;
-    private int totalSlots = 0;
+    private final int maxTransferSize;
+    private int transferSize = 0;
+    private int potentialSlots = 1;
     //**************************************************************************
     private final Map<Identifier, FilePeerConnection> fpcs = new HashMap<>();
 
-    public SimpleFileConnection(FileId fileId, ComponentLoadTracking loadTracking, int maxBufSize) {
+    public SimpleFileConnection(FileId fileId, ComponentLoadTracking loadTracking, int maxBufSize, int maxTransferSize) {
         this.fileId = fileId;
         this.loadTracking = loadTracking;
         this.maxBufSize = maxBufSize;
+        this.maxTransferSize = maxTransferSize;
     }
 
     @Override
@@ -53,12 +56,18 @@ public class SimpleFileConnection implements FileConnection {
 
     @Override
     public void useSlot() {
-        totalSlots++;
+        transferSize++;
+        potentialSlots--;
     }
 
     @Override
     public void releaseSlot() {
-        totalSlots--;
+        transferSize--;
+    }
+    
+    @Override
+    public void potentialSlots(int slots) {
+        potentialSlots += slots;
     }
 
     @Override
@@ -75,8 +84,7 @@ public class SimpleFileConnection implements FileConnection {
 
     private boolean availableBufferSpace() {
         int bufSize = loadTracking.getMaxBufferSize(fileId);
-        int usedTransferSize = bufSize == -1 ? totalSlots : totalSlots + bufSize;
-        if(usedTransferSize < maxBufSize) {
+        if(bufSize < maxBufSize && transferSize < maxTransferSize && potentialSlots > 0) {
             return true;
         }
         return false;

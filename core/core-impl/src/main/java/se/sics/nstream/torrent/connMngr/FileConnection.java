@@ -44,6 +44,7 @@ public interface FileConnection {
     //
     public void useSlot();
     public void releaseSlot();
+    public void potentialSlots(int slots);
     //<peerId>
     public Set<Identifier> closeAll();
 }

@@ -551,7 +551,7 @@ public class TransferComp extends ComponentDefinition {
                 getDefState.handleBlockCompleted(event);
             } else {
                 writeToFile(event.connId.fileId, event.blocks, event.hashes);
-                updateConn(event.connId, event.blocks);
+                updateConn(event.connId, event.blocks, event.potentialSlots);
                 tryAdvance();
             }
         }
@@ -571,10 +571,10 @@ public class TransferComp extends ComponentDefinition {
         }
     }
 
-    private void updateConn(ConnId connId, Map<Integer, byte[]> blocks) {
+    private void updateConn(ConnId connId, Map<Integer, byte[]> blocks, int potentialSlots) {
+        connMngr.potentialSlots(connId, potentialSlots);
         for (Integer blockNr : blocks.keySet()) {
             connMngr.releaseSlot(connId, blockNr);
-
         }
     }
 

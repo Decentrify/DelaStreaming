@@ -288,7 +288,7 @@ public class DwnlConnComp extends ComponentDefinition {
         if (workController.hasComplete()) {
             Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
             LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
-            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
+            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots()), connPort);
         }
     }
 
@@ -307,10 +307,10 @@ public class DwnlConnComp extends ComponentDefinition {
         if (workController.hasComplete()) {
             Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
             LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
-            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
+            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots()), connPort);
         }
     }
-
+    
     //**************************************************************************
     private void tryDownload(long now) {
         if (workController.hasNewHint()) {

@@ -46,8 +46,9 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
  */
 public class TorrentConnMngr {
 
-    public static final int MAX_ONGOING_FILES = 10;
     public static final int MAX_FILE_BUF = 10;
+    public static final int MAX_FILE_TRANSFER = 90;
+    public static final int MAX_TORRENT_BUF = 100;
     //**************************************************************************
     //all control from fileConnection
     private final ComponentLoadTracking loadTracking;
@@ -56,10 +57,19 @@ public class TorrentConnMngr {
     private final Map<FileId, FileConnection> fileConnections = new HashMap<>();
     private final TreeMap<Identifier, KAddress> connected = new TreeMap<>();
     private final LinkedList<KAddress> connCandidates = new LinkedList<>();
+    //**************************************************************************
+    private final int maxFileBuf;
+    private final int maxFileTransfer;
+    private final int maxTorrentBuf;
+    private int usedSlots = 0;
 
     public TorrentConnMngr(ComponentLoadTracking loadTracking, List<KAddress> peers) {
         this.loadTracking = loadTracking;
         connCandidates.addAll(peers);
+
+        this.maxFileBuf = MAX_FILE_BUF;
+        this.maxFileTransfer = MAX_FILE_TRANSFER;
+        this.maxTorrentBuf = MAX_TORRENT_BUF;
     }
 
     public void newCandidates(LinkedList<KAddress> peers) {
@@ -95,23 +105,31 @@ public class TorrentConnMngr {
     }
 
     public boolean canStartNewFile() {
-        if (fileConnections.size() < MAX_ONGOING_FILES) {
-            return true;
-        }
-        return false;
+        return true;
     }
 
     public void newFileConnection(FileId fileId) {
-        FileConnection fileConnection = new SimpleFileConnection(fileId, loadTracking, MAX_FILE_BUF);
+        FileConnection fileConnection = new SimpleFileConnection(fileId, loadTracking, maxFileBuf, maxFileTransfer);
         fileConnections.put(fileId, fileConnection);
     }
-    
+
     public Set<Identifier> closeFileConnection(FileId fileId) {
         FileConnection fc = fileConnections.remove(fileId);
         return fc.closeAll();
     }
+    
+    public void potentialSlots(ConnId connId, int slots) {
+        FileConnection fileConnection = fileConnections.get(connId.fileId);
+        if (fileConnection == null) {
+            throw new RuntimeException("ups");
+        }
+        fileConnection.potentialSlots(slots);
+    }
 
     public ConnResult attemptSlot(FileId fileId, int blockNr, Optional<BlockDetails> irregularBlock) {
+        if(usedSlots >= maxTorrentBuf) {
+            return new NoConnections();
+        }
         FileConnection fileConnection = fileConnections.get(fileId);
         if (fileConnection == null) {
             throw new RuntimeException("ups");
@@ -164,6 +182,7 @@ public class TorrentConnMngr {
         if (fpc == null) {
             throw new RuntimeException("ups");
         }
+        usedSlots++;
         fpc.useSlot(conn.blockNr);
     }
 
@@ -176,6 +195,7 @@ public class TorrentConnMngr {
         if (fpc == null) {
             throw new RuntimeException("ups");
         }
+        usedSlots--;
         fpc.releaseSlot(blockNr);
     }
 
@@ -232,7 +252,7 @@ public class TorrentConnMngr {
         public UseFileConnection advance() {
             return new UseFileConnection(connId, peer, blockNr, irregularBlock);
         }
-        
+
         public OpenTransfer.LeecherRequest getMsg() {
             return new OpenTransfer.LeecherRequest(peer, connId);
         }

@@ -76,6 +76,22 @@ public class DwnlConnWorkCtrl {
         this.defaultBlockDetails = defaultBlocksDetails;
         this.withHashes = withHashes;
     }
+    
+    public int potentialSlots() {
+        if(!nextBlocks.isEmpty()) {
+            return 0;
+        }
+        if(!pendingCacheBlocks.isEmpty())  {
+            return 1;
+        }
+        if(!cachedBlocks.isEmpty()) {
+            return 2;
+        }
+        if(!ongoingBlocks.isEmpty()) {
+            return 3;
+        }
+        return 4;
+    }
 
     public void add(Set<Integer> newBlocks, Map<Integer, BlockDetails> newIrregularBlocks) {
         cacheHintChanged = true;

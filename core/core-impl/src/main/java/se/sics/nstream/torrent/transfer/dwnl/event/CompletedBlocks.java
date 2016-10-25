@@ -33,12 +33,14 @@ public class CompletedBlocks implements TorrentConnEvent {
     public final ConnId connId;
     public final Map<Integer, byte[]> hashes;
     public final Map<Integer, byte[]> blocks;
+    public final int potentialSlots;
     
-    public CompletedBlocks(ConnId connId, Map<Integer, byte[]> hashes, Map<Integer, byte[]> blocks) {
+    public CompletedBlocks(ConnId connId, Map<Integer, byte[]> hashes, Map<Integer, byte[]> blocks, int potentialSlots) {
         this.eventId = BasicIdentifiers.eventId();
         this.connId = connId;
         this.hashes = hashes;
         this.blocks = blocks;
+        this.potentialSlots = potentialSlots;
     }
     
     @Override
