@@ -101,6 +101,7 @@ public class DwnlConnComp extends ComponentDefinition {
     private final Map<Identifier, Identifiable> pendingMsgs = new HashMap<>();
     //**************************************************************************
     private final LedbatConfig ledbatConfig;
+    private final int defaultBlockSize;
 
     public DwnlConnComp(Init init) {
         connId = init.connId;
@@ -109,6 +110,7 @@ public class DwnlConnComp extends ComponentDefinition {
         logPrefix = connId.toString();
 
         ledbatConfig = new LedbatConfig(config());
+        defaultBlockSize = init.defaultBlockDetails.blockSize;
         networkQueueLoad = new NetworkQueueLoadProxy(logPrefix, proxy, new QueueLoadConfig(config()));
         cwnd = new AppCongestionWindow(ledbatConfig, connId);
         workController = new DwnlConnWorkCtrl(init.defaultBlockDetails, init.withHashes);
@@ -150,7 +152,7 @@ public class DwnlConnComp extends ComponentDefinition {
             LOG.info("{}reporting", logPrefix);
             Pair<Integer, Integer> queueDelay = networkQueueLoad.queueDelay();
             DownloadThroughput downloadThroughput = cwnd.report();
-            DownloadTrackingTrace trace = new DownloadTrackingTrace(downloadThroughput, workController.blockSize(), cwnd.cwnd());
+            DownloadTrackingTrace trace = new DownloadTrackingTrace(downloadThroughput, workController.workloadSize(), cwnd.cwnd());
             trigger(new DownloadTrackingReport(connId, trace), reportPort);
         }
     };
@@ -177,7 +179,7 @@ public class DwnlConnComp extends ComponentDefinition {
         @Override
         public void handle(DownloadBlocks event) {
             LOG.info("{}new blocks:{}", logPrefix, event.blocks);
-            workController.add(event.blocks, event.irregularBlocks);
+            workController.nextBlocks(event.blocks, event.irregularBlocks);
         }
     };
     //**************************************************************************
@@ -288,7 +290,9 @@ public class DwnlConnComp extends ComponentDefinition {
         if (workController.hasComplete()) {
             Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
             LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
-            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots()), connPort);
+            double auxCwnd = cwnd.cwnd();
+            int cwndAsBlocks = (int)(auxCwnd / defaultBlockSize) + (auxCwnd % defaultBlockSize == 0 ? 0 : 1);
+            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots(cwndAsBlocks, cwnd.getRTO())), connPort);
         }
     }
 
@@ -307,7 +311,8 @@ public class DwnlConnComp extends ComponentDefinition {
         if (workController.hasComplete()) {
             Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
             LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
-            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots()), connPort);
+            int cwndAsBlocks = (int)(cwnd.cwnd() / defaultBlockSize);
+            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots(cwndAsBlocks, cwnd.getRTO())), connPort);
         }
     }
     

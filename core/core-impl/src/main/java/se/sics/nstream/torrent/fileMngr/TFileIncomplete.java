@@ -211,12 +211,10 @@ public class TFileIncomplete implements TFileWrite, TFileRead {
                 if (result.isSuccess()) {
                     //nothing - we write it
                 } else {
-                    //didn't hash - redownload;
+                    //didn't hash or didn't get the hash - redownload - might also consider storing and retrying, but easier to just redownload
                     ongoingBlocks.remove(blockNr);
                     silentRelease(block);
                     nextBlocks.add(blockNr);
-                    //TODO Alex remove
-                    throw new RuntimeException("hash mismatch");
                 }
             }
 

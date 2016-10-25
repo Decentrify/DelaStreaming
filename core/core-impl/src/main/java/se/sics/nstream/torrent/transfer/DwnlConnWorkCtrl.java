@@ -37,76 +37,94 @@ import se.sics.nstream.util.BlockDetails;
  */
 public class DwnlConnWorkCtrl {
 
-    private static final int BATCHED_HASHES = 20;
+    private static final int BATCHED_HASHES = 10;
 
+    /**
+     * withHashes set to false skips stages 3 and 4
+     */
     private final boolean withHashes;
-    //**************************************************************************
-    private final Map<Integer, BlockMngr> completedBlocks = new HashMap<>();
-    /**
-     * cachedBlocks - blocks that have been confirmed as being available and
-     * cached on the seeder side
-     */
-    private final LinkedList<Integer> cachedBlocks = new LinkedList<>();
-    /**
-     * pendingCacheBlocks - blocks that I would like, but not sure yet if the
-     * seeder has it available in cache (or at all)
-     */
-    private final LinkedList<Integer> pendingCacheBlocks = new LinkedList<>();
-    /**
-     * nextBlocks - blocks the application wants me to get and I didn't get a
-     * change to even ask the seeder if it has them
-     */
-    private final LinkedList<Integer> nextBlocks = new LinkedList<>();
-    private final BlockDetails defaultBlockDetails;
-    private final Map<Integer, BlockDetails> irregularBlockDetails = new HashMap<>();
-    //**************************************************************************
-    private final Set<Integer> cachedHashes = new TreeSet<>();
-    private final Set<Integer> pendingHashes = new HashSet<>();
-    private final Map<Integer, byte[]> completedHashes = new HashMap<>();
     //**************************************************************************
     private KHint.Summary oldHint = new KHint.Summary(0, new TreeSet<Integer>());
     private boolean cacheHintChanged = false; //new work or finishing a block changes this to true
     private boolean cacheConfirmed = true;
     //**************************************************************************
+    /**
+     * stage 1. blocks the application wants me to get and I didn't get a change
+     * to even ask the seeder if it has them
+     */
+    private final LinkedList<Integer> nextBlocks = new LinkedList<>();
+    /**
+     * stage 2. asked for caching - in flight - no answer yet
+     */
+    private final LinkedList<Integer> pendingCacheBlocks = new LinkedList<>();
+    /**
+     * stage 3. cache confirmed on seeder side
+     */
+    private final LinkedList<Integer> awaitingHashes = new LinkedList<>();
+    /**
+     * stage 4. asked for hash - in flight - no answer yet
+     */
+    private final Set<Integer> pendingHashes = new HashSet<>();
+    /**
+     * stage 5. blocks prepared for downloading
+     */
+    private final Set<Integer> awaitingBlocks = new TreeSet<>();
+    /**
+     * stage 6 - blocks being downloaded
+     */
     private final Map<Integer, BlockMngr> ongoingBlocks = new HashMap<>();
-    private final TreeMap<Integer, LinkedList<Integer>> cachedPieces = new TreeMap<>();
+    private final TreeMap<Integer, LinkedList<Integer>> awaitingPieces = new TreeMap<>();
     private final TreeMap<Integer, Set<Integer>> pendingPieces = new TreeMap<>();
+    //**************************************************************************
+    private final Map<Integer, byte[]> completedHashes = new HashMap<>();
+    private final Map<Integer, BlockMngr> completedBlocks = new HashMap<>();
+    //**************************************************************************
+    private final BlockDetails defaultBlockDetails;
+    private final Map<Integer, BlockDetails> irregularBlockDetails = new HashMap<>();
+    //**************************************************************************
+    private int indicatedPotentialSlots = 0;
 
     public DwnlConnWorkCtrl(BlockDetails defaultBlocksDetails, boolean withHashes) {
         this.defaultBlockDetails = defaultBlocksDetails;
         this.withHashes = withHashes;
     }
-    
-    public int potentialSlots() {
-        if(!nextBlocks.isEmpty()) {
+
+    public int potentialSlots(int cwndAsBlocks, long rto) {
+        if (indicatedPotentialSlots > 0) {
             return 0;
         }
-        if(!pendingCacheBlocks.isEmpty())  {
-            return 1;
+        int stagedWork1 = ongoingBlocks.size();
+        int stagedWork2 = stagedWork1 + pendingHashes.size() + awaitingHashes.size();
+        int stagedWork3 = stagedWork2 + pendingCacheBlocks.size() + nextBlocks.size();
+
+        int potentialSlots = 0;
+        int perSecondWindowSize = (int)(cwndAsBlocks * 1000 / rto);
+        if (stagedWork3 < 2 * perSecondWindowSize) {
+            potentialSlots += BATCHED_HASHES;
         }
-        if(!cachedBlocks.isEmpty()) {
-            return 2;
+        if (stagedWork1 < perSecondWindowSize) {
+            potentialSlots *= 2;
         }
-        if(!ongoingBlocks.isEmpty()) {
-            return 3;
-        }
-        return 4;
+        indicatedPotentialSlots += potentialSlots;
+        return potentialSlots;
     }
 
-    public void add(Set<Integer> newBlocks, Map<Integer, BlockDetails> newIrregularBlocks) {
+    public void nextBlocks(Set<Integer> newBlocks, Map<Integer, BlockDetails> newIrregularBlocks) {
+        indicatedPotentialSlots -= newBlocks.size();
         cacheHintChanged = true;
         nextBlocks.addAll(newBlocks);
         irregularBlockDetails.putAll(newIrregularBlocks);
     }
 
     public void cacheConfirmed(long ts) {
-        if(oldHint.lStamp != ts) {
+        if (oldHint.lStamp != ts) {
             return;
         }
         cacheConfirmed = true;
-        cachedBlocks.addAll(pendingCacheBlocks);
         if (withHashes) {
-            cachedHashes.addAll(pendingCacheBlocks);
+            awaitingHashes.addAll(pendingCacheBlocks);
+        } else {
+            awaitingBlocks.addAll(pendingCacheBlocks);
         }
         pendingCacheBlocks.clear();
     }
@@ -121,13 +139,13 @@ public class DwnlConnWorkCtrl {
     }
 
     public boolean hasHashes() {
-        return !cachedHashes.isEmpty();
+        return !awaitingHashes.isEmpty();
     }
 
     public Set<Integer> nextHashes() {
         Set<Integer> nextHash = new TreeSet<>();
         int nrH = BATCHED_HASHES;
-        Iterator<Integer> it = cachedHashes.iterator();
+        Iterator<Integer> it = awaitingHashes.iterator();
         while (it.hasNext() && nrH-- > 0) {
             int hash = it.next();
             nextHash.add(hash);
@@ -140,11 +158,12 @@ public class DwnlConnWorkCtrl {
     public void hashes(Map<Integer, byte[]> hashes) {
         pendingHashes.removeAll(hashes.keySet());
         completedHashes.putAll(hashes);
+        awaitingBlocks.addAll(hashes.keySet());
     }
 
     public void hashTimeout(Set<Integer> hashes) {
         if (pendingHashes.removeAll(hashes)) {
-            cachedHashes.addAll(hashes);
+            awaitingHashes.addAll(hashes);
         }
     }
 
@@ -153,10 +172,10 @@ public class DwnlConnWorkCtrl {
     }
 
     public boolean hasPiece() {
-        if (cachedPieces.isEmpty()) {
+        if (awaitingPieces.isEmpty()) {
             newWorkPieces();
         }
-        return !cachedPieces.isEmpty();
+        return !awaitingPieces.isEmpty();
     }
 
     public Pair<Integer, Integer> nextPiece() {
@@ -187,7 +206,7 @@ public class DwnlConnWorkCtrl {
     }
 
     public boolean hasComplete() {
-        return !completedBlocks.isEmpty();
+        return !completedHashes.isEmpty() || !completedBlocks.isEmpty();
     }
 
     //<hashes, blocks>
@@ -206,8 +225,8 @@ public class DwnlConnWorkCtrl {
 
     //**************************************************************************
     private void newWorkPieces() {
-        if (!cachedBlocks.isEmpty()) {
-            newPendingBlock(cachedBlocks.removeFirst());
+        if (!awaitingBlocks.isEmpty()) {
+            newPendingBlock(awaitingHashes.removeFirst());
         }
     }
 
@@ -219,17 +238,18 @@ public class DwnlConnWorkCtrl {
         for (int i = 0; i < bd.nrPieces; i++) {
             pieceList.add(i);
         }
-        cachedPieces.put(blockNr, pieceList);
+        awaitingPieces.put(blockNr, pieceList);
     }
 
     private KHint.Summary rebuildCacheHint() {
-        if (!nextBlocks.isEmpty()) {
-            pendingCacheBlocks.addAll(nextBlocks);
-            nextBlocks.clear();
-        }
+        pendingCacheBlocks.addAll(nextBlocks);
+        nextBlocks.clear();
+        
         Set<Integer> hint = new TreeSet<>();
         hint.addAll(ongoingBlocks.keySet());
-        hint.addAll(cachedBlocks);
+        hint.addAll(awaitingBlocks);
+        hint.addAll(awaitingHashes);
+        hint.addAll(pendingHashes);
         hint.addAll(pendingCacheBlocks);
         oldHint = new KHint.Summary(oldHint.lStamp + 1, hint);
         cacheHintChanged = false;
@@ -237,30 +257,30 @@ public class DwnlConnWorkCtrl {
     }
 
     private void addNextPiece(Pair<Integer, Integer> piece) {
-        LinkedList<Integer> nextBlock = cachedPieces.get(piece.getValue0());
+        LinkedList<Integer> nextBlock = awaitingPieces.get(piece.getValue0());
         if (nextBlock == null) {
             nextBlock = new LinkedList<>();
-            cachedPieces.put(piece.getValue0(), nextBlock);
+            awaitingPieces.put(piece.getValue0(), nextBlock);
         }
         nextBlock.add(piece.getValue1());
     }
 
     private Pair<Integer, Integer> removeNextPiece() {
-        Map.Entry<Integer, LinkedList<Integer>> nextBlock = cachedPieces.firstEntry();
+        Map.Entry<Integer, LinkedList<Integer>> nextBlock = awaitingPieces.firstEntry();
         Integer nextPiece = nextBlock.getValue().removeFirst();
         if (nextBlock.getValue().isEmpty()) {
-            cachedPieces.remove(nextBlock.getKey());
+            awaitingPieces.remove(nextBlock.getKey());
         }
         return Pair.with(nextBlock.getKey(), nextPiece);
     }
 
     private boolean removeNextPiece(Pair<Integer, Integer> piece) {
         boolean result = false;
-        LinkedList<Integer> block = cachedPieces.get(piece.getValue0());
+        LinkedList<Integer> block = awaitingPieces.get(piece.getValue0());
         if (block != null) {
             result = block.remove(piece.getValue1());
             if (block.isEmpty()) {
-                cachedPieces.remove(piece.getValue0());
+                awaitingPieces.remove(piece.getValue0());
             }
         }
         return result;
@@ -277,7 +297,7 @@ public class DwnlConnWorkCtrl {
 
     private Boolean removePendingPiece(Pair<Integer, Integer> piece) {
         Set<Integer> pendingBlock = pendingPieces.get(piece.getValue0());
-        if(pendingBlock == null) {
+        if (pendingBlock == null) {
             return false;
         }
         boolean result = pendingBlock.remove(piece.getValue1());
@@ -302,8 +322,8 @@ public class DwnlConnWorkCtrl {
             completedBlocks.put(piece.getValue0(), bm);
         }
     }
-    
-    public int blockSize() {
-        return ongoingBlocks.size() + cachedBlocks.size() + pendingCacheBlocks.size() + nextBlocks.size() + completedBlocks.size();
+
+    public int workloadSize() {
+        return ongoingBlocks.size() + awaitingBlocks.size() + awaitingHashes.size() + pendingHashes.size() + pendingCacheBlocks.size() + nextBlocks.size() + completedBlocks.size();
     }
 }
