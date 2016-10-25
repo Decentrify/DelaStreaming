@@ -290,9 +290,9 @@ public class DwnlConnComp extends ComponentDefinition {
         if (workController.hasComplete()) {
             Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
             LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
-            double auxCwnd = cwnd.cwnd();
-            int cwndAsBlocks = (int)(auxCwnd / defaultBlockSize) + (auxCwnd % defaultBlockSize == 0 ? 0 : 1);
-            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots(cwndAsBlocks, cwnd.getRTO())), connPort);
+            int perSecondWindowSize = (int)((cwnd.cwnd() * 1000 / cwnd.getRTO()) / defaultBlockSize);
+            perSecondWindowSize = perSecondWindowSize == 0 ? 1 : perSecondWindowSize;
+            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots(perSecondWindowSize)), connPort);
         }
     }
 
@@ -311,8 +311,9 @@ public class DwnlConnComp extends ComponentDefinition {
         if (workController.hasComplete()) {
             Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
             LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
-            int cwndAsBlocks = (int)(cwnd.cwnd() / defaultBlockSize);
-            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots(cwndAsBlocks, cwnd.getRTO())), connPort);
+            int perSecondWindowSize = (int)((cwnd.cwnd() * 1000 / cwnd.getRTO()) / defaultBlockSize);
+            perSecondWindowSize = perSecondWindowSize == 0 ? 1 : perSecondWindowSize;
+            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots(perSecondWindowSize)), connPort);
         }
     }
     

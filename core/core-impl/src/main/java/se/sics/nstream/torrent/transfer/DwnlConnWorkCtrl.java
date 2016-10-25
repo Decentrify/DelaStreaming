@@ -89,7 +89,7 @@ public class DwnlConnWorkCtrl {
         this.withHashes = withHashes;
     }
 
-    public int potentialSlots(int cwndAsBlocks, long rto) {
+    public int potentialSlots(int perSecondWindowSize) {
         if (indicatedPotentialSlots > 0) {
             return 0;
         }
@@ -98,7 +98,6 @@ public class DwnlConnWorkCtrl {
         int stagedWork3 = stagedWork2 + pendingCacheBlocks.size() + nextBlocks.size();
 
         int potentialSlots = 0;
-        int perSecondWindowSize = (int)(cwndAsBlocks * 1000 / rto);
         if (stagedWork3 < 2 * perSecondWindowSize) {
             potentialSlots += BATCHED_HASHES;
         }
