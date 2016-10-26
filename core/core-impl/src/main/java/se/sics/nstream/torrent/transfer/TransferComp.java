@@ -329,8 +329,9 @@ public class TransferComp extends ComponentDefinition {
         @Override
         public void handle(TransferTrackingReport event) {
             TorrentTracking.Indication report = new TorrentTracking.Indication(fileMngr.report(), event.downloadReport);
-            LOG.info("{}transfer completed:{}/{} speed:{}", new Object[]{logPrefix, report.dataReport.totalSize.getValue1(), report.dataReport.totalSize.getValue0(), 
-                report.downloadReport.total.throughput.inTimeThroughput});
+            double torrentSpeedInKB = report.downloadReport.total.throughput.inTimeThroughput / 1024;
+            LOG.info("{}transfer completed:{}/{} speed:{}KB/s", new Object[]{logPrefix, report.dataReport.totalSize.getValue1(), 
+                report.dataReport.totalSize.getValue0(), torrentSpeedInKB});
             trigger(report, statusPort);
         }
     };
