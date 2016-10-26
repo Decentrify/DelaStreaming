@@ -112,7 +112,7 @@ public class DwnlConnComp extends ComponentDefinition {
 
         ledbatConfig = new LedbatConfig(config());
         defaultBlockSize = init.defaultBlockDetails.blockSize;
-        networkQueueLoad = new NetworkQueueLoadProxy(logPrefix, proxy, new QueueLoadConfig(config()));
+        networkQueueLoad = new NetworkQueueLoadProxy(logPrefix + "dwnl", proxy, new QueueLoadConfig(config()));
         cwnd = new AppCongestionWindow(ledbatConfig, connId);
         workController = new DwnlConnWorkCtrl(init.defaultBlockDetails, init.withHashes);
 
