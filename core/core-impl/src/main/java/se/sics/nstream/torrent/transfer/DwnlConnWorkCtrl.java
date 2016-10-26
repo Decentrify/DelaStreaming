@@ -98,10 +98,10 @@ public class DwnlConnWorkCtrl {
         int stagedWork3 = stagedWork2 + pendingCacheBlocks.size() + nextBlocks.size();
 
         int potentialSlots = 0;
-        if (stagedWork3 < 2 * perSecondWindowSize) {
+        if (stagedWork3 < 10 * perSecondWindowSize) {
             potentialSlots += BATCHED_HASHES;
         }
-        if (stagedWork1 < perSecondWindowSize) {
+        if (stagedWork1 < 2 * perSecondWindowSize) {
             potentialSlots *= 2;
         }
         indicatedPotentialSlots += potentialSlots;

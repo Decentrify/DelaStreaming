@@ -291,7 +291,7 @@ public class DwnlConnComp extends ComponentDefinition {
             Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
             LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
             int perSecondWindowSize = (int)((cwnd.cwnd() * 1000 / cwnd.getRTO()) / defaultBlockSize);
-            perSecondWindowSize = perSecondWindowSize == 0 ? 1 : perSecondWindowSize;
+            perSecondWindowSize = Math.max(perSecondWindowSize, 1);
             trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1(), workController.potentialSlots(perSecondWindowSize)), connPort);
         }
     }

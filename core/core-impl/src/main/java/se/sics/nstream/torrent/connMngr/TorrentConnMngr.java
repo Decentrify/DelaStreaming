@@ -52,8 +52,8 @@ public class TorrentConnMngr {
     // Ramping up a connection can be a bit slow, so we want to have one already ongoing when the previous one finishes.
     // Ideally we would be able to appoint LEDBAT priority to them, so that main connection could get more bandwidth through LEDBAT.
     public static final int MAX_FILE_BUF = 10;
-    public static final int MAX_FILE_TRANSFER = 90;
-    public static final int MAX_TORRENT_BUF = 150; 
+    public static final int MAX_FILE_TRANSFER = 20;
+    public static final int MAX_TORRENT_BUF = 100; 
     //**************************************************************************
     //all control from fileConnection
     private final ComponentLoadTracking loadTracking;
