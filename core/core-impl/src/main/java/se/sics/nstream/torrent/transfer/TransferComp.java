@@ -328,8 +328,9 @@ public class TransferComp extends ComponentDefinition {
     Handler handleTransferReport = new Handler<TransferTrackingReport>() {
         @Override
         public void handle(TransferTrackingReport event) {
-            LOG.info("{}transfer report", logPrefix);
             TorrentTracking.Indication report = new TorrentTracking.Indication(fileMngr.report(), event.downloadReport);
+            LOG.info("{}transfer completed:{}/{} speed:{}", new Object[]{logPrefix, report.dataReport.totalSize.getValue1(), report.dataReport.totalSize.getValue0(), 
+                report.downloadReport.total.throughput.inTimeThroughput});
             trigger(report, statusPort);
         }
     };
@@ -381,12 +382,12 @@ public class TransferComp extends ComponentDefinition {
             if (fileMngr.hasPending()) {
                 Pair<FileId, Map<StreamId, MyStream>> resource = fileMngr.nextPending();
                 fileId = resource.getValue0();
-                LOG.debug("{}advance new file:{}", logPrefix, fileId);
+                LOG.info("{}advance new file:{}", logPrefix, fileId);
                 connMngr.newFileConnection(fileId);
                 return;
             }
         }
-        LOG.warn("{}nothing", logPrefix);
+        LOG.debug("{}nothing", logPrefix);
     }
 
     private Pair<Integer, Optional<BlockDetails>> nextBlock(TFileWrite fileWriter) {
@@ -543,7 +544,7 @@ public class TransferComp extends ComponentDefinition {
     Handler handleCompletedBlocks = new Handler<CompletedBlocks>() {
         @Override
         public void handle(CompletedBlocks event) {
-            LOG.info("{}conn:{} completed blocks:{} hashes:{}", new Object[]{logPrefix, event.connId, event.blocks.keySet(), event.hashes.keySet()});
+            LOG.debug("{}conn:{} completed blocks:{} hashes:{}", new Object[]{logPrefix, event.connId, event.blocks.keySet(), event.hashes.keySet()});
             if (event.connId.fileId.fileNr == DEF_FILE_NR) {
                 if (getDefState == null) {
                     throw new RuntimeException("ups");
