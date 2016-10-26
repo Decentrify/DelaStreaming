@@ -285,6 +285,8 @@ public class DwnlConnComp extends ComponentDefinition {
             cwnd.success(now, ledbatConfig.mss, content);
             tryDownload(now);
         } else {
+            int rtt = (int) (now - content.leecherAppReqSendT);
+            LOG.info("{}late rtt:{}", logPrefix, rtt);
             workController.latePiece(resp.piece, resp.val.getRight());
             cwnd.late(now, ledbatConfig.mss, content);
         }
