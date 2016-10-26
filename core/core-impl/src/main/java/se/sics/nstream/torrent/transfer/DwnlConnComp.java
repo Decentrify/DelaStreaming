@@ -77,6 +77,7 @@ public class DwnlConnComp extends ComponentDefinition {
     private static final Logger LOG = LoggerFactory.getLogger(DwnlConnComp.class);
     private String logPrefix;
 
+    private static final int PIECE_REQ_INCREASE = 5;
     private static final long ADVANCE_DOWNLOAD = 1000;
     private static final long CACHE_BASE_TIMEOUT = 1000;
     private static final int CACHE_RETRY = 30;
@@ -331,11 +332,13 @@ public class DwnlConnComp extends ComponentDefinition {
             pendingMsgs.put(req.getId(), req);
             cwnd.request(now, ledbatConfig.mss);
         }
-        while (workController.hasPiece() && cwnd.canSend()) {
+        int batchSize = PIECE_REQ_INCREASE;
+        while (workController.hasPiece() && cwnd.canSend() && batchSize > 0) {
             DownloadPiece.Request req = new DownloadPiece.Request(connId.fileId, workController.nextPiece());
             sendSimpleLedbat(req);
             pendingMsgs.put(req.getId(), req);
             cwnd.request(now, ledbatConfig.mss);
+            batchSize--;
         }
     }
 
