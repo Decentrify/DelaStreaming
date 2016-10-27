@@ -174,7 +174,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     Handler handleTorrentTrackingIndication = new Handler<TorrentTracking.Indication>() {
         @Override
         public void handle(TorrentTracking.Indication resp) {
-            LOG.info("{}reporting", logPrefix);
+            LOG.debug("{}reporting", logPrefix);
             dataReport = resp.dataReport;
             downloadReport = resp.downloadReport;
             if (fileCounter > 0) {
