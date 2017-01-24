@@ -81,7 +81,7 @@ import se.sics.nstream.util.FileBaseDetails;
  */
 public class HopsLibraryMngr {
 
-    private static final Details.Types RUN_TYPE = Details.Types.HDFS;
+    private static final Details.Types RUN_TYPE = Details.Types.DISK;
 
     private static final Logger LOG = LoggerFactory.getLogger(HopsLibraryMngr.class);
     private String logPrefix = "";

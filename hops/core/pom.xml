@@ -13,7 +13,7 @@
     
     <properties>
         <hops.version>2.4.0</hops.version>
-        <kafkautil.version>0.1</kafkautil.version>
+        <hopsutil.version>0.1</hopsutil.version>
         <avro.version>1.8.1</avro.version>
     </properties>
     
@@ -36,8 +36,8 @@
         </dependency>
         <dependency>
             <groupId>io.hops</groupId>
-            <artifactId>kafka-util</artifactId>
-            <version>${kafkautil.version}</version>
+            <artifactId>hops-util</artifactId>
+            <version>${hopsutil.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.avro</groupId>

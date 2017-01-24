@@ -18,11 +18,11 @@
  */
 package se.sics.nstream.hops.kafka;
 
-import io.hops.kafkautil.HopsKafkaConsumer;
-import io.hops.kafkautil.HopsKafkaProducer;
-import io.hops.kafkautil.HopsKafkaUtil;
-import io.hops.kafkautil.NHopsKafkaUtil;
-import io.hops.kafkautil.SchemaNotFoundException;
+import io.hops.util.HopsUtil;
+import io.hops.util.SchemaNotFoundException;
+import io.hops.util.dela.HopsConsumer;
+import io.hops.util.dela.HopsHelper;
+import io.hops.util.dela.HopsProducer;
 import org.apache.avro.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,37 +34,25 @@ public class KafkaHelper {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaHelper.class);
 
-    public static HopsKafkaProducer getKafkaProducer(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
+    public static HopsProducer getKafkaProducer(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
         LOG.warn("do not start multiple kafka workers in parallel - risk of race condition (setup/getProducer/getConsumer");
-        HopsKafkaUtil hopsKafkaUtil = HopsKafkaUtil.getInstance();
-        int projectId = Integer.parseInt(kafkaEndpoint.projectId);
-        LOG.info("getting producer session:{}, project:{} topic:{} domain:{} broker:{} rest:{} key:{} trust:{}",
-                new Object[]{kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.domain, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
-                    kafkaEndpoint.keyStore, kafkaEndpoint.trustStore});
-        hopsKafkaUtil.setup(kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.domain, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
-                kafkaEndpoint.keyStore, kafkaEndpoint.trustStore);
-        HopsKafkaProducer kp;
+        setKafkaProperties(kafkaEndpoint, kafkaResource);
+        HopsProducer kp;
         try {
             //TODO Alex - hardcoded linger delay
-            kp = hopsKafkaUtil.getHopsKafkaProducer(kafkaResource.topicName, 5);
+            kp = HopsHelper.getHopsProducer(kafkaResource.topicName, 5);
             return kp;
         } catch (SchemaNotFoundException ex) {
             throw new RuntimeException(ex);
         }
     }
 
-    public static HopsKafkaConsumer getKafkaConsumer(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
+    public static HopsConsumer getKafkaConsumer(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
         LOG.warn("do not start multiple kafka workers in parallel - risk of race condition (setup/getProducer/getConsumer");
-        HopsKafkaUtil hopsKafkaUtil = HopsKafkaUtil.getInstance();
-        int projectId = Integer.parseInt(kafkaEndpoint.projectId);
-        LOG.info("getting consumer session:{}, project:{} topic:{} domain:{} broker:{} rest:{} key:{} trust:{}",
-                new Object[]{kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.domain, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
-                    kafkaEndpoint.keyStore, kafkaEndpoint.trustStore});
-        hopsKafkaUtil.setup(kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.domain, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
-                kafkaEndpoint.keyStore, kafkaEndpoint.trustStore);
-        HopsKafkaConsumer kc;
+        setKafkaProperties(kafkaEndpoint, kafkaResource);
+        HopsConsumer kc;
         try {
-            kc = hopsKafkaUtil.getHopsKafkaConsumer(kafkaResource.topicName);
+            kc = HopsHelper.getHopsConsumer(kafkaResource.topicName);
             return kc;
         } catch (SchemaNotFoundException ex) {
             throw new RuntimeException(ex);
@@ -72,16 +60,10 @@ public class KafkaHelper {
     }
 
     public static Schema getKafkaSchemaByTopic(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
-        HopsKafkaUtil hopsKafkaUtil = HopsKafkaUtil.getInstance();
-        int projectId = Integer.parseInt(kafkaEndpoint.projectId);
-        LOG.info("getting schema session:{}, project:{} topic:{} domain:{} broker:{} rest:{} key:{} trust:{}",
-                new Object[]{kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.domain, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
-                    kafkaEndpoint.keyStore, kafkaEndpoint.trustStore});
-        hopsKafkaUtil.setup(kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.domain, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
-                kafkaEndpoint.keyStore, kafkaEndpoint.trustStore);
+        HopsUtil kafkaConfig = setKafkaProperties(kafkaEndpoint, kafkaResource);
         String stringSchema;
         try {
-            stringSchema = NHopsKafkaUtil.getSchemaByTopic(hopsKafkaUtil, kafkaResource.topicName);
+            stringSchema = HopsHelper.getSchemaByTopic(kafkaConfig, kafkaResource.topicName);
         } catch (SchemaNotFoundException ex) {
             throw new RuntimeException(ex);
         }
@@ -90,4 +72,19 @@ public class KafkaHelper {
         Schema schema = parser.parse(stringSchema);
         return schema;
     }
+    
+    private static HopsUtil setKafkaProperties(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
+        HopsUtil hopsUtil = HopsUtil.getInstance();
+        int projectId = Integer.parseInt(kafkaEndpoint.projectId);
+        LOG.info("setting hops-kafka properties - session:{}, project:{} topic:{} broker:{} rest:{} key:{} trust:{}",
+                new Object[]{kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
+                    kafkaEndpoint.keyStore, kafkaEndpoint.trustStore});
+        //TODO Alex - important - set pwd as config params. Have hopsworks send them to me, by reading them from Settings
+        String keystorePwd = "adminpw";
+        String truststorePwd = "adminpw";
+        hopsUtil.setup(kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
+                kafkaEndpoint.keyStore, kafkaEndpoint.trustStore, keystorePwd, truststorePwd);
+        return hopsUtil;
+    }
+    
 }
