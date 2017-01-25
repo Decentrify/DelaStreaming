@@ -81,8 +81,6 @@ import se.sics.nstream.util.FileBaseDetails;
  */
 public class HopsLibraryMngr {
 
-    private static final Details.Types RUN_TYPE = Details.Types.HDFS;
-
     private static final Logger LOG = LoggerFactory.getLogger(HopsLibraryMngr.class);
     private String logPrefix = "";
 
@@ -98,13 +96,13 @@ public class HopsLibraryMngr {
         this.logPrefix = logPrefix;
         this.config = config;
         this.selfAdr = selfAdr;
-
+        
         componentHelper = new ComponentHelper(proxy);
         library = new Library(config.getValue("library.summary", String.class));
         endpointTracker = new EndpointTracker(logPrefix, componentHelper);
         transferTracker = new TransferTracker(logPrefix, componentHelper);
 
-        libOpTracker = new LibOpTracker(logPrefix, componentHelper, endpointTracker, transferTracker, library, selfAdr.getId());
+        libOpTracker = new LibOpTracker(logPrefix, config, componentHelper, endpointTracker, transferTracker, library, selfAdr.getId());
         restartTorrents();
     }
 
@@ -876,6 +874,7 @@ public class HopsLibraryMngr {
     public static class LibOpTracker {
 
         private final String logPrefix;
+        private final HopsLibraryKConfig hopsLibraryConfig;
         private final ComponentHelper comp;
         private final EndpointTracker endpointTracker;
         private final TransferTracker transferTracker;
@@ -889,7 +888,7 @@ public class HopsLibraryMngr {
         private final Map<OverlayId, BasicCompleteCallback> pendingHDFSDownloadCallback = new HashMap<>();
         private final Map<OverlayId, HopsTorrentDownloadEvent.AdvanceRequest> pendingHDFSAdvanceDownloads = new HashMap<>();
 
-        public LibOpTracker(String logPrefix, ComponentHelper comp, EndpointTracker endpointTracker, TransferTracker transferTracker,
+        public LibOpTracker(String logPrefix, Config config, ComponentHelper comp, EndpointTracker endpointTracker, TransferTracker transferTracker,
                 Library library, Identifier selfId) {
             this.logPrefix = logPrefix;
             this.comp = comp;
@@ -897,8 +896,10 @@ public class HopsLibraryMngr {
             this.transferTracker = transferTracker;
             this.library = library;
             this.selfId = selfId;
+            
+            this.hopsLibraryConfig = new HopsLibraryKConfig(config);
 
-            if (RUN_TYPE.equals(Details.Types.DISK)) {
+            if (hopsLibraryConfig.baseEndpointType.equals(Details.Types.DISK)) {
                 comp.proxy.subscribe(handleDiskTorrentUpload, comp.libraryCtrlPort);
                 comp.proxy.subscribe(handleDiskTorrentDownload, comp.libraryCtrlPort);
             } else {
