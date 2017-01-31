@@ -40,14 +40,6 @@
                     <groupId>org.slf4j</groupId>
                     <artifactId>log4j-over-slf4j</artifactId>
                 </exclusion>
-                <exclusion>
-                    <groupId>io.hops</groupId>
-                    <artifactId>hops-leader-election</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>io.hops</groupId>
-                    <artifactId>hops-leader-election</artifactId>
-                </exclusion> 
             </exclusions>
             
         </dependency>
