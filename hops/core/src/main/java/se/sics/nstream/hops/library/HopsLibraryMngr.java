@@ -37,6 +37,7 @@ import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.FileId;
@@ -55,6 +56,8 @@ import se.sics.nstream.hops.manifest.DiskHelper;
 import se.sics.nstream.hops.manifest.ManifestHelper;
 import se.sics.nstream.hops.manifest.ManifestJSON;
 import se.sics.nstream.library.Library;
+import se.sics.nstream.library.disk.LibrarySummaryHelper;
+import se.sics.nstream.library.disk.LibrarySummaryJSON;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
@@ -96,7 +99,7 @@ public class HopsLibraryMngr {
         this.logPrefix = logPrefix;
         this.config = config;
         this.selfAdr = selfAdr;
-        
+
         componentHelper = new ComponentHelper(proxy);
         library = new Library(config.getValue("library.summary", String.class));
         endpointTracker = new EndpointTracker(logPrefix, componentHelper);
@@ -115,35 +118,28 @@ public class HopsLibraryMngr {
     public void cleanAndDestroy(OverlayId torrentId) {
         library.destroyed(torrentId);
     }
-    
+
     private void restartTorrents() {
-        
+        HopsLibraryKConfig hopsLibraryConfig = new HopsLibraryKConfig(config);
+        OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory();
+
+        Result<LibrarySummaryJSON> librarySummary = LibrarySummaryHelper.readTorrentList(config.getValue("library.summary", String.class));
+        if (!librarySummary.isSuccess()) {
+            throw new RuntimeException("fix me - corrupted library");
+        }
+        Map<OverlayId, Library.Torrent> torrents = LibrarySummaryHelper.fromSummary(librarySummary.getValue(), TorrentIds.torrentIdFactory());
+
+        //TODO Alex - important - when registering endpoints - what happens if I register multiple endpoints
+        for(Map.Entry<OverlayId, Library.Torrent> torrent : torrents.entrySet()) {
+            //TODO - cleaner way than check resource
+            if(torrent.getValue().manifestStream.endpoint instanceof DiskEndpoint) {
+                libOpTracker.restartDiskUpload(torrent.getKey(), torrent.getValue().torrentName, torrent.getValue().manifestStream);
+            } else {
+                libOpTracker.restartHDFSUpload(torrent.getKey(), torrent.getValue().torrentName, torrent.getValue().manifestStream);
+            }
+        }
     }
 
-//    private void restartTorrents() {
-//        if (RUN_TYPE.equals(Details.Types.DISK)) {
-//            DiskLibrarySummary librarySummary = TorrentList.readTorrentList(TORRENT_LIST);
-//            if (librarySummary.isEmpty()) {
-//                return;
-//            }
-//            Map<OverlayId, MyStream> torrents = new HashMap<>();
-//            Map<OverlayId, List<KAddress>> peers = new HashMap<>();
-//            for (Map.Entry<String, DiskLibrarySummary.Torrent> e : librarySummary.getTorrents().entrySet()) {
-//                OverlayId torrentId = torrentIdFactory.id(new BasicBuilders.StringBuilder(e.getKey()));
-//                StreamEndpoint manifestEndpoint = new DiskEndpoint();
-//                StreamResource manifestResource = new DiskResource(e.getValue().getTorrentPath(), MyTorrent.MANIFEST_NAME);
-//                MyStream manifestStream = new MyStream(manifestEndpoint, manifestResource);
-//                torrents.put(torrentId, manifestStream);
-//            }
-//            diskTorrentsRestart = new RestartTorrents(transferST, new DiskManifestHelper(), torrents, peers);
-//
-//            List<DurableStorageProvider> storageProviders = new ArrayList<>();
-//            storageProviders.add(new DiskComp.StorageProvider(selfAdr.getId()));
-//            endpointCT.registerEndpoints(storageProviders, new EndpointCallbackWrapper(diskTorrentsRestart));
-//        } else {
-//            return;
-//        }
-//    }
     public static interface BasicCompleteCallback<V extends Object> {
 
         public void ready(Result<V> result);
@@ -873,6 +869,8 @@ public class HopsLibraryMngr {
     //**************************************************************************
     public static class LibOpTracker {
 
+        private static final HopsTorrentUploadEvent.Request RESTART_NOHUP_REQ = new HopsTorrentUploadEvent.Request(null, null, null, null);
+
         private final String logPrefix;
         private final HopsLibraryKConfig hopsLibraryConfig;
         private final ComponentHelper comp;
@@ -896,7 +894,7 @@ public class HopsLibraryMngr {
             this.transferTracker = transferTracker;
             this.library = library;
             this.selfId = selfId;
-            
+
             this.hopsLibraryConfig = new HopsLibraryKConfig(config);
 
             if (hopsLibraryConfig.baseEndpointType.equals(Details.Types.DISK)) {
@@ -914,13 +912,13 @@ public class HopsLibraryMngr {
             public void handle(final HopsTorrentUploadEvent.Request req) {
                 LOG.trace("{}received:{}", logPrefix, req);
 
-                Result<Boolean> validateResult = validatUploadRequest(req);
-                if(!validateResult.isSuccess() || validateResult.getValue()) {
+                Result<Boolean> validateResult = validateUploadRequest(req);
+                if (!validateResult.isSuccess() || validateResult.getValue()) {
                     comp.proxy.answer(req, req.failed(validateResult));
                 }
 
                 library.prepareUpload(req.torrentId, req.torrentName);
-                
+
                 OverlayId torrentId = req.torrentId;
                 final MyStream torrentStream = new MyStream(new DiskEndpoint(), new DiskResource(req.manifestResource.dirPath, req.manifestResource.fileName));
                 List<KAddress> torrentPeers = new ArrayList<>();
@@ -943,12 +941,33 @@ public class HopsLibraryMngr {
             }
         };
 
+        public void restartDiskUpload(final OverlayId torrentId, String torrentName, final MyStream manifestStream) {
+            library.prepareUpload(torrentId, torrentName);
+
+            List<KAddress> torrentPeers = new ArrayList<>();
+            MyTorrentBuilder torrentBuilder = new MyTorrentBuilderImpl(torrentId);
+
+            MyBasicHelper torrentHelper = new MyDiskHelper(selfId);
+
+            BasicCompleteCallback<Boolean> completeCallback = new BasicCompleteCallback<Boolean>() {
+                @Override
+                public void ready(Result<Boolean> result) {
+                    pendingDiskUploads.remove(torrentId);
+                    library.upload(torrentId, manifestStream);
+                }
+            };
+
+            BasicTorrent upload = new BasicTorrent(endpointTracker, transferTracker, torrentHelper, completeCallback, torrentId, manifestStream, torrentPeers, torrentBuilder);
+            pendingDiskUploads.put(torrentId, RESTART_NOHUP_REQ);
+            upload.start();
+        }
+
         Handler handleHDFSTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
             @Override
             public void handle(final HopsTorrentUploadEvent.Request req) {
                 LOG.trace("{}received:{}", logPrefix, req);
 
-                Result<Boolean> validateResult = validatUploadRequest(req);
+                Result<Boolean> validateResult = validateUploadRequest(req);
                 if (!validateResult.isSuccess()) {
                     LOG.debug("{}validation error", logPrefix);
                     comp.proxy.answer(req, req.failed(validateResult));
@@ -959,7 +978,7 @@ public class HopsLibraryMngr {
                 }
 
                 library.prepareUpload(req.torrentId, req.torrentName);
-                
+
                 OverlayId torrentId = req.torrentId;
                 final MyStream torrentStream = new MyStream(req.hdfsEndpoint, req.manifestResource);
                 List<KAddress> torrentPeers = new ArrayList<>();
@@ -982,7 +1001,28 @@ public class HopsLibraryMngr {
             }
         };
 
-        private Result<Boolean> validatUploadRequest(HopsTorrentUploadEvent.Request req) {
+        public void restartHDFSUpload(final OverlayId torrentId, String torrentName, final MyStream manifestStream) {
+            library.prepareUpload(torrentId, torrentName);
+
+            List<KAddress> torrentPeers = new ArrayList<>();
+            MyTorrentBuilder torrentBuilder = new MyTorrentBuilderImpl(torrentId);
+
+            MyBasicHelper torrentHelper = new MyHDFSHelper(selfId);
+
+            BasicCompleteCallback<Boolean> completeCallback = new BasicCompleteCallback<Boolean>() {
+                @Override
+                public void ready(Result<Boolean> result) {
+                    pendingHDFSUploads.remove(torrentId);
+                    library.upload(torrentId, manifestStream);
+                }
+            };
+
+            BasicTorrent upload = new BasicTorrent(endpointTracker, transferTracker, torrentHelper, completeCallback, torrentId, manifestStream, torrentPeers, torrentBuilder);
+            pendingHDFSUploads.put(torrentId, RESTART_NOHUP_REQ);
+            upload.start();
+        }
+
+        private Result<Boolean> validateUploadRequest(HopsTorrentUploadEvent.Request req) {
             TorrentState status = library.getStatus(req.torrentId);
             switch (status) {
                 case PREPARE_UPLOAD:
@@ -1175,5 +1215,4 @@ public class HopsLibraryMngr {
         }
     }
 
-    
 }

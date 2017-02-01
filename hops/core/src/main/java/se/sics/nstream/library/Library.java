@@ -44,7 +44,7 @@ public class Library {
     public Library(String librarySummaryFile) {
         this.librarySumaryFile = librarySummaryFile;
     }
-    
+
     public boolean containsTorrent(OverlayId torrentId) {
         return torrentStatus.containsKey(torrentId);
     }
@@ -73,7 +73,7 @@ public class Library {
         Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
         status = Pair.with(status.getValue0(), TorrentState.UPLOADING);
         torrentStatus.put(torrentId, status);
-        torrents.put(torrentId, new Torrent(manifestStream));
+        torrents.put(torrentId, new Torrent(status.getValue0(), manifestStream));
         updateSummary();
     }
 
@@ -85,7 +85,7 @@ public class Library {
         Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
         status = Pair.with(status.getValue0(), TorrentState.DOWNLOADING);
         torrentStatus.put(torrentId, status);
-        torrents.put(torrentId, new Torrent(manifestStream));
+        torrents.put(torrentId, new Torrent(status.getValue0(), manifestStream));
         updateSummary();
     }
 
@@ -98,7 +98,7 @@ public class Library {
     private void updateSummary() {
         LibrarySummaryJSON summaryResult = LibrarySummaryHelper.toSummary(torrents);
         Result<Boolean> writeResult = LibrarySummaryHelper.writeTorrentList(librarySumaryFile, summaryResult);
-        if(!writeResult.isSuccess()) {
+        if (!writeResult.isSuccess()) {
             //TODO - try again next time?
         }
     }
@@ -114,9 +114,12 @@ public class Library {
 
     public static class Torrent {
 
+        //TODO Alex - duplicate data torrentName
+        public final String torrentName;
         public final MyStream manifestStream;
 
-        public Torrent(MyStream manifestStream) {
+        public Torrent(String torrentName, MyStream manifestStream) {
+            this.torrentName = torrentName;
             this.manifestStream = manifestStream;
         }
     }
