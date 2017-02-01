@@ -139,6 +139,7 @@ public class LibrarySummaryHelper {
     private static Result<LibrarySummaryJSON> createEmptyTorrentList(File torrentListFile) throws IOException {
         LibrarySummaryJSON emptyContent = new LibrarySummaryJSON();
         emptyContent.setDiskLibrary(new DiskLibrarySummaryJSON());
+        emptyContent.setHdfsLibrary(new HDFSLibrarySummaryJSON());
         
         Gson gson = new Gson();
         String jsonContent = gson.toJson(emptyContent);
