@@ -58,6 +58,7 @@ import se.sics.nstream.hops.manifest.ManifestJSON;
 import se.sics.nstream.library.Library;
 import se.sics.nstream.library.disk.LibrarySummaryHelper;
 import se.sics.nstream.library.disk.LibrarySummaryJSON;
+import se.sics.nstream.library.event.torrent.HopsContentsEvent;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
@@ -908,8 +909,18 @@ public class HopsLibraryMngr {
                 comp.proxy.subscribe(handleHDFSTorrentDownload, comp.libraryCtrlPort);
                 comp.proxy.subscribe(handleHDFSTorrentAdvanceDownload, comp.libraryCtrlPort);
             }
+            comp.proxy.subscribe(handleContents, comp.libraryCtrlPort);
         }
 
+        Handler handleContents = new Handler<HopsContentsEvent.Request>() {
+
+            @Override
+            public void handle(HopsContentsEvent.Request req) {
+                LOG.trace("{}received:{}", logPrefix, req);
+                comp.proxy.answer(req, req.success(library.getSummary()));
+            }
+        };
+        
         Handler handleDiskTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
             @Override
             public void handle(final HopsTorrentUploadEvent.Request req) {
