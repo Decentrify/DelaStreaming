@@ -69,6 +69,7 @@ public class HDFSLibrarySummaryJSON {
     
     public static class TorrentJSON {
         private String torrentName;
+        private String torrentStatus;
         private String baseId;
         private HDFSEndpointJSON endpoint;
         private String dirPath;
@@ -83,6 +84,14 @@ public class HDFSLibrarySummaryJSON {
             this.torrentName = torrentName;
         }
 
+        public String getTorrentStatus() {
+            return torrentStatus;
+        }
+
+        public void setTorrentStatus(String torrentStatus) {
+            this.torrentStatus = torrentStatus;
+        }
+        
         public String getDirPath() {
             return dirPath;
         }

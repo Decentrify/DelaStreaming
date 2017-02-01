@@ -46,6 +46,7 @@ public class DiskLibrarySummaryJSON {
     
     public static class TorrentJSON {
         private String torrentName;
+        private String torrentStatus;
         private String baseId;
         private String dirPath;
         
@@ -58,6 +59,14 @@ public class DiskLibrarySummaryJSON {
 
         public void setTorrentName(String torrentName) {
             this.torrentName = torrentName;
+        }
+
+        public String getTorrentStatus() {
+            return torrentStatus;
+        }
+
+        public void setTorrentStatus(String torrentStatus) {
+            this.torrentStatus = torrentStatus;
         }
         
         public String getBaseId() {

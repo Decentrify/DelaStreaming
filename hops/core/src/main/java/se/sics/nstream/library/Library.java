@@ -73,7 +73,7 @@ public class Library {
         Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
         status = Pair.with(status.getValue0(), TorrentState.UPLOADING);
         torrentStatus.put(torrentId, status);
-        torrents.put(torrentId, new Torrent(status.getValue0(), manifestStream));
+        torrents.put(torrentId, new Torrent(status.getValue0(), status.getValue1().toString(), manifestStream));
         updateSummary();
     }
 
@@ -85,7 +85,7 @@ public class Library {
         Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
         status = Pair.with(status.getValue0(), TorrentState.DOWNLOADING);
         torrentStatus.put(torrentId, status);
-        torrents.put(torrentId, new Torrent(status.getValue0(), manifestStream));
+        torrents.put(torrentId, new Torrent(status.getValue0(), status.getValue1().toString(), manifestStream));
         updateSummary();
     }
 
@@ -116,10 +116,12 @@ public class Library {
 
         //TODO Alex - duplicate data torrentName
         public final String torrentName;
+        public final String torrentStatus;
         public final MyStream manifestStream;
 
-        public Torrent(String torrentName, MyStream manifestStream) {
+        public Torrent(String torrentName, String torrentStatus, MyStream manifestStream) {
             this.torrentName = torrentName;
+            this.torrentStatus = torrentStatus;
             this.manifestStream = manifestStream;
         }
     }
