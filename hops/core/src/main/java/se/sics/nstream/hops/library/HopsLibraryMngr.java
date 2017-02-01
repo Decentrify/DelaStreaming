@@ -106,10 +106,10 @@ public class HopsLibraryMngr {
         transferTracker = new TransferTracker(logPrefix, componentHelper);
 
         libOpTracker = new LibOpTracker(logPrefix, config, componentHelper, endpointTracker, transferTracker, library, selfAdr.getId());
-        restartTorrents();
     }
 
     public void start() {
+        restartTorrents();
     }
 
     public void close() {
@@ -120,6 +120,7 @@ public class HopsLibraryMngr {
     }
 
     private void restartTorrents() {
+        LOG.info("{}restarting torrents", logPrefix);
         HopsLibraryKConfig hopsLibraryConfig = new HopsLibraryKConfig(config);
         OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory();
 
@@ -133,8 +134,10 @@ public class HopsLibraryMngr {
         for(Map.Entry<OverlayId, Library.Torrent> torrent : torrents.entrySet()) {
             //TODO - cleaner way than check resource
             if(torrent.getValue().manifestStream.endpoint instanceof DiskEndpoint) {
+                LOG.info("{}restarting DISK torrent:{}", logPrefix, torrent.getValue().torrentName);
                 libOpTracker.restartDiskUpload(torrent.getKey(), torrent.getValue().torrentName, torrent.getValue().manifestStream);
             } else {
+                LOG.info("{}restarting HDFS torrent:{}", logPrefix, torrent.getValue().torrentName);
                 libOpTracker.restartHDFSUpload(torrent.getKey(), torrent.getValue().torrentName, torrent.getValue().manifestStream);
             }
         }
