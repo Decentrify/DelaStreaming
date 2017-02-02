@@ -115,6 +115,9 @@ public class Library {
     
     public TorrentExtendedStatus getExtendedStatus(OverlayId torrentId) {
         Pair<String, TorrentState> ts = torrentStatus.get(torrentId);
+        if(ts == null) {
+            return null;
+        }
         return new TorrentExtendedStatus(torrentId, ts.getValue1(), 0, 0);
     }
 
