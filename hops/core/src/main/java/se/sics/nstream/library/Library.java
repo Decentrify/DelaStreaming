@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.gvod.mngr.util.ElementSummary;
+import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.library.disk.LibrarySummaryHelper;
@@ -110,6 +111,11 @@ public class Library {
             summary.add(es);
         }
         return summary;
+    }
+    
+    public TorrentExtendedStatus getExtendedStatus(OverlayId torrentId) {
+        Pair<String, TorrentState> ts = torrentStatus.get(torrentId);
+        return new TorrentExtendedStatus(torrentId, ts.getValue1(), 0, 0);
     }
 
     public static class Torrent {
