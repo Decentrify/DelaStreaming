@@ -1176,9 +1176,9 @@ public class HopsLibraryMngr {
                     @Override
                     public void ready(Result<Boolean> result) {
                         if (result.isSuccess()) {
-                            pendingHDFSAdvanceDownloads.remove(req.torrentId);
+                            HopsTorrentDownloadEvent.AdvanceRequest areq = pendingHDFSAdvanceDownloads.remove(req.torrentId);
                             library.download(req.torrentId, torrentStream);
-                            comp.proxy.answer(req, req.success(result));
+                            comp.proxy.answer(areq, areq.success(result));
                         } else {
                             throw new RuntimeException("todo - cleanup");
                         }
