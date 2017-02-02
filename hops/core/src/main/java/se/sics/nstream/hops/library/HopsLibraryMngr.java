@@ -1195,7 +1195,8 @@ public class HopsLibraryMngr {
             @Override
             public void handle(HopsTorrentDownloadEvent.AdvanceRequest req) {
                 LOG.trace("{}received:{}", logPrefix, req);
-
+                
+                pendingHDFSAdvanceDownloads.put(req.torrentId, req);
                 BasicCompleteCallback<Pair<KafkaEndpoint, Map<String, KafkaResource>>> advanceCallback = pendingHDFSDownloadCallback.remove(req.torrentId);
                 KafkaEndpoint kafkaEndpoint = req.kafkaEndpoint.isPresent() ? req.kafkaEndpoint.get() : null;
                 Map<String, KafkaResource> kafkaResources = kafkaEndpoint != null ? req.kafkaDetails : new HashMap<String, KafkaResource>();
