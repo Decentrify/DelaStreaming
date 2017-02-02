@@ -76,6 +76,7 @@ import se.sics.nstream.storage.durable.util.StreamEndpoint;
 import se.sics.nstream.storage.durable.util.StreamResource;
 import se.sics.nstream.torrent.TorrentMngrPort;
 import se.sics.nstream.torrent.event.StartTorrent;
+import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
@@ -914,6 +915,7 @@ public class HopsLibraryMngr {
             }
             comp.proxy.subscribe(handleContents, comp.libraryCtrlPort);
             comp.proxy.subscribe(handleTorrentDetails, comp.libraryCtrlPort);
+            comp.proxy.subscribe(handleTorrentStatus, comp.torrentStatusPort);
         }
 
         Handler handleContents = new Handler<HopsContentsEvent.Request>() {
@@ -938,6 +940,15 @@ public class HopsLibraryMngr {
                     tes = new TorrentExtendedStatus(req.torrentId, TorrentState.NONE, 0, 0);
                 }
                 comp.proxy.answer(req, req.succes(tes));
+            }
+        };
+        
+        Handler handleTorrentStatus = new Handler<DownloadSummaryEvent>(){
+            @Override
+            public void handle(DownloadSummaryEvent ind) {
+                LOG.trace("{}received:{}", logPrefix, ind);
+                LOG.info("{}download completed:{}", logPrefix, ind.torrentId);
+                library.finishDownload(ind.torrentId);
             }
         };
         
