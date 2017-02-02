@@ -94,6 +94,7 @@ public class Library {
         Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
         status = Pair.with(status.getValue0(), TorrentState.UPLOADING);
         torrentStatus.put(torrentId, status);
+        updateSummary();
     }
 
     private void updateSummary() {

@@ -78,6 +78,7 @@ import se.sics.nstream.torrent.TorrentMngrPort;
 import se.sics.nstream.torrent.event.StartTorrent;
 import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
+import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
 import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
@@ -136,9 +137,9 @@ public class HopsLibraryMngr {
         Map<OverlayId, Library.Torrent> torrents = LibrarySummaryHelper.fromSummary(librarySummary.getValue(), TorrentIds.torrentIdFactory());
 
         //TODO Alex - important - when registering endpoints - what happens if I register multiple endpoints
-        for(Map.Entry<OverlayId, Library.Torrent> torrent : torrents.entrySet()) {
+        for (Map.Entry<OverlayId, Library.Torrent> torrent : torrents.entrySet()) {
             //TODO - cleaner way than check resource
-            if(torrent.getValue().manifestStream.endpoint instanceof DiskEndpoint) {
+            if (torrent.getValue().manifestStream.endpoint instanceof DiskEndpoint) {
                 LOG.info("{}restarting DISK torrent:{}", logPrefix, torrent.getValue().torrentName);
                 libOpTracker.restartDiskUpload(torrent.getKey(), torrent.getValue().torrentName, torrent.getValue().manifestStream);
             } else {
@@ -893,6 +894,7 @@ public class HopsLibraryMngr {
         private final Map<OverlayId, HopsTorrentDownloadEvent.StartRequest> pendingHDFSStartDownloads = new HashMap<>();
         private final Map<OverlayId, BasicCompleteCallback> pendingHDFSDownloadCallback = new HashMap<>();
         private final Map<OverlayId, HopsTorrentDownloadEvent.AdvanceRequest> pendingHDFSAdvanceDownloads = new HashMap<>();
+        private final Map<OverlayId, TorrentExtendedStatusEvent.Request> pendingTESE = new HashMap<>();
 
         public LibOpTracker(String logPrefix, Config config, ComponentHelper comp, EndpointTracker endpointTracker, TransferTracker transferTracker,
                 Library library, Identifier selfId) {
@@ -915,6 +917,7 @@ public class HopsLibraryMngr {
             }
             comp.proxy.subscribe(handleContents, comp.libraryCtrlPort);
             comp.proxy.subscribe(handleTorrentDetails, comp.libraryCtrlPort);
+            comp.proxy.subscribe(handleDownloadCompleted, comp.torrentStatusPort);
             comp.proxy.subscribe(handleTorrentStatus, comp.torrentStatusPort);
         }
 
@@ -926,24 +929,52 @@ public class HopsLibraryMngr {
                 comp.proxy.answer(req, req.success(library.getSummary()));
             }
         };
-        
+
         Handler handleTorrentDetails = new Handler<TorrentExtendedStatusEvent.Request>() {
             @Override
             public void handle(TorrentExtendedStatusEvent.Request req) {
                 LOG.trace("{}received:{}", logPrefix, req);
                 TorrentExtendedStatus tes = library.getExtendedStatus(req.torrentId);
-                if(tes == null) {
-                    LOG.warn("{}torrent:{} not found", logPrefix, req.torrentId);
-                    for(ElementSummary es : library.getSummary()) {
-                        LOG.warn("{}found torrent:{}", logPrefix, es.torrentId);
-                    }
+                if (tes == null) {
+                    torrentNotFound(req.torrentId);
                     tes = new TorrentExtendedStatus(req.torrentId, TorrentState.NONE, 0, 0);
+                    comp.proxy.answer(req, req.succes(tes));
+                } else {
+                    pendingTESE.put(req.torrentId, req);
+                    comp.proxy.trigger(new StatusSummaryEvent.Request(req.torrentId), comp.torrentStatusPort);
+                }
+            }
+        };
+
+        private void torrentNotFound(OverlayId torrentId) {
+            TorrentExtendedStatus tes;
+            LOG.warn("{}torrent:{} not found", logPrefix, torrentId);
+            for (ElementSummary es : library.getSummary()) {
+                LOG.warn("{}found torrent:{}", logPrefix, es.torrentId);
+            }
+
+        }
+
+        Handler handleTorrentStatus = new Handler<StatusSummaryEvent.Response>() {
+            @Override
+            public void handle(StatusSummaryEvent.Response resp) {
+                LOG.trace("{}received:{}", logPrefix, resp);
+                TorrentExtendedStatusEvent.Request req = pendingTESE.remove(resp.req.torrentId);
+                if (req == null) {
+                    return;
+                }
+                TorrentExtendedStatus tes = library.getExtendedStatus(req.torrentId);
+                if (tes == null) {
+                    torrentNotFound(req.torrentId);
+                    tes = new TorrentExtendedStatus(req.torrentId, TorrentState.NONE, 0, 0);
+                } else {
+                    tes = new TorrentExtendedStatus(req.torrentId, resp.result.torrentStatus, resp.result.downloadSpeed, resp.result.percentageComplete);
                 }
                 comp.proxy.answer(req, req.succes(tes));
             }
         };
-        
-        Handler handleTorrentStatus = new Handler<DownloadSummaryEvent>(){
+
+        Handler handleDownloadCompleted = new Handler<DownloadSummaryEvent>() {
             @Override
             public void handle(DownloadSummaryEvent ind) {
                 LOG.trace("{}received:{}", logPrefix, ind);
@@ -951,7 +982,7 @@ public class HopsLibraryMngr {
                 library.finishDownload(ind.torrentId);
             }
         };
-        
+
         Handler handleDiskTorrentUpload = new Handler<HopsTorrentUploadEvent.Request>() {
             @Override
             public void handle(final HopsTorrentUploadEvent.Request req) {
@@ -1226,7 +1257,7 @@ public class HopsLibraryMngr {
             @Override
             public void handle(HopsTorrentDownloadEvent.AdvanceRequest req) {
                 LOG.trace("{}received:{}", logPrefix, req);
-                
+
                 pendingHDFSAdvanceDownloads.put(req.torrentId, req);
                 BasicCompleteCallback<Pair<KafkaEndpoint, Map<String, KafkaResource>>> advanceCallback = pendingHDFSDownloadCallback.remove(req.torrentId);
                 KafkaEndpoint kafkaEndpoint = req.kafkaEndpoint.isPresent() ? req.kafkaEndpoint.get() : null;
