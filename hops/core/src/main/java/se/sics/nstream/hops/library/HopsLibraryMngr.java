@@ -29,6 +29,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
@@ -931,6 +932,10 @@ public class HopsLibraryMngr {
                 TorrentExtendedStatus tes = library.getExtendedStatus(req.torrentId);
                 if(tes == null) {
                     LOG.warn("{}torrent:{} not found", logPrefix, req.torrentId);
+                    for(ElementSummary es : library.getSummary()) {
+                        LOG.warn("{}found torrent:{}", logPrefix, es.torrentId);
+                    }
+                    tes = new TorrentExtendedStatus(req.torrentId, TorrentState.NONE, 0, 0);
                 }
                 comp.proxy.answer(req, req.succes(tes));
             }
