@@ -45,12 +45,21 @@ public class DiskLibrarySummaryJSON {
     }
     
     public static class TorrentJSON {
+        private String projectId;
         private String torrentName;
         private String torrentStatus;
         private String baseId;
         private String dirPath;
         
         public TorrentJSON() {
+        }
+
+        public String getProjectId() {
+          return projectId;
+        }
+
+        public void setProjectId(String projectId) {
+          this.projectId = projectId;
         }
 
         public String getTorrentName() {

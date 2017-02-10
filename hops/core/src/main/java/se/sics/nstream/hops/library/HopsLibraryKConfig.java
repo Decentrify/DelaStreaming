@@ -31,10 +31,12 @@ public class HopsLibraryKConfig {
     
     public final Config configCore;
     public final Details.Types baseEndpointType;
+    public final String librarySummaryPath;
     
     public HopsLibraryKConfig(Config configCore) {
         this.configCore = configCore;
         String baseEndpointString = KConfigHelper.read(configCore, baseEndpointOpt);
         baseEndpointType = Details.Types.valueOf(baseEndpointString);
+        librarySummaryPath = configCore.getValue("library.summary", String.class);
     }
 }

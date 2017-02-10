@@ -18,13 +18,12 @@
  */
 package se.sics.nstream.library;
 
+import com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.javatuples.Pair;
 import se.sics.gvod.mngr.util.ElementSummary;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.library.disk.LibrarySummaryHelper;
@@ -38,101 +37,147 @@ import se.sics.nstream.storage.durable.util.MyStream;
  */
 public class Library {
 
-    private final String librarySumaryFile;
-    private final Map<OverlayId, Pair<String, TorrentState>> torrentStatus = new HashMap<>();
-    private final Map<OverlayId, Torrent> torrents = new HashMap<>();
+  private final String librarySumaryFile;
 
-    public Library(String librarySummaryFile) {
-        this.librarySumaryFile = librarySummaryFile;
+  private final Map<OverlayId, Torrent> torrents = new HashMap<>();
+
+  public Library(String librarySummaryFile) {
+    this.librarySumaryFile = librarySummaryFile;
+  }
+
+//  public void destroyed(OverlayId torrentId) {
+//    Pair<String, TorrentState> status = torrentStatus.destroy(torrentId);
+//    status = Pair.with(status.getValue0(), TorrentState.DESTROYED);
+//    torrentStatus.put(torrentId, status);
+//    torrents.destroy(torrentId);
+//    updateSummary();
+//  }
+  
+  public boolean containsTorrent(OverlayId tId) {
+    return torrents.containsKey(tId);
+  }
+  
+  public TorrentState stateOf(OverlayId tId) {
+    Torrent t = torrents.get(tId);
+    if(t == null) {
+      return TorrentState.NONE;
+    }
+    return t.torrentStatus;
+  }
+
+  public Result<Boolean> checkState(OverlayId tId, TorrentState expectedState) {
+    Torrent t = torrents.get(tId);
+    if (expectedState.equals(t.torrentStatus)) {
+      return Result.success(true);
+    }
+    return Result.badArgument("torrent:" + tId + " expected state:" + expectedState + " found state:" + t.torrentStatus);
+  }
+
+  public Result<Boolean> checkBasicDetails(OverlayId tId, String projectId, String tName) {
+    Torrent t = torrents.get(tId);
+    if (!t.projectId.equals(projectId)) {
+      return Result.badArgument("torrent:" + tId + "already active in project:" + t.projectId);
+    }
+    if (!t.torrentName.equals(tName)) {
+      return Result.badArgument("torrent:" + tId + "already active with name:" + t.torrentName);
+    }
+    return Result.success(true);
+  }
+
+  public void destroy(OverlayId torrentId) {
+    Torrent torrent = torrents.get(torrentId);
+    if (torrent != null) {
+      torrent.setTorrentStatus(TorrentState.DESTROYED);
+      updateSummary();
+    }
+  }
+
+  public void prepareUpload(String projectId, OverlayId torrentId, String torrentName) {
+    Torrent torrent = new Torrent(projectId, torrentName, TorrentState.PREPARE_UPLOAD);
+    torrents.put(torrentId, torrent);
+  }
+
+  public void upload(OverlayId torrentId, MyStream manifestStream) {
+    Torrent torrent = torrents.get(torrentId);
+    torrent.setTorrentStatus(TorrentState.UPLOADING);
+    torrent.setManifestStream(manifestStream);
+    updateSummary();
+  }
+
+  public void prepareDownload(String projectId, OverlayId torrentId, String torrentName) {
+    Torrent torrent = new Torrent(projectId, projectId, TorrentState.PREPARE_DOWNLOAD);
+    torrents.put(torrentId, torrent);
+  }
+
+  public void download(String projectId, OverlayId torrentId, String torrentName, MyStream manifestStream) {
+    Torrent torrent = torrents.get(torrentId);
+    torrent.setTorrentStatus(TorrentState.DOWNLOADING);
+    torrent.setManifestStream(manifestStream);
+    updateSummary();
+  }
+
+  public void finishDownload(OverlayId torrentId) {
+    Torrent torrent = torrents.get(torrentId);
+    torrent.setTorrentStatus(TorrentState.UPLOADING);
+    updateSummary();
+  }
+
+  private void updateSummary() {
+    LibrarySummaryJSON summaryResult = LibrarySummaryHelper.toSummary(torrents);
+    Result<Boolean> writeResult = LibrarySummaryHelper.writeTorrentList(librarySumaryFile, summaryResult);
+    if (!writeResult.isSuccess()) {
+      //TODO - try again next time?
+    }
+  }
+
+  public List<ElementSummary> getSummary() {
+    List<ElementSummary> summary = new ArrayList<>();
+    for (Map.Entry<OverlayId, Torrent> e : torrents.entrySet()) {
+      ElementSummary es = new ElementSummary(e.getValue().torrentName, e.
+        getKey(), e.getValue().torrentStatus);
+      summary.add(es);
+    }
+    return summary;
+  }
+
+  public static class Torrent {
+
+    //TODO Alex - duplicate data torrentName
+    public final String projectId;
+    public final String torrentName;
+    private TorrentState torrentStatus;
+    private Optional<MyStream> manifestStream;
+
+    private Torrent(String projectId, String torrentName,
+      TorrentState torrentStatus, Optional<MyStream> manifestStream) {
+      this.projectId = projectId;
+      this.torrentName = torrentName;
+      this.torrentStatus = torrentStatus;
+      this.manifestStream = manifestStream;
     }
 
-    public boolean containsTorrent(OverlayId torrentId) {
-        return torrentStatus.containsKey(torrentId);
+    public Torrent(String projectId, String torrentName, TorrentState torrentStatus, MyStream manifestStream) {
+      this(projectId, torrentName, torrentStatus, Optional.of(manifestStream));
     }
 
-    public TorrentState getStatus(OverlayId torrentId) {
-        Pair<String, TorrentState> status = torrentStatus.get(torrentId);
-        if (status == null) {
-            status = Pair.with("", TorrentState.NONE);
-        }
-        return status.getValue1();
+    public Torrent(String projectId, String torrentName,TorrentState torrentStatus) {
+      this(projectId, torrentName, torrentStatus, Optional.fromNullable((MyStream) null));
     }
 
-    public void destroyed(OverlayId torrentId) {
-        Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
-        status = Pair.with(status.getValue0(), TorrentState.DESTROYED);
-        torrentStatus.put(torrentId, status);
-        torrents.remove(torrentId);
-        updateSummary();
+    public TorrentState getTorrentStatus() {
+      return torrentStatus;
     }
 
-    public void prepareUpload(OverlayId torrentId, String torrentName) {
-        torrentStatus.put(torrentId, Pair.with(torrentName, TorrentState.PREPARE_UPLOAD));
+    public void setTorrentStatus(TorrentState torrentStatus) {
+      this.torrentStatus = torrentStatus;
     }
 
-    public void upload(OverlayId torrentId, MyStream manifestStream) {
-        Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
-        status = Pair.with(status.getValue0(), TorrentState.UPLOADING);
-        torrentStatus.put(torrentId, status);
-        torrents.put(torrentId, new Torrent(status.getValue0(), status.getValue1().toString(), manifestStream));
-        updateSummary();
+    public MyStream getManifestStream() {
+      return manifestStream.get();
     }
 
-    public void prepareDownload(OverlayId torrentId, String torrentName) {
-        torrentStatus.put(torrentId, Pair.with(torrentName, TorrentState.PREPARE_DOWNLOAD));
+    public void setManifestStream(MyStream manifestStream) {
+      this.manifestStream = Optional.of(manifestStream);
     }
-
-    public void download(OverlayId torrentId, MyStream manifestStream) {
-        Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
-        status = Pair.with(status.getValue0(), TorrentState.DOWNLOADING);
-        torrentStatus.put(torrentId, status);
-        torrents.put(torrentId, new Torrent(status.getValue0(), status.getValue1().toString(), manifestStream));
-        updateSummary();
-    }
-
-    public void finishDownload(OverlayId torrentId) {
-        Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
-        status = Pair.with(status.getValue0(), TorrentState.UPLOADING);
-        torrentStatus.put(torrentId, status);
-        updateSummary();
-    }
-
-    private void updateSummary() {
-        LibrarySummaryJSON summaryResult = LibrarySummaryHelper.toSummary(torrents);
-        Result<Boolean> writeResult = LibrarySummaryHelper.writeTorrentList(librarySumaryFile, summaryResult);
-        if (!writeResult.isSuccess()) {
-            //TODO - try again next time?
-        }
-    }
-
-    public List<ElementSummary> getSummary() {
-        List<ElementSummary> summary = new ArrayList<>();
-        for (Map.Entry<OverlayId, Pair<String, TorrentState>> e : torrentStatus.entrySet()) {
-            ElementSummary es = new ElementSummary(e.getValue().getValue0(), e.getKey(), e.getValue().getValue1());
-            summary.add(es);
-        }
-        return summary;
-    }
-    
-    public TorrentExtendedStatus getExtendedStatus(OverlayId torrentId) {
-        Pair<String, TorrentState> ts = torrentStatus.get(torrentId);
-        if(ts == null) {
-            return null;
-        }
-        return new TorrentExtendedStatus(torrentId, ts.getValue1(), 0, 0);
-    }
-
-    public static class Torrent {
-
-        //TODO Alex - duplicate data torrentName
-        public final String torrentName;
-        public final String torrentStatus;
-        public final MyStream manifestStream;
-
-        public Torrent(String torrentName, String torrentStatus, MyStream manifestStream) {
-            this.torrentName = torrentName;
-            this.torrentStatus = torrentStatus;
-            this.manifestStream = manifestStream;
-        }
-    }
+  }
 }

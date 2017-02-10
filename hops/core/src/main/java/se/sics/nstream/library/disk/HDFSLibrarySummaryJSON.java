@@ -68,6 +68,7 @@ public class HDFSLibrarySummaryJSON {
     }
     
     public static class TorrentJSON {
+        private String projectId;
         private String torrentName;
         private String torrentStatus;
         private String baseId;
@@ -76,6 +77,14 @@ public class HDFSLibrarySummaryJSON {
 
         public TorrentJSON(){}
 
+        public String getProjectId() {
+          return projectId;
+        }
+
+        public void setProjectId(String projectId) {
+          this.projectId = projectId;
+        }
+        
         public String getTorrentName() {
             return torrentName;
         }

@@ -19,6 +19,8 @@
 package se.sics.nstream.torrent.transfer.event.ctrl;
 
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.nutil.fsm.FSMEvent;
+import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -31,51 +33,76 @@ import se.sics.nstream.transfer.MyTorrent;
  */
 public class SetupTransfer {
 
-    public static class Request extends Direct.Request<Response> implements OverlayEvent {
+  public static class Request extends Direct.Request<Response> implements OverlayEvent, FSMEvent {
 
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        public final MyTorrent torrent;
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+    public final MyTorrent torrent;
+    //fsm
+    public final FSMId fsmId;
+    public final String fsmName;
 
-        public Request(OverlayId torrentId, MyTorrent torrent) {
-            eventId = BasicIdentifiers.eventId();
-            this.torrentId = torrentId;
-            this.torrent = torrent;
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        @Override
-        public OverlayId overlayId() {
-            return torrentId;
-        }
-
-        public Response complete(Result<Boolean> result) {
-            return new Response(this, result);
-        }
+    public Request(OverlayId torrentId, MyTorrent torrent, FSMId fsmId, String fsmName) {
+      eventId = BasicIdentifiers.eventId();
+      this.torrentId = torrentId;
+      this.torrent = torrent;
+      this.fsmId = fsmId;
+      this.fsmName = fsmName;
     }
 
-    public static class Response implements Direct.Response, OverlayEvent {
-
-        public final Request req;
-        public final Result<Boolean> result;
-
-        private Response(Request req, Result<Boolean> result) {
-            this.req = req;
-            this.result = result;
-        }
-
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
-
-        @Override
-        public OverlayId overlayId() {
-            return req.overlayId();
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+
+    @Override
+    public OverlayId overlayId() {
+      return torrentId;
+    }
+
+    public Response complete(Result<Boolean> result) {
+      return new Response(this, result);
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return fsmId.baseId;
+    }
+
+    @Override
+    public String getFSMName() {
+      return fsmName;
+    }
+  }
+
+  public static class Response implements Direct.Response, OverlayEvent, FSMEvent {
+
+    public final Request req;
+    public final Result<Boolean> result;
+
+    private Response(Request req, Result<Boolean> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return req.overlayId();
+    }
+    
+    @Override
+    public Identifier getBaseId() {
+      return req.getBaseId();
+    }
+
+    @Override
+    public String getFSMName() {
+      return req.getFSMName();
+    }
+  }
 }
