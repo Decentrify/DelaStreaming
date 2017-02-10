@@ -16,37 +16,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library.event.core;
+package se.sics.nstream.torrent.event;
 
-import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.nutil.fsm.FSMEvent;
+import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.hops.libmngr.LocalLibTorrentFSM;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsTorrentStopEvent {
-
-  public static class Request extends Direct.Request<Response> implements VoDMngrEvent, FSMEvent {
+public class StopTorrent {
+  public static class Request extends Direct.Request<Response> implements OverlayEvent, FSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
     //fsm
-    private String fsmName;
+    public final FSMId fsmId;
+    public final String fsmName;
 
-    public Request(Identifier eventId, OverlayId torrentId) {
-      this.eventId = eventId;
+    public Request(OverlayId torrentId, FSMId fsmId, String fsmName) {
+      this.eventId = BasicIdentifiers.eventId();
       this.torrentId = torrentId;
-    }
-
-    public Request(OverlayId torrentId) {
-      this(BasicIdentifiers.eventId(), torrentId);
+      this.fsmId = fsmId;
+      this.fsmName = fsmName;
     }
 
     @Override
@@ -55,41 +52,60 @@ public class HopsTorrentStopEvent {
     }
 
     @Override
-    public Identifier getBaseId() {
-      return torrentId.baseId;
-    }
-
-    @Override
-    public String getFSMName() {
-      return LocalLibTorrentFSM.NAME;
+    public OverlayId overlayId() {
+      return torrentId;
     }
 
     public Response success() {
       return new Response(this, Result.success(true));
     }
 
-    public Response badRequest(Exception ex) {
-      return new Response(this, Result.badRequest(ex));
+    @Override
+    public Identifier getBaseId() {
+      return fsmId.baseId;
     }
 
-    public Response internalFailure(Exception ex) {
-      return new Response(this, Result.internalFailure(ex));
+    @Override
+    public String getFSMName() {
+      return fsmName;
     }
   }
 
-  public static class Response implements Direct.Response, VoDMngrEvent {
+  public static class Response implements Direct.Response, OverlayEvent, FSMEvent {
 
-    public final Request req;
+    public final Identifier eventId;
+    public final OverlayId torrentId;
     public final Result<Boolean> result;
+    //fsm
+    public final FSMId fsmId;
+    public final String fsmName;
 
-    public Response(Request req, Result<Boolean> result) {
-      this.req = req;
+    private Response(Request req, Result<Boolean> result) {
+      this.eventId = req.eventId;
+      this.torrentId = req.torrentId;
       this.result = result;
+      this.fsmId = req.fsmId;
+      this.fsmName = req.fsmName;
     }
 
     @Override
     public Identifier getId() {
-      return req.eventId;
+      return eventId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return torrentId;
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return fsmId.baseId;
+    }
+
+    @Override
+    public String getFSMName() {
+      return fsmName;
     }
   }
 }

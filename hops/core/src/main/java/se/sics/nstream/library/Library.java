@@ -46,10 +46,10 @@ public class Library {
   }
 
 //  public void destroyed(OverlayId torrentId) {
-//    Pair<String, TorrentState> status = torrentStatus.destroy(torrentId);
+//    Pair<String, TorrentState> status = torrentStatus.remove(torrentId);
 //    status = Pair.with(status.getValue0(), TorrentState.DESTROYED);
 //    torrentStatus.put(torrentId, status);
-//    torrents.destroy(torrentId);
+//    torrents.remove(torrentId);
 //    updateSummary();
 //  }
   
@@ -84,10 +84,9 @@ public class Library {
     return Result.success(true);
   }
 
-  public void destroy(OverlayId torrentId) {
-    Torrent torrent = torrents.get(torrentId);
+  public void remove(OverlayId torrentId) {
+    Torrent torrent = torrents.remove(torrentId);
     if (torrent != null) {
-      torrent.setTorrentStatus(TorrentState.DESTROYED);
       updateSummary();
     }
   }

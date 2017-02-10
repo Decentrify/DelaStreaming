@@ -16,17 +16,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library;
+package se.sics.nstream.hops.libmngr;
 
-import se.sics.nstream.library.endpointmngr.EndpointIdRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.nutil.fsm.MultiFSM;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.hops.libmngr.LocalLibTorrentFSM;
+import se.sics.nstream.hops.library.Details;
+import se.sics.nstream.hops.library.HopsLibraryKConfig;
 import se.sics.nstream.library.Library;
+import se.sics.nstream.library.endpointmngr.EndpointIdRegistry;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

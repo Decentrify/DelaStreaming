@@ -34,16 +34,13 @@ public class EndpointRegistration {
   private final Map<String, Identifier> nameToId = new HashMap<>();
   private final Map<Identifier, StreamEndpoint> endpoints = new HashMap<>();
   private final Set<Identifier> connecting = new HashSet<>();
+  
+  private final Set<Identifier> selfCleaning = new HashSet<>();
 
   public void addWaiting(String endpointName, Identifier endpointId, StreamEndpoint endpoint) {
     nameToId.put(endpointName, endpointId);
     endpoints.put(endpointId, endpoint);
     connecting.add(endpointId);
-  }
-
-  public void addConnected(String endpointName, Identifier endpointId, StreamEndpoint endpoint) {
-    nameToId.put(endpointName, endpointId);
-    endpoints.put(endpointId, endpoint);
   }
 
   public boolean isComplete() {
@@ -60,5 +57,19 @@ public class EndpointRegistration {
   
   public Identifier nameToId(String endpointName) {
     return nameToId.get(endpointName);
+  }
+  
+  public Set<Identifier> selfCleaning() {
+    selfCleaning.addAll(endpoints.keySet());
+    selfCleaning.addAll(connecting);
+    return selfCleaning;
+  }
+  
+  public void cleaned(Identifier endpointId) {
+    selfCleaning.remove(endpointId);
+  }
+  
+  public boolean cleaningComplete() {
+    return selfCleaning.isEmpty();
   }
 }

@@ -1018,7 +1018,7 @@
 //      //TODO Alex - important - when registering endpoints - what happens if I register multiple endpoints
 //      for (Map.Entry<OverlayId, Library.Torrent> torrent : torrents.entrySet()) {
 //        if (!restartable(torrent.getValue().getTorrentStatus())) {
-//          library.destroy(torrent.getKey());
+//          library.remove(torrent.getKey());
 //          continue;
 //        }
 //        //TODO - cleaner way than check resource
@@ -1100,7 +1100,7 @@
 //    };
 //
 //    private void cleanSinksAndSources(OverlayId torrentId) {
-//      library.destroy(torrentId);
+//      library.remove(torrentId);
 //      throw new RuntimeException("TODO clean endpoints");
 //    }
 //
@@ -1161,7 +1161,7 @@
 //            if (!result.isSuccess()) {
 //              //Fail on setup clean sinks/sources and library
 //              cleanSinksAndSources(req.torrentId);
-//              library.destroy(req.torrentId);
+//              library.remove(req.torrentId);
 //              comp.proxy.answer(req, req.failed(result));
 //            }
 //            Result<Boolean> uResult = library.upload(req.projectId, req.torrentId, req.torrentName, torrentStream);
@@ -1202,7 +1202,7 @@
 //
 //      @Override
 //      public void doCleanup() {
-//        lib.destroy(torrentId);
+//        lib.remove(torrentId);
 //      }
 //    }
 //
@@ -1275,7 +1275,7 @@
 //            //Fail on setup clean sinks/sources and library
 //            LOG.warn("{}DISK torrent restart - fail name:{} id:{}", new Object[]{logPrefix, torrentName, torrentId});
 //            cleanSinksAndSources(torrentId);
-//            library.destroy(torrentId);
+//            library.remove(torrentId);
 //            return;
 //          }
 //          Result uResult = library.upload(projectId, torrentId, torrentName, manifestStream);

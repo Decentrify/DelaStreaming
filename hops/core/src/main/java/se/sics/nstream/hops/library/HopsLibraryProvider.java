@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.hops.library;
 
+import se.sics.nstream.hops.libmngr.HopsLibraryMngr;
 import java.util.ArrayList;
 import java.util.List;
 import se.sics.kompics.ComponentProxy;

@@ -43,99 +43,90 @@ import se.sics.nstream.storage.durable.events.DStreamDisconnect;
  */
 public class DStreamMngrComp extends ComponentDefinition {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DStorageMngrComp.class);
-    private final String logPrefix;
+  private static final Logger LOG = LoggerFactory.getLogger(DStorageMngrComp.class);
+  private final String logPrefix;
 
-    private final Negative<DStoragePort> storagePort = provides(DStoragePort.class);
-    private final Negative<DStreamControlPort> streamControlPort = provides(DStreamControlPort.class);
-    private final One2NChannel storageChannel;
-    //**************************************************************************
-    private final Identifier self;
-    private final DurableStorageProvider storageProvider;
-    //**************************************************************************
-    private final Map<UUID, StreamId> compIdToStreamId = new HashMap<>();
-    private final Map<StreamId, Component> streamStorage = new HashMap<>();
-    private final Map<StreamId, DStreamDisconnect.Request> pendingDisconnects = new HashMap<>();
+  private final Negative<DStoragePort> storagePort = provides(DStoragePort.class);
+  private final Negative<DStreamControlPort> streamControlPort = provides(DStreamControlPort.class);
+  private final One2NChannel storageChannel;
+  //**************************************************************************
+  private final Identifier self;
+  private final DurableStorageProvider storageProvider;
+  //**************************************************************************
+  private final Map<UUID, StreamId> compIdToStreamId = new HashMap<>();
+  private final Map<StreamId, Component> streamStorage = new HashMap<>();
 
-    public DStreamMngrComp(Init init) {
-        self = init.self;
-        logPrefix = "<nid:" + self + ">";
-        LOG.info("{}initiating...", logPrefix);
+  public DStreamMngrComp(Init init) {
+    self = init.self;
+    logPrefix = "<nid:" + self + ">";
+    LOG.info("{}initiating...", logPrefix);
 
-        storageProvider = init.storageProvider;
-        
-        storageChannel = One2NChannel.getChannel(logPrefix + ":dstream_storage", storagePort, new DStreamIdExtractor());
+    storageProvider = init.storageProvider;
 
-        subscribe(handleStart, control);
-        subscribe(handleKilled, control);
-        subscribe(handleConnect, streamControlPort);
-//        subscribe(handleDisconnect, streamControlPort);
+    storageChannel = One2NChannel.getChannel(logPrefix + ":dstream_storage", storagePort, new DStreamIdExtractor());
+
+    subscribe(handleStart, control);
+    subscribe(handleKilled, control);
+    subscribe(handleConnect, streamControlPort);
+    subscribe(handleDisconnect, streamControlPort);
+  }
+
+  Handler handleStart = new Handler<Start>() {
+    @Override
+    public void handle(Start event) {
+      LOG.info("{}starting", logPrefix);
     }
+  };
 
-    Handler handleStart = new Handler<Start>() {
-        @Override
-        public void handle(Start event) {
-            LOG.info("{}starting", logPrefix);
-        }
-    };
-
-    Handler handleKilled = new Handler<Killed>() {
-        @Override
-        public void handle(Killed event) {
-            StreamId streamId = compIdToStreamId.remove(event.component.id());
-            if (streamId != null) {
-                LOG.info("{}disconnected stream:{}", logPrefix, streamId);
-                Component streamStorageComp = streamStorage.remove(streamId);
-
-                storageChannel.removeChannel(streamId, streamStorageComp.getPositive(DStoragePort.class));
-
-                DStreamDisconnect.Request req = pendingDisconnects.remove(streamId);
-                answer(req, req.success());
-            } else {
-                LOG.warn("{}double killed? no stream - component:{}", logPrefix, event.component.id());
-            }
-        }
-    };
-
-    Handler handleConnect = new Handler<DStreamConnect.Request>() {
-        @Override
-        public void handle(DStreamConnect.Request req) {
-            Pair<Init, Long> init = storageProvider.initiate(req.stream.getValue1().resource);
-            LOG.info("{}connecting stream:{} pos:{}", logPrefix, req.stream.getValue0(), init.getValue1());
-            Component streamStorageComp = create(storageProvider.getStorageDefinition(), init.getValue0());
-            storageChannel.addChannel(req.stream.getValue0(), streamStorageComp.getPositive(DStoragePort.class));
-
-            compIdToStreamId.put(streamStorageComp.id(), req.stream.getValue0());
-            streamStorage.put(req.stream.getValue0(), streamStorageComp);
-
-            trigger(Start.event, streamStorageComp.control());
-            answer(req, req.success(init.getValue1()));
-        }
-    };
-
-    Handler handleDisconnect = new Handler<DStreamDisconnect.Request>() {
-        @Override
-        public void handle(DStreamDisconnect.Request req) {
-            LOG.info("{}disconnecting stream:{}", logPrefix, req.streamId);
-            Component streamStorageComp = streamStorage.get(req.streamId);
-            if (streamStorageComp == null) {
-                LOG.warn("{}stream:{} already disconnected", logPrefix, req.streamId);
-                answer(req, req.success());
-                return;
-            }
-            pendingDisconnects.put(req.streamId, req);
-            trigger(Kill.event, streamStorageComp.control());
-        }
-    };
-
-    public static class Init extends se.sics.kompics.Init<DStreamMngrComp> {
-
-        public final Identifier self;
-        public final DurableStorageProvider storageProvider;
-
-        public Init(Identifier self, DurableStorageProvider storageProvider) {
-            this.self = self;
-            this.storageProvider = storageProvider;
-        }
+  Handler handleKilled = new Handler<Killed>() {
+    @Override
+    public void handle(Killed event) {
+      LOG.info("{}killed stream comp:{}", logPrefix, event.component.id());
     }
+  };
+
+  Handler handleConnect = new Handler<DStreamConnect.Request>() {
+    @Override
+    public void handle(DStreamConnect.Request req) {
+      Pair<Init, Long> init = storageProvider.initiate(req.stream.getValue1().resource);
+      LOG.info("{}connecting stream:{} pos:{}", logPrefix, req.stream.getValue0(), init.getValue1());
+      Component streamStorageComp = create(storageProvider.getStorageDefinition(), init.getValue0());
+
+      storageChannel.addChannel(req.stream.getValue0(), streamStorageComp.getPositive(DStoragePort.class));
+
+      compIdToStreamId.put(streamStorageComp.id(), req.stream.getValue0());
+      streamStorage.put(req.stream.getValue0(), streamStorageComp);
+
+      trigger(Start.event, streamStorageComp.control());
+      answer(req, req.success(init.getValue1()));
+    }
+  };
+
+  Handler handleDisconnect = new Handler<DStreamDisconnect.Request>() {
+    @Override
+    public void handle(DStreamDisconnect.Request req) {
+      LOG.info("{}disconnecting stream:{}", logPrefix, req.streamId);
+      Component streamStorageComp = streamStorage.remove(req.streamId);
+      if (streamStorageComp == null) {
+        throw new RuntimeException("TODO Alex - probbably mismatch between things keeping track of resources");
+      }
+      compIdToStreamId.remove(streamStorageComp.id());
+      
+      storageChannel.removeChannel(req.streamId, streamStorageComp.getPositive(DStoragePort.class));
+      
+      trigger(Kill.event, streamStorageComp.control());
+      answer(req, req.success());
+    }
+  };
+
+  public static class Init extends se.sics.kompics.Init<DStreamMngrComp> {
+
+    public final Identifier self;
+    public final DurableStorageProvider storageProvider;
+
+    public Init(Identifier self, DurableStorageProvider storageProvider) {
+      this.self = self;
+      this.storageProvider = storageProvider;
+    }
+  }
 }
