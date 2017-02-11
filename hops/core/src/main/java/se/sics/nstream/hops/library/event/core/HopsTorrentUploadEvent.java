@@ -28,7 +28,6 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
-import se.sics.nstream.hops.libmngr.LocalLibTorrentFSM;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -73,11 +72,6 @@ public class HopsTorrentUploadEvent {
         @Override
         public Identifier getBaseId() {
           return torrentId.baseId;
-        }
-
-        @Override
-        public String getFSMName() {
-          return LocalLibTorrentFSM.NAME;
         }
     }
 

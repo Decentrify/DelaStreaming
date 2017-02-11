@@ -25,7 +25,6 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.hops.libmngr.LocalLibTorrentFSM;
 
 /**
  *
@@ -37,8 +36,6 @@ public class HopsTorrentStopEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
-    //fsm
-    private String fsmName;
 
     public Request(Identifier eventId, OverlayId torrentId) {
       this.eventId = eventId;
@@ -57,11 +54,6 @@ public class HopsTorrentStopEvent {
     @Override
     public Identifier getBaseId() {
       return torrentId.baseId;
-    }
-
-    @Override
-    public String getFSMName() {
-      return LocalLibTorrentFSM.NAME;
     }
 
     public Response success() {

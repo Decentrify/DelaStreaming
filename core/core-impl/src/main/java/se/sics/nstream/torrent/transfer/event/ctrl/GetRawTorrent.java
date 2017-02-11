@@ -19,6 +19,7 @@
 package se.sics.nstream.torrent.transfer.event.ctrl;
 
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.nutil.fsm.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -30,47 +31,60 @@ import se.sics.nstream.transfer.MyTorrent;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class GetRawTorrent {
-    public static class Request extends Direct.Request<Response> implements OverlayEvent {
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        
-        public Request(OverlayId torrentId) {
-            eventId = BasicIdentifiers.eventId();
-            this.torrentId = torrentId;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        public Response complete(Result result) {
-            return new Response(this, result);
-        }
 
-        @Override
-        public OverlayId overlayId() {
-            return torrentId;
-        }
-    }
-    
-    public static class Response implements Direct.Response, OverlayEvent {
-        public final Request req;
-        public final Result<MyTorrent.Manifest> result;
-        
-        private Response(Request req, Result<MyTorrent.Manifest> result) {
-            this.req = req;
-            this.result = result;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
+  public static class Request extends Direct.Request<Response> implements OverlayEvent, FSMEvent {
 
-        @Override
-        public OverlayId overlayId() {
-            return req.overlayId();
-        }
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+
+    public Request(OverlayId torrentId) {
+      eventId = BasicIdentifiers.eventId();
+      this.torrentId = torrentId;
     }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    public Response complete(Result result) {
+      return new Response(this, result);
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return torrentId;
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return torrentId.baseId;
+    }
+  }
+
+  public static class Response implements Direct.Response, OverlayEvent, FSMEvent {
+
+    public final Request req;
+    public final Result<MyTorrent.Manifest> result;
+
+    private Response(Request req, Result<MyTorrent.Manifest> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return req.overlayId();
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return req.getBaseId();
+    }
+  }
 }

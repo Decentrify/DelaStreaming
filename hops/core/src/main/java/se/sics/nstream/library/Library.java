@@ -108,7 +108,7 @@ public class Library {
     torrents.put(torrentId, torrent);
   }
 
-  public void download(String projectId, OverlayId torrentId, String torrentName, MyStream manifestStream) {
+  public void download(OverlayId torrentId, MyStream manifestStream) {
     Torrent torrent = torrents.get(torrentId);
     torrent.setTorrentStatus(TorrentState.DOWNLOADING);
     torrent.setManifestStream(manifestStream);

@@ -32,8 +32,8 @@ import se.sics.kompics.Kill;
 import se.sics.kompics.Killed;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.storage.durable.events.DEndpointConnect;
 import se.sics.nstream.storage.durable.events.DEndpointDisconnect;
@@ -57,7 +57,7 @@ public class DStorageMngrComp extends ComponentDefinition {
   //**************************************************************************
   private final Map<UUID, Identifier> compIdToEndpointId = new HashMap<>();
   private final Map<Identifier, Component> storageEndpoints = new HashMap<>();
-  private final Map<Identifier, List<FSMId>> clients = new HashMap<>();
+  private final Map<Identifier, List<OverlayId>> clients = new HashMap<>();
 
   public DStorageMngrComp(Init init) {
     self = init.self;
@@ -92,7 +92,7 @@ public class DStorageMngrComp extends ComponentDefinition {
     @Override
     public void handle(DEndpointConnect.Request req) {
       LOG.info("{}connecting endpoint:{}", logPrefix, req.endpointId);
-      List<FSMId> endpointClients;
+      List<OverlayId> endpointClients;
       if (!storageEndpoints.containsKey(req.endpointId)) {
         Component endpointComp = create(DStreamMngrComp.class, new DStreamMngrComp.Init(self, req.endpointProvider));
         streamControlChannel.addChannel(req.endpointId, endpointComp.getPositive(DStreamControlPort.class));
@@ -108,7 +108,7 @@ public class DStorageMngrComp extends ComponentDefinition {
       } else {
         endpointClients = clients.get(req.endpointId);
       }
-      endpointClients.add(req.fsmId);
+      endpointClients.add(req.torrentId);
       answer(req, req.success());
     }
   };
@@ -117,11 +117,11 @@ public class DStorageMngrComp extends ComponentDefinition {
     @Override
     public void handle(DEndpointDisconnect.Request req) {
       LOG.info("{}disconnecting endpoint:{}", logPrefix, req.endpointId);
-      List<FSMId> endpointClients = clients.get(req.endpointId);
+      List<OverlayId> endpointClients = clients.get(req.endpointId);
       if (endpointClients == null) {
         throw new RuntimeException("weird behaviour - someone is not keeping track of things right");
       }
-      endpointClients.remove(req.fsmId);
+      endpointClients.remove(req.torrentId);
 
       Component endpointComp = storageEndpoints.get(req.endpointId);
       if (endpointComp == null) {

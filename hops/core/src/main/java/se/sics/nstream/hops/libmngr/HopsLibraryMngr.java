@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.nutil.fsm.MultiFSM;
+import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.hops.library.Details;
 import se.sics.nstream.hops.library.HopsLibraryKConfig;
@@ -42,15 +43,18 @@ public class HopsLibraryMngr {
   private final MultiFSM fsm;
   private final Library library;
 
-  public HopsLibraryMngr(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr) {
+  public HopsLibraryMngr(OnFSMExceptionAction oexa, ComponentProxy proxy, Config config, String logPrefix,
+    KAddress selfAdr) {
     this.logPrefix = logPrefix;
     this.config = config;
     this.selfAdr = selfAdr;
     this.library = new Library(config.getValue("library.summary", String.class));
 
     HopsLibraryKConfig hopsLibraryConfig = new HopsLibraryKConfig(config);
+
     if (hopsLibraryConfig.baseEndpointType.equals(Details.Types.DISK)) {
-      this.fsm = LocalLibTorrentFSM.getFSM(new LocalLibTorrentFSM.LibTExternal(selfAdr, library, new EndpointIdRegistry()));
+      this.fsm = LocalLibTorrentFSM.getFSM(
+        new LocalLibTorrentFSM.LibTExternal(selfAdr, library,new EndpointIdRegistry()), oexa);
     } else {
       throw new RuntimeException("not ready");
     }
@@ -65,4 +69,5 @@ public class HopsLibraryMngr {
 
   public void close() {
   }
+
 }

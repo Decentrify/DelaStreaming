@@ -33,7 +33,6 @@ import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
-import se.sics.nstream.hops.libmngr.LocalLibTorrentFSM;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -82,11 +81,6 @@ public class HopsTorrentDownloadEvent {
     @Override
     public Identifier getBaseId() {
       return torrentId.baseId;
-    }
-
-    @Override
-    public String getFSMName() {
-      return LocalLibTorrentFSM.NAME;
     }
   }
 

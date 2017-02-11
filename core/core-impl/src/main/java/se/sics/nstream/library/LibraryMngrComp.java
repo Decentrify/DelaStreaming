@@ -28,6 +28,8 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.PortType;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.ktoolbox.nutil.fsm.FSMException;
+import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.event.system.SystemAddressEvent;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
@@ -73,7 +75,14 @@ public class LibraryMngrComp extends ComponentDefinition {
         for (Class<PortType> r : torrentProvider.providesPorts()) {
             providedPorts.add(provides(r));
         }
-        torrentProvider.create(proxy, config(), logPrefix, selfAdr);
+        OnFSMExceptionAction oexa = new OnFSMExceptionAction() {
+
+          @Override
+          public void handle(FSMException ex) {
+            throw new RuntimeException(ex);
+          }
+        };
+        torrentProvider.create(proxy, config(), logPrefix, selfAdr, oexa);
     }
 
     Handler handleStart = new Handler<Start>() {

@@ -21,7 +21,6 @@ package se.sics.nstream.torrent.event;
 import java.util.List;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.nutil.fsm.FSMEvent;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -40,16 +39,11 @@ public class StartTorrent {
     public final Identifier eventId;
     public final OverlayId torrentId;
     public final List<KAddress> partners;
-    //fsm
-    public final FSMId fsmId;
-    public final String fsmName;
 
-    public Request(OverlayId torrentId, List<KAddress> partners, FSMId fsmId, String fsmName) {
+    public Request(OverlayId torrentId, List<KAddress> partners) {
       this.eventId = BasicIdentifiers.eventId();
       this.torrentId = torrentId;
       this.partners = partners;
-      this.fsmId = fsmId;
-      this.fsmName = fsmName;
     }
 
     @Override
@@ -68,12 +62,7 @@ public class StartTorrent {
 
     @Override
     public Identifier getBaseId() {
-      return fsmId.baseId;
-    }
-
-    @Override
-    public String getFSMName() {
-      return fsmName;
+      return torrentId.baseId;
     }
   }
 
@@ -82,16 +71,11 @@ public class StartTorrent {
     public final Identifier eventId;
     public final OverlayId torrentId;
     public final Result<Boolean> result;
-    //fsm
-    public final FSMId fsmId;
-    public final String fsmName;
 
     private Response(Request req, Result<Boolean> result) {
       this.eventId = req.eventId;
       this.torrentId = req.torrentId;
       this.result = result;
-      this.fsmId = req.fsmId;
-      this.fsmName = req.fsmName;
     }
 
     @Override
@@ -106,12 +90,7 @@ public class StartTorrent {
 
     @Override
     public Identifier getBaseId() {
-      return fsmId.baseId;
-    }
-
-    @Override
-    public String getFSMName() {
-      return fsmName;
+      return torrentId.baseId;
     }
   }
 }

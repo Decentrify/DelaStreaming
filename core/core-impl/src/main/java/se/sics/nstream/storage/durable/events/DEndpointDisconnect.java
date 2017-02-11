@@ -20,10 +20,10 @@ package se.sics.nstream.storage.durable.events;
 
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.nutil.fsm.FSMEvent;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 
 /**
  *
@@ -34,16 +34,13 @@ public class DEndpointDisconnect {
   public static class Request extends Direct.Request<Success> implements Identifiable, FSMEvent {
 
     public final Identifier eventId;
+    public final OverlayId torrentId;
     public final Identifier endpointId;
-    //fsm
-    public final FSMId fsmId;
-    public final String fsmName;
 
-    public Request(Identifier endpointId, FSMId fsmId, String fsmName) {
+    public Request(OverlayId torrentId, Identifier endpointId) {
       this.eventId = BasicIdentifiers.eventId();
+      this.torrentId = torrentId;
       this.endpointId = endpointId;
-      this.fsmId = fsmId;
-      this.fsmName = fsmName;
     }
 
     @Override
@@ -57,12 +54,7 @@ public class DEndpointDisconnect {
 
     @Override
     public Identifier getBaseId() {
-      return fsmId.baseId;
-    }
-
-    @Override
-    public String getFSMName() {
-      return fsmName;
+      return torrentId.baseId;
     }
   }
 
@@ -82,11 +74,6 @@ public class DEndpointDisconnect {
     @Override
     public Identifier getBaseId() {
       return req.getBaseId();
-    }
-
-    @Override
-    public String getFSMName() {
-      return req.getFSMName();
     }
   }
 }
