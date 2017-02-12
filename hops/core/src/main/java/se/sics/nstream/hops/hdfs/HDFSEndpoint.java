@@ -41,7 +41,7 @@ public class HDFSEndpoint implements StreamEndpoint {
 
     @Override
     public String getEndpointName() {
-        return hopsURL;
+        return hopsURL + "_" + user;
     }
 
     public static HDFSEndpoint getBasic(String user, String hopsIp, int hopsPort) {
