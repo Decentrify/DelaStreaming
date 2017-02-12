@@ -16,34 +16,28 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library.event.core;
+package se.sics.nstream.torrent.event;
 
-import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.nutil.fsm.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsTorrentStopEvent {
-
-  public static class Request extends Direct.Request<Response> implements VoDMngrEvent, FSMEvent {
+public class StopTorrent {
+  public static class Request extends Direct.Request<Response> implements OverlayEvent, FSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
 
-    public Request(Identifier eventId, OverlayId torrentId) {
-      this.eventId = eventId;
-      this.torrentId = torrentId;
-    }
-
     public Request(OverlayId torrentId) {
-      this(BasicIdentifiers.eventId(), torrentId);
+      this.eventId = BasicIdentifiers.eventId();
+      this.torrentId = torrentId;
     }
 
     @Override
@@ -52,36 +46,45 @@ public class HopsTorrentStopEvent {
     }
 
     @Override
-    public Identifier getBaseId() {
-      return torrentId.baseId;
+    public OverlayId overlayId() {
+      return torrentId;
     }
 
     public Response success() {
       return new Response(this, Result.success(true));
     }
 
-    public Response badRequest(Exception ex) {
-      return new Response(this, Result.badRequest(ex));
-    }
-
-    public Response internalFailure(Exception ex) {
-      return new Response(this, Result.internalFailure(ex));
+    @Override
+    public Identifier getBaseId() {
+      return torrentId.baseId;
     }
   }
 
-  public static class Response implements Direct.Response, VoDMngrEvent {
+  public static class Response implements Direct.Response, OverlayEvent, FSMEvent {
 
-    public final Request req;
+    public final Identifier eventId;
+    public final OverlayId torrentId;
     public final Result<Boolean> result;
 
-    public Response(Request req, Result<Boolean> result) {
-      this.req = req;
+    private Response(Request req, Result<Boolean> result) {
+      this.eventId = req.eventId;
+      this.torrentId = req.torrentId;
       this.result = result;
     }
 
     @Override
     public Identifier getId() {
-      return req.eventId;
+      return eventId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return torrentId;
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return torrentId.baseId;
     }
   }
 }

@@ -36,6 +36,7 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
 import se.sics.nstream.library.Library;
+import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.disk.DiskEndpoint;
 import se.sics.nstream.storage.durable.disk.DiskResource;
 import se.sics.nstream.storage.durable.util.MyStream;
@@ -58,22 +59,30 @@ public class LibrarySummaryHelper {
         
         for(Map.Entry<OverlayId, Library.Torrent> torrent : torrents.entrySet()) {
             Identifier torrentBaseId = torrent.getKey().baseId;
-            MyStream manifestStream = torrent.getValue().manifestStream;
+            MyStream manifestStream = torrent.getValue().getManifestStream();
             if(manifestStream.resource instanceof DiskResource) {
                 DiskLibrarySummaryJSON.TorrentJSON torrentJSON = new DiskLibrarySummaryJSON.TorrentJSON();
+                torrentJSON.setProjectId(torrent.getValue().projectId);
+                torrentJSON.setTorrentName(torrent.getValue().torrentName);
+                torrentJSON.setTorrentStatus(torrent.getValue().getTorrentStatus().toString());
                 torrentJSON.setBaseId(torrentBaseId.toString());
-                torrentJSON.setPath(((DiskResource)manifestStream.resource).dirPath);
+                torrentJSON.setDirPath(((DiskResource)manifestStream.resource).dirPath);
                 disk.addTorrent(torrentJSON);
             } else if(manifestStream.resource instanceof HDFSResource) {
                 HDFSLibrarySummaryJSON.TorrentJSON torrentJSON = new HDFSLibrarySummaryJSON.TorrentJSON();
+                torrentJSON.setProjectId(torrent.getValue().projectId);
+                torrentJSON.setTorrentName(torrent.getValue().torrentName);
+                torrentJSON.setTorrentStatus(torrent.getValue().getTorrentStatus().toString());
                 torrentJSON.setBaseId(torrentBaseId.toString());
+                //endpoint
                 HDFSEndpoint hdfsEndpoint = (HDFSEndpoint)manifestStream.endpoint;
                 HDFSLibrarySummaryJSON.HDFSEndpointJSON endpoint = new HDFSLibrarySummaryJSON.HDFSEndpointJSON();
                 endpoint.setUrl(hdfsEndpoint.hopsURL);
                 endpoint.setUser(hdfsEndpoint.user);
                 torrentJSON.setEndpoint(endpoint);
+                //resource
                 HDFSResource hdfsResource = (HDFSResource)manifestStream.resource;
-                torrentJSON.setPath(hdfsResource.dirPath);
+                torrentJSON.setDirPath(hdfsResource.dirPath);
                 hdfs.addTorrent(torrentJSON);
             }
         }
@@ -84,16 +93,18 @@ public class LibrarySummaryHelper {
         Map<OverlayId, Library.Torrent> library = new HashMap<>();
         for(DiskLibrarySummaryJSON.TorrentJSON torrent : summary.getDiskLibrary().getTorrents()) {
             OverlayId torrentId = torrentIdFactory.id(new BasicBuilders.StringBuilder(torrent.getBaseId()));
-            DiskResource manifestResource = new DiskResource(torrent.getPath(), MyTorrent.MANIFEST_NAME);
+            DiskResource manifestResource = new DiskResource(torrent.getDirPath(), MyTorrent.MANIFEST_NAME);
             MyStream manifestStream = new MyStream(new DiskEndpoint(), manifestResource);
-            library.put(torrentId, new Library.Torrent(manifestStream));
+            TorrentState status = TorrentState.valueOf(torrent.getTorrentStatus());
+            library.put(torrentId, new Library.Torrent(torrent.getProjectId(), torrent.getTorrentName(), status, manifestStream));
         }
         for(HDFSLibrarySummaryJSON.TorrentJSON torrent : summary.getHdfsLibrary().getTorrents()) {
             OverlayId torrentId = torrentIdFactory.id(new BasicBuilders.StringBuilder(torrent.getBaseId()));
             HDFSEndpoint endpoint = HDFSEndpoint.getBasic(torrent.getEndpoint().getUrl(), torrent.getEndpoint().getUser());
-            HDFSResource manifestResource = new HDFSResource(torrent.getPath(), MyTorrent.MANIFEST_NAME);
+            HDFSResource manifestResource = new HDFSResource(torrent.getDirPath(), MyTorrent.MANIFEST_NAME);
             MyStream manifestStream = new MyStream(endpoint, manifestResource);
-            library.put(torrentId, new Library.Torrent(manifestStream));
+            TorrentState status = TorrentState.valueOf(torrent.getTorrentStatus());
+            library.put(torrentId, new Library.Torrent(torrent.getProjectId(), torrent.getTorrentName(), status, manifestStream));
         }
         return library;
     }
@@ -135,6 +146,7 @@ public class LibrarySummaryHelper {
     private static Result<LibrarySummaryJSON> createEmptyTorrentList(File torrentListFile) throws IOException {
         LibrarySummaryJSON emptyContent = new LibrarySummaryJSON();
         emptyContent.setDiskLibrary(new DiskLibrarySummaryJSON());
+        emptyContent.setHdfsLibrary(new HDFSLibrarySummaryJSON());
         
         Gson gson = new Gson();
         String jsonContent = gson.toJson(emptyContent);

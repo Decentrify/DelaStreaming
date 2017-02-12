@@ -22,6 +22,7 @@ import java.util.List;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.PortType;
 import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
@@ -30,7 +31,7 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public interface LibraryProvider {
     public List<Class<PortType>> providesPorts();
-    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr);
+    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, OnFSMExceptionAction oexa);
     public void start();
     public void close();
 }

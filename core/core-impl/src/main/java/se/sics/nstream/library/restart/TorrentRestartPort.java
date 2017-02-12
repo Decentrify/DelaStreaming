@@ -16,27 +16,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library;
+package se.sics.nstream.library.restart;
 
-import se.sics.kompics.config.Config;
-import se.sics.ktoolbox.util.config.KConfigHelper;
-import se.sics.ktoolbox.util.config.KConfigOption;
+import se.sics.kompics.PortType;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsLibraryKConfig {
-    public final static KConfigOption.Basic<String> baseEndpointOpt = new KConfigOption.Basic("hops.library.baseEndpoint", String.class);
+public class TorrentRestartPort extends PortType {
+  {
+    request(TorrentRestart.DwldReq.class);
+    indication(TorrentRestart.DwldFail.class);
+    indication(TorrentRestart.DwldSuccess.class);
     
-    public final Config configCore;
-    public final Details.Types baseEndpointType;
-    public final String librarySummaryPath;
-    
-    public HopsLibraryKConfig(Config configCore) {
-        this.configCore = configCore;
-        String baseEndpointString = KConfigHelper.read(configCore, baseEndpointOpt);
-        baseEndpointType = Details.Types.valueOf(baseEndpointString);
-        librarySummaryPath = configCore.getValue("library.summary", String.class);
-    }
+    request(TorrentRestart.UpldReq.class);
+    indication(TorrentRestart.UpldFail.class);
+    indication(TorrentRestart.UpldSuccess.class);
+  }
 }

@@ -48,6 +48,8 @@ public class HDFSLibrarySummaryJSON {
         private String url;
         private String user;
 
+        public HDFSEndpointJSON() {}
+        
         public String getUrl() {
             return url;
         }
@@ -66,10 +68,47 @@ public class HDFSLibrarySummaryJSON {
     }
     
     public static class TorrentJSON {
+        private String projectId;
+        private String torrentName;
+        private String torrentStatus;
         private String baseId;
         private HDFSEndpointJSON endpoint;
-        private String path;
+        private String dirPath;
 
+        public TorrentJSON(){}
+
+        public String getProjectId() {
+          return projectId;
+        }
+
+        public void setProjectId(String projectId) {
+          this.projectId = projectId;
+        }
+        
+        public String getTorrentName() {
+            return torrentName;
+        }
+
+        public void setTorrentName(String torrentName) {
+            this.torrentName = torrentName;
+        }
+
+        public String getTorrentStatus() {
+            return torrentStatus;
+        }
+
+        public void setTorrentStatus(String torrentStatus) {
+            this.torrentStatus = torrentStatus;
+        }
+        
+        public String getDirPath() {
+            return dirPath;
+        }
+
+        public void setDirPath(String dirPath) {
+            this.dirPath = dirPath;
+        }
+        
         public String getBaseId() {
             return baseId;
         }
@@ -84,14 +123,6 @@ public class HDFSLibrarySummaryJSON {
 
         public void setEndpoint(HDFSEndpointJSON endpoint) {
             this.endpoint = endpoint;
-        }
-
-        public String getPath() {
-            return path;
-        }
-
-        public void setPath(String path) {
-            this.path = path;
         }
     }
 }

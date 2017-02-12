@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library;
+package se.sics.nstream.library.endpointmngr;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,7 +31,7 @@ public class EndpointIdRegistry {
     private final IntIdFactory storageIdFactory;
     private final Map<String, Identifier> nameToId = new HashMap<>();
     private int id = 0;
-
+    
     public EndpointIdRegistry() {
         storageIdFactory = new IntIdFactory(null); //no random ids
     }

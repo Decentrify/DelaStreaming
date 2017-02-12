@@ -22,6 +22,7 @@ import com.google.common.base.Optional;
 import java.util.List;
 import java.util.Map;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.nutil.fsm.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -38,145 +39,161 @@ import se.sics.nstream.hops.kafka.KafkaResource;
  */
 public class HopsTorrentDownloadEvent {
 
-    public static class StartRequest extends Direct.Request<StartResponse> implements StreamEvent {
+  public static class StartRequest extends Direct.Request<StartResponse> implements StreamEvent, FSMEvent {
 
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        public final String torrentName;
-        public final HDFSEndpoint hdfsEndpoint;
-        public final HDFSResource manifest;
-        public final List<KAddress> partners;
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+    public final String torrentName;
+    public final String projectId;
+    public final HDFSEndpoint hdfsEndpoint;
+    public final HDFSResource manifest;
+    public final List<KAddress> partners;
 
-        public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
-            this.eventId = eventId;
-            this.torrentId = torrentId;
-            this.torrentName = torrentName;
-            this.hdfsEndpoint = hdfsEndpoint;
-            this.manifest = manifest;
-            this.partners = partners;
-        }
-
-        public StartRequest(OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
-            this(BasicIdentifiers.eventId(), torrentId, torrentName, hdfsEndpoint, manifest, partners);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        public StartResponse failed(Result result) {
-            return new StartFailed(this, result);
-        }
-
-        public StartResponse success(Result<Boolean> result) {
-            return new StartSuccess(this, result);
-        }
+    public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, String projectId, HDFSEndpoint hdfsEndpoint,
+      HDFSResource manifest, List<KAddress> partners) {
+      this.eventId = eventId;
+      this.torrentId = torrentId;
+      this.torrentName = torrentName;
+      this.projectId = projectId;
+      this.hdfsEndpoint = hdfsEndpoint;
+      this.manifest = manifest;
+      this.partners = partners;
     }
 
-    public static interface StartResponse extends Direct.Response, StreamEvent {
+    public StartRequest(OverlayId torrentId, String torrentName, String projectId, HDFSEndpoint hdfsEndpoint, HDFSResource manifest,
+      List<KAddress> partners) {
+      this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, hdfsEndpoint, manifest, partners);
     }
 
-    public static class StartSuccess implements StartResponse {
-
-        public final StartRequest req;
-        public final Result<Boolean> result;
-
-        public StartSuccess(StartRequest req, Result<Boolean> result) {
-            this.req = req;
-            this.result = result;
-        }
-
-        @Override
-        public Identifier getId() {
-            return req.eventId;
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
 
-    public static class StartFailed implements StartResponse {
-
-        public final StartRequest req;
-        public final Result result;
-
-        public StartFailed(StartRequest req, Result result) {
-            this.req = req;
-            this.result = result;
-        }
-
-        @Override
-        public Identifier getId() {
-            return req.eventId;
-        }
-    }
-    
-    public static class TorrentResult implements StartResponse {
-        public final StartRequest req;
-        public final Result<Boolean> manifest;
-        
-        TorrentResult(StartRequest req, Result<Boolean> manifest) {
-            this.req =req;
-            this.manifest = manifest;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
+    public StartResponse failed(Result result) {
+      return new StartFailed(this, result);
     }
 
-    public static class AdvanceRequest extends Direct.Request<AdvanceResponse> implements StreamEvent {
-
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        public final Result<Boolean> result;
-        public final HDFSEndpoint hdfsEndpoint;
-        public final Optional<KafkaEndpoint> kafkaEndpoint;
-        public final Map<String, HDFSResource> hdfsDetails;
-        public final Map<String, KafkaResource> kafkaDetails;
-
-        public AdvanceRequest(Identifier eventId, OverlayId torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
-                Map<String, HDFSResource> hdfsDetails, Map<String, KafkaResource> kafkaDetails) {
-            this.eventId = eventId;
-            this.torrentId = torrentId;
-            this.result = Result.success(true);
-            this.hdfsEndpoint = hdfsEndpoint;
-            this.kafkaEndpoint = kafkaEndpoint;
-            this.hdfsDetails = hdfsDetails;
-            this.kafkaDetails = kafkaDetails;
-        }
-
-        public AdvanceRequest(OverlayId torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
-                Map<String, HDFSResource> hdfsDetails, Map<String, KafkaResource> kafkaDetails) {
-            this(BasicIdentifiers.eventId(), torrentId, hdfsEndpoint, kafkaEndpoint, hdfsDetails, kafkaDetails);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        public AdvanceResponse success(Result<Boolean> result) {
-            return new AdvanceResponse(this, result);
-        }
-        
-        public AdvanceResponse fail(Result result) {
-            return new AdvanceResponse(this, result);
-        }
+    public StartResponse success(Result<Boolean> result) {
+      return new StartSuccess(this, result);
     }
 
-    public static class AdvanceResponse implements Direct.Response, StreamEvent {
-
-        public final AdvanceRequest req;
-        public final Result<Boolean> result;
-
-        public AdvanceResponse(AdvanceRequest req, Result<Boolean> result) {
-            this.req = req;
-            this.result = result;
-        }
-
-        @Override
-        public Identifier getId() {
-            return req.eventId;
-        }
+    @Override
+    public Identifier getBaseId() {
+      return torrentId.baseId;
     }
+  }
+
+  public static interface StartResponse extends Direct.Response, StreamEvent {
+  }
+
+  public static class StartSuccess implements StartResponse {
+
+    public final StartRequest req;
+    public final Result<Boolean> result;
+
+    public StartSuccess(StartRequest req, Result<Boolean> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.eventId;
+    }
+  }
+
+  public static class StartFailed implements StartResponse {
+
+    public final StartRequest req;
+    public final Result result;
+
+    public StartFailed(StartRequest req, Result result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.eventId;
+    }
+  }
+
+  public static class TorrentResult implements StartResponse {
+
+    public final StartRequest req;
+    public final Result<Boolean> manifest;
+
+    TorrentResult(StartRequest req, Result<Boolean> manifest) {
+      this.req = req;
+      this.manifest = manifest;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+  }
+
+  public static class AdvanceRequest extends Direct.Request<AdvanceResponse> implements StreamEvent, FSMEvent {
+
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+    public final Result<Boolean> result;
+    public final HDFSEndpoint hdfsEndpoint;
+    public final Optional<KafkaEndpoint> kafkaEndpoint;
+    public final Map<String, HDFSResource> hdfsDetails;
+    public final Map<String, KafkaResource> kafkaDetails;
+
+    public AdvanceRequest(Identifier eventId, OverlayId torrentId, HDFSEndpoint hdfsEndpoint,
+      Optional<KafkaEndpoint> kafkaEndpoint,
+      Map<String, HDFSResource> hdfsDetails, Map<String, KafkaResource> kafkaDetails) {
+      this.eventId = eventId;
+      this.torrentId = torrentId;
+      this.result = Result.success(true);
+      this.hdfsEndpoint = hdfsEndpoint;
+      this.kafkaEndpoint = kafkaEndpoint;
+      this.hdfsDetails = hdfsDetails;
+      this.kafkaDetails = kafkaDetails;
+    }
+
+    public AdvanceRequest(OverlayId torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
+      Map<String, HDFSResource> hdfsDetails, Map<String, KafkaResource> kafkaDetails) {
+      this(BasicIdentifiers.eventId(), torrentId, hdfsEndpoint, kafkaEndpoint, hdfsDetails, kafkaDetails);
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    public AdvanceResponse success(Result<Boolean> result) {
+      return new AdvanceResponse(this, result);
+    }
+
+    public AdvanceResponse fail(Result result) {
+      return new AdvanceResponse(this, result);
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return torrentId.baseId;
+    }
+  }
+
+  public static class AdvanceResponse implements Direct.Response, StreamEvent {
+
+    public final AdvanceRequest req;
+    public final Result<Boolean> result;
+
+    public AdvanceResponse(AdvanceRequest req, Result<Boolean> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.eventId;
+    }
+  }
 }

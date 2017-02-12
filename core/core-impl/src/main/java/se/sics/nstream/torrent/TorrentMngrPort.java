@@ -20,13 +20,17 @@ package se.sics.nstream.torrent;
 
 import se.sics.kompics.PortType;
 import se.sics.nstream.torrent.event.StartTorrent;
+import se.sics.nstream.torrent.event.StopTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentMngrPort extends PortType {
-    {
-        request(StartTorrent.Request.class);
-        indication(StartTorrent.Response.class);
-    }
+
+  {
+    request(StartTorrent.Request.class);
+    indication(StartTorrent.Response.class);
+    request(StopTorrent.Request.class);
+    indication(StopTorrent.Response.class);
+  }
 }

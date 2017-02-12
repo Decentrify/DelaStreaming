@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.torrent.status.event;
 
+import se.sics.ktoolbox.nutil.fsm.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -28,7 +29,7 @@ import se.sics.nstream.StreamEvent;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DownloadSummaryEvent implements StreamEvent, OverlayEvent {
+public class DownloadSummaryEvent implements StreamEvent, OverlayEvent, FSMEvent {
     public final Identifier eventId;
     public final OverlayId torrentId;
     public final long transferSize;
@@ -59,4 +60,9 @@ public class DownloadSummaryEvent implements StreamEvent, OverlayEvent {
     public String toString() {
         return "Download<" + overlayId() + ">SummaryEvent<" + getId() + ">";
     }
+
+  @Override
+  public Identifier getBaseId() {
+    return torrentId.baseId;
+  }
 }

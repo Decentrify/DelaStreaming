@@ -19,17 +19,17 @@
 package se.sics.nstream.storage.durable;
 
 import se.sics.kompics.PortType;
-import se.sics.nstream.storage.durable.events.DEndpointConnect;
-import se.sics.nstream.storage.durable.events.DEndpointDisconnect;
+import se.sics.nstream.storage.durable.events.DEndpoint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DEndpointCtrlPort extends PortType {
     {
-        request(DEndpointConnect.Request.class);
-        indication(DEndpointConnect.Success.class);
-        request(DEndpointDisconnect.Request.class);
-        indication(DEndpointDisconnect.Success.class);
+        request(DEndpoint.Connect.class);
+        indication(DEndpoint.Success.class);
+        indication(DEndpoint.Failed.class);
+        request(DEndpoint.Disconnect.class);
+        indication(DEndpoint.Disconnected.class);
     }
 }

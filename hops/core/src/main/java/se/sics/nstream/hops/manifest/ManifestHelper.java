@@ -63,9 +63,6 @@ public class ManifestHelper {
         } catch (UnsupportedEncodingException ex) {
             throw new RuntimeException(ex);
         }
-        if (jsonByte.length > 1200) {
-            throw new RuntimeException("manifest is too long");
-        }
         return jsonByte;
     }
 

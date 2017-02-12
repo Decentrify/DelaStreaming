@@ -45,9 +45,39 @@ public class DiskLibrarySummaryJSON {
     }
     
     public static class TorrentJSON {
+        private String projectId;
+        private String torrentName;
+        private String torrentStatus;
         private String baseId;
-        private String path;
+        private String dirPath;
+        
+        public TorrentJSON() {
+        }
 
+        public String getProjectId() {
+          return projectId;
+        }
+
+        public void setProjectId(String projectId) {
+          this.projectId = projectId;
+        }
+
+        public String getTorrentName() {
+            return torrentName;
+        }
+
+        public void setTorrentName(String torrentName) {
+            this.torrentName = torrentName;
+        }
+
+        public String getTorrentStatus() {
+            return torrentStatus;
+        }
+
+        public void setTorrentStatus(String torrentStatus) {
+            this.torrentStatus = torrentStatus;
+        }
+        
         public String getBaseId() {
             return baseId;
         }
@@ -56,12 +86,12 @@ public class DiskLibrarySummaryJSON {
             this.baseId = baseId;
         }
 
-        public String getPath() {
-            return path;
+        public String getDirPath() {
+            return dirPath;
         }
 
-        public void setPath(String path) {
-            this.path = path;
+        public void setDirPath(String dirPath) {
+            this.dirPath = dirPath;
         }
     }
 }

@@ -20,6 +20,7 @@ package se.sics.nstream.hops.library.event.core;
 
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.ktoolbox.nutil.fsm.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -33,24 +34,26 @@ import se.sics.nstream.hops.hdfs.HDFSResource;
  */
 public class HopsTorrentUploadEvent {
 
-    public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+    public static class Request extends Direct.Request<Response> implements VoDMngrEvent, FSMEvent {
 
         public final Identifier eventId;
         public final OverlayId torrentId;
         public final String torrentName;
+        public final String projectId;
         public final HDFSEndpoint hdfsEndpoint;
         public final HDFSResource manifestResource;
 
-        public Request(Identifier eventId, OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint,  HDFSResource manifestResource) {
+        public Request(Identifier eventId, OverlayId torrentId, String torrentName, String projectId, HDFSEndpoint hdfsEndpoint,  HDFSResource manifestResource) {
             this.eventId = eventId;
             this.torrentId = torrentId;
             this.torrentName = torrentName;
+            this.projectId = projectId;
             this.hdfsEndpoint = hdfsEndpoint;
             this.manifestResource = manifestResource;
         }
 
-        public Request(OverlayId torrentId, String torrentName, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
-            this(BasicIdentifiers.eventId(), torrentId, torrentName, hdfsEndpoint, hdfsResource);
+        public Request(OverlayId torrentId, String torrentName, String projectId, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
+            this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, hdfsEndpoint, hdfsResource);
         }
 
         @Override
@@ -64,6 +67,11 @@ public class HopsTorrentUploadEvent {
         
         public Response success(Result<Boolean> result) {
             return new Success(this, result);
+        }
+
+        @Override
+        public Identifier getBaseId() {
+          return torrentId.baseId;
         }
     }
 

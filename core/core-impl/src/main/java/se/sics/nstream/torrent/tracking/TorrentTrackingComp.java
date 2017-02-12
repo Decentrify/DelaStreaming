@@ -40,8 +40,8 @@ import se.sics.nstream.FileId;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.torrent.core.DataReport;
 import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
-import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.status.event.TorrentStatus;
+import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.tracking.event.TorrentTracking;
 import se.sics.nstream.torrent.transfer.tracking.DownloadReport;
 
@@ -112,7 +112,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         subscribe(handleDownloadStarting, trackingPort);
         subscribe(handleDownloadDone, trackingPort);
         subscribe(handleTorrentTrackingIndication, trackingPort);
-        
+
         subscribe(handleStatusSummaryRequest, statusPort);
     }
 
@@ -144,7 +144,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
             trigger(new TorrentStatus.DownloadedManifest(req), statusPort);
         }
     };
-    
+
     Handler handleDownloadStarting = new Handler<TorrentTracking.TransferSetUp>() {
         @Override
         public void handle(TorrentTracking.TransferSetUp event) {
@@ -228,7 +228,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     private void downloadValues(DownloadReport report) {
         try {
             downloadFile.write(report.total.throughput.inTimeThroughput / 1024 + "," + report.total.throughput.timedOutThroughput / 1024 + ","
-                    + report.total.ongoingBlocks + "," + report.total.cwnd +  "\n");
+                    + report.total.ongoingBlocks + "," + report.total.cwnd + "\n");
         } catch (IOException ex) {
             throw new RuntimeException("file report error");
         }
@@ -238,8 +238,13 @@ public class TorrentTrackingComp extends ComponentDefinition {
         @Override
         public void handle(StatusSummaryEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            double percentageCompleted = 100 * ((double) dataReport.totalSize.getValue1()) / dataReport.totalSize.getValue0();
-            answer(req, req.success(new TorrentExtendedStatus(torrentId, status, downloadReport.total.throughput.inTimeThroughput, percentageCompleted)));
+
+            if (downloadReport == null || dataReport == null) {
+                answer(req, req.success(new TorrentExtendedStatus(torrentId, status, 0, 0)));
+            } else {
+                double percentageCompleted = 100 * ((double) dataReport.totalSize.getValue1()) / dataReport.totalSize.getValue0();
+                answer(req, req.success(new TorrentExtendedStatus(torrentId, status, downloadReport.total.throughput.inTimeThroughput, percentageCompleted)));
+            }
         }
     };
 
