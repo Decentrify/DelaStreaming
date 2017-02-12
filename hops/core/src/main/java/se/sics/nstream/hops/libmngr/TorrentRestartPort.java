@@ -16,20 +16,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage.durable;
+package se.sics.nstream.hops.libmngr;
 
 import se.sics.kompics.PortType;
-import se.sics.nstream.storage.durable.events.DEndpoint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DEndpointCtrlPort extends PortType {
-    {
-        request(DEndpoint.Connect.class);
-        indication(DEndpoint.Success.class);
-        indication(DEndpoint.Failed.class);
-        request(DEndpoint.Disconnect.class);
-        indication(DEndpoint.Disconnected.class);
-    }
+public class TorrentRestartPort extends PortType {
+  {
+    request(TorrentRestart.DiskDwldReq.class);
+    indication(TorrentRestart.DiskDwldFail.class);
+    indication(TorrentRestart.DiskDwldSuccess.class);
+    
+    request(TorrentRestart.DiskUpldReq.class);
+    indication(TorrentRestart.DiskUpldFail.class);
+    indication(TorrentRestart.DiskUpldSuccess.class);
+  }
 }

@@ -71,8 +71,7 @@ import se.sics.nstream.storage.durable.disk.DiskComp;
 import se.sics.nstream.storage.durable.disk.DiskEndpoint;
 import se.sics.nstream.storage.durable.disk.DiskFED;
 import se.sics.nstream.storage.durable.disk.DiskResource;
-import se.sics.nstream.storage.durable.events.DEndpointConnect;
-import se.sics.nstream.storage.durable.events.DEndpointDisconnect;
+import se.sics.nstream.storage.durable.events.DEndpoint;
 import se.sics.nstream.storage.durable.util.FileExtendedDetails;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.storage.durable.util.StreamResource;
@@ -101,7 +100,8 @@ public class LocalLibTorrentFSM {
     D_PREPARE_TRANSFER1,
     D_PREPARE_TRANSFER2,
     D_GET_MANIFEST,
-    D_ADVANCE_TRANSFER,
+    D_ADVANCE_TRANSFER1,
+    D_ADVANCE_TRANSFER2,
     DOWNLOADING,
     UPLOADING2,
     D_ENDPOINT_CLEAN,
@@ -137,8 +137,9 @@ public class LocalLibTorrentFSM {
       //
       Class endpointPort = DEndpointCtrlPort.class;
       List<Class> endpointEvents = new LinkedList<>();
-      endpointEvents.add(DEndpointConnect.Success.class);
-      endpointEvents.add(DEndpointDisconnect.Success.class);
+      endpointEvents.add(DEndpoint.Success.class);
+      endpointEvents.add(DEndpoint.Failed.class);
+      endpointEvents.add(DEndpoint.Disconnected.class);
       positivePorts.add(Pair.with(endpointPort, endpointEvents));
       //
       Class torrentMngrPort = TorrentMngrPort.class;
@@ -170,8 +171,9 @@ public class LocalLibTorrentFSM {
         private final Set<Class> fsmEvents = new HashSet<>();
 
         {
-          fsmEvents.add(DEndpointConnect.Success.class);
-          fsmEvents.add(DEndpointDisconnect.Success.class);
+          fsmEvents.add(DEndpoint.Success.class);
+          fsmEvents.add(DEndpoint.Failed.class);
+          fsmEvents.add(DEndpoint.Disconnected.class);
           fsmEvents.add(StartTorrent.Response.class);
           fsmEvents.add(StopTorrent.Response.class);
           fsmEvents.add(SetupTransfer.Response.class);
@@ -221,9 +223,10 @@ public class LocalLibTorrentFSM {
     fsm.register(Transition.D_PREPARE_TRANSFER2, d_ps_id, d_pt_id);
     fsm.register(Transition.D_ENDPOINT_CLEAN, d_ps_id, ec_id);
     fsm.register(Transition.D_GET_MANIFEST, d_pt_id, d_gm_id);
+    fsm.register(Transition.D_ADVANCE_TRANSFER1, d_pt_id, d_at_id);
     fsm.register(Transition.D_TRANSFER_CLEAN1, d_pt_id, tc_id);
+    fsm.register(Transition.D_ADVANCE_TRANSFER2, d_gm_id, d_at_id);
     fsm.register(Transition.D_MANIFEST_CLEAN, d_gm_id, tc_id);
-    fsm.register(Transition.D_ADVANCE_TRANSFER, d_gm_id, d_at_id);
     fsm.register(Transition.DOWNLOADING, d_at_id, d_id);
     fsm.register(Transition.D_TRANSFER_CLEAN2, d_at_id, tc_id);
     fsm.register(Transition.UPLOADING2, d_id, u_id);
@@ -283,8 +286,7 @@ public class LocalLibTorrentFSM {
       @Override
       public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
         LOG.info("<{}>stop received during download:{} - move to cleaning endpoints", req.getBaseId(), req.torrentId);
-        es.proxy.answer(is.downloadReq, is.downloadReq.
-          failed(Result.logicalFail("concurrent stop event:" + req.getId())));
+        downloadReqFailed(es, is);
         is.setStopReq(req);
         cleanStorageEndpoints(es, is, is.endpointRegistration.selfCleaning());
         return t;
@@ -297,8 +299,7 @@ public class LocalLibTorrentFSM {
       @Override
       public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
         LOG.info("<{}>stop received during download:{} - move to cleaning transfer", req.getBaseId(), is.torrentId);
-        es.proxy.answer(is.downloadReq, is.downloadReq.
-          failed(Result.logicalFail("concurrent stop event:" + req.getId())));
+        downloadReqFailed(es, is);
         is.setStopReq(req);
         cleanTransfer(es, is);
         return t;
@@ -320,16 +321,16 @@ public class LocalLibTorrentFSM {
 
   private static FSMStateDef downloadPrepareStorageState() throws FSMException {
     FSMStateDef state = new FSMStateDef();
-    state.register(DEndpointConnect.Success.class, downloadPrepareStorage);
+    state.register(DEndpoint.Success.class, downloadPrepareStorage);
     state.register(HopsTorrentStopEvent.Request.class, downloadStop1(Transition.D_ENDPOINT_CLEAN));
     state.seal();
     return state;
   }
 
   static FSMEventHandler downloadPrepareStorage
-    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpointConnect.Success>() {
+    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpointConnect.Success resp) {
+      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
         LOG.debug("<{}>endpoint:{} prepared", resp.getBaseId(), resp.req.endpointProvider.getName());
         is.endpointRegistration.connected(resp.req.endpointId);
         if (is.endpointRegistration.isComplete()) {
@@ -356,8 +357,17 @@ public class LocalLibTorrentFSM {
       public FSMTransition handle(LibTExternal es, LibTInternal is, StartTorrent.Response resp) {
         if (resp.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - prepared", resp.getBaseId(), resp.overlayId());
-          getManifest(es, is);
-          return Transition.D_GET_MANIFEST;
+          if (is.downloadReq.isPresent()) {
+            getManifest(es, is);
+            return Transition.D_GET_MANIFEST;
+          } else {
+            //on restart I already have the manifest
+            readManifest(is);
+            prepareDetails(is);
+            is.setTorrent(is.getTorrentBuilder().getTorrent());
+            advanceTransfer(es, is);
+            return Transition.D_ADVANCE_TRANSFER1;
+          }
         } else {
           LOG.warn("<{}>torrent:{} - start failed", resp.getBaseId(), resp.overlayId());
           throw new RuntimeException("todo deal with failure");
@@ -383,7 +393,7 @@ public class LocalLibTorrentFSM {
           prepareDetails(is);
           is.setTorrent(is.getTorrentBuilder().getTorrent());
           advanceTransfer(es, is);
-          return Transition.D_ADVANCE_TRANSFER;
+          return Transition.D_ADVANCE_TRANSFER2;
         } else {
           LOG.warn("<{}>torrent:{} - start failed", resp.getBaseId(), resp.overlayId());
           throw new RuntimeException("todo deal with failure");
@@ -408,8 +418,7 @@ public class LocalLibTorrentFSM {
           if (!es.library.containsTorrent(resp.overlayId())) {
             throw new RuntimeException("mismatch between library and fsm - critical logical error");
           }
-          es.library.download(resp.overlayId(), is.torrentBuilder.getManifestStream().getValue1());
-          es.getProxy().answer(is.getDownloadReq(), is.getDownloadReq().success(Result.success(true)));
+          downloadReqSuccess(es, is);
           return Transition.DOWNLOADING;
         } else {
           LOG.debug("<{}>torrent:{} - transfer - set up failed", resp.getBaseId(), resp.overlayId());
@@ -468,7 +477,7 @@ public class LocalLibTorrentFSM {
       @Override
       public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
         LOG.info("<{}>stop received during upload:{} - move to cleaning endpoints", req.getBaseId(), req.torrentId);
-        es.proxy.answer(is.uploadReq, is.uploadReq.failed(Result.logicalFail("concurrent stop event:" + req.getId())));
+        uploadReqFailed(es, is);
         is.setStopReq(req);
         cleanStorageEndpoints(es, is, is.endpointRegistration.selfCleaning());
         return t;
@@ -481,7 +490,7 @@ public class LocalLibTorrentFSM {
       @Override
       public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
         LOG.info("<{}>stop received during upload:{} - move to cleaning endpoints", req.getBaseId(), req.torrentId);
-        es.proxy.answer(is.uploadReq, is.uploadReq.failed(Result.logicalFail("concurrent stop event:" + req.getId())));
+        uploadReqFailed(es, is);
         is.setStopReq(req);
         cleanTransfer(es, is);
         return t;
@@ -503,16 +512,16 @@ public class LocalLibTorrentFSM {
 
   private static FSMStateDef uploadPrepareStorageState() throws FSMException {
     FSMStateDef state = new FSMStateDef();
-    state.register(DEndpointConnect.Success.class, uploadPrepareStorage);
+    state.register(DEndpoint.Success.class, uploadPrepareStorage);
     state.register(HopsTorrentStopEvent.Request.class, uploadStop1(Transition.U_ENDPOINT_CLEAN));
     state.seal();
     return state;
   }
 
   static FSMEventHandler uploadPrepareStorage
-    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpointConnect.Success>() {
+    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpointConnect.Success resp) {
+      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
         LOG.debug("<{}>endpoint:{} prepared", resp.getBaseId(), resp.req.endpointProvider.getName());
         is.endpointRegistration.connected(resp.req.endpointId);
         if (is.endpointRegistration.isComplete()) {
@@ -565,11 +574,10 @@ public class LocalLibTorrentFSM {
       public FSMTransition handle(LibTExternal es, LibTInternal is, SetupTransfer.Response resp) {
         if (resp.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - transfer - set up", resp.getBaseId(), resp.overlayId());
-          if (!es.library.containsTorrent(resp.overlayId())) {
+          if (!es.library.containsTorrent(is.torrentId)) {
             throw new RuntimeException("mismatch between library and fsm - critical logical error");
           }
-          es.library.upload(resp.overlayId(), is.torrentBuilder.getManifestStream().getValue1());
-          es.getProxy().answer(is.getUploadReq(), is.getUploadReq().success(Result.success(true)));
+          uploadReqSuccess(es, is);
           return Transition.UPLOADING;
         } else {
           LOG.debug("<{}>torrent:{} - transfer - set up failed", resp.getBaseId(), resp.overlayId());
@@ -585,17 +593,59 @@ public class LocalLibTorrentFSM {
     return state;
   }
 
+  //********************************************************************************************************************
+//  private static FSMEventHandler storageError1(Transition t) {
+//    return new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Failed>() {
+//      @Override
+//      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpoint.Failed resp) {
+//        LOG.info("<{}>endpoint error received for torrent:{} - move to cleaning endpoints", resp.getBaseId(),
+//          resp.req.torrentId);
+//        if (is.downloadReq.isPresent()) {
+//          es.proxy.answer(is.downloadReq.get(), is.downloadReq.get().failed(Result.internalFailure(
+//            (Exception) resp.cause)));
+//          is.finishDownloadReq();
+//        }
+//        if (is.uploadReq.isPresent()) {
+//          es.proxy.answer(is.uploadReq.get(), is.uploadReq.get().failed(Result.internalFailure((Exception) resp.cause)));
+//          is.finishUploadReq();
+//        }
+//        cleanStorageEndpoints(es, is, is.endpointRegistration.selfCleaning());
+//        return t;
+//      }
+//    };
+//  }
+//
+//  private static FSMEventHandler storageError2() {
+//    return new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Failed>() {
+//      @Override
+//      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpoint.Failed resp) {
+//        LOG.info("<{}>endpoint error received for torrent:{} - move to cleaning transfer", resp.getBaseId(),
+//          resp.req.torrentId);
+//        if (is.downloadReq.isPresent()) {
+//          es.proxy.answer(is.downloadReq.get(), is.downloadReq.get().failed(Result.internalFailure(
+//            (Exception) resp.cause)));
+//          is.finishDownloadReq();
+//        }
+//        if (is.uploadReq.isPresent()) {
+//          es.proxy.answer(is.uploadReq.get(), is.uploadReq.get().failed(Result.internalFailure((Exception) resp.cause)));
+//          is.finishUploadReq();
+//        }
+//        cleanTransfer(es, is);
+//        return Transition.;
+//      }
+//    };
+//  }
   private static FSMStateDef endpointCleaningState() throws FSMException {
     FSMStateDef state = new FSMStateDef();
-    state.register(DEndpointDisconnect.Success.class, endpointCleaning);
+    state.register(DEndpoint.Disconnected.class, endpointCleaning);
     state.seal();
     return state;
   }
 
   static FSMEventHandler endpointCleaning
-    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpointDisconnect.Success>() {
+    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Disconnected>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpointDisconnect.Success resp) {
+      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpoint.Disconnected resp) {
         LOG.debug("<{}>endpoint:{} cleaned", resp.getBaseId(), resp.req.endpointId);
         is.endpointRegistration.cleaned(resp.req.endpointId);
         if (is.endpointRegistration.cleaningComplete()) {
@@ -655,13 +705,13 @@ public class LocalLibTorrentFSM {
         endpointId = es.endpointIdRegistry.register(endpointName);
       }
       is.endpointRegistration.addWaiting(endpointName, endpointId, dsp.getEndpoint());
-      es.proxy.trigger(new DEndpointConnect.Request(is.torrentId, endpointId, storageProvider), es.endpointPort());
+      es.proxy.trigger(new DEndpoint.Connect(is.torrentId, endpointId, storageProvider), es.endpointPort());
     }
   }
 
   private static void cleanStorageEndpoints(LibTExternal es, LibTInternal is, Set<Identifier> endpoints) {
     for (Identifier endpointId : endpoints) {
-      es.proxy.trigger(new DEndpointDisconnect.Request(is.torrentId, endpointId), es.endpointPort());
+      es.proxy.trigger(new DEndpoint.Disconnect(is.torrentId, endpointId), es.endpointPort());
     }
   }
 
@@ -674,7 +724,7 @@ public class LocalLibTorrentFSM {
     Either<MyTorrent.Manifest, ManifestJSON> manifestResult = Either.right(manifestJSON.getValue());
     is.getTorrentBuilder().setManifest(is.getTorrentId(), manifestResult);
   }
-  
+
   private static void readManifest2(LibTInternal is, MyTorrent.Manifest manifest) {
     Either<MyTorrent.Manifest, ManifestJSON> manifestResult = Either.left(manifest);
     is.getTorrentBuilder().setManifest(is.getTorrentId(), manifestResult);
@@ -713,15 +763,58 @@ public class LocalLibTorrentFSM {
     es.getProxy().trigger(req, es.transferCtrlPort());
   }
 
+  private static void downloadReqFailed(LibTExternal es, LibTInternal is) {
+    if (is.downloadReq.isPresent()) {
+      es.proxy.answer(is.downloadReq.get(), is.downloadReq.get().
+        failed(Result.logicalFail("concurrent stop event with download:" + is.torrentId)));
+    } else {
+      is.dRestartReq.get().failed();
+    }
+    is.finishDownloadReq();
+  }
+
+  private static void downloadReqSuccess(LibTExternal es, LibTInternal is) {
+    es.library.download(is.torrentId, is.torrentBuilder.getManifestStream().getValue1());
+    if (is.downloadReq.isPresent()) {
+      es.getProxy().answer(is.getDownloadReq(), is.getDownloadReq().success(Result.success(true)));
+    } else {
+      is.dRestartReq.get().success();
+    }
+    is.finishDownloadReq();
+  }
+
+  private static void uploadReqFailed(LibTExternal es, LibTInternal is) {
+    if (is.uploadReq.isPresent()) {
+      es.proxy.answer(is.uploadReq.get(), is.uploadReq.get().
+        failed(Result.logicalFail("concurrent stop event with upload:" + is.torrentId)));
+    } else {
+      is.uRestartReq.get().failed();
+    }
+    is.finishUploadReq();
+  }
+
+  private static void uploadReqSuccess(LibTExternal es, LibTInternal is) {
+    es.library.upload(is.torrentId, is.torrentBuilder.getManifestStream().getValue1());
+    if (is.uploadReq.isPresent()) {
+      es.getProxy().answer(is.getUploadReq(), is.getUploadReq().success(Result.success(true)));
+    } else {
+      is.uRestartReq.get().success();
+    }
+    is.finishUploadReq();
+  }
+
   public static class LibTInternal implements FSMInternalState {
 
     public final FSMId fsmId;
     public final String fsmName;
     //either
-    private HopsTorrentUploadEvent.Request uploadReq;
-    private HopsTorrentDownloadEvent.StartRequest downloadReq;
+    private Optional<HopsTorrentUploadEvent.Request> uploadReq = Optional.absent();
+    private Optional<TorrentRestart.DiskUpldReq> uRestartReq = Optional.absent();
+    private Optional<HopsTorrentDownloadEvent.StartRequest> downloadReq = Optional.absent();
+    private Optional<TorrentRestart.DiskDwldReq> dRestartReq = Optional.absent();
     //
     private HopsTorrentStopEvent.Request stopReq;
+    //
     private OverlayId torrentId;
     private List<KAddress> partners;
     private final EndpointRegistration endpointRegistration = new EndpointRegistration();
@@ -734,23 +827,43 @@ public class LocalLibTorrentFSM {
     }
 
     public void setUploadInit(HopsTorrentUploadEvent.Request req) {
-      this.uploadReq = req;
+      this.uploadReq = Optional.of(req);
       this.torrentId = req.torrentId;
       this.partners = new LinkedList<>();
     }
 
+    public void setUploadRestartInit(TorrentRestart.DiskUpldReq req) {
+      this.uRestartReq = Optional.of(req);
+      this.torrentId = req.torrentId;
+      this.partners = req.partners;
+    }
+
     public void setDownloadInit(HopsTorrentDownloadEvent.StartRequest req) {
-      this.downloadReq = req;
+      this.downloadReq = Optional.of(req);
+      this.torrentId = req.torrentId;
+      this.partners = req.partners;
+    }
+
+    public void setDownloadRestartInit(TorrentRestart.DiskDwldReq req) {
+      this.dRestartReq = Optional.of(req);
       this.torrentId = req.torrentId;
       this.partners = req.partners;
     }
 
     public HopsTorrentUploadEvent.Request getUploadReq() {
-      return uploadReq;
+      return uploadReq.get();
+    }
+
+    public void finishUploadReq() {
+      uploadReq = Optional.absent();
     }
 
     public HopsTorrentDownloadEvent.StartRequest getDownloadReq() {
-      return downloadReq;
+      return downloadReq.get();
+    }
+
+    public void finishDownloadReq() {
+      downloadReq = Optional.absent();
     }
 
     public HopsTorrentStopEvent.Request getStopReq() {

@@ -30,16 +30,16 @@ import se.sics.nstream.storage.durable.DurableStorageProvider;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DEndpointConnect {
+public class DEndpoint {
 
-  public static class Request extends Direct.Request<Success> implements Identifiable, FSMEvent {
+  public static class Connect extends Direct.Request<Success> implements Identifiable, FSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
     public final Identifier endpointId;
     public final DurableStorageProvider endpointProvider;
 
-    public Request(OverlayId torrentId, Identifier endpointId, DurableStorageProvider endpointProvider) {
+    public Connect(OverlayId torrentId, Identifier endpointId, DurableStorageProvider endpointProvider) {
       this.eventId = BasicIdentifiers.eventId();
       this.torrentId = torrentId;
       this.endpointId = endpointId;
@@ -54,6 +54,10 @@ public class DEndpointConnect {
     public Success success() {
       return new Success(this);
     }
+    
+    public Failed failed(Throwable cause) {
+      return new Failed(this, cause);
+    }
 
     @Override
     public Identifier getBaseId() {
@@ -61,11 +65,72 @@ public class DEndpointConnect {
     }
   }
 
-  public static class Success implements Direct.Response, Identifiable, FSMEvent {
+  public static abstract class Indication implements Direct.Response, Identifiable, FSMEvent {
 
-    public final Request req;
+    public final Connect req;
 
-    private Success(Request req) {
+    private Indication(Connect req) {
+      this.req = req;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return req.getBaseId();
+    }
+  }
+  
+  public static class Success extends Indication {
+
+    public Success(Connect req) {
+      super(req);
+    }
+  }
+  
+  public static class Failed extends Indication {
+    public final Throwable cause;
+    public Failed(Connect req, Throwable cause) {
+      super(req);
+      this.cause = cause;
+    }
+  }
+  
+  public static class Disconnect extends Direct.Request<Disconnected> implements Identifiable, FSMEvent {
+
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+    public final Identifier endpointId;
+
+    public Disconnect(OverlayId torrentId, Identifier endpointId) {
+      this.eventId = BasicIdentifiers.eventId();
+      this.torrentId = torrentId;
+      this.endpointId = endpointId;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    public Disconnected success() {
+      return new Disconnected(this);
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return torrentId.baseId;
+    }
+  }
+
+  public static class Disconnected implements Direct.Response, Identifiable, FSMEvent {
+
+    public final Disconnect req;
+
+    private Disconnected(Disconnect req) {
       this.req = req;
     }
 
