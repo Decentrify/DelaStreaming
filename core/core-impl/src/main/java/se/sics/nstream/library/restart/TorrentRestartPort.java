@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.libmngr;
+package se.sics.nstream.library.restart;
 
 import se.sics.kompics.PortType;
 
@@ -25,12 +25,12 @@ import se.sics.kompics.PortType;
  */
 public class TorrentRestartPort extends PortType {
   {
-    request(TorrentRestart.DiskDwldReq.class);
-    indication(TorrentRestart.DiskDwldFail.class);
-    indication(TorrentRestart.DiskDwldSuccess.class);
+    request(TorrentRestart.DwldReq.class);
+    indication(TorrentRestart.DwldFail.class);
+    indication(TorrentRestart.DwldSuccess.class);
     
-    request(TorrentRestart.DiskUpldReq.class);
-    indication(TorrentRestart.DiskUpldFail.class);
-    indication(TorrentRestart.DiskUpldSuccess.class);
+    request(TorrentRestart.UpldReq.class);
+    indication(TorrentRestart.UpldFail.class);
+    indication(TorrentRestart.UpldSuccess.class);
   }
 }

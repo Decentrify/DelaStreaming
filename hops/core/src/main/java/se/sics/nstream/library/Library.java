@@ -52,14 +52,13 @@ public class Library {
 //    torrents.remove(torrentId);
 //    updateSummary();
 //  }
-  
   public boolean containsTorrent(OverlayId tId) {
     return torrents.containsKey(tId);
   }
-  
+
   public TorrentState stateOf(OverlayId tId) {
     Torrent t = torrents.get(tId);
-    if(t == null) {
+    if (t == null) {
       return TorrentState.NONE;
     }
     return t.torrentStatus;
@@ -130,11 +129,16 @@ public class Library {
   }
 
   public List<ElementSummary> getSummary() {
+    return getSummary(Optional.fromNullable((String)null));
+  }
+  
+  public List<ElementSummary> getSummary(Optional<String> projectId) {
     List<ElementSummary> summary = new ArrayList<>();
     for (Map.Entry<OverlayId, Torrent> e : torrents.entrySet()) {
-      ElementSummary es = new ElementSummary(e.getValue().torrentName, e.
-        getKey(), e.getValue().torrentStatus);
-      summary.add(es);
+      if (!projectId.isPresent() || (projectId.isPresent() && projectId.get().equals(e.getValue().projectId))) {
+        ElementSummary es = new ElementSummary(e.getValue().torrentName, e.getKey(), e.getValue().torrentStatus);
+        summary.add(es);
+      }
     }
     return summary;
   }
@@ -159,7 +163,7 @@ public class Library {
       this(projectId, torrentName, torrentStatus, Optional.of(manifestStream));
     }
 
-    public Torrent(String projectId, String torrentName,TorrentState torrentStatus) {
+    public Torrent(String projectId, String torrentName, TorrentState torrentStatus) {
       this(projectId, torrentName, torrentStatus, Optional.fromNullable((MyStream) null));
     }
 

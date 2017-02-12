@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.Channel;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -32,6 +33,7 @@ import se.sics.ktoolbox.nutil.fsm.FSMException;
 import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.event.system.SystemAddressEvent;
+import se.sics.nstream.library.restart.TorrentRestartPort;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.torrent.TorrentMngrPort;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
@@ -51,6 +53,8 @@ public class LibraryMngrComp extends ComponentDefinition {
     Positive<TorrentMngrPort> torrentMngrPort = requires(TorrentMngrPort.class);
     Positive<TransferCtrlPort> transferCtrl = requires(TransferCtrlPort.class);
     Positive<TorrentStatusPort> reportPort = requires(TorrentStatusPort.class);
+    Positive<TorrentRestartPort> restartPort1 = requires(TorrentRestartPort.class);
+    Negative<TorrentRestartPort> restartPort2 = provides(TorrentRestartPort.class);
     
     Negative<SystemPort> systemPort = provides(SystemPort.class);
     List<Negative> providedPorts = new ArrayList<>();
@@ -66,6 +70,8 @@ public class LibraryMngrComp extends ComponentDefinition {
         torrentProvider = init.libraryProvider;
         setupLibraryProvider();
         LOG.info("{}initiated", logPrefix);
+        
+        connect(proxy.getPositive(TorrentRestartPort.class), proxy.getNegative(TorrentRestartPort.class), Channel.TWO_WAY);
 
         subscribe(handleStart, control);
         subscribe(handleSystemAddress, systemPort);

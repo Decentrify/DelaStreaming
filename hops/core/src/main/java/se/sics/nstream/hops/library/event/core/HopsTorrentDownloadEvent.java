@@ -135,7 +135,7 @@ public class HopsTorrentDownloadEvent {
     }
   }
 
-  public static class AdvanceRequest extends Direct.Request<AdvanceResponse> implements StreamEvent {
+  public static class AdvanceRequest extends Direct.Request<AdvanceResponse> implements StreamEvent, FSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -173,6 +173,11 @@ public class HopsTorrentDownloadEvent {
 
     public AdvanceResponse fail(Result result) {
       return new AdvanceResponse(this, result);
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return torrentId.baseId;
     }
   }
 
