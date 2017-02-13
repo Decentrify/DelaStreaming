@@ -34,14 +34,14 @@ import se.sics.ktoolbox.util.result.Result;
 public class HopsContentsEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
-        public final Optional<String> projectId;
+        public final Optional<Integer> projectId;
         
-        public Request(Identifier eventId, Optional<String> projectId) {
+        public Request(Identifier eventId, Optional<Integer> projectId) {
             this.eventId = eventId;
             this.projectId = projectId;
         }
         
-        public Request(Optional<String> projectId) {
+        public Request(Optional<Integer> projectId) {
             this(BasicIdentifiers.eventId(), projectId);
         }
         

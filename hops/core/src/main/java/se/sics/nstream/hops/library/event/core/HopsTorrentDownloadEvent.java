@@ -44,12 +44,12 @@ public class HopsTorrentDownloadEvent {
     public final Identifier eventId;
     public final OverlayId torrentId;
     public final String torrentName;
-    public final String projectId;
+    public final Integer projectId;
     public final HDFSEndpoint hdfsEndpoint;
     public final HDFSResource manifest;
     public final List<KAddress> partners;
 
-    public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, String projectId, HDFSEndpoint hdfsEndpoint,
+    public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint,
       HDFSResource manifest, List<KAddress> partners) {
       this.eventId = eventId;
       this.torrentId = torrentId;
@@ -60,7 +60,7 @@ public class HopsTorrentDownloadEvent {
       this.partners = partners;
     }
 
-    public StartRequest(OverlayId torrentId, String torrentName, String projectId, HDFSEndpoint hdfsEndpoint, HDFSResource manifest,
+    public StartRequest(OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint, HDFSResource manifest,
       List<KAddress> partners) {
       this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, hdfsEndpoint, manifest, partners);
     }

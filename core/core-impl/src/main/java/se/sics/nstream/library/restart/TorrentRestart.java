@@ -35,11 +35,11 @@ public class TorrentRestart {
 
     public final OverlayId torrentId;
     public final String torrentName;
-    public final String projectId;
+    public final Integer projectId;
     public final List<KAddress> partners;
     public final MyStream manifestStream;
 
-    public UpldReq(OverlayId torrentId, String torrentName, String projectId, List<KAddress> partners,
+    public UpldReq(OverlayId torrentId, String torrentName, Integer projectId, List<KAddress> partners,
       MyStream manifestStream) {
       super();
       this.torrentId = torrentId;
@@ -90,11 +90,11 @@ public class TorrentRestart {
 
     public final OverlayId torrentId;
     public final String torrentName;
-    public final String projectId;
+    public final Integer projectId;
     public final List<KAddress> partners;
     public final MyStream manifestStream;
 
-    public DwldReq(OverlayId torrentId, String torrentName, String projectId, List<KAddress> partners,
+    public DwldReq(OverlayId torrentId, String torrentName, Integer projectId, List<KAddress> partners,
       MyStream manifestStream) {
       super();
       this.torrentId = torrentId;

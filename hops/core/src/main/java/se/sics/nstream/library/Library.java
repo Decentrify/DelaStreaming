@@ -90,7 +90,7 @@ public class Library {
     }
   }
 
-  public void prepareUpload(String projectId, OverlayId torrentId, String torrentName) {
+  public void prepareUpload(Integer projectId, OverlayId torrentId, String torrentName) {
     Torrent torrent = new Torrent(projectId, torrentName, TorrentState.PREPARE_UPLOAD);
     torrents.put(torrentId, torrent);
   }
@@ -102,8 +102,8 @@ public class Library {
     updateSummary();
   }
 
-  public void prepareDownload(String projectId, OverlayId torrentId, String torrentName) {
-    Torrent torrent = new Torrent(projectId, projectId, TorrentState.PREPARE_DOWNLOAD);
+  public void prepareDownload(Integer projectId, OverlayId torrentId, String torrentName) {
+    Torrent torrent = new Torrent(projectId, torrentName, TorrentState.PREPARE_DOWNLOAD);
     torrents.put(torrentId, torrent);
   }
 
@@ -129,10 +129,10 @@ public class Library {
   }
 
   public List<ElementSummary> getSummary() {
-    return getSummary(Optional.fromNullable((String)null));
+    return getSummary(Optional.fromNullable((Integer)null));
   }
   
-  public List<ElementSummary> getSummary(Optional<String> projectId) {
+  public List<ElementSummary> getSummary(Optional<Integer> projectId) {
     List<ElementSummary> summary = new ArrayList<>();
     for (Map.Entry<OverlayId, Torrent> e : torrents.entrySet()) {
       if (!projectId.isPresent() || (projectId.isPresent() && projectId.get().equals(e.getValue().projectId))) {
@@ -146,12 +146,12 @@ public class Library {
   public static class Torrent {
 
     //TODO Alex - duplicate data torrentName
-    public final String projectId;
+    public final Integer projectId;
     public final String torrentName;
     private TorrentState torrentStatus;
     private Optional<MyStream> manifestStream;
 
-    private Torrent(String projectId, String torrentName,
+    private Torrent(Integer projectId, String torrentName,
       TorrentState torrentStatus, Optional<MyStream> manifestStream) {
       this.projectId = projectId;
       this.torrentName = torrentName;
@@ -159,11 +159,11 @@ public class Library {
       this.manifestStream = manifestStream;
     }
 
-    public Torrent(String projectId, String torrentName, TorrentState torrentStatus, MyStream manifestStream) {
+    public Torrent(Integer projectId, String torrentName, TorrentState torrentStatus, MyStream manifestStream) {
       this(projectId, torrentName, torrentStatus, Optional.of(manifestStream));
     }
 
-    public Torrent(String projectId, String torrentName, TorrentState torrentStatus) {
+    public Torrent(Integer projectId, String torrentName, TorrentState torrentStatus) {
       this(projectId, torrentName, torrentStatus, Optional.fromNullable((MyStream) null));
     }
 

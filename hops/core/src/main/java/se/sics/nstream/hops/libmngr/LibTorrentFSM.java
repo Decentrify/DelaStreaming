@@ -115,7 +115,6 @@ public class LibTorrentFSM {
     ADVANCE_TRANSFER_DM,
     ADVANCE_TRANSFER_EX,
     DOWNLOADING,
-    DOWNLOADING2,
     UPLOADING,
     UPLOADING2,
     ENDPOINT_CLEAN,
@@ -287,7 +286,7 @@ public class LibTorrentFSM {
     };
 
   private static Transition downloadInit(LibTExternal es, LibTInternal is, OverlayId torrentId, String torrentName,
-    String projectId, MyStream manifestStream) {
+    Integer projectId, MyStream manifestStream) {
     if (es.library.containsTorrent(torrentId)) {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
@@ -326,7 +325,7 @@ public class LibTorrentFSM {
     };
 
   private static Transition initUpload(LibTExternal es, LibTInternal is, OverlayId torrentId, String torrentName,
-    String projectId, MyStream manifestStream) {
+    Integer projectId, MyStream manifestStream) {
     if (es.library.containsTorrent(torrentId)) {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
@@ -472,7 +471,7 @@ public class LibTorrentFSM {
 
   private static FSMStateDef extendedDetailsState() throws FSMException {
     FSMStateDef state = new FSMStateDef();
-    state.register(GetRawTorrent.Response.class, extendedDetails);
+    state.register(HopsTorrentDownloadEvent.AdvanceRequest.class, extendedDetails);
     state.register(HopsTorrentStopEvent.Request.class, stop2(Transition.TRANSFER_CLEAN_EX));
     state.seal();
     return state;
@@ -738,7 +737,7 @@ public class LibTorrentFSM {
       es.getProxy().answer(is.advanceReq.get(), is.advanceReq.get().success(Result.success(true)));
       es.library.download(is.torrentId, is.torrentBuilder.getManifestStream().getValue1());
       is.advanceReq = Optional.absent();
-      return Transition.DOWNLOADING2;
+      return Transition.DOWNLOADING;
     } else if (is.dRestartReq.isPresent()) {
       is.dRestartReq.get().success();
       es.library.download(is.torrentId, is.torrentBuilder.getManifestStream().getValue1());
