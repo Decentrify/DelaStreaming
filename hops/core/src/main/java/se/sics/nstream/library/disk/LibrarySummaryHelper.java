@@ -58,8 +58,8 @@ public class LibrarySummaryHelper {
     library.setHdfsLibrary(hdfs);
 
     for (Map.Entry<OverlayId, Library.Torrent> torrent : torrents.entrySet()) {
-      if(!torrent.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)
-        || !torrent.getValue().getTorrentStatus().equals(TorrentState.UPLOADING)) {
+      if(!(torrent.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)
+        || torrent.getValue().getTorrentStatus().equals(TorrentState.UPLOADING))) {
         continue;
       } 
       Identifier torrentBaseId = torrent.getKey().baseId;
