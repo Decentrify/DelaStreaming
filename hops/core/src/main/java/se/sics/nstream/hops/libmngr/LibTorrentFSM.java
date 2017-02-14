@@ -127,7 +127,8 @@ public class LibTorrentFSM {
     TRANSFER_CLEAN3,
     TRANSFER_CLEAN4,
     TRANSFER_CLEAN5,
-    TRANSFER_CLEAN_EX
+    TRANSFER_CLEAN_EX,
+    INIT_STOP
   }
 
   public static MultiFSM getFSM(LibTExternal es, OnFSMExceptionAction oexa) {
@@ -208,19 +209,7 @@ public class LibTorrentFSM {
           return Optional.absent();
         }
       };
-      //for multi dela if no fsm and you give a m
-      FSMOnWrongStateAction owsa = new FSMOnWrongStateAction<LibTExternal, LibTInternal>() {
-        @Override
-        public void handle(FSMStateId state, FSMEvent event, LibTExternal es, LibTInternal is) {
-          if (event instanceof HopsTorrentStopEvent.Request) {
-            HopsTorrentStopEvent.Request req = (HopsTorrentStopEvent.Request) event;
-            es.proxy.answer(req, req.success());
-          } else {
-            LOG.warn("state:{} does not handle event:{} and does not register owsa behaviour", state, event);
-          }
-        }
-      };
-      MultiFSM fsm = new MultiFSM(oexa, owsa, fsmIdExtractor, fsmds, es, builders, positivePorts, negativePorts);
+      MultiFSM fsm = new MultiFSM(oexa, fsmIdExtractor, fsmds, es, builders, positivePorts, negativePorts);
       return fsm;
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
@@ -285,6 +274,7 @@ public class LibTorrentFSM {
   private static FSMStateDef initState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
     state.setOnWrongStateAction(owsa);
+    state.register(HopsTorrentStopEvent.Request.class, stop0());
     state.register(HopsTorrentDownloadEvent.StartRequest.class, initDownload);
     state.register(TorrentRestart.DwldReq.class, initDownloadRestart);
     state.register(HopsTorrentUploadEvent.Request.class, initUpload);
@@ -371,6 +361,16 @@ public class LibTorrentFSM {
     }
   }
 
+  private static FSMEventHandler stop0() {
+    return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+      @Override
+      public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+        LOG.info("<{}>stop received for torrent:{} - stopping", req.getBaseId(), req.torrentId);
+        es.proxy.answer(req, req.success());
+        return FSMTransitions.KILL;
+      }
+    };
+  }
   private static FSMEventHandler stop1(final Transition t) {
     return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
       @Override
