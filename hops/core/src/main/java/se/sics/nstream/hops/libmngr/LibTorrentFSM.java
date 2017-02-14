@@ -208,7 +208,19 @@ public class LibTorrentFSM {
           return Optional.absent();
         }
       };
-      MultiFSM fsm = new MultiFSM(oexa, fsmIdExtractor, fsmds, es, builders, positivePorts, negativePorts);
+      //for multi dela if no fsm and you give a m
+      FSMOnWrongStateAction owsa = new FSMOnWrongStateAction<LibTExternal, LibTInternal>() {
+        @Override
+        public void handle(FSMStateId state, FSMEvent event, LibTExternal es, LibTInternal is) {
+          if (event instanceof HopsTorrentStopEvent.Request) {
+            HopsTorrentStopEvent.Request req = (HopsTorrentStopEvent.Request) event;
+            es.proxy.answer(req, req.success());
+          } else {
+            LOG.warn("state:{} does not handle event:{} and does not register owsa behaviour", state, event);
+          }
+        }
+      };
+      MultiFSM fsm = new MultiFSM(oexa, owsa, fsmIdExtractor, fsmds, es, builders, positivePorts, negativePorts);
       return fsm;
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
@@ -222,9 +234,6 @@ public class LibTorrentFSM {
         if (event instanceof HopsTorrentDownloadEvent.StartRequest) {
           HopsTorrentDownloadEvent.StartRequest req = (HopsTorrentDownloadEvent.StartRequest) event;
           es.proxy.answer(req, req.failed(Result.logicalFail("torrent:" + is.torrentId + "is active already")));
-        } else if (event instanceof HopsTorrentDownloadEvent.AdvanceRequest) {
-          HopsTorrentDownloadEvent.AdvanceRequest req = (HopsTorrentDownloadEvent.AdvanceRequest) event;
-          es.proxy.answer(req, req.fail(Result.logicalFail("torrent:" + is.torrentId + "is active already")));
         } else if (event instanceof HopsTorrentUploadEvent.Request) {
           HopsTorrentUploadEvent.Request req = (HopsTorrentUploadEvent.Request) event;
           es.proxy.answer(req, req.failed(Result.logicalFail("torrent:" + is.torrentId + "is active already")));
