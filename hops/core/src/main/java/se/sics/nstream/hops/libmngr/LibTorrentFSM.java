@@ -40,6 +40,7 @@ import se.sics.ktoolbox.nutil.fsm.FSMIdExtractor;
 import se.sics.ktoolbox.nutil.fsm.FSMInternalState;
 import se.sics.ktoolbox.nutil.fsm.FSMInternalStateBuilder;
 import se.sics.ktoolbox.nutil.fsm.FSMInternalStateBuilders;
+import se.sics.ktoolbox.nutil.fsm.FSMOnWrongStateAction;
 import se.sics.ktoolbox.nutil.fsm.FSMStateDef;
 import se.sics.ktoolbox.nutil.fsm.FSMTransition;
 import se.sics.ktoolbox.nutil.fsm.FSMTransitions;
@@ -49,6 +50,7 @@ import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
 import se.sics.ktoolbox.nutil.fsm.ids.FSMDefId;
 import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
 import se.sics.ktoolbox.nutil.fsm.ids.FSMStateDefId;
+import se.sics.ktoolbox.nutil.fsm.ids.FSMStateId;
 import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -214,17 +216,34 @@ public class LibTorrentFSM {
   }
 
   public static FSMachineDef build() throws FSMException {
+    FSMOnWrongStateAction owsa = new FSMOnWrongStateAction<LibTExternal, LibTInternal>() {
+      @Override
+      public void handle(FSMStateId state, FSMEvent event, LibTExternal es, LibTInternal is) {
+        if (event instanceof HopsTorrentDownloadEvent.StartRequest) {
+          HopsTorrentDownloadEvent.StartRequest req = (HopsTorrentDownloadEvent.StartRequest) event;
+          es.proxy.answer(req, req.failed(Result.logicalFail("torrent:" + is.torrentId + "is active already")));
+        } else if (event instanceof HopsTorrentDownloadEvent.AdvanceRequest) {
+          HopsTorrentDownloadEvent.AdvanceRequest req = (HopsTorrentDownloadEvent.AdvanceRequest) event;
+          es.proxy.answer(req, req.fail(Result.logicalFail("torrent:" + is.torrentId + "is active already")));
+        } else if (event instanceof HopsTorrentUploadEvent.Request) {
+          HopsTorrentUploadEvent.Request req = (HopsTorrentUploadEvent.Request) event;
+          es.proxy.answer(req, req.failed(Result.logicalFail("torrent:" + is.torrentId + "is active already")));
+        } else {
+          LOG.warn("state:{} does not handle event:{} and does not register owsa behaviour", state, event);
+        }
+      }
+    };
     FSMachineDef fsm = FSMachineDef.instance(NAME);
-    FSMStateDefId init_id = fsm.registerInitState(initState());
-    FSMStateDefId ps_id = fsm.registerState(prepareStorageState());
-    FSMStateDefId pt_id = fsm.registerState(prepareTransferState());
-    FSMStateDefId dm_id = fsm.registerState(downloadManifestState());
-    FSMStateDefId ex_id = fsm.registerState(extendedDetailsState());
-    FSMStateDefId at_id = fsm.registerState(advanceTransferState());
-    FSMStateDefId d_id = fsm.registerState(downloadingState());
-    FSMStateDefId u_id = fsm.registerState(uploadingState());
-    FSMStateDefId ec_id = fsm.registerState(endpointCleaningState());
-    FSMStateDefId tc_id = fsm.registerState(transferCleaningState());
+    FSMStateDefId init_id = fsm.registerInitState(initState(owsa));
+    FSMStateDefId ps_id = fsm.registerState(prepareStorageState(owsa));
+    FSMStateDefId pt_id = fsm.registerState(prepareTransferState(owsa));
+    FSMStateDefId dm_id = fsm.registerState(downloadManifestState(owsa));
+    FSMStateDefId ex_id = fsm.registerState(extendedDetailsState(owsa));
+    FSMStateDefId at_id = fsm.registerState(advanceTransferState(owsa));
+    FSMStateDefId d_id = fsm.registerState(downloadingState(owsa));
+    FSMStateDefId u_id = fsm.registerState(uploadingState(owsa));
+    FSMStateDefId ec_id = fsm.registerState(endpointCleaningState(owsa));
+    FSMStateDefId tc_id = fsm.registerState(transferCleaningState(owsa));
 
     fsm.register(Transition.PREPARE_STORAGE_D, init_id, ps_id);
     fsm.register(Transition.PREPARE_STORAGE_U, init_id, ps_id);
@@ -254,8 +273,9 @@ public class LibTorrentFSM {
     return fsm;
   }
 
-  private static FSMStateDef initState() throws FSMException {
+  private static FSMStateDef initState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(HopsTorrentDownloadEvent.StartRequest.class, initDownload);
     state.register(TorrentRestart.DwldReq.class, initDownloadRestart);
     state.register(HopsTorrentUploadEvent.Request.class, initUpload);
@@ -380,8 +400,9 @@ public class LibTorrentFSM {
     };
   }
 
-  private static FSMStateDef prepareStorageState() throws FSMException {
+  private static FSMStateDef prepareStorageState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(DEndpoint.Success.class, prepareStorage);
     state.register(HopsTorrentStopEvent.Request.class, stop1(Transition.ENDPOINT_CLEAN2));
     state.seal();
@@ -404,8 +425,9 @@ public class LibTorrentFSM {
       }
     };
 
-  private static FSMStateDef prepareTransferState() throws FSMException {
+  private static FSMStateDef prepareTransferState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(StartTorrent.Response.class, prepareTransfer);
     state.register(HopsTorrentStopEvent.Request.class, stop2(Transition.TRANSFER_CLEAN1));
     state.seal();
@@ -437,8 +459,9 @@ public class LibTorrentFSM {
       }
     };
 
-  private static FSMStateDef downloadManifestState() throws FSMException {
+  private static FSMStateDef downloadManifestState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(GetRawTorrent.Response.class, downloadManifest);
     state.register(HopsTorrentStopEvent.Request.class, stop2(Transition.TRANSFER_CLEAN2));
     state.seal();
@@ -469,8 +492,9 @@ public class LibTorrentFSM {
       }
     };
 
-  private static FSMStateDef extendedDetailsState() throws FSMException {
+  private static FSMStateDef extendedDetailsState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(HopsTorrentDownloadEvent.AdvanceRequest.class, extendedDetails);
     state.register(HopsTorrentStopEvent.Request.class, stop2(Transition.TRANSFER_CLEAN_EX));
     state.seal();
@@ -495,8 +519,9 @@ public class LibTorrentFSM {
       }
     };
 
-  private static FSMStateDef advanceTransferState() throws FSMException {
+  private static FSMStateDef advanceTransferState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(SetupTransfer.Response.class, advanceTransfer);
     state.register(HopsTorrentStopEvent.Request.class, stop2(Transition.TRANSFER_CLEAN3));
     state.seal();
@@ -520,8 +545,9 @@ public class LibTorrentFSM {
       }
     };
 
-  private static FSMStateDef downloadingState() throws FSMException {
+  private static FSMStateDef downloadingState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(DownloadSummaryEvent.class, downloadCompleted);
     state.register(HopsTorrentStopEvent.Request.class, stop3(Transition.TRANSFER_CLEAN4));
     state.seal();
@@ -541,8 +567,9 @@ public class LibTorrentFSM {
       }
     };
 
-  private static FSMStateDef uploadingState() throws FSMException {
+  private static FSMStateDef uploadingState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(HopsTorrentStopEvent.Request.class, stop3(Transition.TRANSFER_CLEAN5));
     state.seal();
     return state;
@@ -590,8 +617,9 @@ public class LibTorrentFSM {
 //      }
 //    };
 //  }
-  private static FSMStateDef endpointCleaningState() throws FSMException {
+  private static FSMStateDef endpointCleaningState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(DEndpoint.Disconnected.class, endpointCleaning);
     state.seal();
     return state;
@@ -612,8 +640,9 @@ public class LibTorrentFSM {
       }
     };
 
-  private static FSMStateDef transferCleaningState() throws FSMException {
+  private static FSMStateDef transferCleaningState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
+    state.setOnWrongStateAction(owsa);
     state.register(StopTorrent.Response.class, transferCleaning);
     state.seal();
     return state;
@@ -694,7 +723,7 @@ public class LibTorrentFSM {
     GetRawTorrent.Request req = new GetRawTorrent.Request(is.torrentId);
     es.getProxy().trigger(req, es.transferCtrlPort());
   }
-  
+
   private static void getExtendedDetails(LibTExternal es, LibTInternal is) {
     es.getProxy().answer(is.downloadReq.get(), is.downloadReq.get().success(Result.success(true)));
     is.downloadReq = Optional.absent();
@@ -710,7 +739,7 @@ public class LibTorrentFSM {
       es.proxy.answer(is.downloadReq.get(), is.downloadReq.get().
         failed(Result.logicalFail("concurrent stop event with download:" + is.torrentId)));
       is.downloadReq = Optional.absent();
-    } else if(is.advanceReq.isPresent()) {
+    } else if (is.advanceReq.isPresent()) {
       es.proxy.answer(is.advanceReq.get(), is.advanceReq.get().
         fail(Result.logicalFail("concurrent stop event with download:" + is.torrentId)));
       is.advanceReq = Optional.absent();
@@ -827,7 +856,7 @@ public class LibTorrentFSM {
     }
     is.getTorrentBuilder().setExtendedDetails(extendedDetails);
   }
-  
+
   private static boolean withExtendedDetails(LibTExternal es) {
     if (es.fsmType.equals(Details.Types.DISK)) {
       return false;
@@ -877,7 +906,7 @@ public class LibTorrentFSM {
       this.torrentId = req.torrentId;
       this.partners = req.partners;
     }
-    
+
     public void setDownloadAdvance(HopsTorrentDownloadEvent.AdvanceRequest req) {
       this.advanceReq = Optional.of(req);
     }
