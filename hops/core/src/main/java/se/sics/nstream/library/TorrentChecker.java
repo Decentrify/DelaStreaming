@@ -28,7 +28,7 @@ import se.sics.nstream.library.util.TorrentState;
  */
 public class TorrentChecker {
 
-  public static Result upload(Library library, String projectId, OverlayId torrentId, String torrentName) {
+  public static Result upload(Library library, Integer projectId, OverlayId torrentId, String torrentName) {
     if (!library.containsTorrent(torrentId)) {
       return Result.badArgument("torrent:" + torrentId + " is not active");
     }
@@ -43,7 +43,7 @@ public class TorrentChecker {
     return Result.success(true);
   }
 
-  public static Result prepareDownload(Library library, String projectId, OverlayId torrentId, String torrentName) {
+  public static Result prepareDownload(Library library, Integer projectId, OverlayId torrentId, String torrentName) {
     if (!library.containsTorrent(torrentId)) {
       return Result.success(true);
     }
@@ -58,7 +58,7 @@ public class TorrentChecker {
     return Result.success(true);
   }
 
-  public static Result download(Library library, String projectId, OverlayId torrentId,
+  public static Result download(Library library, Integer projectId, OverlayId torrentId,
     String torrentName) {
     if (!library.containsTorrent(torrentId)) {
       return Result.badArgument("torrent:" + torrentId + " is not active");

@@ -72,7 +72,7 @@ public class Library {
     return Result.badArgument("torrent:" + tId + " expected state:" + expectedState + " found state:" + t.torrentStatus);
   }
 
-  public Result<Boolean> checkBasicDetails(OverlayId tId, String projectId, String tName) {
+  public Result<Boolean> checkBasicDetails(OverlayId tId, Integer projectId, String tName) {
     Torrent t = torrents.get(tId);
     if (!t.projectId.equals(projectId)) {
       return Result.badArgument("torrent:" + tId + "already active in project:" + t.projectId);
