@@ -21,10 +21,12 @@ package se.sics.nstream.library;
 import com.google.common.base.Optional;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.library.disk.LibrarySummaryHelper;
 import se.sics.nstream.library.disk.LibrarySummaryJSON;
@@ -102,8 +104,9 @@ public class Library {
     updateSummary();
   }
 
-  public void prepareDownload(Integer projectId, OverlayId torrentId, String torrentName) {
+  public void prepareDownload(Integer projectId, OverlayId torrentId, String torrentName, List<KAddress> partners) {
     Torrent torrent = new Torrent(projectId, torrentName, TorrentState.PREPARE_DOWNLOAD);
+    torrent.setPartners(partners);
     torrents.put(torrentId, torrent);
   }
 
@@ -144,27 +147,16 @@ public class Library {
   }
 
   public static class Torrent {
-
-    //TODO Alex - duplicate data torrentName
     public final Integer projectId;
     public final String torrentName;
-    private TorrentState torrentStatus;
-    private Optional<MyStream> manifestStream;
+    private TorrentState torrentStatus = TorrentState.NONE;
+    private Optional<MyStream> manifestStream = Optional.absent();
+    private List<KAddress> partners = new LinkedList<>();
 
-    private Torrent(Integer projectId, String torrentName,
-      TorrentState torrentStatus, Optional<MyStream> manifestStream) {
+    public Torrent(Integer projectId, String torrentName, TorrentState torrentStatus) {
       this.projectId = projectId;
       this.torrentName = torrentName;
       this.torrentStatus = torrentStatus;
-      this.manifestStream = manifestStream;
-    }
-
-    public Torrent(Integer projectId, String torrentName, TorrentState torrentStatus, MyStream manifestStream) {
-      this(projectId, torrentName, torrentStatus, Optional.of(manifestStream));
-    }
-
-    public Torrent(Integer projectId, String torrentName, TorrentState torrentStatus) {
-      this(projectId, torrentName, torrentStatus, Optional.fromNullable((MyStream) null));
     }
 
     public TorrentState getTorrentStatus() {
@@ -181,6 +173,14 @@ public class Library {
 
     public void setManifestStream(MyStream manifestStream) {
       this.manifestStream = Optional.of(manifestStream);
+    }
+
+    public List<KAddress> getPartners() {
+      return partners;
+    }
+
+    public void setPartners(List<KAddress> partners) {
+      this.partners = partners;
     }
   }
 }

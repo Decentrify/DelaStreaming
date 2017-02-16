@@ -19,7 +19,6 @@
 package se.sics.nstream.hops.libmngr;
 
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -126,8 +125,13 @@ public class HopsLibraryMngr {
         = LibrarySummaryHelper.fromSummary(librarySummary.getValue(), TorrentIds.torrentIdFactory());
 
       for (Map.Entry<OverlayId, Library.Torrent> t : torrents.entrySet()) {
-        proxy.trigger(new TorrentRestart.UpldReq(t.getKey(), t.getValue().torrentName, t.getValue().projectId,
-          new LinkedList<KAddress>(), t.getValue().getManifestStream()), restartPort);
+        if (t.getValue().getTorrentStatus().equals(TorrentState.UPLOADING)) {
+          proxy.trigger(new TorrentRestart.UpldReq(t.getKey(), t.getValue().torrentName, t.getValue().projectId,
+            t.getValue().getPartners(), t.getValue().getManifestStream()), restartPort);
+        } else if (t.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)) {
+          proxy.trigger(new TorrentRestart.DwldReq(t.getKey(), t.getValue().torrentName, t.getValue().projectId,
+            t.getValue().getPartners(), t.getValue().getManifestStream()), restartPort);
+        }
       }
     }
 
@@ -159,23 +163,24 @@ public class HopsLibraryMngr {
       }
     };
   }
-  
+
   public static class LibraryDetails {
+
     private static final Logger LOG = LoggerFactory.getLogger(HopsLibraryMngr.class);
     private String logPrefix = "";
-    
+
     private final ComponentProxy proxy;
     private final Library library;
     private Negative<HopsTorrentPort> libraryCtrlPort;
     private Positive<TorrentStatusPort> torrentStatusPort;
-    
+
     private final Map<OverlayId, TorrentExtendedStatusEvent.Request> pendingTESE = new HashMap<>();
-    
+
     public LibraryDetails(ComponentProxy proxy, Library library) {
       this.proxy = proxy;
       this.library = library;
     }
-    
+
     public void setup() {
       libraryCtrlPort = proxy.getPositive(HopsTorrentPort.class).getPair();
       torrentStatusPort = proxy.getNegative(TorrentStatusPort.class).getPair();
@@ -183,7 +188,7 @@ public class HopsLibraryMngr {
       proxy.subscribe(handleTorrentDetails, libraryCtrlPort);
       proxy.subscribe(handleTorrentStatus, torrentStatusPort);
     }
-    
+
     Handler handleContents = new Handler<HopsContentsEvent.Request>() {
 
       @Override

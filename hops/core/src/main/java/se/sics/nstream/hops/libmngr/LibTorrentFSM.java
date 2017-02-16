@@ -290,7 +290,7 @@ public class LibTorrentFSM {
         LOG.info("{}accepting new download:{}", req.getBaseId(), req.torrentName);
         is.setDownloadInit(req);
         MyStream manifestStream = manifestStreamSetup(es, is, req.hdfsEndpoint, req.manifest);
-        return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, manifestStream);
+        return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, manifestStream, req.partners);
       }
     };
 
@@ -300,16 +300,16 @@ public class LibTorrentFSM {
       public FSMTransition handle(LibTExternal es, LibTInternal is, TorrentRestart.DwldReq req) {
         LOG.info("{}restarting download:{}", req.getBaseId(), req.torrentName);
         is.setDownloadRestartInit(req);
-        return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, req.manifestStream);
+        return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, req.manifestStream, req.partners);
       }
     };
 
   private static Transition downloadInit(LibTExternal es, LibTInternal is, OverlayId torrentId, String torrentName,
-    Integer projectId, MyStream manifestStream) {
+    Integer projectId, MyStream manifestStream, List<KAddress> partners) {
     if (es.library.containsTorrent(torrentId)) {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
-    es.library.prepareDownload(projectId, torrentId, torrentName);
+    es.library.prepareDownload(projectId, torrentId, torrentName, partners);
     is.setTorrentBuilder(new TorrentBuilder());
     setupStorageEndpoints(es, is, manifestStream);
     setManifestStream(is, manifestStream);
