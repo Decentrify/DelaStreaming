@@ -94,7 +94,7 @@ public class UpldConnComp extends ComponentDefinition {
     withHashes = init.withHashes;
     logPrefix = "<" + connId.toString() + ">";
 
-    networkQueueLoad = NetworkQueueLoadProxy.instance("upld_" + logPrefix, connId, proxy, config(), Optional.
+    networkQueueLoad = NetworkQueueLoadProxy.instance("load_upld" + logPrefix, proxy, config(), Optional.
       fromNullable((String) null));
     subscribe(handleStart, control);
     subscribe(handleReport, timerPort);
@@ -218,6 +218,8 @@ public class UpldConnComp extends ComponentDefinition {
       byte[] hashVal = servedHashes.get(hashNr);
       if (hashVal == null) {
         LOG.warn("{}no hash for:{} - not serving incomplete", logPrefix, hashNr);
+        LOG.warn("{}no hash - serving blocks:{}", logPrefix, servedBlocks.keySet());
+        LOG.warn("{}no hash - serving hashes:{}", logPrefix, servedHashes.keySet());
         LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().badRequest());
         answerMsg(msg, ledbatContent);
         return;

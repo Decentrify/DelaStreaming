@@ -110,9 +110,9 @@ public class DwnlConnComp extends ComponentDefinition {
 
   public DwnlConnComp(Init init) {
     connId = init.connId;
-    
+
     SystemKCWrapper sc = new SystemKCWrapper(config());
-    if(sc.parallelPorts.isPresent()) {
+    if (sc.parallelPorts.isPresent()) {
       parallelPorts = sc.parallelPorts.get();
     } else {
       parallelPorts = 1;
@@ -133,7 +133,7 @@ public class DwnlConnComp extends ComponentDefinition {
     DwnlConnConfig dConfig = new DwnlConnConfig(config());
 
     ledbatConfig = new LedbatConfig(config());
-    networkQueueLoad = NetworkQueueLoadProxy.instance("dwnl_" + logPrefix, connId, proxy, config(), dConfig.reportDir);
+    networkQueueLoad = NetworkQueueLoadProxy.instance("load_dwnl_" + logPrefix, proxy, config(), dConfig.reportDir);
     cwnd = new AppCongestionWindow(ledbatConfig, connId, dConfig.minRTO, dConfig.reportDir);
     workController = new DwnlConnWorkCtrl(init.defaultBlockDetails, init.withHashes);
 
@@ -182,7 +182,7 @@ public class DwnlConnComp extends ComponentDefinition {
   Handler handleReport = new Handler<ReportTimeout>() {
     @Override
     public void handle(ReportTimeout event) {
-      LOG.debug("{}reporting", logPrefix);
+      LOG.trace("{}reporting", logPrefix);
       Pair<Integer, Integer> queueDelay = networkQueueLoad.queueDelay();
       DownloadThroughput downloadThroughput = cwnd.report();
       DownloadTrackingTrace trace = new DownloadTrackingTrace(downloadThroughput, workController.blockSize(), cwnd.
@@ -212,7 +212,7 @@ public class DwnlConnComp extends ComponentDefinition {
   private Handler handleNewBlocks = new Handler<DownloadBlocks>() {
     @Override
     public void handle(DownloadBlocks event) {
-      LOG.debug("{}new blocks:{}", logPrefix, event.blocks);
+      LOG.trace("{}new blocks:{}", logPrefix, event.blocks);
       workController.add(event.blocks, event.irregularBlocks);
     }
   };
@@ -244,21 +244,24 @@ public class DwnlConnComp extends ComponentDefinition {
   }
 
   public void handlePieceTimeout(DownloadPiece.Request req) {
+    LOG.debug("{}piece timeout:<{},{}>", new Object[]{logPrefix, req.piece.getValue0(), req.piece.getValue1()});
     if (pendingMsgs.remove(req.msgId) != null) {
-      long now = System.currentTimeMillis();
       workController.pieceTimeout(req.piece);
-      cwnd.timeout(now, ledbatConfig.mss);
-      tryDownload(now);
+
     }
+    long now = System.currentTimeMillis();
+    cwnd.timeout(now, ledbatConfig.mss);
+    tryDownload(now);
   }
 
   public void handleHashTimeout(DownloadHash.Request req) {
+    LOG.debug("{}hash timeout:<{}>", new Object[]{logPrefix, req.hashes});
     if (pendingMsgs.remove(req.msgId) != null) {
-      long now = System.currentTimeMillis();
       workController.hashTimeout(req.hashes);
-      cwnd.timeout(now, ledbatConfig.mss);
-      tryDownload(now);
     }
+    long now = System.currentTimeMillis();
+    cwnd.timeout(now, ledbatConfig.mss);
+    tryDownload(now);
   }
 
   //**************************************************************************
@@ -286,9 +289,9 @@ public class DwnlConnComp extends ComponentDefinition {
     trigger(msg, networkPort);
   }
 
-  private void sendSimpleLedbat(Identifiable content) {
+  private void sendSimpleLedbat(Identifiable content, int retries) {
     LedbatMsg.Request ledbatContent = new LedbatMsg.Request(content);
-    sendSimpleUDP(ledbatContent, 0, cwnd.getRTO());
+    sendSimpleUDP(ledbatContent, retries, cwnd.getRTO());
   }
 
   ClassMatchedHandler handleCache
@@ -318,10 +321,12 @@ public class DwnlConnComp extends ComponentDefinition {
         } else if (baseContent instanceof DownloadHash.Success) {
           handleHash(content);
         } else if (baseContent instanceof DownloadPiece.BadRequest) {
-          LOG.warn("{}dropping bad request:{} - if this is due to retransmission - it should be fine", logPrefix, baseContent);
+          LOG.warn("{}dropping bad request:{} - if this is due to retransmission - it should be fine", logPrefix,
+            baseContent);
           return;
         } else if (baseContent instanceof DownloadHash.BadRequest) {
-          LOG.warn("{}dropping bad request:{} - if this is due to retransmission - it should be fine", logPrefix, baseContent);
+          LOG.warn("{}dropping bad request:{} - if this is due to retransmission - it should be fine", logPrefix,
+            baseContent);
           return;
         } else {
           throw new RuntimeException("ups");
@@ -338,6 +343,7 @@ public class DwnlConnComp extends ComponentDefinition {
       cwnd.success(now, ledbatConfig.mss, content);
       tryDownload(now);
     } else {
+      LOG.debug("{}late piece:<{},{}>", new Object[]{logPrefix,resp.piece.getValue0(), resp.piece.getValue1()});
       workController.latePiece(resp.piece, resp.val.getRight());
       cwnd.late(now, ledbatConfig.mss, content);
       reportLate(System.currentTimeMillis(), content);
@@ -359,13 +365,14 @@ public class DwnlConnComp extends ComponentDefinition {
       cwnd.success(now, ledbatConfig.mss, content);
       tryDownload(now);
     } else {
+      LOG.debug("{}late hashes", new Object[]{logPrefix});
       workController.lateHashes(resp.hashValues);
       cwnd.late(now, ledbatConfig.mss, content);
       reportLate(System.currentTimeMillis(), content);
     }
     if (workController.hasComplete()) {
       Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
-      LOG.debug("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.
+      LOG.trace("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.
         getValue1().keySet()});
       trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
     }
@@ -375,20 +382,20 @@ public class DwnlConnComp extends ComponentDefinition {
   private void tryDownload(long now) {
     if (workController.hasNewHint()) {
       CacheHint.Request req = new CacheHint.Request(connId.fileId, workController.newHint());
-      LOG.info("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp,
+      LOG.debug("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp,
         req.requestCache.blocks});
       sendSimpleUDP(req, CACHE_RETRY, CACHE_BASE_TIMEOUT);
       pendingMsgs.put(req.getId(), req);
     }
     while (workController.hasHashes() && cwnd.canSend()) {
       DownloadHash.Request req = new DownloadHash.Request(connId.fileId, workController.nextHashes());
-      sendSimpleLedbat(req);
+      sendSimpleLedbat(req, 5);
       pendingMsgs.put(req.getId(), req);
       cwnd.request(now, ledbatConfig.mss);
     }
     while (workController.hasPiece() && cwnd.canSend()) {
       DownloadPiece.Request req = new DownloadPiece.Request(connId.fileId, workController.nextPiece());
-      sendSimpleLedbat(req);
+      sendSimpleLedbat(req, 1);
       pendingMsgs.put(req.getId(), req);
       cwnd.request(now, ledbatConfig.mss);
     }
@@ -404,6 +411,7 @@ public class DwnlConnComp extends ComponentDefinition {
   private void reportLate(long now, LedbatMsg.Response late) {
     if (tracker.isPresent()) {
       tracker.get().reportLate(now, late);
+
     }
   }
 
@@ -452,6 +460,7 @@ public class DwnlConnComp extends ComponentDefinition {
     CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(reportTid);
     trigger(cpd, timerPort);
     reportTid = null;
+
   }
 
   public static class ReportTimeout extends Timeout {

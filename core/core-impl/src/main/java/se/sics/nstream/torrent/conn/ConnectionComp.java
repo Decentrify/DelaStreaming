@@ -86,7 +86,7 @@ public class ConnectionComp extends ComponentDefinition {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ",oid:" + torrentId + "> ";
 
-        networkQueueLoad = NetworkQueueLoadProxy.instance("connection:" + logPrefix, torrentId, proxy, config(), 
+        networkQueueLoad = NetworkQueueLoadProxy.instance("load_conn" + logPrefix, proxy, config(), 
           Optional.fromNullable((String)null));
         seederConnState = new SeederConnectionState();
 
