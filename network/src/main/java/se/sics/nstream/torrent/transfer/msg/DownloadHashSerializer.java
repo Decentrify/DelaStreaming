@@ -35,87 +35,130 @@ import se.sics.nstream.FileId;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadHashSerializer {
-    public static class Request implements Serializer {
-        private final int id;
-        private final Class msgIdType;
-        
-        public Request(int id) {
-            this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
-        }
 
-        @Override
-        public int identifier() {
-            return id;
-        }
+  public static class Request implements Serializer {
 
-        @Override
-        public void toBinary(Object o, ByteBuf buf) {
-            DownloadHash.Request obj = (DownloadHash.Request)o;
-            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
-            buf.writeInt(obj.hashes.size());
-            for(Integer h : obj.hashes) {
-                buf.writeInt(h);
-            }
-        }
+    private final int id;
+    private final Class msgIdType;
 
-        @Override
-        public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier eventId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
-            Set<Integer> hashes = new TreeSet();
-            int hashSize = buf.readInt();
-            while(hashSize > 0) {
-                hashSize--;
-                hashes.add(buf.readInt());
-            }
-            return new DownloadHash.Request(eventId, fileId, hashes);
-        }
+    public Request(int id) {
+      this.id = id;
+      this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
     }
-    
-    public static class Response implements Serializer {
-        private final int id;
-        private final Class msgIdType;
-        
-        public Response(int id) {
-            this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
-        }
 
-        @Override
-        public int identifier() {
-            return id;
-        }
-
-        @Override
-        public void toBinary(Object o, ByteBuf buf) {
-            DownloadHash.Response obj = (DownloadHash.Response)o;
-            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
-            buf.writeInt(obj.hashValues.size());
-            for(Map.Entry<Integer, byte[]> hv : obj.hashValues.entrySet()) {
-                buf.writeInt(hv.getKey());
-                buf.writeInt(hv.getValue().length);
-                buf.writeBytes(hv.getValue());
-            }
-        }
-        
-        @Override
-        public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
-            int hashSize = buf.readInt();
-            Map<Integer, byte[]> hashValues = new TreeMap<>();
-            while(hashSize > 0) {
-                hashSize--;
-                int hashNr = buf.readInt();
-                int hashValueSize = buf.readInt();
-                byte[] hashValue = new byte[hashValueSize];
-                buf.readBytes(hashValue);
-                hashValues.put(hashNr, hashValue);
-            }
-            return new DownloadHash.Response(msgId, fileId, hashValues);
-        }
+    @Override
+    public int identifier() {
+      return id;
     }
+
+    @Override
+    public void toBinary(Object o, ByteBuf buf) {
+      DownloadHash.Request obj = (DownloadHash.Request) o;
+      Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+      Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
+      buf.writeInt(obj.hashes.size());
+      for (Integer h : obj.hashes) {
+        buf.writeInt(h);
+      }
+    }
+
+    @Override
+    public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
+      Identifier eventId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+      FileId fileId = (FileId) Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
+      Set<Integer> hashes = new TreeSet();
+      int hashSize = buf.readInt();
+      while (hashSize > 0) {
+        hashSize--;
+        hashes.add(buf.readInt());
+      }
+      return new DownloadHash.Request(eventId, fileId, hashes);
+    }
+  }
+
+  public static class Success implements Serializer {
+
+    private final int id;
+    private final Class msgIdType;
+
+    public Success(int id) {
+      this.id = id;
+      this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
+    }
+
+    @Override
+    public int identifier() {
+      return id;
+    }
+
+    @Override
+    public void toBinary(Object o, ByteBuf buf) {
+      DownloadHash.Success obj = (DownloadHash.Success) o;
+      Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+      Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
+      buf.writeInt(obj.hashValues.size());
+      for (Map.Entry<Integer, byte[]> hv : obj.hashValues.entrySet()) {
+        buf.writeInt(hv.getKey());
+        buf.writeInt(hv.getValue().length);
+        buf.writeBytes(hv.getValue());
+      }
+    }
+
+    @Override
+    public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
+      Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+      FileId fileId = (FileId) Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
+      int hashSize = buf.readInt();
+      Map<Integer, byte[]> hashValues = new TreeMap<>();
+      while (hashSize > 0) {
+        hashSize--;
+        int hashNr = buf.readInt();
+        int hashValueSize = buf.readInt();
+        byte[] hashValue = new byte[hashValueSize];
+        buf.readBytes(hashValue);
+        hashValues.put(hashNr, hashValue);
+      }
+      return new DownloadHash.Success(msgId, fileId, hashValues);
+    }
+  }
+
+  public static class BadRequest implements Serializer {
+
+    private final int id;
+    private final Class msgIdType;
+
+    public BadRequest(int id) {
+      this.id = id;
+      this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
+    }
+
+    @Override
+    public int identifier() {
+      return id;
+    }
+
+    @Override
+    public void toBinary(Object o, ByteBuf buf) {
+      DownloadHash.BadRequest obj = (DownloadHash.BadRequest) o;
+      Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+      Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
+      buf.writeInt(obj.hashes.size());
+      for (Integer h : obj.hashes) {
+        buf.writeInt(h);
+      }
+    }
+
+    @Override
+    public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
+      Identifier eventId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+      FileId fileId = (FileId) Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
+      Set<Integer> hashes = new TreeSet();
+      int hashSize = buf.readInt();
+      while (hashSize > 0) {
+        hashSize--;
+        hashes.add(buf.readInt());
+      }
+      return new DownloadHash.BadRequest(eventId, fileId, hashes);
+    }
+  }
 }

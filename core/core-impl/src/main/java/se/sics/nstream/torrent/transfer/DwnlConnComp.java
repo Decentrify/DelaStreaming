@@ -119,11 +119,14 @@ public class DwnlConnComp extends ComponentDefinition {
     }
     self = new ArrayList<>(parallelPorts);
     target = new ArrayList<>(parallelPorts);
-    self.set(0, init.self);
-    target.set(0, init.target);
+    self.add(0, init.self);
+    target.add(0, init.target);
     for (int i = 1; i < parallelPorts; i++) {
-      self.set(i, init.self.withPort(init.self.getPort() + i));
-      target.set(i, init.target.withPort(init.target.getPort() + i));
+      KAddress s = init.self.withPort(init.self.getPort() + i);
+      self.add(i, s);
+      KAddress t = init.target.withPort(init.target.getPort() + i);
+      target.add(i, t);
+      LOG.info("{}setting s:{} t:{}", new Object[]{logPrefix, s, t});
     }
     logPrefix = "<" + connId.toString() + ">";
 
@@ -310,19 +313,25 @@ public class DwnlConnComp extends ComponentDefinition {
       public void handle(LedbatMsg.Response content,
         KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response> context) {
         Object baseContent = content.getWrappedContent();
-        if (baseContent instanceof DownloadPiece.Response) {
+        if (baseContent instanceof DownloadPiece.Success) {
           handlePiece(content);
-        } else if (baseContent instanceof DownloadHash.Response) {
+        } else if (baseContent instanceof DownloadHash.Success) {
           handleHash(content);
+        } else if (baseContent instanceof DownloadPiece.BadRequest) {
+          LOG.warn("{}dropping bad request:{} - if this is due to retransmission - it should be fine", logPrefix, baseContent);
+          return;
+        } else if (baseContent instanceof DownloadHash.BadRequest) {
+          LOG.warn("{}dropping bad request:{} - if this is due to retransmission - it should be fine", logPrefix, baseContent);
+          return;
         } else {
           throw new RuntimeException("ups");
         }
       }
     };
 
-  private void handlePiece(LedbatMsg.Response<DownloadPiece.Response> content) {
+  private void handlePiece(LedbatMsg.Response<DownloadPiece.Success> content) {
     LOG.trace("{}received:{}", logPrefix, content);
-    DownloadPiece.Response resp = content.getWrappedContent();
+    DownloadPiece.Success resp = content.getWrappedContent();
     long now = System.currentTimeMillis();
     if (pendingMsgs.remove(resp.msgId) != null) {
       workController.piece(resp.piece, resp.val.getRight());
@@ -341,9 +350,9 @@ public class DwnlConnComp extends ComponentDefinition {
     }
   }
 
-  private void handleHash(LedbatMsg.Response<DownloadHash.Response> content) {
+  private void handleHash(LedbatMsg.Response<DownloadHash.Success> content) {
     LOG.trace("{}received:{}", logPrefix, content);
-    DownloadHash.Response resp = content.getWrappedContent();
+    DownloadHash.Success resp = content.getWrappedContent();
     long now = System.currentTimeMillis();
     if (pendingMsgs.remove(resp.msgId) != null) {
       workController.hashes(resp.hashValues);
@@ -366,7 +375,7 @@ public class DwnlConnComp extends ComponentDefinition {
   private void tryDownload(long now) {
     if (workController.hasNewHint()) {
       CacheHint.Request req = new CacheHint.Request(connId.fileId, workController.newHint());
-      LOG.debug("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp,
+      LOG.info("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp,
         req.requestCache.blocks});
       sendSimpleUDP(req, CACHE_RETRY, CACHE_BASE_TIMEOUT);
       pendingMsgs.put(req.getId(), req);

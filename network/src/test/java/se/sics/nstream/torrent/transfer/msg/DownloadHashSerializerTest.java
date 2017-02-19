@@ -87,9 +87,9 @@ public class DownloadHashSerializerTest {
 
     @Test
     public void simpleResp() {
-        Serializer serializer = Serializers.lookupSerializer(DownloadHash.Response.class);
+        Serializer serializer = Serializers.lookupSerializer(DownloadHash.Success.class);
         DownloadHashResponseEC ec = new DownloadHashResponseEC();
-        DownloadHash.Response original, copy;
+        DownloadHash.Success original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
         Set<Integer> hashes = new TreeSet<>();
@@ -105,7 +105,7 @@ public class DownloadHashSerializerTest {
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (DownloadHash.Response) serializer.fromBinary(serializedCopy, Optional.absent());
+        copy = (DownloadHash.Success) serializer.fromBinary(serializedCopy, Optional.absent());
 
         Assert.assertTrue(ec.isEqual(original, copy));
         Assert.assertEquals(0, serializedCopy.readableBytes());

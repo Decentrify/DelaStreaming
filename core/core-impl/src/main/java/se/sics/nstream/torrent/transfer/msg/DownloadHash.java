@@ -31,69 +31,108 @@ import se.sics.nstream.TorrentIds;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadHash {
-    public static class Request implements ConnectionMsg {
-        public final Identifier msgId;
-        public final FileId fileId;
-        public final Set<Integer> hashes;
-        
-        protected Request(Identifier msgId, FileId fileId, Set<Integer> hashes) {
-            this.msgId = msgId;
-            this.fileId = fileId;
-            this.hashes = hashes;
-        }
 
-        public Request(FileId fileId, Set<Integer> hashes) {
-            this(BasicIdentifiers.eventId(), fileId, hashes);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
+  public static class Request implements ConnectionMsg {
 
-        @Override
-        public OverlayId overlayId() {
-            return fileId.torrentId;
-        }
-        
-        @Override
-        public ConnId getConnectionId(Identifier peer) {
-            return TorrentIds.connId(fileId, peer, false);
-        }
-        
-        public Response success(Map<Integer, byte[]> hashValues) {
-            return new Response(this, hashValues);
-        }
+    public final Identifier msgId;
+    public final FileId fileId;
+    public final Set<Integer> hashes;
+
+    protected Request(Identifier msgId, FileId fileId, Set<Integer> hashes) {
+      this.msgId = msgId;
+      this.fileId = fileId;
+      this.hashes = hashes;
+    }
+
+    public Request(FileId fileId, Set<Integer> hashes) {
+      this(BasicIdentifiers.eventId(), fileId, hashes);
+    }
+
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return fileId.torrentId;
+    }
+
+    @Override
+    public ConnId getConnectionId(Identifier peer) {
+      return TorrentIds.connId(fileId, peer, false);
+    }
+
+    public Success success(Map<Integer, byte[]> hashValues) {
+      return new Success(this, hashValues);
+    }
+
+    public BadRequest badRequest() {
+      return new BadRequest(this);
+    }
+  }
+
+  public static class Success implements ConnectionMsg {
+
+    public final Identifier msgId;
+    public final FileId fileId;
+    public final Map<Integer, byte[]> hashValues;
+
+    protected Success(Identifier msgId, FileId fileId, Map<Integer, byte[]> hashValues) {
+      this.msgId = msgId;
+      this.fileId = fileId;
+      this.hashValues = hashValues;
+    }
+
+    private Success(Request req, Map<Integer, byte[]> hashValues) {
+      this(req.msgId, req.fileId, hashValues);
+    }
+
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return fileId.torrentId;
+    }
+
+    @Override
+    public ConnId getConnectionId(Identifier peer) {
+      return TorrentIds.connId(fileId, peer, true);
+    }
+  }
+
+  public static class BadRequest implements ConnectionMsg {
+
+    public final Identifier msgId;
+    public final FileId fileId;
+    public final Set<Integer> hashes;
+
+    protected BadRequest(Identifier msgId, FileId fileId, Set<Integer> hashes) {
+      this.msgId = msgId;
+      this.fileId = fileId;
+      this.hashes = hashes;
     }
     
-    public static class Response implements ConnectionMsg {
-        public final Identifier msgId;
-        public final FileId fileId;
-        public final Map<Integer, byte[]> hashValues;
-        
-        protected Response(Identifier msgId, FileId fileId, Map<Integer, byte[]> hashValues) {
-            this.msgId = msgId;
-            this.fileId = fileId;
-            this.hashValues = hashValues;
-        }
-        
-        private Response(Request req, Map<Integer, byte[]> hashValues) {
-            this(req.msgId, req.fileId, hashValues);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
-        
-        @Override
-        public OverlayId overlayId() {
-            return fileId.torrentId;
-        }
-
-        @Override
-        public ConnId getConnectionId(Identifier peer) {
-            return TorrentIds.connId(fileId, peer, true);
-        }
+    private BadRequest(Request req) {
+      this(req.msgId, req.fileId, req.hashes);
     }
+    
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return fileId.torrentId;
+    }
+
+    @Override
+    public ConnId getConnectionId(Identifier peer) {
+      return TorrentIds.connId(fileId, peer, true);
+    }
+  }
 }

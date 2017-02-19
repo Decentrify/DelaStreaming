@@ -27,10 +27,10 @@ import se.sics.nstream.torrent.transfer.msg.DownloadHash;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DownloadHashResponseEC implements EqualComparator<DownloadHash.Response> {
+public class DownloadHashResponseEC implements EqualComparator<DownloadHash.Success> {
 
     @Override
-    public boolean isEqual(DownloadHash.Response o1, DownloadHash.Response o2) {
+    public boolean isEqual(DownloadHash.Success o1, DownloadHash.Success o2) {
         if (o1 == null && o2 == null) {
             return true;
         }

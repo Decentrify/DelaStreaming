@@ -35,87 +35,124 @@ import se.sics.nstream.FileId;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadPieceSerializer {
-    public static class Request implements Serializer {
-        private final int id;
-        private final Class msgIdType;
-        
-        public Request(int id) {
-            this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
-        }
 
-        @Override
-        public int identifier() {
-            return id;
-        }
+  public static class Request implements Serializer {
 
-        @Override
-        public void toBinary(Object o, ByteBuf buf) {
-            DownloadPiece.Request obj = (DownloadPiece.Request)o;
-            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
-            buf.writeInt(obj.piece.getValue0());
-            buf.writeInt(obj.piece.getValue1());
-        }
+    private final int id;
+    private final Class msgIdType;
 
-        @Override
-        public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
-            int blockNr = buf.readInt();
-            int pieceNr = buf.readInt();
-            return new DownloadPiece.Request(msgId, fileId, Pair.with(blockNr, pieceNr));
-        }
+    public Request(int id) {
+      this.id = id;
+      this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
     }
-    
-    public static class Response implements Serializer {
-        private final int id;
-        private final Class msgIdType;
-        
-        public Response(int id) {
-            this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
-        }
 
-        @Override
-        public int identifier() {
-            return id;
-        }
-
-        @Override
-        public void toBinary(Object o, ByteBuf buf) {
-            DownloadPiece.Response obj = (DownloadPiece.Response)o;
-            Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
-            Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
-            buf.writeInt(obj.piece.getValue0());
-            buf.writeInt(obj.piece.getValue1());
-           
-            byte[] piece = getPiece(obj.val.getLeft());
-            buf.writeInt(piece.length);
-            buf.writeBytes(piece);
-        }
-        
-        private byte[] getPiece(KReference<byte[]> pieceRef) {
-            byte[] piece = pieceRef.getValue().get();
-            try {
-                pieceRef.release();
-            } catch (KReferenceException ex) {
-                throw new RuntimeException(ex);
-            }
-            return piece;
-        }
-
-        @Override
-        public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-            Identifier msgId = (Identifier)Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-            FileId fileId = (FileId)Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
-            int blockNr = buf.readInt();
-            int pieceNr = buf.readInt();
-            
-            int pieceSize = buf.readInt();
-            byte[] piece = new byte[pieceSize];
-            buf.readBytes(piece);
-            return new DownloadPiece.Response(msgId, fileId, Pair.with(blockNr, pieceNr), piece);
-        }
+    @Override
+    public int identifier() {
+      return id;
     }
+
+    @Override
+    public void toBinary(Object o, ByteBuf buf) {
+      DownloadPiece.Request obj = (DownloadPiece.Request) o;
+      Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+      Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
+      buf.writeInt(obj.piece.getValue0());
+      buf.writeInt(obj.piece.getValue1());
+    }
+
+    @Override
+    public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
+      Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+      FileId fileId = (FileId) Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
+      int blockNr = buf.readInt();
+      int pieceNr = buf.readInt();
+      return new DownloadPiece.Request(msgId, fileId, Pair.with(blockNr, pieceNr));
+    }
+  }
+
+  public static class Success implements Serializer {
+
+    private final int id;
+    private final Class msgIdType;
+
+    public Success(int id) {
+      this.id = id;
+      this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
+    }
+
+    @Override
+    public int identifier() {
+      return id;
+    }
+
+    @Override
+    public void toBinary(Object o, ByteBuf buf) {
+      DownloadPiece.Success obj = (DownloadPiece.Success) o;
+      Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+      Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
+      buf.writeInt(obj.piece.getValue0());
+      buf.writeInt(obj.piece.getValue1());
+
+      byte[] piece = getPiece(obj.val.getLeft());
+      buf.writeInt(piece.length);
+      buf.writeBytes(piece);
+    }
+
+    private byte[] getPiece(KReference<byte[]> pieceRef) {
+      byte[] piece = pieceRef.getValue().get();
+      try {
+        pieceRef.release();
+      } catch (KReferenceException ex) {
+        throw new RuntimeException(ex);
+      }
+      return piece;
+    }
+
+    @Override
+    public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
+      Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+      FileId fileId = (FileId) Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
+      int blockNr = buf.readInt();
+      int pieceNr = buf.readInt();
+
+      int pieceSize = buf.readInt();
+      byte[] piece = new byte[pieceSize];
+      buf.readBytes(piece);
+      return new DownloadPiece.Success(msgId, fileId, Pair.with(blockNr, pieceNr), piece);
+    }
+  }
+
+  public static class BadRequest implements Serializer {
+
+    private final int id;
+    private final Class msgIdType;
+
+    public BadRequest(int id) {
+      this.id = id;
+      this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
+    }
+
+    @Override
+    public int identifier() {
+      return id;
+    }
+
+    @Override
+    public void toBinary(Object o, ByteBuf buf) {
+      DownloadPiece.BadRequest obj = (DownloadPiece.BadRequest) o;
+      Serializers.lookupSerializer(msgIdType).toBinary(obj.msgId, buf);
+      Serializers.lookupSerializer(FileId.class).toBinary(obj.fileId, buf);
+      buf.writeInt(obj.piece.getValue0());
+      buf.writeInt(obj.piece.getValue1());
+    }
+
+    @Override
+    public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
+      Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+      FileId fileId = (FileId) Serializers.lookupSerializer(FileId.class).fromBinary(buf, hint);
+      int blockNr = buf.readInt();
+      int pieceNr = buf.readInt();
+      return new DownloadPiece.BadRequest(msgId, fileId, Pair.with(blockNr, pieceNr));
+    }
+  }
 }

@@ -48,7 +48,7 @@ import se.sics.nstream.util.BlockDetailsSerializer;
 public class GVoDSerializerSetup {
     //You may add up to max serializers without the need to recompile all the projects that use the serializer space after gvod
     public static int maxSerializers = 25;
-    public static int serializerIds = 16;
+    public static int serializerIds = 18;
     
     public static enum GVoDSerializers {
         FileIdentifier(FileId.class, "nStreamFileIdentifier"),
@@ -64,9 +64,11 @@ public class GVoDSerializerSetup {
         CacheHintRequest(CacheHint.Request.class, "nstreamCacheHintRequest"),
         CacheHintResponse(CacheHint.Response.class, "nstreamCacheHintResponse"),
         DownloadPieceRequest(DownloadPiece.Request.class, "nstreamDownloadPieceRequest"),
-        DownloadPieceResponse(DownloadPiece.Response.class, "nstreamDownloadPieceResponse"),
+        DownloadPieceSuccess(DownloadPiece.Success.class, "nstreamDownloadPieceSuccess"),
+        DownloadPieceBadReq(DownloadPiece.BadRequest.class, "nstreamDownloadPieceBadReq"),
         DownloadHashRequest(DownloadHash.Request.class, "nstreamDownloadHashRequest"),
-        DownloadHashResponse(DownloadHash.Response.class, "nstreamDownloadHashResponse");
+        DownloadHashSuccess(DownloadHash.Success.class, "nstreamDownloadHashSuccess"),
+        DownloadHashBadReq(DownloadHash.BadRequest.class, "nstreamDownloadHashBadReq");
         
         public final Class serializedClass;
         public final String serializerName;
@@ -144,17 +146,25 @@ public class GVoDSerializerSetup {
         Serializers.register(downloadPieceRequestSerializer, GVoDSerializers.DownloadPieceRequest.serializerName);
         Serializers.register(GVoDSerializers.DownloadPieceRequest.serializedClass, GVoDSerializers.DownloadPieceRequest.serializerName);
         
-        DownloadPieceSerializer.Response downloadPieceResponseSerializer = new DownloadPieceSerializer.Response(currentId++);
-        Serializers.register(downloadPieceResponseSerializer, GVoDSerializers.DownloadPieceResponse.serializerName);
-        Serializers.register(GVoDSerializers.DownloadPieceResponse.serializedClass, GVoDSerializers.DownloadPieceResponse.serializerName);
+        DownloadPieceSerializer.Success downloadPieceSuccessSerializer = new DownloadPieceSerializer.Success(currentId++);
+        Serializers.register(downloadPieceSuccessSerializer, GVoDSerializers.DownloadPieceSuccess.serializerName);
+        Serializers.register(GVoDSerializers.DownloadPieceSuccess.serializedClass, GVoDSerializers.DownloadPieceSuccess.serializerName);
+        
+        DownloadPieceSerializer.BadRequest downloadPieceBadRequestSerializer = new DownloadPieceSerializer.BadRequest(currentId++);
+        Serializers.register(downloadPieceBadRequestSerializer, GVoDSerializers.DownloadPieceBadReq.serializerName);
+        Serializers.register(GVoDSerializers.DownloadPieceBadReq.serializedClass, GVoDSerializers.DownloadPieceBadReq.serializerName);
         
         DownloadHashSerializer.Request downloadHashRequestSerializer = new DownloadHashSerializer.Request(currentId++);
         Serializers.register(downloadHashRequestSerializer, GVoDSerializers.DownloadHashRequest.serializerName);
         Serializers.register(GVoDSerializers.DownloadHashRequest.serializedClass, GVoDSerializers.DownloadHashRequest.serializerName);
         
-        DownloadHashSerializer.Response downloadHashResponseSerializer = new DownloadHashSerializer.Response(currentId++);
-        Serializers.register(downloadHashResponseSerializer, GVoDSerializers.DownloadHashResponse.serializerName);
-        Serializers.register(GVoDSerializers.DownloadHashResponse.serializedClass, GVoDSerializers.DownloadHashResponse.serializerName);
+        DownloadHashSerializer.Success downloadHashSuccessSerializer = new DownloadHashSerializer.Success(currentId++);
+        Serializers.register(downloadHashSuccessSerializer, GVoDSerializers.DownloadHashSuccess.serializerName);
+        Serializers.register(GVoDSerializers.DownloadHashSuccess.serializedClass, GVoDSerializers.DownloadHashSuccess.serializerName);
+        
+        DownloadHashSerializer.BadRequest downloadHashBadRequestuestSerializer = new DownloadHashSerializer.BadRequest(currentId++);
+        Serializers.register(downloadHashBadRequestuestSerializer, GVoDSerializers.DownloadHashBadReq.serializerName);
+        Serializers.register(GVoDSerializers.DownloadHashBadReq.serializedClass, GVoDSerializers.DownloadHashBadReq.serializerName);
         
         assert startingId + serializerIds == currentId;
         assert serializerIds <= maxSerializers;

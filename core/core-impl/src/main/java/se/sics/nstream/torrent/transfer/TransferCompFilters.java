@@ -72,9 +72,9 @@ public class TransferCompFilters {
             allowedClasses.add(CacheHint.Request.class);
             allowedClasses.add(CacheHint.Response.class);
             allowedClasses.add(DownloadPiece.Request.class);
-            allowedClasses.add(DownloadPiece.Response.class);
+            allowedClasses.add(DownloadPiece.Success.class);
             allowedClasses.add(DownloadHash.Request.class);
-            allowedClasses.add(DownloadHash.Response.class);
+            allowedClasses.add(DownloadHash.Success.class);
         }
 
         @Override

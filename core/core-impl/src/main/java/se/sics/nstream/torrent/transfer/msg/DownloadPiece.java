@@ -32,85 +32,132 @@ import se.sics.nstream.TorrentIds;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadPiece {
-    public static class Request implements ConnectionMsg {
-        public final Identifier msgId;
-        public final FileId fileId;
-        public final Pair<Integer, Integer> piece;
-        
-        protected Request(Identifier msgId, FileId fileId, Pair<Integer, Integer> piece) {
-            this.msgId = msgId;
-            this.fileId = fileId;
-            this.piece = piece;
-        }
 
-        public Request(FileId fileId, Pair<Integer, Integer> piece) {
-            this(BasicIdentifiers.msgId(), fileId, piece);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
+  public static class Request implements ConnectionMsg {
 
-        @Override
-        public OverlayId overlayId() {
-            return fileId.torrentId;
-        }
-        
-        @Override
-        public ConnId getConnectionId(Identifier peer) {
-            return TorrentIds.connId(fileId, peer, false);
-        }
-        
-        public Response success(KReference<byte[]> val) {
-            return new Response(this, val);
-        }
-        
-        @Override
-        public String toString() {
-            return "DwnlPieceReq<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + msgId.toString() + ">";
-        }
+    public final Identifier msgId;
+    public final FileId fileId;
+    public final Pair<Integer, Integer> piece;
+
+    protected Request(Identifier msgId, FileId fileId, Pair<Integer, Integer> piece) {
+      this.msgId = msgId;
+      this.fileId = fileId;
+      this.piece = piece;
+    }
+
+    public Request(FileId fileId, Pair<Integer, Integer> piece) {
+      this(BasicIdentifiers.msgId(), fileId, piece);
+    }
+
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return fileId.torrentId;
+    }
+
+    @Override
+    public ConnId getConnectionId(Identifier peer) {
+      return TorrentIds.connId(fileId, peer, false);
+    }
+
+    public Success success(KReference<byte[]> val) {
+      return new Success(this, val);
+    }
+
+    public BadRequest badRequest() {
+      return new BadRequest(this);
+    }
+
+    @Override
+    public String toString() {
+      return "DwnlPieceReq<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + msgId.
+        toString() + ">";
+    }
+  }
+
+  public static class Success implements ConnectionMsg {
+
+    public final Identifier msgId;
+    public final FileId fileId;
+    public final Pair<Integer, Integer> piece;
+    public final Either<KReference<byte[]>, byte[]> val;
+
+    private Success(Identifier msgId, FileId fileId, Pair<Integer, Integer> piece, Either val) {
+      this.msgId = msgId;
+      this.fileId = fileId;
+      this.piece = piece;
+      this.val = val;
+    }
+
+    private Success(Request req, KReference<byte[]> val) {
+      this(req.msgId, req.fileId, req.piece, Either.left(val));
+    }
+
+    protected Success(Identifier eventId, FileId fileId, Pair<Integer, Integer> piece, byte[] val) {
+      this(eventId, fileId, piece, Either.right(val));
+    }
+
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return fileId.torrentId;
+    }
+
+    @Override
+    public ConnId getConnectionId(Identifier peer) {
+      return TorrentIds.connId(fileId, peer, true);
+    }
+
+    @Override
+    public String toString() {
+      return "DwnlPieceSuccess<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + msgId.
+        toString() + ">";
+    }
+  }
+
+  public static class BadRequest implements ConnectionMsg {
+
+    public final Identifier msgId;
+    public final FileId fileId;
+    public final Pair<Integer, Integer> piece;
+
+    protected BadRequest(Identifier msgId, FileId fileId, Pair<Integer, Integer> piece) {
+      this.msgId = msgId;
+      this.fileId = fileId;
+      this.piece = piece;
     }
     
-    public static class Response implements ConnectionMsg {
-        public final Identifier msgId;
-        public final FileId fileId;
-        public final Pair<Integer, Integer> piece;
-        public final Either<KReference<byte[]>, byte[]> val;
-        
-        private Response(Identifier msgId, FileId fileId, Pair<Integer, Integer> piece, Either val) {
-            this.msgId = msgId;
-            this.fileId = fileId;
-            this.piece = piece;
-            this.val = val;
-        }
-        
-        private Response(Request req, KReference<byte[]> val) {
-            this(req.msgId, req.fileId, req.piece, Either.left(val));
-        }
-        
-        protected Response(Identifier eventId, FileId fileId, Pair<Integer, Integer> piece, byte[] val) {
-            this(eventId, fileId, piece, Either.right(val));
-        }
-        
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
-        
-        @Override
-        public OverlayId overlayId() {
-            return fileId.torrentId;
-        }
-
-        @Override
-        public ConnId getConnectionId(Identifier peer) {
-            return TorrentIds.connId(fileId, peer, true);
-        }
-        
-        @Override
-        public String toString() {
-            return "DwnlPieceResp<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + msgId.toString() + ">";
-        }
+    private BadRequest(Request req) {
+      this(req.msgId, req.fileId, req.piece);
     }
+
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return fileId.torrentId;
+    }
+
+    @Override
+    public ConnId getConnectionId(Identifier peer) {
+      return TorrentIds.connId(fileId, peer, true);
+    }
+
+    @Override
+    public String toString() {
+      return "DwnlPieceBadReq<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + msgId.
+        toString() + ">";
+    }
+  }
 }

@@ -83,9 +83,9 @@ public class DownloadPieceSerializerTest {
 
     @Test
     public void simpleResp() {
-        Serializer serializer = Serializers.lookupSerializer(DownloadPiece.Response.class);
+        Serializer serializer = Serializers.lookupSerializer(DownloadPiece.Success.class);
         DownloadPieceResponseEC ec = new DownloadPieceResponseEC();
-        DownloadPiece.Response original, copy;
+        DownloadPiece.Success original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
         DownloadPiece.Request request = new DownloadPiece.Request(TorrentIds.fileId(overlayIdFactory.randomId(), 2), Pair.with(1, 2));
@@ -98,7 +98,7 @@ public class DownloadPieceSerializerTest {
 
         serializedCopy = Unpooled.buffer();
         serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (DownloadPiece.Response) serializer.fromBinary(serializedCopy, Optional.absent());
+        copy = (DownloadPiece.Success) serializer.fromBinary(serializedCopy, Optional.absent());
 
         Assert.assertTrue(ec.isEqual(original, copy));
         Assert.assertEquals(0, serializedCopy.readableBytes());

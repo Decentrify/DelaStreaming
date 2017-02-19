@@ -27,9 +27,9 @@ import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DownloadPieceResponseEC implements EqualComparator<DownloadPiece.Response>{
+public class DownloadPieceResponseEC implements EqualComparator<DownloadPiece.Success>{
     @Override
-    public boolean isEqual(DownloadPiece.Response o1, DownloadPiece.Response o2) {
+    public boolean isEqual(DownloadPiece.Success o1, DownloadPiece.Success o2) {
         if(o1 == null && o2 == null) {
             return true;
         }
