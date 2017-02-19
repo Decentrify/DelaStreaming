@@ -82,7 +82,7 @@ public class DiskComp extends ComponentDefinition {
     Handler handleRead = new Handler<DStorageRead.Request>() {
         @Override
         public void handle(DStorageRead.Request req) {
-            LOG.info("{}read:{}", logPrefix, req);
+            LOG.debug("{}read:{}", logPrefix, req);
             int readLength = (int) (req.readRange.upperAbsEndpoint() - req.readRange.lowerAbsEndpoint() + 1);
             byte[] readVal = new byte[readLength];
             int readPos = (int) req.readRange.lowerAbsEndpoint();
@@ -100,9 +100,9 @@ public class DiskComp extends ComponentDefinition {
     Handler handleWrite = new Handler<DStorageWrite.Request>() {
         @Override
         public void handle(DStorageWrite.Request req) {
-            LOG.info("{}write:{}", logPrefix, req);
+            LOG.debug("{}write:{}", logPrefix, req);
             if (writePos >= req.pos + req.value.length) {
-                LOG.info("{}write with pos:{} skipped", logPrefix, req.pos);
+                LOG.debug("{}write with pos:{} skipped", logPrefix, req.pos);
                 answer(req, req.respond(Result.success(true)));
                 return;
             }
@@ -114,7 +114,7 @@ public class DiskComp extends ComponentDefinition {
                 int writeAmount = req.value.length - sourcePos;
                 writeValue = new byte[writeAmount];
                 System.arraycopy(req.value, sourcePos, writeValue, 0, writeAmount);
-                LOG.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
+                LOG.debug("{}convert write pos from:{} to:{} write amount from:{} to:{}",
                         new Object[]{logPrefix, req.pos, pos, req.value.length, writeAmount});
             }
             try {

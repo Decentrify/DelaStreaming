@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.torrent.transfer;
 
+import com.google.common.base.Optional;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -58,13 +59,13 @@ import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.transfer.tracking.DownloadTrackingReport;
 import se.sics.nstream.torrent.transfer.tracking.DownloadTrackingTrace;
+import se.sics.nstream.torrent.transfer.tracking.DwnlConnTracker;
 import se.sics.nstream.torrent.transfer.tracking.TransferTrackingPort;
 import se.sics.nstream.torrent.transfer.tracking.event.TrackingConnection;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nutil.ContentWrapperHelper;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
-import se.sics.nutil.tracking.load.QueueLoadConfig;
 
 /**
  * A DwnlConnComp per torrent per peer per file per dwnl (there is an equivalent
@@ -94,6 +95,7 @@ public class DwnlConnComp extends ComponentDefinition {
     private final NetworkQueueLoadProxy networkQueueLoad;
     private final AppCongestionWindow cwnd;
     private final DwnlConnWorkCtrl workController;
+    private final Optional<DwnlConnTracker> tracker;
     //**************************************************************************
     private UUID advanceDownloadTid;
     private UUID cacheTid;
@@ -106,12 +108,20 @@ public class DwnlConnComp extends ComponentDefinition {
         connId = init.connId;
         self = init.self;
         target = init.target;
-        logPrefix = connId.toString();
+        logPrefix = "<"+ connId.toString() + ">";
 
+        DwnlConnConfig dConfig = new DwnlConnConfig(config());
+        
         ledbatConfig = new LedbatConfig(config());
-        networkQueueLoad = new NetworkQueueLoadProxy(logPrefix, proxy, new QueueLoadConfig(config()));
-        cwnd = new AppCongestionWindow(ledbatConfig, connId);
+        networkQueueLoad = NetworkQueueLoadProxy.instance("dwnl_" + logPrefix, connId, proxy, config(), dConfig.reportDir);
+        cwnd = new AppCongestionWindow(ledbatConfig, connId, dConfig.minRTO, dConfig.reportDir);
         workController = new DwnlConnWorkCtrl(init.defaultBlockDetails, init.withHashes);
+        
+        if(dConfig.reportDir.isPresent()) {
+          tracker = Optional.fromNullable(DwnlConnTracker.onDisk(dConfig.reportDir.get(), connId));
+        } else {
+          tracker = Optional.absent();
+        }
 
         subscribe(handleStart, control);
         subscribe(handleReport, timerPort);
@@ -135,19 +145,24 @@ public class DwnlConnComp extends ComponentDefinition {
 
     @Override
     public void tearDown() {
+      LOG.info("{}tear down", logPrefix);
         for (Identifiable msg : pendingMsgs.values()) {
             cancelMsg(msg);
         }
         networkQueueLoad.tearDown();
         cancelAdvanceDownload();
         cancelReport();
+        cwnd.close();
+        if(tracker.isPresent()) {
+          tracker.get().close();
+        }
         trigger(new TrackingConnection.Close(connId), reportPort);
     }
 
     Handler handleReport = new Handler<ReportTimeout>() {
         @Override
         public void handle(ReportTimeout event) {
-            LOG.info("{}reporting", logPrefix);
+            LOG.debug("{}reporting", logPrefix);
             Pair<Integer, Integer> queueDelay = networkQueueLoad.queueDelay();
             DownloadThroughput downloadThroughput = cwnd.report();
             DownloadTrackingTrace trace = new DownloadTrackingTrace(downloadThroughput, workController.blockSize(), cwnd.cwnd());
@@ -176,7 +191,7 @@ public class DwnlConnComp extends ComponentDefinition {
     private Handler handleNewBlocks = new Handler<DownloadBlocks>() {
         @Override
         public void handle(DownloadBlocks event) {
-            LOG.info("{}new blocks:{}", logPrefix, event.blocks);
+            LOG.debug("{}new blocks:{}", logPrefix, event.blocks);
             workController.add(event.blocks, event.irregularBlocks);
         }
     };
@@ -185,13 +200,15 @@ public class DwnlConnComp extends ComponentDefinition {
             = new ClassMatchedHandler<BestEffortMsg.Timeout, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout>>() {
                 @Override
                 public void handle(BestEffortMsg.Timeout wrappedContent, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout> context) {
-                    Object content = ContentWrapperHelper.getBaseContent(wrappedContent, Object.class);
+                    Identifiable content = ContentWrapperHelper.getBaseContent(wrappedContent, Identifiable.class);
                     if (content instanceof CacheHint.Request) {
                         handleCacheTimeout((CacheHint.Request) content);
                     } else if (content instanceof DownloadPiece.Request) {
                         handlePieceTimeout((DownloadPiece.Request) content);
+                        reportTimeout(System.currentTimeMillis(), content, wrappedContent.req.rto);
                     } else if (content instanceof DownloadHash.Request) {
                         handleHashTimeout((DownloadHash.Request) content);
+                        reportTimeout(System.currentTimeMillis(), content, wrappedContent.req.rto);
                     } else {
                         LOG.warn("{}!!!possible performance issue - fix:{}", logPrefix, content);
                     }
@@ -250,7 +267,7 @@ public class DwnlConnComp extends ComponentDefinition {
                 public void handle(CacheHint.Response content, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Response> context) {
                     CacheHint.Request req = (CacheHint.Request)pendingMsgs.remove(content.getId());
                     if (req != null) {
-                        LOG.info("{}cache confirm ts:{}", logPrefix, req.requestCache.lStamp);
+                        LOG.debug("{}cache confirm ts:{}", logPrefix, req.requestCache.lStamp);
                         workController.cacheConfirmed(req.requestCache.lStamp);
                         tryDownload(System.currentTimeMillis());
                     }
@@ -284,10 +301,11 @@ public class DwnlConnComp extends ComponentDefinition {
         } else {
             workController.latePiece(resp.piece, resp.val.getRight());
             cwnd.late(now, ledbatConfig.mss, content);
+            reportLate(System.currentTimeMillis(), content);
         }
         if (workController.hasComplete()) {
             Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
-            LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
+            LOG.debug("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
             trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
         }
     }
@@ -303,10 +321,11 @@ public class DwnlConnComp extends ComponentDefinition {
         } else {
             workController.lateHashes(resp.hashValues);
             cwnd.late(now, ledbatConfig.mss, content);
+            reportLate(System.currentTimeMillis(), content);
         }
         if (workController.hasComplete()) {
             Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
-            LOG.info("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
+            LOG.debug("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
             trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
         }
     }
@@ -315,7 +334,7 @@ public class DwnlConnComp extends ComponentDefinition {
     private void tryDownload(long now) {
         if (workController.hasNewHint()) {
             CacheHint.Request req = new CacheHint.Request(connId.fileId, workController.newHint());
-            LOG.info("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp, req.requestCache.blocks});
+            LOG.debug("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp, req.requestCache.blocks});
             sendSimpleUDP(req, CACHE_RETRY, CACHE_BASE_TIMEOUT);
             pendingMsgs.put(req.getId(), req);
         }
@@ -334,6 +353,18 @@ public class DwnlConnComp extends ComponentDefinition {
     }
 
     //**************************************************************************
+    private void reportTimeout(long now, Identifiable event, long rto) {
+      if(tracker.isPresent()) {
+        tracker.get().reportTimeout(now, event.getId(), rto);
+      }
+    }
+    
+    private void reportLate(long now, LedbatMsg.Response late) {
+      if(tracker.isPresent()) {
+        tracker.get().reportLate(now, late);
+      }
+    }
+    
     public static class Init extends se.sics.kompics.Init<DwnlConnComp> {
 
         public final ConnId connId;

@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.torrent.transfer;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -57,7 +58,6 @@ import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.range.KPiece;
 import se.sics.nstream.util.range.RangeKReference;
 import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
-import se.sics.nutil.tracking.load.QueueLoadConfig;
 
 /**
  *
@@ -65,212 +65,214 @@ import se.sics.nutil.tracking.load.QueueLoadConfig;
  */
 public class UpldConnComp extends ComponentDefinition {
 
-    private static final Logger LOG = LoggerFactory.getLogger(UpldConnComp.class);
-    private String logPrefix;
+  private static final Logger LOG = LoggerFactory.getLogger(UpldConnComp.class);
+  private String logPrefix;
 
-    private static final long REPORT_PERIOD = 1000;
-    //**************************************************************************
-    Negative<UpldConnPort> connPort = provides(UpldConnPort.class);
-    Positive<Network> networkPort = requires(Network.class);
-    Positive<Timer> timerPort = requires(Timer.class);
-    //**************************************************************************
-    private final ConnId connId;
-    private final KAddress self;
-    private final BlockDetails defaultBlock;
-    private final boolean withHashes;
-    //**************************************************************************
-    private final NetworkQueueLoadProxy networkQueueLoad;
-    private final Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
-    private final Map<Integer, KReference<byte[]>> servedBlocks = new HashMap<>();
-    private final Map<Integer, byte[]> servedHashes = new HashMap<>();
-    private KContentMsg<?, ?, CacheHint.Request> pendingCacheReq;
-    //**************************************************************************
-    private UUID reportTid;
+  private static final long REPORT_PERIOD = 1000;
+  //**************************************************************************
+  Negative<UpldConnPort> connPort = provides(UpldConnPort.class);
+  Positive<Network> networkPort = requires(Network.class);
+  Positive<Timer> timerPort = requires(Timer.class);
+  //**************************************************************************
+  private final ConnId connId;
+  private final KAddress self;
+  private final BlockDetails defaultBlock;
+  private final boolean withHashes;
+  //**************************************************************************
+  private final NetworkQueueLoadProxy networkQueueLoad;
+  private final Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
+  private final Map<Integer, KReference<byte[]>> servedBlocks = new HashMap<>();
+  private final Map<Integer, byte[]> servedHashes = new HashMap<>();
+  private KContentMsg<?, ?, CacheHint.Request> pendingCacheReq;
+  //**************************************************************************
+  private UUID reportTid;
 
-    public UpldConnComp(Init init) {
-        connId = init.connId;
-        self = init.self;
-        defaultBlock = init.defaultBlock;
-        withHashes = init.withHashes;
-        logPrefix = connId.toString();
+  public UpldConnComp(Init init) {
+    connId = init.connId;
+    self = init.self;
+    defaultBlock = init.defaultBlock;
+    withHashes = init.withHashes;
+    logPrefix = "<" + connId.toString() + ">";
 
-        networkQueueLoad = new NetworkQueueLoadProxy(logPrefix, proxy, new QueueLoadConfig(config()));
-        subscribe(handleStart, control);
-        subscribe(handleReport, timerPort);
-        subscribe(handleCache, networkPort);
-        subscribe(handleGetBlocks, connPort);
-        subscribe(handleLedbat, networkPort);
-    }
+    networkQueueLoad = NetworkQueueLoadProxy.instance("upld_" + logPrefix, connId, proxy, config(), Optional.fromNullable((String)null));
+    subscribe(handleStart, control);
+    subscribe(handleReport, timerPort);
+    subscribe(handleCache, networkPort);
+    subscribe(handleGetBlocks, connPort);
+    subscribe(handleLedbat, networkPort);
+  }
 
-    Handler handleStart = new Handler<Start>() {
-        @Override
-        public void handle(Start event) {
-            LOG.info("{}starting", logPrefix);
-            networkQueueLoad.start();
-            scheduleReport();
-        }
-    };
-
+  Handler handleStart = new Handler<Start>() {
     @Override
-    public void tearDown() {
-        networkQueueLoad.tearDown();
-        cancelReport();
-        for (KReference<byte[]> block : servedBlocks.values()) {
-            silentRelease(block);
-        }
-        servedBlocks.clear();
+    public void handle(Start event) {
+      LOG.info("{}starting", logPrefix);
+      networkQueueLoad.start();
+      scheduleReport();
     }
+  };
 
-    Handler handleReport = new Handler<ReportTimeout>() {
-        @Override
-        public void handle(ReportTimeout event) {
-            double queueAdjustment = networkQueueLoad.adjustment();
-            Pair<Integer, Integer> queueDelay = networkQueueLoad.queueDelay();
-            trigger(new UpldConnReport(connId, queueDelay, queueAdjustment), connPort);
-        }
-    };
+  @Override
+  public void tearDown() {
+    LOG.info("{}tear down", logPrefix);
+    networkQueueLoad.tearDown();
+    cancelReport();
+    for (KReference<byte[]> block : servedBlocks.values()) {
+      silentRelease(block);
+    }
+    servedBlocks.clear();
+  }
 
-    //**************************************************************************
-    ClassMatchedHandler handleCache
-            = new ClassMatchedHandler<CacheHint.Request, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Request>>() {
+  Handler handleReport = new Handler<ReportTimeout>() {
+    @Override
+    public void handle(ReportTimeout event) {
+      double queueAdjustment = networkQueueLoad.adjustment();
+      Pair<Integer, Integer> queueDelay = networkQueueLoad.queueDelay();
+      trigger(new UpldConnReport(connId, queueDelay, queueAdjustment), connPort);
+    }
+  };
 
-                @Override
-                public void handle(CacheHint.Request content, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Request> context) {
-                    LOG.trace("{}received:{}", new Object[]{logPrefix, content});
-                    if (pendingCacheReq == null) {
-                        LOG.info("{}cache:{} req - ts:{} blocks:{}", 
-                                new Object[]{logPrefix, content.getId(), content.requestCache.lStamp, content.requestCache.blocks});
-                        pendingCacheReq = context;
-                        Set<Integer> newCache = Sets.difference(content.requestCache.blocks, servedBlocks.keySet());
-                        Set<Integer> delCache = new HashSet<>(Sets.difference(servedBlocks.keySet(), content.requestCache.blocks));
+  //**************************************************************************
+  ClassMatchedHandler handleCache
+    = new ClassMatchedHandler<CacheHint.Request, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Request>>() {
 
-                        if (!newCache.isEmpty()) {
-                            trigger(new GetBlocks.Request(connId, newCache, withHashes, content.requestCache), connPort);
-                        } else {
-                            answerCacheHint();
-                        }
-                        //release references that were retained when given to us
-                        for (Integer blockNr : delCache) {
-                            KReference<byte[]> block = servedBlocks.remove(blockNr);
-                            servedHashes.remove(blockNr);
-                            irregularBlocks.remove(blockNr);
-                            silentRelease(block);
-                        }
-                    }
-                }
-            };
+      @Override
+      public void handle(CacheHint.Request content, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Request> context) {
+        LOG.trace("{}received:{}", new Object[]{logPrefix, content});
+        if (pendingCacheReq == null) {
+          LOG.debug("{}cache:{} req - ts:{} blocks:{}",
+            new Object[]{logPrefix, content.getId(), content.requestCache.lStamp, content.requestCache.blocks});
+          pendingCacheReq = context;
+          Set<Integer> newCache = Sets.difference(content.requestCache.blocks, servedBlocks.keySet());
+          Set<Integer> delCache = new HashSet<>(Sets.difference(servedBlocks.keySet(), content.requestCache.blocks));
 
-    Handler handleGetBlocks = new Handler<GetBlocks.Response>() {
-        @Override
-        public void handle(GetBlocks.Response resp) {
-            //references are already retained by whoever gives them to us
-            LOG.info("{}serving blocks:{} hashes:{}", new Object[]{logPrefix, resp.blocks.keySet(), resp.hashes.keySet()});
-            servedBlocks.putAll(resp.blocks);
-            servedHashes.putAll(resp.hashes);
-            irregularBlocks.putAll(resp.irregularBlocks);
+          if (!newCache.isEmpty()) {
+            trigger(new GetBlocks.Request(connId, newCache, withHashes, content.requestCache), connPort);
+          } else {
             answerCacheHint();
+          }
+          //release references that were retained when given to us
+          for (Integer blockNr : delCache) {
+            KReference<byte[]> block = servedBlocks.remove(blockNr);
+            servedHashes.remove(blockNr);
+            irregularBlocks.remove(blockNr);
+            silentRelease(block);
+          }
         }
+      }
     };
 
-    private void answerCacheHint() {
-        answerMsg(pendingCacheReq, pendingCacheReq.getContent().success());
-        pendingCacheReq = null;
+  Handler handleGetBlocks = new Handler<GetBlocks.Response>() {
+    @Override
+    public void handle(GetBlocks.Response resp) {
+      //references are already retained by whoever gives them to us
+      LOG.debug("{}serving blocks:{} hashes:{}", new Object[]{logPrefix, resp.blocks.keySet(), resp.hashes.keySet()});
+      servedBlocks.putAll(resp.blocks);
+      servedHashes.putAll(resp.hashes);
+      irregularBlocks.putAll(resp.irregularBlocks);
+      answerCacheHint();
     }
-    //**************************************************************************
-    ClassMatchedHandler handleLedbat
-            = new ClassMatchedHandler<LedbatMsg.Request, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request>>() {
-                @Override
-                public void handle(LedbatMsg.Request content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request> context) {
-                    Object baseContent = content.getWrappedContent();
-                    if (baseContent instanceof DownloadPiece.Request) {
-                        handlePiece(context, content);
-                    } else if (baseContent instanceof DownloadHash.Request) {
-                        handleHashes(context, content);
-                    } else {
-                        LOG.error("{}received:{}", logPrefix, content);
-                        throw new RuntimeException("ups");
-                    }
-                }
-            };
+  };
 
-    public void handlePiece(KContentMsg msg, LedbatMsg.Request<DownloadPiece.Request> content) {
-        int blockNr = content.getWrappedContent().piece.getValue0();
-        BlockDetails blockDetails = irregularBlocks.containsKey(blockNr) ? irregularBlocks.get(blockNr) : defaultBlock;
-        KReference<byte[]> block = servedBlocks.get(blockNr);
-        if (block == null) {
-            //TODO Alex
+  private void answerCacheHint() {
+    answerMsg(pendingCacheReq, pendingCacheReq.getContent().success());
+    pendingCacheReq = null;
+  }
+  //**************************************************************************
+  ClassMatchedHandler handleLedbat
+    = new ClassMatchedHandler<LedbatMsg.Request, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request>>() {
+      @Override
+      public void handle(LedbatMsg.Request content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request> context) {
+        Object baseContent = content.getWrappedContent();
+        if (baseContent instanceof DownloadPiece.Request) {
+          handlePiece(context, content);
+        } else if (baseContent instanceof DownloadHash.Request) {
+          handleHashes(context, content);
+        } else {
+          LOG.error("{}received:{}", logPrefix, content);
+          throw new RuntimeException("ups");
+        }
+      }
+    };
+
+  public void handlePiece(KContentMsg msg, LedbatMsg.Request<DownloadPiece.Request> content) {
+    int blockNr = content.getWrappedContent().piece.getValue0();
+    BlockDetails blockDetails = irregularBlocks.containsKey(blockNr) ? irregularBlocks.get(blockNr) : defaultBlock;
+    KReference<byte[]> block = servedBlocks.get(blockNr);
+    if (block == null) {
+      //TODO Alex
 //            return;
-            LOG.error("{}block req:{} served blocks:{}", new Object[]{logPrefix, blockNr, servedBlocks.keySet()});
-            throw new RuntimeException("bad cache-block logic");
-        }
-        KPiece pieceRange = BlockHelper.getPieceRange(content.getWrappedContent().piece, blockDetails, defaultBlock);
-        //retain block here(range create) - release in serializer
-        RangeKReference piece = RangeKReference.createInstance(block, BlockHelper.getBlockPos(blockNr, defaultBlock), pieceRange);
-        LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(piece));
-        answerMsg(msg, ledbatContent);
+      LOG.error("{}block req:{} served blocks:{}", new Object[]{logPrefix, blockNr, servedBlocks.keySet()});
+      throw new RuntimeException("bad cache-block logic");
     }
+    KPiece pieceRange = BlockHelper.getPieceRange(content.getWrappedContent().piece, blockDetails, defaultBlock);
+    //retain block here(range create) - release in serializer
+    RangeKReference piece = RangeKReference.createInstance(block, BlockHelper.getBlockPos(blockNr, defaultBlock),
+      pieceRange);
+    LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(piece));
+    answerMsg(msg, ledbatContent);
+  }
 
-    public void handleHashes(KContentMsg msg, LedbatMsg.Request<DownloadHash.Request> content) {
-        Map<Integer, byte[]> hashValues = new TreeMap<>();
-        for (Integer hashNr : content.getWrappedContent().hashes) {
-            byte[] hashVal = servedHashes.get(hashNr);
-            if (hashVal == null) {
-                LOG.warn("{}no hash for:{} - not serving incomplete", logPrefix, hashNr);
-                return;
-            }
-            hashValues.put(hashNr, hashVal);
-        }
-        LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(hashValues));
-        answerMsg(msg, ledbatContent);
+  public void handleHashes(KContentMsg msg, LedbatMsg.Request<DownloadHash.Request> content) {
+    Map<Integer, byte[]> hashValues = new TreeMap<>();
+    for (Integer hashNr : content.getWrappedContent().hashes) {
+      byte[] hashVal = servedHashes.get(hashNr);
+      if (hashVal == null) {
+        LOG.warn("{}no hash for:{} - not serving incomplete", logPrefix, hashNr);
+        return;
+      }
+      hashValues.put(hashNr, hashVal);
     }
-    //**************************************************************************
+    LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(hashValues));
+    answerMsg(msg, ledbatContent);
+  }
+  //**************************************************************************
 
-    private void answerMsg(KContentMsg original, Identifiable respContent) {
-        LOG.trace("{}answering with:{}", logPrefix, respContent);
-        trigger(original.answer(respContent), networkPort);
+  private void answerMsg(KContentMsg original, Identifiable respContent) {
+    LOG.trace("{}answering with:{}", logPrefix, respContent);
+    trigger(original.answer(respContent), networkPort);
+  }
+
+  private void silentRelease(KReference<byte[]> ref) {
+    try {
+      ref.release();
+    } catch (KReferenceException ex) {
+      throw new RuntimeException(ex);
     }
+  }
 
-    private void silentRelease(KReference<byte[]> ref) {
-        try {
-            ref.release();
-        } catch (KReferenceException ex) {
-            throw new RuntimeException(ex);
-        }
+  public static class Init extends se.sics.kompics.Init<UpldConnComp> {
+
+    public final ConnId connId;
+    public final KAddress self;
+    public final BlockDetails defaultBlock;
+    public final boolean withHashes;
+
+    public Init(ConnId connId, KAddress self, BlockDetails defaultBlock, boolean withHashes) {
+      this.connId = connId;
+      this.self = self;
+      this.defaultBlock = defaultBlock;
+      this.withHashes = withHashes;
     }
+  }
 
-    public static class Init extends se.sics.kompics.Init<UpldConnComp> {
+  private void scheduleReport() {
+    SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(REPORT_PERIOD, REPORT_PERIOD);
+    ReportTimeout rt = new ReportTimeout(spt);
+    spt.setTimeoutEvent(rt);
+    reportTid = rt.getTimeoutId();
+    trigger(spt, timerPort);
+  }
 
-        public final ConnId connId;
-        public final KAddress self;
-        public final BlockDetails defaultBlock;
-        public final boolean withHashes;
+  private void cancelReport() {
+    CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(reportTid);
+    trigger(cpd, timerPort);
+    reportTid = null;
+  }
 
-        public Init(ConnId connId, KAddress self, BlockDetails defaultBlock, boolean withHashes) {
-            this.connId = connId;
-            this.self = self;
-            this.defaultBlock = defaultBlock;
-            this.withHashes = withHashes;
-        }
+  public static class ReportTimeout extends Timeout {
+
+    public ReportTimeout(SchedulePeriodicTimeout spt) {
+      super(spt);
     }
-
-    private void scheduleReport() {
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(REPORT_PERIOD, REPORT_PERIOD);
-        ReportTimeout rt = new ReportTimeout(spt);
-        spt.setTimeoutEvent(rt);
-        reportTid = rt.getTimeoutId();
-        trigger(spt, timerPort);
-    }
-
-    private void cancelReport() {
-        CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(reportTid);
-        trigger(cpd, timerPort);
-        reportTid = null;
-    }
-
-    public static class ReportTimeout extends Timeout {
-
-        public ReportTimeout(SchedulePeriodicTimeout spt) {
-            super(spt);
-        }
-    }
+  }
 }

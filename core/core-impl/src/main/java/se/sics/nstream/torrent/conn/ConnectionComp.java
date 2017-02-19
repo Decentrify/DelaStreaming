@@ -58,7 +58,6 @@ import se.sics.nstream.torrent.conn.msg.NetOpenTransfer;
 import se.sics.nstream.transfer.MyTorrent.ManifestDef;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
-import se.sics.nutil.tracking.load.QueueLoadConfig;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -87,7 +86,8 @@ public class ConnectionComp extends ComponentDefinition {
         selfAdr = init.selfAdr;
         logPrefix = "<nid:" + selfAdr.getId() + ",oid:" + torrentId + "> ";
 
-        networkQueueLoad = new NetworkQueueLoadProxy("connection:" + logPrefix, proxy, new QueueLoadConfig(config()));
+        networkQueueLoad = NetworkQueueLoadProxy.instance("connection:" + logPrefix, torrentId, proxy, config(), 
+          Optional.fromNullable((String)null));
         seederConnState = new SeederConnectionState();
 
         subscribe(handleStart, control);

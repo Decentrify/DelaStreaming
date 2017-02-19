@@ -312,10 +312,10 @@ public class SimpleKCache implements KCache {
                 if (!systemRef.isValid()) {
                     it1.remove();
                 } else {
-                    LOG.info("{}ref count", logPrefix);
+                    LOG.debug("{}ref count", logPrefix);
                 }
             }
-            LOG.info("{}cache size - cache ref:{}, system ref:{}", new Object[]{logPrefix, cacheRef.size(), systemRef.size()});
+            LOG.debug("{}cache size - cache ref:{}, system ref:{}", new Object[]{logPrefix, cacheRef.size(), systemRef.size()});
         }
     };
 

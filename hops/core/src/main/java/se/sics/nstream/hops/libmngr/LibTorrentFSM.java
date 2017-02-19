@@ -452,6 +452,9 @@ public class LibTorrentFSM {
           if (is.downloadReq.isPresent()) {
             getManifest(es, is);
             return Transition.DOWNLOAD_MANIFEST;
+          } else if (is.dRestartReq.isPresent()) {
+            getManifest(es, is);
+            return Transition.DOWNLOAD_MANIFEST;
           } else {
             //on download restart the manifest is present on endpoint
             //on upload req/restart the manifest is present on endpoint
