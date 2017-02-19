@@ -19,7 +19,9 @@
 package se.sics.nstream.torrent.transfer;
 
 import com.google.common.base.Optional;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.javatuples.Pair;
@@ -37,6 +39,7 @@ import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -75,345 +78,377 @@ import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
  */
 public class DwnlConnComp extends ComponentDefinition {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DwnlConnComp.class);
-    private String logPrefix;
+  private static final Logger LOG = LoggerFactory.getLogger(DwnlConnComp.class);
+  private String logPrefix;
 
-    private static final long ADVANCE_DOWNLOAD = 1000;
-    private static final long CACHE_BASE_TIMEOUT = 1000;
-    private static final int CACHE_RETRY = 30;
-    private static final long REPORT_PERIOD = 200;
-    //**************************************************************************
-    Negative<DwnlConnPort> connPort = provides(DwnlConnPort.class);
-    Negative<TransferTrackingPort> reportPort = provides(TransferTrackingPort.class);
-    Positive<Network> networkPort = requires(Network.class);
-    Positive<Timer> timerPort = requires(Timer.class);
-    //**************************************************************************
-    private final ConnId connId;
-    private final KAddress self;
-    private final KAddress target;
-    //**************************************************************************
-    private final NetworkQueueLoadProxy networkQueueLoad;
-    private final AppCongestionWindow cwnd;
-    private final DwnlConnWorkCtrl workController;
-    private final Optional<DwnlConnTracker> tracker;
-    //**************************************************************************
-    private UUID advanceDownloadTid;
-    private UUID cacheTid;
-    private UUID reportTid;
-    private final Map<Identifier, Identifiable> pendingMsgs = new HashMap<>();
-    //**************************************************************************
-    private final LedbatConfig ledbatConfig;
+  private static final long ADVANCE_DOWNLOAD = 1000;
+  private static final long CACHE_BASE_TIMEOUT = 1000;
+  private static final int CACHE_RETRY = 30;
+  private static final long REPORT_PERIOD = 200;
+  //**************************************************************************
+  Negative<DwnlConnPort> connPort = provides(DwnlConnPort.class);
+  Negative<TransferTrackingPort> reportPort = provides(TransferTrackingPort.class);
+  Positive<Network> networkPort = requires(Network.class);
+  Positive<Timer> timerPort = requires(Timer.class);
+  //**************************************************************************
+  private final ConnId connId;
+  private final List<KAddress> self;
+  private final List<KAddress> target;
+  private final int parallelPorts;
+  //**************************************************************************
+  private final NetworkQueueLoadProxy networkQueueLoad;
+  private final AppCongestionWindow cwnd;
+  private final DwnlConnWorkCtrl workController;
+  private final Optional<DwnlConnTracker> tracker;
+  //**************************************************************************
+  private UUID advanceDownloadTid;
+  private UUID cacheTid;
+  private UUID reportTid;
+  private final Map<Identifier, Identifiable> pendingMsgs = new HashMap<>();
+  //**************************************************************************
+  private final LedbatConfig ledbatConfig;
 
-    public DwnlConnComp(Init init) {
-        connId = init.connId;
-        self = init.self;
-        target = init.target;
-        logPrefix = "<"+ connId.toString() + ">";
+  public DwnlConnComp(Init init) {
+    connId = init.connId;
+    
+    SystemKCWrapper sc = new SystemKCWrapper(config());
+    if(sc.parallelPorts.isPresent()) {
+      parallelPorts = sc.parallelPorts.get();
+    } else {
+      parallelPorts = 1;
+    }
+    self = new ArrayList<>(parallelPorts);
+    target = new ArrayList<>(parallelPorts);
+    self.set(0, init.self);
+    target.set(0, init.target);
+    for (int i = 1; i < parallelPorts; i++) {
+      self.set(i, init.self.withPort(init.self.getPort() + i));
+      target.set(i, init.target.withPort(init.target.getPort() + i));
+    }
+    logPrefix = "<" + connId.toString() + ">";
 
-        DwnlConnConfig dConfig = new DwnlConnConfig(config());
-        
-        ledbatConfig = new LedbatConfig(config());
-        networkQueueLoad = NetworkQueueLoadProxy.instance("dwnl_" + logPrefix, connId, proxy, config(), dConfig.reportDir);
-        cwnd = new AppCongestionWindow(ledbatConfig, connId, dConfig.minRTO, dConfig.reportDir);
-        workController = new DwnlConnWorkCtrl(init.defaultBlockDetails, init.withHashes);
-        
-        if(dConfig.reportDir.isPresent()) {
-          tracker = Optional.fromNullable(DwnlConnTracker.onDisk(dConfig.reportDir.get(), connId));
-        } else {
-          tracker = Optional.absent();
-        }
+    DwnlConnConfig dConfig = new DwnlConnConfig(config());
 
-        subscribe(handleStart, control);
-        subscribe(handleReport, timerPort);
-        subscribe(handleAdvanceDownload, timerPort);
-        subscribe(handleFPDControl, connPort);
-        subscribe(handleNewBlocks, connPort);
-        subscribe(handleNetworkTimeouts, networkPort);
-        subscribe(handleCache, networkPort);
-        subscribe(handleLedbat, networkPort);
+    ledbatConfig = new LedbatConfig(config());
+    networkQueueLoad = NetworkQueueLoadProxy.instance("dwnl_" + logPrefix, connId, proxy, config(), dConfig.reportDir);
+    cwnd = new AppCongestionWindow(ledbatConfig, connId, dConfig.minRTO, dConfig.reportDir);
+    workController = new DwnlConnWorkCtrl(init.defaultBlockDetails, init.withHashes);
+
+    if (dConfig.reportDir.isPresent()) {
+      tracker = Optional.fromNullable(DwnlConnTracker.onDisk(dConfig.reportDir.get(), connId));
+    } else {
+      tracker = Optional.absent();
     }
 
-    Handler handleStart = new Handler<Start>() {
-        @Override
-        public void handle(Start event) {
-            LOG.info("{}starting conn to:{}", logPrefix, target);
-            networkQueueLoad.start();
-            scheduleAdvanceDownload();
-            scheduleReport();
-        }
-    };
+    subscribe(handleStart, control);
+    subscribe(handleReport, timerPort);
+    subscribe(handleAdvanceDownload, timerPort);
+    subscribe(handleFPDControl, connPort);
+    subscribe(handleNewBlocks, connPort);
+    subscribe(handleNetworkTimeouts, networkPort);
+    subscribe(handleCache, networkPort);
+    subscribe(handleLedbat, networkPort);
+  }
 
+  Handler handleStart = new Handler<Start>() {
     @Override
-    public void tearDown() {
-      LOG.info("{}tear down", logPrefix);
-        for (Identifiable msg : pendingMsgs.values()) {
-            cancelMsg(msg);
-        }
-        networkQueueLoad.tearDown();
-        cancelAdvanceDownload();
-        cancelReport();
-        cwnd.close();
-        if(tracker.isPresent()) {
-          tracker.get().close();
-        }
-        trigger(new TrackingConnection.Close(connId), reportPort);
+    public void handle(Start event) {
+      LOG.info("{}starting conn to:{}", logPrefix, target);
+      networkQueueLoad.start();
+      scheduleAdvanceDownload();
+      scheduleReport();
     }
+  };
 
-    Handler handleReport = new Handler<ReportTimeout>() {
-        @Override
-        public void handle(ReportTimeout event) {
-            LOG.debug("{}reporting", logPrefix);
-            Pair<Integer, Integer> queueDelay = networkQueueLoad.queueDelay();
-            DownloadThroughput downloadThroughput = cwnd.report();
-            DownloadTrackingTrace trace = new DownloadTrackingTrace(downloadThroughput, workController.blockSize(), cwnd.cwnd());
-            trigger(new DownloadTrackingReport(connId, trace), reportPort);
-        }
-    };
-
-    Handler handleAdvanceDownload = new Handler<TorrentTimeout.AdvanceDownload>() {
-        @Override
-        public void handle(TorrentTimeout.AdvanceDownload event) {
-            LOG.trace("{}advance download", logPrefix);
-            cwnd.adjustState(networkQueueLoad.adjustment());
-            tryDownload(System.currentTimeMillis());
-        }
-    };
-
-    Handler handleFPDControl = new Handler<FPDControl>() {
-        @Override
-        public void handle(FPDControl event) {
-            double adjustment = Math.min(event.appCwndAdjustment, networkQueueLoad.adjustment());
-            cwnd.adjustState(adjustment);
-        }
-    };
-    
-    //**********************************FPD*************************************
-    private Handler handleNewBlocks = new Handler<DownloadBlocks>() {
-        @Override
-        public void handle(DownloadBlocks event) {
-            LOG.debug("{}new blocks:{}", logPrefix, event.blocks);
-            workController.add(event.blocks, event.irregularBlocks);
-        }
-    };
-    //**************************************************************************
-    ClassMatchedHandler handleNetworkTimeouts
-            = new ClassMatchedHandler<BestEffortMsg.Timeout, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout>>() {
-                @Override
-                public void handle(BestEffortMsg.Timeout wrappedContent, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout> context) {
-                    Identifiable content = ContentWrapperHelper.getBaseContent(wrappedContent, Identifiable.class);
-                    if (content instanceof CacheHint.Request) {
-                        handleCacheTimeout((CacheHint.Request) content);
-                    } else if (content instanceof DownloadPiece.Request) {
-                        handlePieceTimeout((DownloadPiece.Request) content);
-                        reportTimeout(System.currentTimeMillis(), content, wrappedContent.req.rto);
-                    } else if (content instanceof DownloadHash.Request) {
-                        handleHashTimeout((DownloadHash.Request) content);
-                        reportTimeout(System.currentTimeMillis(), content, wrappedContent.req.rto);
-                    } else {
-                        LOG.warn("{}!!!possible performance issue - fix:{}", logPrefix, content);
-                    }
-                }
-            };
-
-    public void handleCacheTimeout(CacheHint.Request req) {
-        LOG.error("{}cache timeout on hint:{} blocks:{}", new Object[]{logPrefix, req.requestCache.lStamp, req.requestCache.blocks});
-        throw new RuntimeException("ups");
+  @Override
+  public void tearDown() {
+    LOG.info("{}tear down", logPrefix);
+    for (Identifiable msg : pendingMsgs.values()) {
+      cancelMsg(msg);
     }
-
-    public void handlePieceTimeout(DownloadPiece.Request req) {
-        if (pendingMsgs.remove(req.msgId) != null) {
-            long now = System.currentTimeMillis();
-            workController.pieceTimeout(req.piece);
-            cwnd.timeout(now, ledbatConfig.mss);
-            tryDownload(now);
-        }
+    networkQueueLoad.tearDown();
+    cancelAdvanceDownload();
+    cancelReport();
+    cwnd.close();
+    if (tracker.isPresent()) {
+      tracker.get().close();
     }
+    trigger(new TrackingConnection.Close(connId), reportPort);
+  }
 
-    public void handleHashTimeout(DownloadHash.Request req) {
-        if (pendingMsgs.remove(req.msgId) != null) {
-            long now = System.currentTimeMillis();
-            workController.hashTimeout(req.hashes);
-            cwnd.timeout(now, ledbatConfig.mss);
-            tryDownload(now);
-        }
+  Handler handleReport = new Handler<ReportTimeout>() {
+    @Override
+    public void handle(ReportTimeout event) {
+      LOG.debug("{}reporting", logPrefix);
+      Pair<Integer, Integer> queueDelay = networkQueueLoad.queueDelay();
+      DownloadThroughput downloadThroughput = cwnd.report();
+      DownloadTrackingTrace trace = new DownloadTrackingTrace(downloadThroughput, workController.blockSize(), cwnd.
+        cwnd());
+      trigger(new DownloadTrackingReport(connId, trace), reportPort);
     }
+  };
 
-    //**************************************************************************
-    private void cancelMsg(Identifiable content) {
-        BestEffortMsg.Cancel wrappedContent = new BestEffortMsg.Cancel<>(content);
-        KHeader header = new BasicHeader(self, target, Transport.UDP);
-        KContentMsg msg = new BasicContentMsg<>(header, wrappedContent);
-        LOG.trace("{}canceling:{}", logPrefix, content);
-        trigger(msg, networkPort);
+  Handler handleAdvanceDownload = new Handler<TorrentTimeout.AdvanceDownload>() {
+    @Override
+    public void handle(TorrentTimeout.AdvanceDownload event) {
+      LOG.trace("{}advance download", logPrefix);
+      cwnd.adjustState(networkQueueLoad.adjustment());
+      tryDownload(System.currentTimeMillis());
     }
+  };
 
-    private void sendSimpleUDP(Identifiable content, int retries, long rto) {
-        BestEffortMsg.Request wrappedContent = new BestEffortMsg.Request<>(content, retries, rto);
-        KHeader header = new BasicHeader(self, target, Transport.UDP);
-        KContentMsg msg = new BasicContentMsg<>(header, wrappedContent);
-        LOG.trace("{}sending:{}", logPrefix, content);
-        trigger(msg, networkPort);
+  Handler handleFPDControl = new Handler<FPDControl>() {
+    @Override
+    public void handle(FPDControl event) {
+      double adjustment = Math.min(event.appCwndAdjustment, networkQueueLoad.adjustment());
+      cwnd.adjustState(adjustment);
     }
+  };
 
-    private void sendSimpleLedbat(Identifiable content) {
-        LedbatMsg.Request ledbatContent = new LedbatMsg.Request(content);
-        sendSimpleUDP(ledbatContent, 0, cwnd.getRTO());
+  //**********************************FPD*************************************
+  private Handler handleNewBlocks = new Handler<DownloadBlocks>() {
+    @Override
+    public void handle(DownloadBlocks event) {
+      LOG.debug("{}new blocks:{}", logPrefix, event.blocks);
+      workController.add(event.blocks, event.irregularBlocks);
     }
-
-    ClassMatchedHandler handleCache
-            = new ClassMatchedHandler<CacheHint.Response, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Response>>() {
-
-                @Override
-                public void handle(CacheHint.Response content, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Response> context) {
-                    CacheHint.Request req = (CacheHint.Request)pendingMsgs.remove(content.getId());
-                    if (req != null) {
-                        LOG.debug("{}cache confirm ts:{}", logPrefix, req.requestCache.lStamp);
-                        workController.cacheConfirmed(req.requestCache.lStamp);
-                        tryDownload(System.currentTimeMillis());
-                    }
-                }
-            };
-
-    ClassMatchedHandler handleLedbat
-            = new ClassMatchedHandler<LedbatMsg.Response, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response>>() {
-
-                @Override
-                public void handle(LedbatMsg.Response content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response> context) {
-                    Object baseContent = content.getWrappedContent();
-                    if (baseContent instanceof DownloadPiece.Response) {
-                        handlePiece(content);
-                    } else if (baseContent instanceof DownloadHash.Response) {
-                        handleHash(content);
-                    } else {
-                        throw new RuntimeException("ups");
-                    }
-                }
-            };
-
-    private void handlePiece(LedbatMsg.Response<DownloadPiece.Response> content) {
-        LOG.trace("{}received:{}", logPrefix, content);
-        DownloadPiece.Response resp = content.getWrappedContent();
-        long now = System.currentTimeMillis();
-        if (pendingMsgs.remove(resp.msgId) != null) {
-            workController.piece(resp.piece, resp.val.getRight());
-            cwnd.success(now, ledbatConfig.mss, content);
-            tryDownload(now);
+  };
+  //**************************************************************************
+  ClassMatchedHandler handleNetworkTimeouts
+    = new ClassMatchedHandler<BestEffortMsg.Timeout, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout>>() {
+      @Override
+      public void handle(BestEffortMsg.Timeout wrappedContent,
+        KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout> context) {
+        Identifiable content = ContentWrapperHelper.getBaseContent(wrappedContent, Identifiable.class);
+        if (content instanceof CacheHint.Request) {
+          handleCacheTimeout((CacheHint.Request) content);
+        } else if (content instanceof DownloadPiece.Request) {
+          handlePieceTimeout((DownloadPiece.Request) content);
+          reportTimeout(System.currentTimeMillis(), content, wrappedContent.req.rto);
+        } else if (content instanceof DownloadHash.Request) {
+          handleHashTimeout((DownloadHash.Request) content);
+          reportTimeout(System.currentTimeMillis(), content, wrappedContent.req.rto);
         } else {
-            workController.latePiece(resp.piece, resp.val.getRight());
-            cwnd.late(now, ledbatConfig.mss, content);
-            reportLate(System.currentTimeMillis(), content);
+          LOG.warn("{}!!!possible performance issue - fix:{}", logPrefix, content);
         }
-        if (workController.hasComplete()) {
-            Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
-            LOG.debug("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
-            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
-        }
-    }
+      }
+    };
 
-    private void handleHash(LedbatMsg.Response<DownloadHash.Response> content) {
-        LOG.trace("{}received:{}", logPrefix, content);
-        DownloadHash.Response resp = content.getWrappedContent();
-        long now = System.currentTimeMillis();
-        if (pendingMsgs.remove(resp.msgId) != null) {
-            workController.hashes(resp.hashValues);
-            cwnd.success(now, ledbatConfig.mss, content);
-            tryDownload(now);
+  public void handleCacheTimeout(CacheHint.Request req) {
+    LOG.error("{}cache timeout on hint:{} blocks:{}", new Object[]{logPrefix, req.requestCache.lStamp,
+      req.requestCache.blocks});
+    throw new RuntimeException("ups");
+  }
+
+  public void handlePieceTimeout(DownloadPiece.Request req) {
+    if (pendingMsgs.remove(req.msgId) != null) {
+      long now = System.currentTimeMillis();
+      workController.pieceTimeout(req.piece);
+      cwnd.timeout(now, ledbatConfig.mss);
+      tryDownload(now);
+    }
+  }
+
+  public void handleHashTimeout(DownloadHash.Request req) {
+    if (pendingMsgs.remove(req.msgId) != null) {
+      long now = System.currentTimeMillis();
+      workController.hashTimeout(req.hashes);
+      cwnd.timeout(now, ledbatConfig.mss);
+      tryDownload(now);
+    }
+  }
+
+  //**************************************************************************
+  private Pair<KAddress, KAddress> getSrcDst(Identifiable content) {
+    int portOffset = content.getId().partition(parallelPorts);
+    return Pair.with(self.get(portOffset), target.get(portOffset));
+  }
+
+  private void cancelMsg(Identifiable content) {
+    BestEffortMsg.Cancel wrappedContent = new BestEffortMsg.Cancel<>(content);
+    Pair<KAddress, KAddress> srcDst = getSrcDst(content);
+    KHeader header = new BasicHeader(srcDst.getValue0(), srcDst.getValue1(), Transport.UDP);
+    KContentMsg msg = new BasicContentMsg<>(header, wrappedContent);
+    LOG.trace("{}canceling:{}", logPrefix, content);
+    trigger(msg, networkPort);
+  }
+
+  private void sendSimpleUDP(Identifiable content, int retries, long rto) {
+    BestEffortMsg.Request wrappedContent = new BestEffortMsg.Request<>(content, retries, rto);
+    Pair<KAddress, KAddress> srcDst = getSrcDst(content);
+    KHeader header = new BasicHeader(srcDst.getValue0(), srcDst.getValue1(), Transport.UDP);
+    KContentMsg msg = new BasicContentMsg<>(header, wrappedContent);
+    LOG.trace("{}sending:{}", logPrefix, content);
+
+    trigger(msg, networkPort);
+  }
+
+  private void sendSimpleLedbat(Identifiable content) {
+    LedbatMsg.Request ledbatContent = new LedbatMsg.Request(content);
+    sendSimpleUDP(ledbatContent, 0, cwnd.getRTO());
+  }
+
+  ClassMatchedHandler handleCache
+    = new ClassMatchedHandler<CacheHint.Response, KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Response>>() {
+
+      @Override
+      public void handle(CacheHint.Response content,
+        KContentMsg<KAddress, KHeader<KAddress>, CacheHint.Response> context) {
+        CacheHint.Request req = (CacheHint.Request) pendingMsgs.remove(content.getId());
+        if (req != null) {
+          LOG.debug("{}cache confirm ts:{}", logPrefix, req.requestCache.lStamp);
+          workController.cacheConfirmed(req.requestCache.lStamp);
+          tryDownload(System.currentTimeMillis());
+        }
+      }
+    };
+
+  ClassMatchedHandler handleLedbat
+    = new ClassMatchedHandler<LedbatMsg.Response, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response>>() {
+
+      @Override
+      public void handle(LedbatMsg.Response content,
+        KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response> context) {
+        Object baseContent = content.getWrappedContent();
+        if (baseContent instanceof DownloadPiece.Response) {
+          handlePiece(content);
+        } else if (baseContent instanceof DownloadHash.Response) {
+          handleHash(content);
         } else {
-            workController.lateHashes(resp.hashValues);
-            cwnd.late(now, ledbatConfig.mss, content);
-            reportLate(System.currentTimeMillis(), content);
+          throw new RuntimeException("ups");
         }
-        if (workController.hasComplete()) {
-            Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
-            LOG.debug("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.getValue1().keySet()});
-            trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
-        }
-    }
-
-    //**************************************************************************
-    private void tryDownload(long now) {
-        if (workController.hasNewHint()) {
-            CacheHint.Request req = new CacheHint.Request(connId.fileId, workController.newHint());
-            LOG.debug("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp, req.requestCache.blocks});
-            sendSimpleUDP(req, CACHE_RETRY, CACHE_BASE_TIMEOUT);
-            pendingMsgs.put(req.getId(), req);
-        }
-        while (workController.hasHashes() && cwnd.canSend()) {
-            DownloadHash.Request req = new DownloadHash.Request(connId.fileId, workController.nextHashes());
-            sendSimpleLedbat(req);
-            pendingMsgs.put(req.getId(), req);
-            cwnd.request(now, ledbatConfig.mss);
-        }
-        while (workController.hasPiece() && cwnd.canSend()) {
-            DownloadPiece.Request req = new DownloadPiece.Request(connId.fileId, workController.nextPiece());
-            sendSimpleLedbat(req);
-            pendingMsgs.put(req.getId(), req);
-            cwnd.request(now, ledbatConfig.mss);
-        }
-    }
-
-    //**************************************************************************
-    private void reportTimeout(long now, Identifiable event, long rto) {
-      if(tracker.isPresent()) {
-        tracker.get().reportTimeout(now, event.getId(), rto);
       }
-    }
-    
-    private void reportLate(long now, LedbatMsg.Response late) {
-      if(tracker.isPresent()) {
-        tracker.get().reportLate(now, late);
-      }
-    }
-    
-    public static class Init extends se.sics.kompics.Init<DwnlConnComp> {
+    };
 
-        public final ConnId connId;
-        public final KAddress self;
-        public final KAddress target;
-        public final BlockDetails defaultBlockDetails;
-        public final boolean withHashes;
-
-        public Init(ConnId connId, KAddress self, KAddress target, BlockDetails defaultBlockDetails, boolean withHashes) {
-            this.connId = connId;
-            this.self = self;
-            this.target = target;
-            this.defaultBlockDetails = defaultBlockDetails;
-            this.withHashes = withHashes;
-        }
+  private void handlePiece(LedbatMsg.Response<DownloadPiece.Response> content) {
+    LOG.trace("{}received:{}", logPrefix, content);
+    DownloadPiece.Response resp = content.getWrappedContent();
+    long now = System.currentTimeMillis();
+    if (pendingMsgs.remove(resp.msgId) != null) {
+      workController.piece(resp.piece, resp.val.getRight());
+      cwnd.success(now, ledbatConfig.mss, content);
+      tryDownload(now);
+    } else {
+      workController.latePiece(resp.piece, resp.val.getRight());
+      cwnd.late(now, ledbatConfig.mss, content);
+      reportLate(System.currentTimeMillis(), content);
     }
-
-    private void scheduleAdvanceDownload() {
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(TransferConfig.advanceDownloadPeriod, TransferConfig.advanceDownloadPeriod);
-        TorrentTimeout.AdvanceDownload tt = new TorrentTimeout.AdvanceDownload(spt);
-        spt.setTimeoutEvent(tt);
-        advanceDownloadTid = tt.getTimeoutId();
-        trigger(spt, timerPort);
+    if (workController.hasComplete()) {
+      Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
+      LOG.debug("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.
+        getValue1().keySet()});
+      trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
     }
+  }
 
-    private void cancelAdvanceDownload() {
-        CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(advanceDownloadTid);
-        trigger(cpd, timerPort);
-        advanceDownloadTid = null;
+  private void handleHash(LedbatMsg.Response<DownloadHash.Response> content) {
+    LOG.trace("{}received:{}", logPrefix, content);
+    DownloadHash.Response resp = content.getWrappedContent();
+    long now = System.currentTimeMillis();
+    if (pendingMsgs.remove(resp.msgId) != null) {
+      workController.hashes(resp.hashValues);
+      cwnd.success(now, ledbatConfig.mss, content);
+      tryDownload(now);
+    } else {
+      workController.lateHashes(resp.hashValues);
+      cwnd.late(now, ledbatConfig.mss, content);
+      reportLate(System.currentTimeMillis(), content);
     }
-
-    private void scheduleReport() {
-        SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(REPORT_PERIOD, REPORT_PERIOD);
-        ReportTimeout rt = new ReportTimeout(spt);
-        spt.setTimeoutEvent(rt);
-        reportTid = rt.getTimeoutId();
-        trigger(spt, timerPort);
+    if (workController.hasComplete()) {
+      Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
+      LOG.debug("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.
+        getValue1().keySet()});
+      trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
     }
+  }
 
-    private void cancelReport() {
-        CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(reportTid);
-        trigger(cpd, timerPort);
-        reportTid = null;
+  //**************************************************************************
+  private void tryDownload(long now) {
+    if (workController.hasNewHint()) {
+      CacheHint.Request req = new CacheHint.Request(connId.fileId, workController.newHint());
+      LOG.debug("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp,
+        req.requestCache.blocks});
+      sendSimpleUDP(req, CACHE_RETRY, CACHE_BASE_TIMEOUT);
+      pendingMsgs.put(req.getId(), req);
     }
-
-    public static class ReportTimeout extends Timeout {
-
-        public ReportTimeout(SchedulePeriodicTimeout spt) {
-            super(spt);
-        }
+    while (workController.hasHashes() && cwnd.canSend()) {
+      DownloadHash.Request req = new DownloadHash.Request(connId.fileId, workController.nextHashes());
+      sendSimpleLedbat(req);
+      pendingMsgs.put(req.getId(), req);
+      cwnd.request(now, ledbatConfig.mss);
     }
+    while (workController.hasPiece() && cwnd.canSend()) {
+      DownloadPiece.Request req = new DownloadPiece.Request(connId.fileId, workController.nextPiece());
+      sendSimpleLedbat(req);
+      pendingMsgs.put(req.getId(), req);
+      cwnd.request(now, ledbatConfig.mss);
+    }
+  }
+
+  //**************************************************************************
+  private void reportTimeout(long now, Identifiable event, long rto) {
+    if (tracker.isPresent()) {
+      tracker.get().reportTimeout(now, event.getId(), rto);
+    }
+  }
+
+  private void reportLate(long now, LedbatMsg.Response late) {
+    if (tracker.isPresent()) {
+      tracker.get().reportLate(now, late);
+    }
+  }
+
+  public static class Init extends se.sics.kompics.Init<DwnlConnComp> {
+
+    public final ConnId connId;
+    public final KAddress self;
+    public final KAddress target;
+    public final BlockDetails defaultBlockDetails;
+    public final boolean withHashes;
+
+    public Init(ConnId connId, KAddress self, KAddress target,
+      BlockDetails defaultBlockDetails, boolean withHashes) {
+      this.connId = connId;
+      this.self = self;
+      this.target = target;
+      this.defaultBlockDetails = defaultBlockDetails;
+      this.withHashes = withHashes;
+    }
+  }
+
+  private void scheduleAdvanceDownload() {
+    SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(TransferConfig.advanceDownloadPeriod,
+      TransferConfig.advanceDownloadPeriod);
+    TorrentTimeout.AdvanceDownload tt = new TorrentTimeout.AdvanceDownload(spt);
+    spt.setTimeoutEvent(tt);
+    advanceDownloadTid = tt.getTimeoutId();
+    trigger(spt, timerPort);
+  }
+
+  private void cancelAdvanceDownload() {
+    CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(advanceDownloadTid);
+    trigger(cpd, timerPort);
+    advanceDownloadTid = null;
+  }
+
+  private void scheduleReport() {
+    SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(REPORT_PERIOD, REPORT_PERIOD);
+    ReportTimeout rt = new ReportTimeout(spt);
+    spt.setTimeoutEvent(rt);
+    reportTid = rt.getTimeoutId();
+    trigger(spt, timerPort);
+  }
+
+  private void cancelReport() {
+    CancelPeriodicTimeout cpd = new CancelPeriodicTimeout(reportTid);
+    trigger(cpd, timerPort);
+    reportTid = null;
+  }
+
+  public static class ReportTimeout extends Timeout {
+
+    public ReportTimeout(SchedulePeriodicTimeout spt) {
+      super(spt);
+    }
+  }
 };
