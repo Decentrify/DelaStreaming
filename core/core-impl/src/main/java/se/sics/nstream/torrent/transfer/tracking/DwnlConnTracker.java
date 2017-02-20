@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
@@ -38,11 +39,47 @@ public class DwnlConnTracker {
   private final BufferedWriter timeoutsFile;
   private final BufferedWriter lateFile;
   private final long start;
+  private final BufferedWriter portsf;
+  private final ArrayList<Integer> portEvents;
+  private final int nPorts;
+  private long portsLastReported;
 
-  public DwnlConnTracker(BufferedWriter timeoutsFile, BufferedWriter lateFile) {
+  public DwnlConnTracker(BufferedWriter timeoutsFile, BufferedWriter lateFile, BufferedWriter portsf, int nPorts) {
     this.timeoutsFile = timeoutsFile;
     this.lateFile = lateFile;
-    this.start = System.currentTimeMillis();
+    this.portsf = portsf;
+    start = System.currentTimeMillis();
+    portsLastReported = start;
+    this.nPorts = nPorts;
+    portEvents = new ArrayList<>(nPorts);
+    for (int i = 0; i < nPorts; i++) {
+      portEvents.add(i, 0);
+    }
+  }
+
+  private void resetPorts() {
+    for (int i = 0; i < nPorts; i++) {
+      portEvents.set(i, 0);
+    }
+  }
+
+  public void reportPortEvent(long now, int nPort) {
+    portEvents.set(nPort, portEvents.get(nPort) + 1);
+    if (now > portsLastReported + 100) {
+      portsLastReported = now;
+      try {
+        long expTime = now - start;
+        portsf.write(expTime + "");
+        for (int i = 0; i < nPorts; i++) {
+          portsf.write("," + portEvents.get(i));
+        }
+        portsf.write("\n");
+        portsf.flush();
+      } catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
+      resetPorts();
+    }
   }
 
   public void reportTimeout(long now, Identifier eventId, long rto) {
@@ -72,12 +109,13 @@ public class DwnlConnTracker {
     try {
       timeoutsFile.close();
       lateFile.close();
+      portsf.close();
     } catch (IOException ex) {
       throw new RuntimeException(ex);
     }
   }
 
-  public static DwnlConnTracker onDisk(String dirPath, Identifier id) {
+  public static DwnlConnTracker onDisk(String dirPath, Identifier id, int nPorts) {
     try {
       DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
       Date date = new Date();
@@ -95,8 +133,16 @@ public class DwnlConnTracker {
       }
       latef.createNewFile();
 
+      String portsfName = "ports_be_" + id + "_" + sdf.format(date) + ".csv";
+      File portsf = new File(dirPath + File.separator + portsfName);
+      if (portsf.exists()) {
+        portsf.delete();
+      }
+      portsf.createNewFile();
+
       return new DwnlConnTracker(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(timeoutf))),
-        new BufferedWriter(new OutputStreamWriter(new FileOutputStream(latef))));
+        new BufferedWriter(new OutputStreamWriter(new FileOutputStream(latef))),
+        new BufferedWriter(new OutputStreamWriter(new FileOutputStream(portsf))), nPorts);
     } catch (FileNotFoundException ex) {
       throw new RuntimeException(ex);
     } catch (IOException ex) {

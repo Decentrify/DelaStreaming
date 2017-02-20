@@ -138,7 +138,7 @@ public class DwnlConnComp extends ComponentDefinition {
     workController = new DwnlConnWorkCtrl(init.defaultBlockDetails, init.withHashes);
 
     if (dConfig.reportDir.isPresent()) {
-      tracker = Optional.fromNullable(DwnlConnTracker.onDisk(dConfig.reportDir.get(), connId));
+      tracker = Optional.fromNullable(DwnlConnTracker.onDisk(dConfig.reportDir.get(), connId, parallelPorts));
     } else {
       tracker = Optional.absent();
     }
@@ -287,6 +287,7 @@ public class DwnlConnComp extends ComponentDefinition {
     LOG.trace("{}sending:{}", logPrefix, content);
 
     trigger(msg, networkPort);
+    reportPortEvent(content);
   }
 
   private void sendSimpleLedbat(Identifiable content, int retries) {
@@ -343,7 +344,7 @@ public class DwnlConnComp extends ComponentDefinition {
       cwnd.success(now, ledbatConfig.mss, content);
       tryDownload(now);
     } else {
-      LOG.debug("{}late piece:<{},{}>", new Object[]{logPrefix,resp.piece.getValue0(), resp.piece.getValue1()});
+      LOG.debug("{}late piece:<{},{}>", new Object[]{logPrefix, resp.piece.getValue0(), resp.piece.getValue1()});
       workController.latePiece(resp.piece, resp.val.getRight());
       cwnd.late(now, ledbatConfig.mss, content);
       reportLate(System.currentTimeMillis(), content);
@@ -412,6 +413,13 @@ public class DwnlConnComp extends ComponentDefinition {
     if (tracker.isPresent()) {
       tracker.get().reportLate(now, late);
 
+    }
+  }
+
+  private void reportPortEvent(Identifiable content) {
+    if (tracker.isPresent()) {
+      int portOffset = content.getId().partition(parallelPorts);
+      tracker.get().reportPortEvent(System.currentTimeMillis(), portOffset);
     }
   }
 
