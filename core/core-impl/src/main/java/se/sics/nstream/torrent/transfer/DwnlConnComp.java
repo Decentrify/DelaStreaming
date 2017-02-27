@@ -194,17 +194,20 @@ public class DwnlConnComp extends ComponentDefinition {
   Handler handleAdvanceDownload = new Handler<TorrentTimeout.AdvanceDownload>() {
     @Override
     public void handle(TorrentTimeout.AdvanceDownload event) {
-      LOG.trace("{}advance download", logPrefix);
-      cwnd.adjustState(networkQueueLoad.adjustment());
-      tryDownload(System.currentTimeMillis());
+      LOG.error("{}advance download", logPrefix);
+      long now = System.currentTimeMillis();
+      cwnd.adjustState(now, networkQueueLoad.adjustment());
+      tryDownload(now);
     }
   };
 
   Handler handleFPDControl = new Handler<FPDControl>() {
     @Override
     public void handle(FPDControl event) {
+      LOG.error("{}fpd", logPrefix);
       double adjustment = Math.min(event.appCwndAdjustment, networkQueueLoad.adjustment());
-      cwnd.adjustState(adjustment);
+      long now = System.currentTimeMillis();
+      cwnd.adjustState(now, adjustment);
     }
   };
 
@@ -394,7 +397,9 @@ public class DwnlConnComp extends ComponentDefinition {
       pendingMsgs.put(req.getId(), req);
       cwnd.request(now, ledbatConfig.mss);
     }
-    while (workController.hasPiece() && cwnd.canSend()) {
+    int batch =2;
+    while (workController.hasPiece() && cwnd.canSend() && batch > 0) {
+      batch--;
       DownloadPiece.Request req = new DownloadPiece.Request(connId.fileId, workController.nextPiece());
       sendSimpleLedbat(req, 1);
       pendingMsgs.put(req.getId(), req);
