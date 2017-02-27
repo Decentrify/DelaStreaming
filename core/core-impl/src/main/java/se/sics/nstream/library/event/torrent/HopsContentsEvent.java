@@ -18,8 +18,8 @@
  */
 package se.sics.nstream.library.event.torrent;
 
-import com.google.common.base.Optional;
 import java.util.List;
+import java.util.Map;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
@@ -34,18 +34,19 @@ import se.sics.ktoolbox.util.result.Result;
 public class HopsContentsEvent {
     public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
         public final Identifier eventId;
-        public final Optional<Integer> projectId;
+        //an empty list means all projects;
+        public final List<Integer> projectIds;
         
-        public Request(Identifier eventId, Optional<Integer> projectId) {
+        public Request(Identifier eventId, List<Integer> projectIds) {
             this.eventId = eventId;
-            this.projectId = projectId;
+            this.projectIds = projectIds;
         }
         
-        public Request(Optional<Integer> projectId) {
-            this(BasicIdentifiers.eventId(), projectId);
+        public Request(List<Integer> projectIds) {
+            this(BasicIdentifiers.eventId(), projectIds);
         }
         
-        public Response success(List<ElementSummary> value) {
+        public Response success(Map<Integer, List<ElementSummary>> value) {
             return new Response(this, Result.success(value));
         }
         
@@ -62,9 +63,9 @@ public class HopsContentsEvent {
     
     public static class Response implements Direct.Response, VoDMngrEvent {
         public final Request req;
-        public final Result<List<ElementSummary>> result;
+        public final Result<Map<Integer, List<ElementSummary>>> result;
         
-        private Response(Request req, Result<List<ElementSummary>> result) {
+        private Response(Request req, Result<Map<Integer, List<ElementSummary>>> result) {
             this.req = req;
             this.result = result;
         }

@@ -19,6 +19,7 @@
 package se.sics.nstream.hops.libmngr;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -194,14 +195,16 @@ public class HopsLibraryMngr {
       @Override
       public void handle(HopsContentsEvent.Request req) {
         LOG.trace("{}received:{}", logPrefix, req);
-        proxy.answer(req, req.success(library.getSummary(req.projectId)));
+        proxy.answer(req, req.success(library.getSummary(req.projectIds)));
       }
     };
 
     private void torrentNotFound(OverlayId torrentId) {
       LOG.warn("{}torrent:{} not found", logPrefix, torrentId);
-      for (ElementSummary es : library.getSummary()) {
-        LOG.warn("{}found torrent:{}", logPrefix, es.torrentId);
+      for (Map.Entry<Integer, List<ElementSummary>> projectSummary : library.getAllSummary().entrySet()) {
+        for (ElementSummary es : projectSummary.getValue()) {
+          LOG.warn("{}found project: {} torrent:{}", new Object[]{logPrefix, projectSummary.getKey(), es.torrentId});
+        }
       }
     }
 

@@ -19,11 +19,11 @@
 package se.sics.nstream.library;
 
 import com.google.common.base.Optional;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import se.sics.gvod.mngr.util.ElementSummary;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -131,22 +131,40 @@ public class Library {
     }
   }
 
-  public List<ElementSummary> getSummary() {
-    return getSummary(Optional.fromNullable((Integer)null));
-  }
-  
-  public List<ElementSummary> getSummary(Optional<Integer> projectId) {
-    List<ElementSummary> summary = new ArrayList<>();
+  public Map<Integer, List<ElementSummary>> getAllSummary() {
+    Map<Integer, List<ElementSummary>> summary = new TreeMap<>();
     for (Map.Entry<OverlayId, Torrent> e : torrents.entrySet()) {
-      if (!projectId.isPresent() || (projectId.isPresent() && projectId.get().equals(e.getValue().projectId))) {
+      ElementSummary es = new ElementSummary(e.getValue().torrentName, e.getKey(), e.getValue().torrentStatus);
+      List<ElementSummary> projectSummary = summary.get(e.getValue().projectId);
+      if(projectSummary == null) {
+        projectSummary = new LinkedList<>();
+        summary.put(e.getValue().projectId, projectSummary);
+      }
+      projectSummary.add(es);
+    }
+    return summary;
+  }
+
+  public Map<Integer, List<ElementSummary>> getSummary(List<Integer> projectIds) {
+    if(projectIds.isEmpty()) {
+      return getAllSummary();
+    }
+    Map<Integer, List<ElementSummary>> summary = new TreeMap<>();
+    for(Integer projectId : projectIds) {
+      summary.put(projectId, new LinkedList<ElementSummary>());
+    }
+    for (Map.Entry<OverlayId, Torrent> e : torrents.entrySet()) {
+      if (projectIds.contains(e.getValue().projectId)) {
+        List<ElementSummary> projectSummary = summary.get(e.getValue().projectId);
         ElementSummary es = new ElementSummary(e.getValue().torrentName, e.getKey(), e.getValue().torrentStatus);
-        summary.add(es);
+        projectSummary.add(es);
       }
     }
     return summary;
   }
 
   public static class Torrent {
+
     public final Integer projectId;
     public final String torrentName;
     private TorrentState torrentStatus = TorrentState.NONE;
