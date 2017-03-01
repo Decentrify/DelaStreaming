@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Positive;
+import se.sics.ktoolbox.nutil.fsm.FSMBasicStateNames;
 import se.sics.ktoolbox.nutil.fsm.FSMEvent;
 import se.sics.ktoolbox.nutil.fsm.FSMEventHandler;
 import se.sics.ktoolbox.nutil.fsm.FSMException;
@@ -42,15 +43,12 @@ import se.sics.ktoolbox.nutil.fsm.FSMInternalStateBuilder;
 import se.sics.ktoolbox.nutil.fsm.FSMInternalStateBuilders;
 import se.sics.ktoolbox.nutil.fsm.FSMOnWrongStateAction;
 import se.sics.ktoolbox.nutil.fsm.FSMStateDef;
-import se.sics.ktoolbox.nutil.fsm.FSMTransition;
-import se.sics.ktoolbox.nutil.fsm.FSMTransitions;
+import se.sics.ktoolbox.nutil.fsm.FSMStateName;
 import se.sics.ktoolbox.nutil.fsm.FSMachineDef;
 import se.sics.ktoolbox.nutil.fsm.MultiFSM;
 import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
 import se.sics.ktoolbox.nutil.fsm.ids.FSMDefId;
 import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMStateDefId;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMStateId;
 import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -103,32 +101,16 @@ public class LibTorrentFSM {
   private static final Logger LOG = LoggerFactory.getLogger(LibTorrentFSM.class);
   public static final String NAME = "dela-torrent-library-fsm";
 
-  public static enum Transition implements FSMTransition {
-
-    PREPARE_STORAGE_D,
-    PREPARE_STORAGE_U,
-    PREPARE_TRANSFER_D,
-    PREPARE_TRANSFER_U,
-    PREPARE_STORAGE_CONTINUE,
+  private static enum MyStates implements FSMStateName {
+    PREPARE_STORAGE,
     PREPARE_TRANSFER,
     DOWNLOAD_MANIFEST,
     EXTENDED_DETAILS,
-    ADVANCE_TRANSFER1,
-    ADVANCE_TRANSFER_DM,
-    ADVANCE_TRANSFER_EX,
+    ADVANCE_TRANSFER,
     DOWNLOADING,
     UPLOADING,
-    UPLOADING2,
-    ENDPOINT_CLEAN,
-    ENDPOINT_CLEAN2,
-    ENDPOINT_CONTINUE_CLEAN,
-    TRANSFER_CLEAN1,
-    TRANSFER_CLEAN2,
-    TRANSFER_CLEAN3,
-    TRANSFER_CLEAN4,
-    TRANSFER_CLEAN5,
-    TRANSFER_CLEAN_EX,
-    INIT_STOP
+    CLEAN_STORAGE,
+    CLEAN_TRANSFER,
   }
 
   public static MultiFSM getFSM(LibTExternal es, OnFSMExceptionAction oexa) {
@@ -219,7 +201,7 @@ public class LibTorrentFSM {
   public static FSMachineDef build() throws FSMException {
     FSMOnWrongStateAction owsa = new FSMOnWrongStateAction<LibTExternal, LibTInternal>() {
       @Override
-      public void handle(FSMStateId state, FSMEvent event, LibTExternal es, LibTInternal is) {
+      public void handle(FSMStateName state, FSMEvent event, LibTExternal es, LibTInternal is) {
         if (event instanceof HopsTorrentDownloadEvent.StartRequest) {
           HopsTorrentDownloadEvent.StartRequest req = (HopsTorrentDownloadEvent.StartRequest) event;
           es.proxy.answer(req, req.failed(Result.logicalFail("torrent:" + is.torrentId + "is active already")));
@@ -231,44 +213,80 @@ public class LibTorrentFSM {
         }
       }
     };
-    FSMachineDef fsm = FSMachineDef.instance(NAME);
-    FSMStateDefId init_id = fsm.registerInitState(initState(owsa));
-    FSMStateDefId ps_id = fsm.registerState(prepareStorageState(owsa));
-    FSMStateDefId pt_id = fsm.registerState(prepareTransferState(owsa));
-    FSMStateDefId dm_id = fsm.registerState(downloadManifestState(owsa));
-    FSMStateDefId ex_id = fsm.registerState(extendedDetailsState(owsa));
-    FSMStateDefId at_id = fsm.registerState(advanceTransferState(owsa));
-    FSMStateDefId d_id = fsm.registerState(downloadingState(owsa));
-    FSMStateDefId u_id = fsm.registerState(uploadingState(owsa));
-    FSMStateDefId ec_id = fsm.registerState(endpointCleaningState(owsa));
-    FSMStateDefId tc_id = fsm.registerState(transferCleaningState(owsa));
-
-    fsm.register(Transition.PREPARE_STORAGE_D, init_id, ps_id);
-    fsm.register(Transition.PREPARE_STORAGE_U, init_id, ps_id);
-    fsm.register(Transition.PREPARE_TRANSFER_D, init_id, pt_id);
-    fsm.register(Transition.PREPARE_TRANSFER_U, init_id, pt_id);
-    fsm.register(Transition.PREPARE_STORAGE_CONTINUE, ps_id, ps_id);
-    fsm.register(Transition.PREPARE_TRANSFER, ps_id, pt_id);
-    fsm.register(Transition.ENDPOINT_CLEAN2, ps_id, ec_id);
-    fsm.register(Transition.DOWNLOAD_MANIFEST, pt_id, dm_id);
-    fsm.register(Transition.TRANSFER_CLEAN1, pt_id, tc_id);
-    fsm.register(Transition.ADVANCE_TRANSFER1, pt_id, at_id);
-    fsm.register(Transition.ADVANCE_TRANSFER_DM, dm_id, at_id);
-    fsm.register(Transition.EXTENDED_DETAILS, dm_id, ex_id);
-    fsm.register(Transition.TRANSFER_CLEAN2, dm_id, tc_id);
-    fsm.register(Transition.ADVANCE_TRANSFER_EX, ex_id, at_id);
-    fsm.register(Transition.TRANSFER_CLEAN_EX, ex_id, tc_id);
-    fsm.register(Transition.DOWNLOADING, at_id, d_id);
-    fsm.register(Transition.TRANSFER_CLEAN3, at_id, tc_id);
-    fsm.register(Transition.UPLOADING, at_id, u_id);
-    fsm.register(Transition.UPLOADING2, d_id, u_id);
-    fsm.register(Transition.TRANSFER_CLEAN4, d_id, tc_id);
-    fsm.register(Transition.TRANSFER_CLEAN5, u_id, tc_id);
-    //
-    fsm.register(Transition.ENDPOINT_CLEAN, tc_id, ec_id);
-    fsm.register(Transition.ENDPOINT_CONTINUE_CLEAN, ec_id, ec_id);
-    fsm.seal();
+    FSMStateDef startS = initState(owsa);
+    FSMStateDef psS = prepareStorageState(owsa);
+    FSMStateDef ptS = prepareTransferState(owsa);
+    FSMStateDef dmS = downloadManifestState(owsa);
+    FSMStateDef exS = extendedDetailsState(owsa);
+    FSMStateDef atS = advanceTransferState(owsa);
+    FSMStateDef dS = downloadingState(owsa);
+    FSMStateDef uS = uploadingState(owsa);
+    FSMStateDef ecS = endpointCleaningState(owsa);
+    FSMStateDef tcS = transferCleaningState(owsa);
+    
+    FSMachineDef.Builder builder = FSMachineDef.builder(NAME);
+    FSMachineDef fsm = builder
+      .fromState(FSMBasicStateNames.START, startS).toStates(MyStates.PREPARE_STORAGE, MyStates.PREPARE_TRANSFER, FSMBasicStateNames.FINAL).buildState()
+      .fromState(MyStates.PREPARE_STORAGE, psS).toStates(MyStates.PREPARE_STORAGE, MyStates.PREPARE_TRANSFER).cleanup(MyStates.CLEAN_STORAGE).buildState()
+      .fromState(MyStates.PREPARE_TRANSFER, ptS).toStates(MyStates.DOWNLOAD_MANIFEST, MyStates.ADVANCE_TRANSFER).cleanup(MyStates.CLEAN_TRANSFER).buildState()
+      .fromState(MyStates.DOWNLOAD_MANIFEST, dmS).toStates(MyStates.EXTENDED_DETAILS, MyStates.ADVANCE_TRANSFER).cleanup(MyStates.CLEAN_TRANSFER).buildState()
+      .fromState(MyStates.EXTENDED_DETAILS, exS).toStates(MyStates.ADVANCE_TRANSFER).cleanup(MyStates.CLEAN_TRANSFER).buildState()
+      .fromState(MyStates.ADVANCE_TRANSFER, atS).toStates(MyStates.DOWNLOADING, MyStates.UPLOADING).cleanup(MyStates.CLEAN_TRANSFER).buildState()
+      .fromState(MyStates.DOWNLOADING, dS).toStates(MyStates.UPLOADING).cleanup(MyStates.CLEAN_TRANSFER).buildState()
+      .fromState(MyStates.UPLOADING, uS).cleanup(MyStates.CLEAN_TRANSFER).buildState()
+      .fromState(MyStates.CLEAN_TRANSFER, tcS).cleanup(MyStates.CLEAN_STORAGE).buildState()
+      .fromState(MyStates.CLEAN_STORAGE, ecS).toStates(MyStates.CLEAN_STORAGE, FSMBasicStateNames.FINAL).buildState()
+      .complete();
+    
     return fsm;
+  }
+  
+  private static FSMEventHandler stop0() {
+    return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+      @Override
+      public FSMStateName handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+        LOG.info("<{}>stop received for torrent:{} - stopping", req.getBaseId(), req.torrentId);
+        es.proxy.answer(req, req.success());
+        return FSMBasicStateNames.FINAL;
+      }
+    };
+  }
+  private static FSMEventHandler stop1() {
+    return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+      @Override
+      public FSMStateName handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+        LOG.info("<{}>stop received for torrent:{} - move to cleaning endpoints", req.getBaseId(), req.torrentId);
+        reqFailed(es, is);
+        is.setStopReq(req);
+        cleanStorageEndpoints(es, is, is.endpointRegistration.selfCleaning());
+        return MyStates.CLEAN_STORAGE;
+      }
+    };
+  }
+
+  private static FSMEventHandler stop2() {
+    return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+      @Override
+      public FSMStateName handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+        LOG.info("<{}>stop received for torrent:{} - move to cleaning transfer", req.getBaseId(), req.torrentId);
+        reqFailed(es, is);
+        is.setStopReq(req);
+        cleanTransfer(es, is);
+        return MyStates.CLEAN_TRANSFER;
+      }
+    };
+  }
+
+  private static FSMEventHandler stop3() {
+    return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+      @Override
+      public FSMStateName handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+        LOG.info("<{}>stop received for torrent:{} - move to cleaning transfer", req.getBaseId(), is.torrentId);
+        is.setStopReq(req);
+        cleanTransfer(es, is);
+        return MyStates.CLEAN_TRANSFER;
+      }
+    };
   }
 
   private static FSMStateDef initState(FSMOnWrongStateAction owsa) throws FSMException {
@@ -286,7 +304,7 @@ public class LibTorrentFSM {
   static FSMEventHandler initDownload
     = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.StartRequest>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentDownloadEvent.StartRequest req) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, HopsTorrentDownloadEvent.StartRequest req) {
         LOG.info("{}accepting new download:{}", req.getBaseId(), req.torrentName);
         is.setDownloadInit(req);
         MyStream manifestStream = manifestStreamSetup(es, is, req.hdfsEndpoint, req.manifest);
@@ -297,14 +315,14 @@ public class LibTorrentFSM {
   static FSMEventHandler initDownloadRestart
     = new FSMEventHandler<LibTExternal, LibTInternal, TorrentRestart.DwldReq>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, TorrentRestart.DwldReq req) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, TorrentRestart.DwldReq req) {
         LOG.info("{}restarting download:{}", req.getBaseId(), req.torrentName);
         is.setDownloadRestartInit(req);
         return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, req.manifestStream, req.partners);
       }
     };
 
-  private static Transition downloadInit(LibTExternal es, LibTInternal is, OverlayId torrentId, String torrentName,
+  private static MyStates downloadInit(LibTExternal es, LibTInternal is, OverlayId torrentId, String torrentName,
     Integer projectId, MyStream manifestStream, List<KAddress> partners) {
     if (es.library.containsTorrent(torrentId)) {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
@@ -316,16 +334,16 @@ public class LibTorrentFSM {
     if (is.endpointRegistration.isComplete()) {
       is.torrentBuilder.setEndpoints(is.endpointRegistration.getSetup());
       setupTransfer(es, is);
-      return Transition.PREPARE_TRANSFER_D;
+      return MyStates.PREPARE_TRANSFER;
     } else {
-      return Transition.PREPARE_STORAGE_D;
+      return MyStates.PREPARE_STORAGE;
     }
   }
 
   static FSMEventHandler initUpload
     = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentUploadEvent.Request>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentUploadEvent.Request req) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, HopsTorrentUploadEvent.Request req) {
         LOG.info("<{}>accepting new upload:{}", req.getBaseId(), req.torrentName);
         is.setUploadInit(req);
         MyStream manifestStream = manifestStreamSetup(es, is, req.hdfsEndpoint, req.manifestResource);
@@ -336,14 +354,14 @@ public class LibTorrentFSM {
   static FSMEventHandler initUploadRestart
     = new FSMEventHandler<LibTExternal, LibTInternal, TorrentRestart.UpldReq>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, TorrentRestart.UpldReq req) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, TorrentRestart.UpldReq req) {
         LOG.info("<{}>accepting new upload:{}", req.getBaseId(), req.torrentName);
         is.setUploadRestartInit(req);
         return initUpload(es, is, req.torrentId, req.torrentName, req.projectId, req.manifestStream);
       }
     };
 
-  private static Transition initUpload(LibTExternal es, LibTInternal is, OverlayId torrentId, String torrentName,
+  private static MyStates initUpload(LibTExternal es, LibTInternal is, OverlayId torrentId, String torrentName,
     Integer projectId, MyStream manifestStream) {
     if (es.library.containsTorrent(torrentId)) {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
@@ -355,65 +373,17 @@ public class LibTorrentFSM {
     if (is.endpointRegistration.isComplete()) {
       is.torrentBuilder.setEndpoints(is.endpointRegistration.getSetup());
       setupTransfer(es, is);
-      return Transition.PREPARE_TRANSFER_U;
+      return MyStates.PREPARE_TRANSFER;
     } else {
-      return Transition.PREPARE_STORAGE_U;
+      return MyStates.PREPARE_STORAGE;
     }
-  }
-
-  private static FSMEventHandler stop0() {
-    return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
-      @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
-        LOG.info("<{}>stop received for torrent:{} - stopping", req.getBaseId(), req.torrentId);
-        es.proxy.answer(req, req.success());
-        return FSMTransitions.KILL;
-      }
-    };
-  }
-  private static FSMEventHandler stop1(final Transition t) {
-    return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
-      @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
-        LOG.info("<{}>stop received for torrent:{} - move to cleaning endpoints", req.getBaseId(), req.torrentId);
-        reqFailed(es, is);
-        is.setStopReq(req);
-        cleanStorageEndpoints(es, is, is.endpointRegistration.selfCleaning());
-        return t;
-      }
-    };
-  }
-
-  private static FSMEventHandler stop2(final Transition t) {
-    return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
-      @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
-        LOG.info("<{}>stop received for torrent:{} - move to cleaning transfer", req.getBaseId(), req.torrentId);
-        reqFailed(es, is);
-        is.setStopReq(req);
-        cleanTransfer(es, is);
-        return t;
-      }
-    };
-  }
-
-  private static FSMEventHandler stop3(final Transition t) {
-    return new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
-      @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
-        LOG.info("<{}>stop received for torrent:{} - move to cleaning transfer", req.getBaseId(), is.torrentId);
-        is.setStopReq(req);
-        cleanTransfer(es, is);
-        return t;
-      }
-    };
   }
 
   private static FSMStateDef prepareStorageState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
     state.setOnWrongStateAction(owsa);
     state.register(DEndpoint.Success.class, prepareStorage);
-    state.register(HopsTorrentStopEvent.Request.class, stop1(Transition.ENDPOINT_CLEAN2));
+    state.register(HopsTorrentStopEvent.Request.class, stop1());
     state.seal();
     return state;
   }
@@ -421,15 +391,15 @@ public class LibTorrentFSM {
   static FSMEventHandler prepareStorage
     = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
         LOG.debug("<{}>endpoint:{} prepared", resp.getBaseId(), resp.req.endpointProvider.getName());
         is.endpointRegistration.connected(resp.req.endpointId);
         if (is.endpointRegistration.isComplete()) {
           is.torrentBuilder.setEndpoints(is.endpointRegistration.getSetup());
           setupTransfer(es, is);
-          return Transition.PREPARE_TRANSFER;
+          return MyStates.PREPARE_TRANSFER;
         } else {
-          return Transition.PREPARE_STORAGE_CONTINUE;
+          return MyStates.PREPARE_STORAGE;
         }
       }
     };
@@ -438,7 +408,7 @@ public class LibTorrentFSM {
     FSMStateDef state = new FSMStateDef();
     state.setOnWrongStateAction(owsa);
     state.register(StartTorrent.Response.class, prepareTransfer);
-    state.register(HopsTorrentStopEvent.Request.class, stop2(Transition.TRANSFER_CLEAN1));
+    state.register(HopsTorrentStopEvent.Request.class, stop2());
     state.seal();
     return state;
   }
@@ -446,15 +416,15 @@ public class LibTorrentFSM {
   static FSMEventHandler prepareTransfer
     = new FSMEventHandler<LibTExternal, LibTInternal, StartTorrent.Response>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, StartTorrent.Response resp) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, StartTorrent.Response resp) {
         if (resp.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - prepared", resp.getBaseId(), resp.overlayId());
           if (is.downloadReq.isPresent()) {
             getManifest(es, is);
-            return Transition.DOWNLOAD_MANIFEST;
+            return MyStates.DOWNLOAD_MANIFEST;
           } else if (is.dRestartReq.isPresent()) {
             getManifest(es, is);
-            return Transition.DOWNLOAD_MANIFEST;
+            return MyStates.DOWNLOAD_MANIFEST;
           } else {
             //on download restart the manifest is present on endpoint
             //on upload req/restart the manifest is present on endpoint
@@ -462,7 +432,7 @@ public class LibTorrentFSM {
             prepareDetails(es, is);
             is.setTorrent(is.getTorrentBuilder().getTorrent());
             advanceTransfer(es, is);
-            return Transition.ADVANCE_TRANSFER1;
+            return MyStates.ADVANCE_TRANSFER;
           }
         } else {
           LOG.warn("<{}>torrent:{} - start failed", resp.getBaseId(), resp.overlayId());
@@ -475,7 +445,7 @@ public class LibTorrentFSM {
     FSMStateDef state = new FSMStateDef();
     state.setOnWrongStateAction(owsa);
     state.register(GetRawTorrent.Response.class, downloadManifest);
-    state.register(HopsTorrentStopEvent.Request.class, stop2(Transition.TRANSFER_CLEAN2));
+    state.register(HopsTorrentStopEvent.Request.class, stop2());
     state.seal();
     return state;
   }
@@ -483,18 +453,18 @@ public class LibTorrentFSM {
   static FSMEventHandler downloadManifest
     = new FSMEventHandler<LibTExternal, LibTInternal, GetRawTorrent.Response>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, GetRawTorrent.Response resp) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, GetRawTorrent.Response resp) {
         if (resp.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - advanced", resp.getBaseId(), resp.overlayId());
           writeManifest(es, is, resp.result.getValue());
           if (withExtendedDetails(es)) {
             getExtendedDetails(es, is);
-            return Transition.EXTENDED_DETAILS;
+            return MyStates.EXTENDED_DETAILS;
           } else {
             prepareDetails(es, is);
             is.setTorrent(is.getTorrentBuilder().getTorrent());
             advanceTransfer(es, is);
-            return Transition.ADVANCE_TRANSFER_DM;
+            return MyStates.ADVANCE_TRANSFER;
           }
 
         } else {
@@ -508,7 +478,7 @@ public class LibTorrentFSM {
     FSMStateDef state = new FSMStateDef();
     state.setOnWrongStateAction(owsa);
     state.register(HopsTorrentDownloadEvent.AdvanceRequest.class, extendedDetails);
-    state.register(HopsTorrentStopEvent.Request.class, stop2(Transition.TRANSFER_CLEAN_EX));
+    state.register(HopsTorrentStopEvent.Request.class, stop2());
     state.seal();
     return state;
   }
@@ -516,14 +486,14 @@ public class LibTorrentFSM {
   static FSMEventHandler extendedDetails
     = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.AdvanceRequest>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, HopsTorrentDownloadEvent.AdvanceRequest req) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, HopsTorrentDownloadEvent.AdvanceRequest req) {
         if (req.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - extended details", req.getBaseId(), req.torrentId);
           is.setDownloadAdvance(req);
           prepareDetails(es, is);
           is.setTorrent(is.getTorrentBuilder().getTorrent());
           advanceTransfer(es, is);
-          return Transition.ADVANCE_TRANSFER_EX;
+          return MyStates.ADVANCE_TRANSFER;
         } else {
           LOG.warn("<{}>torrent:{} - start failed", req.getBaseId(), req.torrentId);
           throw new RuntimeException("todo deal with failure");
@@ -535,7 +505,7 @@ public class LibTorrentFSM {
     FSMStateDef state = new FSMStateDef();
     state.setOnWrongStateAction(owsa);
     state.register(SetupTransfer.Response.class, advanceTransfer);
-    state.register(HopsTorrentStopEvent.Request.class, stop2(Transition.TRANSFER_CLEAN3));
+    state.register(HopsTorrentStopEvent.Request.class, stop2());
     state.seal();
     return state;
   }
@@ -543,7 +513,7 @@ public class LibTorrentFSM {
   static FSMEventHandler advanceTransfer
     = new FSMEventHandler<LibTExternal, LibTInternal, SetupTransfer.Response>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, SetupTransfer.Response resp) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, SetupTransfer.Response resp) {
         if (resp.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - transfer - set up", resp.getBaseId(), resp.overlayId());
           if (!es.library.containsTorrent(resp.overlayId())) {
@@ -561,7 +531,7 @@ public class LibTorrentFSM {
     FSMStateDef state = new FSMStateDef();
     state.setOnWrongStateAction(owsa);
     state.register(DownloadSummaryEvent.class, downloadCompleted);
-    state.register(HopsTorrentStopEvent.Request.class, stop3(Transition.TRANSFER_CLEAN4));
+    state.register(HopsTorrentStopEvent.Request.class, stop3());
     state.seal();
     return state;
   }
@@ -569,29 +539,29 @@ public class LibTorrentFSM {
   static FSMEventHandler downloadCompleted
     = new FSMEventHandler<LibTExternal, LibTInternal, DownloadSummaryEvent>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, DownloadSummaryEvent event) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, DownloadSummaryEvent event) {
         LOG.debug("<{}>torrent:{} - download completed", event.getBaseId(), event.torrentId);
         if (!es.library.containsTorrent(event.torrentId)) {
           throw new RuntimeException("mismatch between library and fsm - critical logical error");
         }
         es.library.finishDownload(event.torrentId);
-        return Transition.UPLOADING2;
+        return MyStates.UPLOADING;
       }
     };
 
   private static FSMStateDef uploadingState(FSMOnWrongStateAction owsa) throws FSMException {
     FSMStateDef state = new FSMStateDef();
     state.setOnWrongStateAction(owsa);
-    state.register(HopsTorrentStopEvent.Request.class, stop3(Transition.TRANSFER_CLEAN5));
+    state.register(HopsTorrentStopEvent.Request.class, stop3());
     state.seal();
     return state;
   }
 
   //********************************************************************************************************************
-//  private static FSMEventHandler storageError1(Transition t) {
+//  private static FSMEventHandler storageError1(MyStateNames t) {
 //    return new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Failed>() {
 //      @Override
-//      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpoint.Failed resp) {
+//      public FSMStateName handle(LibTExternal es, LibTInternal is, DEndpoint.Failed resp) {
 //        LOG.info("<{}>endpoint error received for torrent:{} - move to cleaning endpoints", resp.getBaseId(),
 //          resp.req.torrentId);
 //        if (is.downloadReq.isPresent()) {
@@ -612,7 +582,7 @@ public class LibTorrentFSM {
 //  private static FSMEventHandler storageError2() {
 //    return new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Failed>() {
 //      @Override
-//      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpoint.Failed resp) {
+//      public FSMStateName handle(LibTExternal es, LibTInternal is, DEndpoint.Failed resp) {
 //        LOG.info("<{}>endpoint error received for torrent:{} - move to cleaning transfer", resp.getBaseId(),
 //          resp.req.torrentId);
 //        if (is.downloadReq.isPresent()) {
@@ -625,7 +595,7 @@ public class LibTorrentFSM {
 //          is.finishUploadReq();
 //        }
 //        cleanTransfer(es, is);
-//        return Transition.;
+//        return MyStateNames.;
 //      }
 //    };
 //  }
@@ -640,15 +610,15 @@ public class LibTorrentFSM {
   static FSMEventHandler endpointCleaning
     = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Disconnected>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, DEndpoint.Disconnected resp) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, DEndpoint.Disconnected resp) {
         LOG.debug("<{}>endpoint:{} cleaned", resp.getBaseId(), resp.req.endpointId);
         is.endpointRegistration.cleaned(resp.req.endpointId);
         if (is.endpointRegistration.cleaningComplete()) {
           es.getProxy().answer(is.stopReq, is.stopReq.success());
           es.library.remove(is.torrentId);
-          return FSMTransitions.KILL;
+          return FSMBasicStateNames.FINAL;
         }
-        return Transition.ENDPOINT_CONTINUE_CLEAN;
+        return MyStates.CLEAN_STORAGE;
       }
     };
 
@@ -663,13 +633,13 @@ public class LibTorrentFSM {
   static FSMEventHandler transferCleaning
     = new FSMEventHandler<LibTExternal, LibTInternal, StopTorrent.Response>() {
       @Override
-      public FSMTransition handle(LibTExternal es, LibTInternal is, StopTorrent.Response resp) {
+      public FSMStateName handle(LibTExternal es, LibTInternal is, StopTorrent.Response resp) {
         LOG.debug("<{}>torrent:{} cleaned", resp.getBaseId(), resp.torrentId);
         if (!resp.result.isSuccess()) {
           throw new RuntimeException("TODO Alex - what do you do when the cleaning operation fails");
         }
         cleanStorageEndpoints(es, is, is.endpointRegistration.selfCleaning());
-        return Transition.ENDPOINT_CLEAN;
+        return MyStates.CLEAN_STORAGE;
       }
     };
 
@@ -768,33 +738,33 @@ public class LibTorrentFSM {
     }
   }
 
-  private static Transition reqSuccess(LibTExternal es, LibTInternal is) {
+  private static MyStates reqSuccess(LibTExternal es, LibTInternal is) {
     if (is.downloadReq.isPresent()) {
       es.getProxy().answer(is.downloadReq.get(), is.downloadReq.get().success(Result.success(true)));
       es.library.download(is.torrentId, is.torrentBuilder.getManifestStream().getValue1());
       is.downloadReq = Optional.absent();
-      return Transition.DOWNLOADING;
+      return MyStates.DOWNLOADING;
     } else if (is.advanceReq.isPresent()) {
       es.getProxy().answer(is.advanceReq.get(), is.advanceReq.get().success(Result.success(true)));
       es.library.download(is.torrentId, is.torrentBuilder.getManifestStream().getValue1());
       is.advanceReq = Optional.absent();
-      return Transition.DOWNLOADING;
+      return MyStates.DOWNLOADING;
     } else if (is.dRestartReq.isPresent()) {
       is.dRestartReq.get().success();
       es.library.download(is.torrentId, is.torrentBuilder.getManifestStream().getValue1());
       is.dRestartReq = Optional.absent();
-      return Transition.DOWNLOADING;
+      return MyStates.DOWNLOADING;
     }
     if (is.uploadReq.isPresent()) {
       es.getProxy().answer(is.getUploadReq(), is.getUploadReq().success(Result.success(true)));
       es.library.upload(is.torrentId, is.torrentBuilder.getManifestStream().getValue1());
       is.uploadReq = Optional.absent();
-      return Transition.UPLOADING;
+      return MyStates.UPLOADING;
     } else {
       is.uRestartReq.get().success();
       es.library.upload(is.torrentId, is.torrentBuilder.getManifestStream().getValue1());
       is.uRestartReq = Optional.absent();
-      return Transition.UPLOADING;
+      return MyStates.UPLOADING;
     }
   }
 
