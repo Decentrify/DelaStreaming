@@ -20,7 +20,7 @@ package se.sics.nstream.library.restart;
 
 import java.util.List;
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.nutil.fsm.FSMEvent;
+import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;

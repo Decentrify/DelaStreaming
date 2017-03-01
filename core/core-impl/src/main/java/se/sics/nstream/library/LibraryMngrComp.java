@@ -29,7 +29,7 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.PortType;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.ktoolbox.nutil.fsm.FSMException;
+import se.sics.ktoolbox.nutil.fsm.api.FSMException;
 import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.event.system.SystemAddressEvent;
