@@ -37,6 +37,8 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.TorrentIds;
+import se.sics.nstream.hops.libmngr.fsm.LibTExternal;
+import se.sics.nstream.hops.libmngr.fsm.LibTFSM;
 import se.sics.nstream.hops.library.HopsLibraryKConfig;
 import se.sics.nstream.hops.library.HopsTorrentPort;
 import se.sics.nstream.library.Library;
@@ -77,7 +79,7 @@ public class HopsLibraryMngr {
     this.libraryDetails = new LibraryDetails(proxy, library);
 
     hopsLibraryConfig = new HopsLibraryKConfig(config);
-    fsm = LibTorrentFSM.getFSM(new LibTorrentFSM.LibTExternal(selfAdr, library, new EndpointIdRegistry(),
+    fsm = LibTFSM.getFSM(new LibTExternal(selfAdr, library, new EndpointIdRegistry(),
       hopsLibraryConfig.baseEndpointType), oexa);
     fsm.setProxy(proxy);
   }
