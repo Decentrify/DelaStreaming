@@ -29,6 +29,7 @@ import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.nutil.fsm.api.FSMBasicStateNames;
+import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.nutil.fsm.api.FSMStateName;
 import se.sics.ktoolbox.nutil.fsm.handler.FSMEventHandler;
 import se.sics.ktoolbox.util.Either;
@@ -75,6 +76,22 @@ import se.sics.nstream.transfer.MyTorrent;
 public class LibTHandlers {
   private static final Logger LOG = LoggerFactory.getLogger(LibTFSM.class);
   
+  static FSMEventHandler fallbackHandler = new FSMEventHandler<LibTExternal, LibTInternal, FSMEvent>() {
+      @Override
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, FSMEvent event) {
+        if (event instanceof HopsTorrentDownloadEvent.StartRequest) {
+          HopsTorrentDownloadEvent.StartRequest req = (HopsTorrentDownloadEvent.StartRequest) event;
+          es.getProxy().answer(req, req.failed(Result.logicalFail("torrent:" + is.getTorrentId() + "is active already")));
+        } else if (event instanceof HopsTorrentUploadEvent.Request) {
+          HopsTorrentUploadEvent.Request req = (HopsTorrentUploadEvent.Request) event;
+          es.getProxy().answer(req, req.failed(Result.logicalFail("torrent:" + is.getTorrentId() + "is active already")));
+        } else {
+          LOG.warn("state:{} does not handle event:{} and does not register owsa behaviour", state, event);
+        }
+        return state;
+      }
+    };
+  
   static FSMEventHandler stop0 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
     public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
@@ -113,6 +130,14 @@ public class LibTHandlers {
       is.setStopReq(req);
       cleanTransfer(es, is);
       return LibTStates.CLEAN_TRANSFER;
+    }
+  };
+  
+  static FSMEventHandler stop4 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+    @Override
+    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+       LOG.info("<{}>stop received for torrent:{} - working on cleaning", req.getBaseId(), is.getTorrentId());
+       return state;
     }
   };
 
