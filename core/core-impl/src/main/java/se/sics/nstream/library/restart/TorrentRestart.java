@@ -20,10 +20,12 @@ package se.sics.nstream.library.restart;
 
 import java.util.List;
 import se.sics.kompics.Direct;
+import se.sics.kompics.Promise;
 import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
@@ -31,7 +33,7 @@ import se.sics.nstream.storage.durable.util.MyStream;
  */
 public class TorrentRestart {
 
-  public static class UpldReq extends Direct.Request<UpldIndication> implements FSMEvent {
+  public static class UpldReq extends Promise<UpldIndication> implements FSMEvent {
 
     public final OverlayId torrentId;
     public final String torrentName;
@@ -49,11 +51,13 @@ public class TorrentRestart {
       this.manifestStream = manifestStream;
     }
 
-    public UpldSuccess success() {
+    @Override
+    public UpldSuccess success(Result r) {
       return new UpldSuccess(this);
     }
 
-    public UpldFail failed() {
+    @Override
+    public UpldFail fail(Result r) {
       return new UpldFail(this);
     }
 
@@ -86,7 +90,7 @@ public class TorrentRestart {
     }
   }
 
-  public static class DwldReq extends Direct.Request<DwldIndication> implements FSMEvent {
+  public static class DwldReq extends Promise<DwldIndication> implements FSMEvent {
 
     public final OverlayId torrentId;
     public final String torrentName;
@@ -104,11 +108,13 @@ public class TorrentRestart {
       this.manifestStream = manifestStream;
     }
 
-    public DwldSuccess success() {
+    @Override
+    public DwldSuccess success(Result r) {
       return new DwldSuccess(this);
     }
 
-    public DwldFail failed() {
+    @Override
+    public DwldFail fail(Result r) {
       return new DwldFail(this);
     }
 

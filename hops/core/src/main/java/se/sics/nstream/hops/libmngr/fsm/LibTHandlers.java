@@ -28,8 +28,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.ComponentProxy;
+import se.sics.kompics.Promise;
 import se.sics.ktoolbox.nutil.fsm.api.FSMBasicStateNames;
 import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
+import se.sics.ktoolbox.nutil.fsm.api.FSMException;
 import se.sics.ktoolbox.nutil.fsm.api.FSMStateName;
 import se.sics.ktoolbox.nutil.fsm.handler.FSMEventHandler;
 import se.sics.ktoolbox.util.Either;
@@ -45,7 +48,6 @@ import se.sics.nstream.hops.hdfs.HDFSComp;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSHelper;
 import se.sics.nstream.hops.hdfs.HDFSResource;
-import se.sics.nstream.hops.libmngr.TorrentBuilder;
 import se.sics.nstream.hops.library.Details;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
@@ -74,70 +76,80 @@ import se.sics.nstream.transfer.MyTorrent;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LibTHandlers {
+
   private static final Logger LOG = LoggerFactory.getLogger(LibTFSM.class);
-  
+
   static FSMEventHandler fallbackHandler = new FSMEventHandler<LibTExternal, LibTInternal, FSMEvent>() {
-      @Override
-      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, FSMEvent event) {
-        if (event instanceof HopsTorrentDownloadEvent.StartRequest) {
-          HopsTorrentDownloadEvent.StartRequest req = (HopsTorrentDownloadEvent.StartRequest) event;
-          es.getProxy().answer(req, req.failed(Result.logicalFail("torrent:" + is.getTorrentId() + "is active already")));
-        } else if (event instanceof HopsTorrentUploadEvent.Request) {
-          HopsTorrentUploadEvent.Request req = (HopsTorrentUploadEvent.Request) event;
-          es.getProxy().answer(req, req.failed(Result.logicalFail("torrent:" + is.getTorrentId() + "is active already")));
-        } else {
-          LOG.warn("state:{} does not handle event:{} and does not register owsa behaviour", state, event);
-        }
-        return state;
+    @Override
+    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, FSMEvent event) {
+      if (event instanceof HopsTorrentDownloadEvent.StartRequest) {
+        HopsTorrentDownloadEvent.StartRequest req = (HopsTorrentDownloadEvent.StartRequest) event;
+        es.getProxy().answer(req, req.fail(Result.logicalFail("torrent:" + is.getTorrentId() + "is active already")));
+      } else if (event instanceof HopsTorrentUploadEvent.Request) {
+        HopsTorrentUploadEvent.Request req = (HopsTorrentUploadEvent.Request) event;
+        es.getProxy().answer(req, req.fail(Result.logicalFail("torrent:" + is.getTorrentId() + "is active already")));
+      } else {
+        LOG.warn("state:{} does not handle event:{} and does not register owsa behaviour", state, event);
       }
-    };
-  
+      return state;
+    }
+  };
+
   static FSMEventHandler stop0 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
-    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
+      throws FSMException {
       LOG.info("<{}>stop received for torrent:{} - stopping", req.getBaseId(), req.torrentId);
-      es.getProxy().answer(req, req.success());
+      stop(is, es.getProxy(), req);
+      success(is, es.getProxy(), Result.success(true));
+      es.library.killed(is.getTorrentId());
       return FSMBasicStateNames.FINAL;
     }
   };
-  
+
   static FSMEventHandler stop1 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
-    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
+      throws FSMException {
       LOG.info("<{}>stop received for torrent:{} - move to cleaning endpoints", req.getBaseId(), req.torrentId);
-      is.reqFailed(es.getProxy());
-      is.setStopReq(req);
-      cleanStorageEndpoints(es, is, is.endpointRegistration.selfCleaning());
+      stop(is, es.getProxy(), req);
+      cleanStorage(es, is);
+      es.library.killing(is.getTorrentId());
       return LibTStates.CLEAN_STORAGE;
     }
   };
 
   static FSMEventHandler stop2 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
-    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
+      throws FSMException {
       LOG.info("<{}>stop received for torrent:{} - move to cleaning transfer", req.getBaseId(), req.torrentId);
-      is.reqFailed(es.getProxy());
-      is.setStopReq(req);
+      stop(is, es.getProxy(), req);
       cleanTransfer(es, is);
+      es.library.killing(is.getTorrentId());
       return LibTStates.CLEAN_TRANSFER;
     }
   };
 
   static FSMEventHandler stop3 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
-    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
+    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
+      throws FSMException {
       LOG.info("<{}>stop received for torrent:{} - move to cleaning transfer", req.getBaseId(), is.getTorrentId());
-      is.setStopReq(req);
+      stop(is, es.getProxy(), req);
       cleanTransfer(es, is);
+      es.library.killing(is.getTorrentId());
       return LibTStates.CLEAN_TRANSFER;
     }
   };
-  
+
   static FSMEventHandler stop4 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
-    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req) {
-       LOG.info("<{}>stop received for torrent:{} - working on cleaning", req.getBaseId(), is.getTorrentId());
-       return state;
+    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
+      throws FSMException {
+      LOG.info("<{}>stop received for torrent:{} - working on cleaning", req.getBaseId(), is.getTorrentId());
+      stop(is, es.getProxy(), req);
+      return state;
     }
   };
 
@@ -145,20 +157,21 @@ public class LibTHandlers {
     = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.StartRequest>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
-        HopsTorrentDownloadEvent.StartRequest req) {
+        HopsTorrentDownloadEvent.StartRequest req) throws FSMException {
         LOG.info("{}accepting new download:{}", req.getBaseId(), req.torrentName);
-        is.setDownloadInit(req);
+        is.setDownload(req);
         MyStream manifestStream = manifestStreamSetup(es, is, req.hdfsEndpoint, req.manifest);
         return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, manifestStream, req.partners);
       }
     };
-  
+
   static FSMEventHandler initDownloadRestart
     = new FSMEventHandler<LibTExternal, LibTInternal, TorrentRestart.DwldReq>() {
       @Override
-      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, TorrentRestart.DwldReq req) {
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, TorrentRestart.DwldReq req)
+      throws FSMException {
         LOG.info("{}restarting download:{}", req.getBaseId(), req.torrentName);
-        is.setDownloadRestartInit(req);
+        is.setDownloadRestart(req);
         return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, req.manifestStream, req.partners);
       }
     };
@@ -169,11 +182,10 @@ public class LibTHandlers {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
     es.library.prepareDownload(projectId, torrentId, torrentName, partners);
-    is.setTorrentBuilder(new TorrentBuilder());
     setupStorageEndpoints(es, is, manifestStream);
     setManifestStream(is, manifestStream);
-    if (is.endpointRegistration.isComplete()) {
-      is.getTorrentBuilder().setEndpoints(is.endpointRegistration.getSetup());
+    if (is.storageRegistry.isComplete()) {
+      is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
       setupTransfer(es, is);
       return LibTStates.PREPARE_TRANSFER;
     } else {
@@ -185,9 +197,9 @@ public class LibTHandlers {
     = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentUploadEvent.Request>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
-        HopsTorrentUploadEvent.Request req) {
+        HopsTorrentUploadEvent.Request req) throws FSMException {
         LOG.info("<{}>accepting new upload:{}", req.getBaseId(), req.torrentName);
-        is.setUploadInit(req);
+        is.setUpload(req);
         MyStream manifestStream = manifestStreamSetup(es, is, req.hdfsEndpoint, req.manifestResource);
         return initUpload(es, is, req.torrentId, req.torrentName, req.projectId, manifestStream);
       }
@@ -196,9 +208,10 @@ public class LibTHandlers {
   static FSMEventHandler initUploadRestart
     = new FSMEventHandler<LibTExternal, LibTInternal, TorrentRestart.UpldReq>() {
       @Override
-      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, TorrentRestart.UpldReq req) {
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, TorrentRestart.UpldReq req)
+      throws FSMException {
         LOG.info("<{}>accepting new upload:{}", req.getBaseId(), req.torrentName);
-        is.setUploadRestartInit(req);
+        is.setUploadRestart(req);
         return initUpload(es, is, req.torrentId, req.torrentName, req.projectId, req.manifestStream);
       }
     };
@@ -209,26 +222,25 @@ public class LibTHandlers {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
     es.library.prepareUpload(projectId, torrentId, torrentName);
-    is.setTorrentBuilder(new TorrentBuilder());
     setupStorageEndpoints(es, is, manifestStream);
     setManifestStream(is, manifestStream);
-    if (is.endpointRegistration.isComplete()) {
-      is.getTorrentBuilder().setEndpoints(is.endpointRegistration.getSetup());
+    if (is.storageRegistry.isComplete()) {
+      is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
       setupTransfer(es, is);
       return LibTStates.PREPARE_TRANSFER;
     } else {
       return LibTStates.PREPARE_STORAGE;
     }
   }
-  
+
   static FSMEventHandler prepareStorage
     = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
       @Override
-      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
+      public FSMStateName handle(FSMStateName stateName, LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
         LOG.debug("<{}>endpoint:{} prepared", resp.getBaseId(), resp.req.endpointProvider.getName());
-        is.endpointRegistration.connected(resp.req.endpointId);
-        if (is.endpointRegistration.isComplete()) {
-          is.getTorrentBuilder().setEndpoints(is.endpointRegistration.getSetup());
+        is.storageRegistry.connected(resp.req.endpointId);
+        if (is.storageRegistry.isComplete()) {
+          is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
           setupTransfer(es, is);
           return LibTStates.PREPARE_TRANSFER;
         } else {
@@ -243,10 +255,7 @@ public class LibTHandlers {
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, StartTorrent.Response resp) {
         if (resp.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - prepared", resp.getBaseId(), resp.overlayId());
-          if (is.isDownload()) {
-            getManifest(es, is);
-            return LibTStates.DOWNLOAD_MANIFEST;
-          } else if (is.isDownloadRestart()) {
+          if (is.getSetupState().isDownloadSetup()) {
             getManifest(es, is);
             return LibTStates.DOWNLOAD_MANIFEST;
           } else {
@@ -254,7 +263,6 @@ public class LibTHandlers {
             //on upload req/restart the manifest is present on endpoint
             readManifest(es, is);
             prepareDetails(es, is);
-            is.setTorrent(is.getTorrentBuilder().getTorrent());
             advanceTransfer(es, is);
             return LibTStates.ADVANCE_TRANSFER;
           }
@@ -268,16 +276,16 @@ public class LibTHandlers {
   static FSMEventHandler downloadManifest
     = new FSMEventHandler<LibTExternal, LibTInternal, GetRawTorrent.Response>() {
       @Override
-      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, GetRawTorrent.Response resp) {
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, GetRawTorrent.Response resp)
+      throws FSMException {
         if (resp.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - advanced", resp.getBaseId(), resp.overlayId());
           writeManifest(es, is, resp.result.getValue());
           if (withExtendedDetails(es)) {
-            getExtendedDetails(es, is);
+            success(is, es.getProxy(), Result.success(true));
             return LibTStates.EXTENDED_DETAILS;
           } else {
             prepareDetails(es, is);
-            is.setTorrent(is.getTorrentBuilder().getTorrent());
             advanceTransfer(es, is);
             return LibTStates.ADVANCE_TRANSFER;
           }
@@ -293,12 +301,11 @@ public class LibTHandlers {
     = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.AdvanceRequest>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
-        HopsTorrentDownloadEvent.AdvanceRequest req) {
+        HopsTorrentDownloadEvent.AdvanceRequest req) throws FSMException {
         if (req.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - extended details", req.getBaseId(), req.torrentId);
           is.setDownloadAdvance(req);
           prepareDetails(es, is);
-          is.setTorrent(is.getTorrentBuilder().getTorrent());
           advanceTransfer(es, is);
           return LibTStates.ADVANCE_TRANSFER;
         } else {
@@ -311,13 +318,23 @@ public class LibTHandlers {
   static FSMEventHandler advanceTransfer
     = new FSMEventHandler<LibTExternal, LibTInternal, SetupTransfer.Response>() {
       @Override
-      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, SetupTransfer.Response resp) {
+      public FSMStateName handle(FSMStateName stateName, LibTExternal es, LibTInternal is, SetupTransfer.Response resp)
+      throws FSMException {
         if (resp.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - transfer - set up", resp.getBaseId(), resp.overlayId());
           if (!es.library.containsTorrent(resp.overlayId())) {
-            throw new RuntimeException("mismatch between library and fsm - critical logical error");
+            throw new RuntimeException("mismatch between library and fsm - broken");
           }
-          return is.reqSuccess(es.getProxy(), es.library);
+          success(is, es.getProxy(), Result.success(true));
+          boolean download = is.getSetupState().isDownload();
+          LibTInternal.TStarted state = is.completeTransferSetup();
+          if (download) {
+            es.library.download(is.getTorrentId(), state.manifestStream);
+            return LibTStates.DOWNLOADING;
+          } else {
+            es.library.upload(is.getTorrentId(), state.manifestStream);
+            return LibTStates.UPLOADING;
+          }
         } else {
           LOG.debug("<{}>torrent:{} - transfer - set up failed", resp.getBaseId(), resp.overlayId());
           throw new RuntimeException("todo deal with failure");
@@ -337,17 +354,17 @@ public class LibTHandlers {
         return LibTStates.UPLOADING;
       }
     };
-  
+
   static FSMEventHandler endpointCleaning
     = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Disconnected>() {
       @Override
-      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, DEndpoint.Disconnected resp) {
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, DEndpoint.Disconnected resp)
+      throws FSMException {
         LOG.debug("<{}>endpoint:{} cleaned", resp.getBaseId(), resp.req.endpointId);
-        is.endpointRegistration.cleaned(resp.req.endpointId);
-        if (is.endpointRegistration.cleaningComplete()) {
-          HopsTorrentStopEvent.Request stopReq = is.getStopReq();
-          es.getProxy().answer(stopReq, stopReq.success());
-          es.library.remove(is.getTorrentId());
+        is.storageRegistry.cleaned(resp.req.endpointId);
+        if (is.storageRegistry.cleaningComplete()) {
+          success(is, es.getProxy(), Result.success(true));
+          es.library.killed(is.getTorrentId());
           return FSMBasicStateNames.FINAL;
         }
         return LibTStates.CLEAN_STORAGE;
@@ -362,16 +379,16 @@ public class LibTHandlers {
         if (!resp.result.isSuccess()) {
           throw new RuntimeException("TODO Alex - what do you do when the cleaning operation fails");
         }
-        cleanStorageEndpoints(es, is, is.endpointRegistration.selfCleaning());
+        cleanStorage(es, is);
         return LibTStates.CLEAN_STORAGE;
       }
     };
 
   private static void setManifestStream(LibTInternal is, MyStream manifestStream) {
-    Identifier manifestEndpointId = is.endpointRegistration.nameToId(manifestStream.endpoint.getEndpointName());
+    Identifier manifestEndpointId = is.storageRegistry.nameToId(manifestStream.endpoint.getEndpointName());
     FileId manifestFileId = TorrentIds.fileId(is.getTorrentId(), MyTorrent.MANIFEST_ID);
     StreamId manifestStreamId = TorrentIds.streamId(manifestEndpointId, manifestFileId);
-    is.getTorrentBuilder().setManifestStream(manifestStreamId, manifestStream);
+    is.getSetupState().setManifestStream(manifestStreamId, manifestStream);
   }
 
   private static void setupStorageEndpoints(LibTExternal es, LibTInternal is, MyStream manifestStream) {
@@ -388,31 +405,32 @@ public class LibTHandlers {
       } else {
         endpointId = es.endpointIdRegistry.register(endpointName);
       }
-      is.endpointRegistration.addWaiting(endpointName, endpointId, dsp.getEndpoint());
+      is.storageRegistry.addWaiting(endpointName, endpointId, dsp.getEndpoint());
       es.getProxy().trigger(new DEndpoint.Connect(is.getTorrentId(), endpointId, storageProvider), es.endpointPort());
     }
   }
 
-  private static void cleanStorageEndpoints(LibTExternal es, LibTInternal is, Set<Identifier> endpoints) {
+  private static void cleanStorage(LibTExternal es, LibTInternal is) {
+    Set<Identifier> endpoints = is.storageRegistry.selfCleaning();
     for (Identifier endpointId : endpoints) {
       es.getProxy().trigger(new DEndpoint.Disconnect(is.getTorrentId(), endpointId), es.endpointPort());
     }
   }
 
   private static void readManifest(LibTExternal es, LibTInternal is) {
-    MyStream manifestStream = is.getTorrentBuilder().getManifestStream().getValue1();
+    MyStream manifestStream = is.getSetupState().getManifestStream();
     Result<ManifestJSON> manifestJSON = readManifestFromStorage(es, manifestStream);
     if (!manifestJSON.isSuccess()) {
       throw new RuntimeException("todo deal with failure");
     }
     Either<MyTorrent.Manifest, ManifestJSON> manifestResult = Either.right(manifestJSON.getValue());
-    is.getTorrentBuilder().setManifest(is.getTorrentId(), manifestResult);
+    is.getSetupState().setManifest(manifestResult);
   }
 
   private static void writeManifest(LibTExternal es, LibTInternal is, MyTorrent.Manifest manifest) {
     writeManifestToStorage(es, is, manifest);
     Either<MyTorrent.Manifest, ManifestJSON> manifestResult = Either.left(manifest);
-    is.getTorrentBuilder().setManifest(is.getTorrentId(), manifestResult);
+    is.getSetupState().setManifest(manifestResult);
   }
 
   private static void setupTransfer(LibTExternal es, LibTInternal is) {
@@ -428,12 +446,6 @@ public class LibTHandlers {
   private static void getManifest(LibTExternal es, LibTInternal is) {
     GetRawTorrent.Request req = new GetRawTorrent.Request(is.getTorrentId());
     es.getProxy().trigger(req, es.transferCtrlPort());
-  }
-  
-  private static void getExtendedDetails(LibTExternal es, LibTInternal is) {
-    HopsTorrentDownloadEvent.StartRequest downloadReq = is.getDownloadReq();
-    es.getProxy().answer(downloadReq, downloadReq.success(Result.success(true)));
-    is.finishDownloadReq();
   }
 
   private static void advanceTransfer(LibTExternal es, LibTInternal is) {
@@ -470,10 +482,10 @@ public class LibTHandlers {
       return HDFSHelper.readManifest(ugi, hdfsEndpoint, (HDFSResource) manifestStream.resource);
     }
   }
-  
+
   private static Result<Boolean> writeManifestToStorage(LibTExternal es, LibTInternal is,
     MyTorrent.Manifest manifest) {
-    MyStream manifestStream = is.getTorrentBuilder().getManifestStream().getValue1();
+    MyStream manifestStream = is.getSetupState().getManifestStream();
     if (es.fsmType.equals(Details.Types.DISK)) {
       ManifestJSON manifestJSON = ManifestHelper.getManifestJSON(manifest.manifestByte);
       return DiskHelper.writeManifest((DiskResource) manifestStream.resource, manifestJSON);
@@ -488,28 +500,29 @@ public class LibTHandlers {
   }
 
   private static void prepareDetails(LibTExternal es, LibTInternal is) {
-    Map<FileId, FileExtendedDetails> extendedDetails = new HashMap<>();
-    Pair<StreamId, MyStream> manifestStream = is.getTorrentBuilder().getManifestStream();
+    Map<FileId, FileExtendedDetails> ed = new HashMap<>();
+    StreamId manifestStreamId = is.getSetupState().getManifestStreamId();
+    MyStream manifestStream = is.getSetupState().getManifestStream();
     if (es.fsmType.equals(Details.Types.DISK)) {
-      DiskResource manifestResource = (DiskResource) manifestStream.getValue1().resource;
-      for (Map.Entry<String, FileId> file : is.getTorrentBuilder().getFiles().entrySet()) {
-        StreamId fileStreamId = manifestStream.getValue0().withFile(file.getValue());
+      DiskResource manifestResource = (DiskResource) manifestStream.resource;
+      for (Map.Entry<String, FileId> file : is.getSetupState().getFiles().entrySet()) {
+        StreamId fileStreamId = manifestStreamId.withFile(file.getValue());
         DiskResource fileResource = manifestResource.withFile(file.getKey());
-        MyStream fileStream = manifestStream.getValue1().withResource(fileResource);
-        extendedDetails.put(file.getValue(), new DiskFED(fileStreamId, fileStream));
+        MyStream fileStream = manifestStream.withResource(fileResource);
+        ed.put(file.getValue(), new DiskFED(fileStreamId, fileStream));
       }
     } else {
-      HDFSResource manifestResource = (HDFSResource) manifestStream.getValue1().resource;
-      for (Map.Entry<String, FileId> file : is.getTorrentBuilder().getFiles().entrySet()) {
-        StreamId fileStreamId = manifestStream.getValue0().withFile(file.getValue());
+      HDFSResource manifestResource = (HDFSResource) manifestStream.resource;
+      for (Map.Entry<String, FileId> file : is.getSetupState().getFiles().entrySet()) {
+        StreamId fileStreamId = manifestStreamId.withFile(file.getValue());
         HDFSResource fileResource = manifestResource.withFile(file.getKey());
-        MyStream fileStream = manifestStream.getValue1().withResource(fileResource);
+        MyStream fileStream = manifestStream.withResource(fileResource);
         //TODO Alex critical - kafka
         Optional<Pair<StreamId, MyStream>> kafkaStream = Optional.absent();
-        extendedDetails.put(file.getValue(), new HopsFED(Pair.with(fileStreamId, fileStream), kafkaStream));
+        ed.put(file.getValue(), new HopsFED(Pair.with(fileStreamId, fileStream), kafkaStream));
       }
     }
-    is.getTorrentBuilder().setExtendedDetails(extendedDetails);
+    is.getSetupState().setExtendedDetails(ed);
   }
 
   private static boolean withExtendedDetails(LibTExternal es) {
@@ -517,6 +530,37 @@ public class LibTHandlers {
       return false;
     } else {
       return true;
+    }
+  }
+
+  public static void failed(LibTInternal is, ComponentProxy proxy, Result r) throws FSMException {
+    Optional<Promise> p = is.ar.active();
+    if (!p.isPresent()) {
+      throw new FSMException("no active req");
+    }
+    proxy.answer(p.get(), p.get().fail(r));
+    is.ar.reset();
+  }
+
+  public static void success(LibTInternal is, ComponentProxy proxy, Result r) throws FSMException {
+    Optional<Promise> p = is.ar.active();
+    if (!p.isPresent()) {
+      throw new FSMException("no active req");
+    }
+    proxy.answer(p.get(), p.get().success(r));
+    is.ar.reset();
+  }
+
+  public static void stop(LibTInternal is, ComponentProxy proxy, HopsTorrentStopEvent.Request stop) throws FSMException {
+    if (is.ar.isStopping()) {
+      proxy.answer(stop, stop.fail(Result.logicalFail("stop already in progress")));
+    } else {
+      try {
+        failed(is, proxy, Result.logicalFail("stop event"));
+      } catch (FSMException ex) {
+        //no active request - possible when actively downloading/uploading
+      }
+      is.setStop(stop);
     }
   }
 }

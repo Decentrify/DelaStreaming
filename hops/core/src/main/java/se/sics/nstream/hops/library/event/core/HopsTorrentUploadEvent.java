@@ -20,6 +20,7 @@ package se.sics.nstream.hops.library.event.core;
 
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.kompics.Promise;
 import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -34,72 +35,78 @@ import se.sics.nstream.hops.hdfs.HDFSResource;
  */
 public class HopsTorrentUploadEvent {
 
-    public static class Request extends Direct.Request<Response> implements VoDMngrEvent, FSMEvent {
+  public static class Request extends Promise<Response> implements VoDMngrEvent, FSMEvent {
 
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        public final String torrentName;
-        public final Integer projectId;
-        public final HDFSEndpoint hdfsEndpoint;
-        public final HDFSResource manifestResource;
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+    public final String torrentName;
+    public final Integer projectId;
+    public final HDFSEndpoint hdfsEndpoint;
+    public final HDFSResource manifestResource;
 
-        public Request(Identifier eventId, OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint,  HDFSResource manifestResource) {
-            this.eventId = eventId;
-            this.torrentId = torrentId;
-            this.torrentName = torrentName;
-            this.projectId = projectId;
-            this.hdfsEndpoint = hdfsEndpoint;
-            this.manifestResource = manifestResource;
-        }
-
-        public Request(OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
-            this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, hdfsEndpoint, hdfsResource);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        public Response failed(Result result) {
-            return new Failed(this, result);
-        }
-        
-        public Response success(Result<Boolean> result) {
-            return new Success(this, result);
-        }
-
-        @Override
-        public Identifier getBaseId() {
-          return torrentId.baseId;
-        }
+    public Request(Identifier eventId, OverlayId torrentId, String torrentName, Integer projectId,
+      HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource) {
+      this.eventId = eventId;
+      this.torrentId = torrentId;
+      this.torrentName = torrentName;
+      this.projectId = projectId;
+      this.hdfsEndpoint = hdfsEndpoint;
+      this.manifestResource = manifestResource;
     }
 
-    public static abstract class Response implements Direct.Response, StreamEvent {
-
-        public final Request req;
-        public final Result<Boolean> result;
-
-        public Response(Request req, Result<Boolean> result) {
-            this.req = req;
-            this.result = result;
-        }
-
-        @Override
-        public Identifier getId() {
-            return req.eventId;
-        }
+    public Request(OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint,
+      HDFSResource hdfsResource) {
+      this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, hdfsEndpoint, hdfsResource);
     }
-    
-    public static class Success extends Response {
-        public Success(Request req, Result<Boolean> result) {
-            super(req, result);
-        }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
-    
-    public static class Failed extends Response {
-        public Failed(Request req, Result<Boolean> result) {
-            super(req, result);
-        }
+
+    @Override
+    public Response fail(Result result) {
+      return new Failed(this, result);
     }
+
+    @Override
+    public Response success(Result result) {
+      return new Success(this, result);
+    }
+
+    @Override
+    public Identifier getBaseId() {
+      return torrentId.baseId;
+    }
+  }
+
+  public static abstract class Response implements Direct.Response, StreamEvent {
+
+    public final Request req;
+    public final Result<Boolean> result;
+
+    public Response(Request req, Result<Boolean> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.eventId;
+    }
+  }
+
+  public static class Success extends Response {
+
+    public Success(Request req, Result<Boolean> result) {
+      super(req, result);
+    }
+  }
+
+  public static class Failed extends Response {
+
+    public Failed(Request req, Result<Boolean> result) {
+      super(req, result);
+    }
+  }
 }

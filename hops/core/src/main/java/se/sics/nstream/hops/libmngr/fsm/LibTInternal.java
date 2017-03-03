@@ -21,20 +21,28 @@ package se.sics.nstream.hops.libmngr.fsm;
 import com.google.common.base.Optional;
 import java.util.LinkedList;
 import java.util.List;
-import se.sics.kompics.ComponentProxy;
+import java.util.Map;
+import org.javatuples.Pair;
+import se.sics.kompics.Promise;
+import se.sics.ktoolbox.nutil.fsm.api.FSMException;
 import se.sics.ktoolbox.nutil.fsm.api.FSMInternalState;
 import se.sics.ktoolbox.nutil.fsm.api.FSMInternalStateBuilder;
 import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
+import se.sics.ktoolbox.util.Either;
+import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.hops.libmngr.EndpointRegistration;
+import se.sics.nstream.FileId;
+import se.sics.nstream.StreamId;
 import se.sics.nstream.hops.libmngr.TorrentBuilder;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
-import se.sics.nstream.library.Library;
+import se.sics.nstream.hops.manifest.ManifestJSON;
 import se.sics.nstream.library.restart.TorrentRestart;
+import se.sics.nstream.storage.durable.util.FileExtendedDetails;
+import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
 import se.sics.nstream.transfer.MyTorrent;
 
 /**
@@ -44,84 +52,64 @@ public class LibTInternal implements FSMInternalState {
 
   public final FSMId fsmId;
   public final String fsmName;
-  //either
-  private Optional<HopsTorrentUploadEvent.Request> uploadReq = Optional.absent();
-  private Optional<TorrentRestart.UpldReq> uRestartReq = Optional.absent();
-  private Optional<HopsTorrentDownloadEvent.StartRequest> downloadReq = Optional.absent();
-  private Optional<HopsTorrentDownloadEvent.AdvanceRequest> advanceReq = Optional.absent();
-  private Optional<TorrentRestart.DwldReq> dRestartReq = Optional.absent();
-  //
-  private HopsTorrentStopEvent.Request stopReq;
-  //
+
+  public final ActiveRequest ar;
   private OverlayId torrentId;
+  private TorrentState torrentState;
+  public final LibTEndpointRegistry storageRegistry = new LibTEndpointRegistry();
+
   private List<KAddress> partners;
-  public final EndpointRegistration endpointRegistration = new EndpointRegistration();
-  private TorrentBuilder torrentBuilder;
   private MyTorrent torrent;
 
   public LibTInternal(FSMId fsmId) {
     this.fsmId = fsmId;
     this.fsmName = LibTFSM.NAME;
+    this.ar = new ActiveRequest();
   }
 
-  public void setUploadInit(HopsTorrentUploadEvent.Request req) {
-    this.uploadReq = Optional.of(req);
+  public void setUpload(HopsTorrentUploadEvent.Request req) throws FSMException {
+    ar.setActive(req);
     this.torrentId = req.torrentId;
     this.partners = new LinkedList<>();
+    this.torrentState = new TSetup(torrentId, false, false);
   }
 
-  public void setUploadRestartInit(TorrentRestart.UpldReq req) {
-    this.uRestartReq = Optional.of(req);
+  public void setUploadRestart(TorrentRestart.UpldReq req) throws FSMException {
+    ar.setActive(req);
     this.torrentId = req.torrentId;
     this.partners = req.partners;
+    this.torrentState = new TSetup(torrentId, false, false);
   }
 
-  public void setDownloadInit(HopsTorrentDownloadEvent.StartRequest req) {
-    this.downloadReq = Optional.of(req);
+  public void setDownload(HopsTorrentDownloadEvent.StartRequest req) throws FSMException {
+    ar.setActive(req);
     this.torrentId = req.torrentId;
     this.partners = req.partners;
-  }
-  
-  public void setDownloadAdvance(HopsTorrentDownloadEvent.AdvanceRequest req) {
-    this.advanceReq = Optional.of(req);
+    this.torrentState = new TSetup(torrentId, true, true);
   }
 
-  public void setDownloadRestartInit(TorrentRestart.DwldReq req) {
-    this.dRestartReq = Optional.of(req);
+  public void setDownloadAdvance(HopsTorrentDownloadEvent.AdvanceRequest req) throws FSMException {
+    ar.setActive(req);
+  }
+
+  public void setDownloadRestart(TorrentRestart.DwldReq req) throws FSMException {
+    ar.setActive(req);
     this.torrentId = req.torrentId;
     this.partners = req.partners;
+    this.torrentState = new TSetup(torrentId, false, true);
   }
 
-  public HopsTorrentUploadEvent.Request getUploadReq() {
-    return uploadReq.get();
+  public void setStop(HopsTorrentStopEvent.Request req) throws FSMException {
+    ar.setActive(req);
   }
 
-  public void finishUploadReq() {
-    uploadReq = Optional.absent();
+  public TStarted completeTransferSetup() throws FSMException {
+    torrentState = ((TSetup) torrentState).finish();
+    return (TStarted) torrentState;
   }
 
-  public boolean isDownload() {
-    return downloadReq.isPresent();
-  }
-  
-  public boolean isDownloadRestart() {
-    return dRestartReq.isPresent();
-  }
-  
-  public HopsTorrentDownloadEvent.StartRequest getDownloadReq() {
-    return downloadReq.get();
-  }
-
-  public void finishDownloadReq() {
-    downloadReq = Optional.absent();
-  }
-
-  public HopsTorrentStopEvent.Request getStopReq() {
-    return stopReq;
-  }
-
-  public void setStopReq(HopsTorrentStopEvent.Request stopReq) {
-    this.stopReq = stopReq;
+  public TSetup getSetupState() {
+    return (TSetup) torrentState;
   }
 
   public OverlayId getTorrentId() {
@@ -132,14 +120,6 @@ public class LibTInternal implements FSMInternalState {
     return partners;
   }
 
-  public TorrentBuilder getTorrentBuilder() {
-    return torrentBuilder;
-  }
-
-  public void setTorrentBuilder(TorrentBuilder torrentBuilder) {
-    this.torrentBuilder = torrentBuilder;
-  }
-
   public MyTorrent getTorrent() {
     return torrent;
   }
@@ -147,59 +127,108 @@ public class LibTInternal implements FSMInternalState {
   public void setTorrent(MyTorrent torrent) {
     this.torrent = torrent;
   }
-  
-  public void reqFailed(ComponentProxy proxy) {
-    if (downloadReq.isPresent()) {
-      proxy.answer(downloadReq.get(), downloadReq.get().
-        failed(Result.logicalFail("concurrent stop event with download:" + torrentId)));
-      downloadReq = Optional.absent();
-    } else if (advanceReq.isPresent()) {
-      proxy.answer(advanceReq.get(), advanceReq.get().
-        fail(Result.logicalFail("concurrent stop event with download:" + torrentId)));
-      advanceReq = Optional.absent();
-    } else if (dRestartReq.isPresent()) {
-      dRestartReq.get().failed();
-      dRestartReq = Optional.absent();
-    } else if (uploadReq.isPresent()) {
-      proxy.answer(uploadReq.get(), uploadReq.get().
-        failed(Result.logicalFail("concurrent stop event with upload:" + torrentId)));
-      uploadReq = Optional.absent();
-    } else {
-      uRestartReq.get().failed();
-      uRestartReq = Optional.absent();
+
+  public static class ActiveRequest {
+
+    //either one
+    private Optional<Promise> activeRequest;
+
+    private ActiveRequest() {
+    }
+
+    private void setActive(Promise req) throws FSMException {
+      if (activeRequest.isPresent()) {
+        throw new FSMException("concurrent pending requests");
+      }
+      this.activeRequest = Optional.of(req);
+    }
+
+    public void reset() {
+      activeRequest = Optional.absent();
+    }
+
+    public Optional<Promise> active() {
+      return activeRequest;
+    }
+
+    public boolean isStopping() {
+      if (activeRequest.isPresent() && HopsTorrentStopEvent.Request.class.isAssignableFrom(activeRequest.get().
+        getClass())) {
+        return true;
+      }
+      return false;
     }
   }
-  
-  public LibTStates reqSuccess(ComponentProxy proxy, Library library) {
-    if (downloadReq.isPresent()) {
-      proxy.answer(downloadReq.get(), downloadReq.get().success(Result.success(true)));
-      library.download(torrentId, torrentBuilder.getManifestStream().getValue1());
-      downloadReq = Optional.absent();
-      return LibTStates.DOWNLOADING;
-    } else if (advanceReq.isPresent()) {
-      proxy.answer(advanceReq.get(), advanceReq.get().success(Result.success(true)));
-      library.download(torrentId, torrentBuilder.getManifestStream().getValue1());
-      advanceReq = Optional.absent();
-      return LibTStates.DOWNLOADING;
-    } else if (dRestartReq.isPresent()) {
-      dRestartReq.get().success();
-      library.download(torrentId, torrentBuilder.getManifestStream().getValue1());
-      dRestartReq = Optional.absent();
-      return LibTStates.DOWNLOADING;
+
+  public static interface TorrentState {
+  }
+
+  public static class TSetup implements TorrentState {
+
+    private final OverlayId torrentId;
+    private final TorrentBuilder torrentBuilder;
+    private final boolean downloadSetup;
+    private final boolean download;
+
+    private TSetup(OverlayId torrentId, boolean downloadSetup, boolean download) {
+      this.torrentId = torrentId;
+      this.torrentBuilder = new TorrentBuilder();
+      this.downloadSetup = downloadSetup;
+      this.download = download;
     }
-    if (uploadReq.isPresent()) {
-      proxy.answer(getUploadReq(), getUploadReq().success(Result.success(true)));
-      library.upload(torrentId, torrentBuilder.getManifestStream().getValue1());
-      uploadReq = Optional.absent();
-      return LibTStates.UPLOADING;
-    } else {
-      uRestartReq.get().success();
-      library.upload(torrentId, torrentBuilder.getManifestStream().getValue1());
-      uRestartReq = Optional.absent();
-      return LibTStates.UPLOADING;
+
+    public boolean isDownloadSetup() {
+      return downloadSetup;
+    }
+
+    public boolean isDownload() {
+      return download;
+    }
+    
+    public void storageSetupComplete(Pair<Map<String, Identifier>, Map<Identifier, StreamEndpoint>> setup) {
+      torrentBuilder.setEndpoints(setup);
+    }
+
+    public void setManifestStream(StreamId manifestStreamId, MyStream manifestStream) {
+      torrentBuilder.setManifestStream(manifestStreamId, manifestStream);
+    }
+
+    public MyStream getManifestStream() {
+      return torrentBuilder.getManifestStream().getValue1();
+    }
+
+    public StreamId getManifestStreamId() {
+      return torrentBuilder.getManifestStream().getValue0();
+    }
+
+    public void setManifest(Either<MyTorrent.Manifest, ManifestJSON> manifest) {
+      torrentBuilder.setManifest(torrentId, manifest);
+    }
+
+    public Map<String, FileId> getFiles() {
+      return torrentBuilder.getFiles();
+    }
+
+    public void setExtendedDetails(Map<FileId, FileExtendedDetails> extendedDetails) {
+      torrentBuilder.setExtendedDetails(extendedDetails);
+    }
+
+    private TStarted finish() {
+      return new TStarted(torrentBuilder.getTorrent(), getManifestStream());
     }
   }
-  
+
+  public static class TStarted implements TorrentState {
+
+    public final MyTorrent torrent;
+    public final MyStream manifestStream;
+
+    private TStarted(MyTorrent torrent, MyStream manifestStream) {
+      this.torrent = torrent;
+      this.manifestStream = manifestStream;
+    }
+  }
+
   public static class Builder implements FSMInternalStateBuilder {
 
     @Override

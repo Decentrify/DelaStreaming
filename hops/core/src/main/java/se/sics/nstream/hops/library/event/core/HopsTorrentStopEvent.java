@@ -20,6 +20,7 @@ package se.sics.nstream.hops.library.event.core;
 
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.kompics.Promise;
 import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -32,7 +33,7 @@ import se.sics.ktoolbox.util.result.Result;
  */
 public class HopsTorrentStopEvent {
 
-  public static class Request extends Direct.Request<Response> implements VoDMngrEvent, FSMEvent {
+  public static class Request extends Promise<Response> implements VoDMngrEvent, FSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -56,8 +57,9 @@ public class HopsTorrentStopEvent {
       return torrentId.baseId;
     }
 
-    public Response success() {
-      return new Response(this, Result.success(true));
+    @Override
+    public Response success(Result r) {
+      return new Response(this, r);
     }
 
     public Response badRequest(Exception ex) {
@@ -66,6 +68,11 @@ public class HopsTorrentStopEvent {
 
     public Response internalFailure(Exception ex) {
       return new Response(this, Result.internalFailure(ex));
+    }
+    
+    @Override
+    public Response fail(Result r) {
+      return new Response(this, r);
     }
   }
 

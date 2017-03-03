@@ -85,11 +85,15 @@ public class Library {
     return Result.success(true);
   }
 
-  public void remove(OverlayId torrentId) {
+  public void killed(OverlayId torrentId) {
     Torrent torrent = torrents.remove(torrentId);
     if (torrent != null) {
       updateSummary();
     }
+  }
+  
+  public void killing(OverlayId torrentId) {
+    torrents.get(torrentId).setTorrentStatus(TorrentState.KILLING);
   }
 
   public void prepareUpload(Integer projectId, OverlayId torrentId, String torrentName) {

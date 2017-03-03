@@ -22,6 +22,7 @@ import com.google.common.base.Optional;
 import java.util.List;
 import java.util.Map;
 import se.sics.kompics.Direct;
+import se.sics.kompics.Promise;
 import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -39,7 +40,7 @@ import se.sics.nstream.hops.kafka.KafkaResource;
  */
 public class HopsTorrentDownloadEvent {
 
-  public static class StartRequest extends Direct.Request<StartResponse> implements StreamEvent, FSMEvent {
+  public static class StartRequest extends Promise<StartResponse> implements StreamEvent, FSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -49,7 +50,8 @@ public class HopsTorrentDownloadEvent {
     public final HDFSResource manifest;
     public final List<KAddress> partners;
 
-    public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint,
+    public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, Integer projectId,
+      HDFSEndpoint hdfsEndpoint,
       HDFSResource manifest, List<KAddress> partners) {
       this.eventId = eventId;
       this.torrentId = torrentId;
@@ -60,7 +62,8 @@ public class HopsTorrentDownloadEvent {
       this.partners = partners;
     }
 
-    public StartRequest(OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint, HDFSResource manifest,
+    public StartRequest(OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint,
+      HDFSResource manifest,
       List<KAddress> partners) {
       this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, hdfsEndpoint, manifest, partners);
     }
@@ -70,11 +73,13 @@ public class HopsTorrentDownloadEvent {
       return eventId;
     }
 
-    public StartResponse failed(Result result) {
+    @Override
+    public StartResponse fail(Result result) {
       return new StartFailed(this, result);
     }
 
-    public StartResponse success(Result<Boolean> result) {
+    @Override
+    public StartResponse success(Result result) {
       return new StartSuccess(this, result);
     }
 
@@ -135,7 +140,7 @@ public class HopsTorrentDownloadEvent {
     }
   }
 
-  public static class AdvanceRequest extends Direct.Request<AdvanceResponse> implements StreamEvent, FSMEvent {
+  public static class AdvanceRequest extends Promise<AdvanceResponse> implements StreamEvent, FSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -167,10 +172,12 @@ public class HopsTorrentDownloadEvent {
       return eventId;
     }
 
-    public AdvanceResponse success(Result<Boolean> result) {
+    @Override
+    public AdvanceResponse success(Result result) {
       return new AdvanceResponse(this, result);
     }
 
+    @Override
     public AdvanceResponse fail(Result result) {
       return new AdvanceResponse(this, result);
     }

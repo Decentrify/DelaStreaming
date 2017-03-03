@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.libmngr;
+package se.sics.nstream.hops.libmngr.fsm;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,7 +29,7 @@ import se.sics.nstream.storage.durable.util.StreamEndpoint;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class EndpointRegistration {
+public class LibTEndpointRegistry {
 
   private final Map<String, Identifier> nameToId = new HashMap<>();
   private final Map<Identifier, StreamEndpoint> endpoints = new HashMap<>();
