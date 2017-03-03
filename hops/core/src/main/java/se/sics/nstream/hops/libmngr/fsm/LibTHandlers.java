@@ -263,6 +263,7 @@ public class LibTHandlers {
             //on upload req/restart the manifest is present on endpoint
             readManifest(es, is);
             prepareDetails(es, is);
+            is.advanceTransfer();
             advanceTransfer(es, is);
             return LibTStates.ADVANCE_TRANSFER;
           }
@@ -286,6 +287,7 @@ public class LibTHandlers {
             return LibTStates.EXTENDED_DETAILS;
           } else {
             prepareDetails(es, is);
+            is.advanceTransfer();
             advanceTransfer(es, is);
             return LibTStates.ADVANCE_TRANSFER;
           }
@@ -306,6 +308,7 @@ public class LibTHandlers {
           LOG.debug("<{}>torrent:{} - extended details", req.getBaseId(), req.torrentId);
           is.setDownloadAdvance(req);
           prepareDetails(es, is);
+          is.advanceTransfer();
           advanceTransfer(es, is);
           return LibTStates.ADVANCE_TRANSFER;
         } else {
@@ -326,9 +329,8 @@ public class LibTHandlers {
             throw new RuntimeException("mismatch between library and fsm - broken");
           }
           success(is, es.getProxy(), Result.success(true));
-          boolean download = is.getSetupState().isDownload();
-          LibTInternal.TStarted state = is.completeTransferSetup();
-          if (download) {
+          LibTInternal.TComplete state = is.getCompleteState();
+          if (state.download) {
             es.library.download(is.getTorrentId(), state.manifestStream);
             return LibTStates.DOWNLOADING;
           } else {
@@ -449,7 +451,7 @@ public class LibTHandlers {
   }
 
   private static void advanceTransfer(LibTExternal es, LibTInternal is) {
-    SetupTransfer.Request req = new SetupTransfer.Request(is.getTorrentId(), is.getTorrent());
+    SetupTransfer.Request req = new SetupTransfer.Request(is.getTorrentId(), is.getCompleteState().torrent);
     es.getProxy().trigger(req, es.transferCtrlPort());
   }
 

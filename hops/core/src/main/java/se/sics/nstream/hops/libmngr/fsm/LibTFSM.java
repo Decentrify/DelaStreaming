@@ -172,6 +172,7 @@ public class LibTFSM {
           .inState(LibTStates.PREPARE_STORAGE, LibTHandlers.prepareStorage)
         .onEvent(DEndpoint.Disconnected.class)
           .inState(LibTStates.CLEAN_STORAGE, LibTHandlers.endpointCleaning)
+        .buildEvent()
       .buildEvents()
       .fallback(LibTHandlers.fallbackHandler)
       .buildFallbacks();

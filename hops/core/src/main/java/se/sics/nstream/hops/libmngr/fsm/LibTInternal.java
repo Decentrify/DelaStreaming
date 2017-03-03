@@ -102,14 +102,17 @@ public class LibTInternal implements FSMInternalState {
   public void setStop(HopsTorrentStopEvent.Request req) throws FSMException {
     ar.setActive(req);
   }
-
-  public TStarted completeTransferSetup() throws FSMException {
+  
+  public void advanceTransfer() {
     torrentState = ((TSetup) torrentState).finish();
-    return (TStarted) torrentState;
   }
 
   public TSetup getSetupState() {
     return (TSetup) torrentState;
+  }
+  
+  public TComplete getCompleteState() {
+    return (TComplete) torrentState;
   }
 
   public OverlayId getTorrentId() {
@@ -120,18 +123,10 @@ public class LibTInternal implements FSMInternalState {
     return partners;
   }
 
-  public MyTorrent getTorrent() {
-    return torrent;
-  }
-
-  public void setTorrent(MyTorrent torrent) {
-    this.torrent = torrent;
-  }
-
   public static class ActiveRequest {
 
     //either one
-    private Optional<Promise> activeRequest;
+    private Optional<Promise> activeRequest = Optional.absent();
 
     private ActiveRequest() {
     }
@@ -181,10 +176,6 @@ public class LibTInternal implements FSMInternalState {
       return downloadSetup;
     }
 
-    public boolean isDownload() {
-      return download;
-    }
-    
     public void storageSetupComplete(Pair<Map<String, Identifier>, Map<Identifier, StreamEndpoint>> setup) {
       torrentBuilder.setEndpoints(setup);
     }
@@ -213,19 +204,21 @@ public class LibTInternal implements FSMInternalState {
       torrentBuilder.setExtendedDetails(extendedDetails);
     }
 
-    private TStarted finish() {
-      return new TStarted(torrentBuilder.getTorrent(), getManifestStream());
+    private TComplete finish() {
+      return new TComplete(torrentBuilder.getTorrent(), getManifestStream(), download);
     }
   }
 
-  public static class TStarted implements TorrentState {
+  public static class TComplete implements TorrentState {
 
     public final MyTorrent torrent;
     public final MyStream manifestStream;
+    public final boolean download;
 
-    private TStarted(MyTorrent torrent, MyStream manifestStream) {
+    private TComplete(MyTorrent torrent, MyStream manifestStream, boolean download) {
       this.torrent = torrent;
       this.manifestStream = manifestStream;
+      this.download = download;
     }
   }
 
