@@ -30,11 +30,12 @@ public class DwnlConnConfig {
     public static String MIN_RTO = "transfer.download.minRTO";
   }
   
+  public static final long DEFAULT_MIN_RTO = 1000; //1s
   public final Optional<String> reportDir;
   public final long minRTO;
   
   public DwnlConnConfig(Config config) {
     reportDir = Optional.fromNullable(config.getValue(Names.REPORT_DIR, String.class));
-    minRTO = config.getValue(Names.MIN_RTO, Long.class);
+    minRTO = config.getValueOrDefault(Names.MIN_RTO, DEFAULT_MIN_RTO);
   }
 }
