@@ -60,7 +60,6 @@ import se.sics.nstream.util.range.RangeKReference;
 import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class UpldConnComp extends ComponentDefinition {

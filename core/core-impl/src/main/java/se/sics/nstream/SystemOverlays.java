@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops;
+package se.sics.nstream;
 
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.TorrentIds;

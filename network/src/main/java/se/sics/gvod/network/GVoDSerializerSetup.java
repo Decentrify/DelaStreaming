@@ -52,6 +52,11 @@ public class GVoDSerializerSetup {
     
     public static enum GVoDSerializers {
         FileIdentifier(FileId.class, "nStreamFileIdentifier"),
+//        TorrentConnect(TorrentMsg.Connect.class, "nStreamTorrentConnect"),
+//        TorrentConnected(TorrentMsg.Connected.class, "nStreamTorrentConnected"),
+//        TorrentChoke(TorrentMsg.Choke.class, "nStreamTorrentChoke"),
+//        TorrentUnchoke(TorrentMsg.Unchoke.class, "nStreamTorrentUnchoke"),
+//        TorrentDisconnect(TorrentMsg.Disconnect.class, "nStreamTorrentDisconnect"),
         NetConnectRequest(NetConnect.Request.class, "nStreamNetConnRequest"),
         NetConnectResponse(NetConnect.Response.class, "nStreamNetConnResponse"),
         BlockDetails(BlockDetails.class, "nstreamBlockDetails"),
@@ -97,7 +102,27 @@ public class GVoDSerializerSetup {
         FileIdentifierSerializer fileIdentifierSerializer = new FileIdentifierSerializer(currentId++);
         Serializers.register(fileIdentifierSerializer, GVoDSerializers.FileIdentifier.serializerName);
         Serializers.register(GVoDSerializers.FileIdentifier.serializedClass, GVoDSerializers.FileIdentifier.serializerName);
-       
+        
+//        TorrentMsgSerializer.Connect tConnectS = new TorrentMsgSerializer.Connect(currentId++);
+//        Serializers.register(tConnectS, GVoDSerializers.TorrentConnect.serializerName);
+//        Serializers.register(GVoDSerializers.TorrentConnect.serializedClass, GVoDSerializers.TorrentConnect.serializerName);
+//        
+//        TorrentMsgSerializer.Connected tConnectedS = new TorrentMsgSerializer.Connected(currentId++);
+//        Serializers.register(tConnectedS, GVoDSerializers.TorrentConnected.serializerName);
+//        Serializers.register(GVoDSerializers.TorrentConnected.serializedClass, GVoDSerializers.TorrentConnected.serializerName);
+//       
+//        TorrentMsgSerializer.Choke tChokeS = new TorrentMsgSerializer.Choke(currentId++);
+//        Serializers.register(tChokeS, GVoDSerializers.TorrentChoke.serializerName);
+//        Serializers.register(GVoDSerializers.TorrentChoke.serializedClass, GVoDSerializers.TorrentChoke.serializerName);
+//        
+//        TorrentMsgSerializer.Unchoke tUnchokeS = new TorrentMsgSerializer.Unchoke(currentId++);
+//        Serializers.register(tUnchokeS, GVoDSerializers.TorrentUnchoke.serializerName);
+//        Serializers.register(GVoDSerializers.TorrentUnchoke.serializedClass, GVoDSerializers.TorrentUnchoke.serializerName);
+//        
+//        TorrentMsgSerializer.Disconnect tDisconnectS = new TorrentMsgSerializer.Disconnect(currentId++);
+//        Serializers.register(tDisconnectS, GVoDSerializers.TorrentDisconnect.serializerName);
+//        Serializers.register(GVoDSerializers.TorrentDisconnect.serializedClass, GVoDSerializers.TorrentDisconnect.serializerName);
+        
         NetConnectSerializer.Request connRequestSerializer = new NetConnectSerializer.Request(currentId++);
         Serializers.register(connRequestSerializer, GVoDSerializers.NetConnectRequest.serializerName);
         Serializers.register(GVoDSerializers.NetConnectRequest.serializedClass, GVoDSerializers.NetConnectRequest.serializerName);

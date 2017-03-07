@@ -43,7 +43,7 @@ import se.sics.ktoolbox.util.network.basic.BasicAddress;
 import se.sics.ktoolbox.util.network.nat.NatAwareAddressImpl;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.TorrentIds;
-import se.sics.nstream.hops.SystemOverlays;
+import se.sics.nstream.SystemOverlays;
 import se.sics.nstream.hops.libmngr.HopsLibraryMngr;
 import se.sics.nstream.hops.libmngr.HopsLibraryMngrTestHelper;
 import se.sics.nstream.hops.library.HopsLibraryProvider;

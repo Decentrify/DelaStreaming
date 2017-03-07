@@ -30,7 +30,7 @@ public class FileId implements Identifier {
     public final OverlayId torrentId;
     public final int fileNr;
     
-    FileId(OverlayId torrentId, int fileNr) {
+    public FileId(OverlayId torrentId, int fileNr) {
         this.torrentId = torrentId;
         this.fileNr = fileNr;
     }

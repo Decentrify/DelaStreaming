@@ -302,4 +302,17 @@ public class DwnlConnWorkCtrl {
     return nextBlocks.size() + pendingCacheBlocks.size() + cachedHashes.size() + pendingHashes.size() 
       + hashReadyBlocks.size() + ongoingBlocks.size();
   }
+  
+  public Set<Integer> allBlocks() {
+    Set<Integer> blocks = new TreeSet<>();
+    blocks.addAll(nextBlocks);
+    blocks.addAll(pendingCacheBlocks);
+    blocks.addAll(hashReadyBlocks);
+    blocks.addAll(ongoingBlocks.keySet());
+    return blocks;
+  }
+  
+  public int allBlocksSize() {
+    return nextBlocks.size() + pendingCacheBlocks.size() + hashReadyBlocks.size() + ongoingBlocks.size();
+  }
 }

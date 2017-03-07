@@ -31,9 +31,9 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
-import se.sics.nstream.library.restart.LibTFSMEvent;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.nstream.library.restart.LibTFSMEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

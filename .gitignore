@@ -8,8 +8,6 @@
 /manager/target/
 /network/target/
 
-/core/core-impl/src/test/resources/library2/status.file
-
 /simulator/target/
 /simulator/simulation*
 /system/simulation*
@@ -21,3 +19,5 @@
 .DS_Store
 /core/core-impl/src/test/resources
 /manager/src/test/resources/
+/core/core-impl/src/test/resources/dmTest/
+/core/core-impl/src/test/resources/libraryTest/
