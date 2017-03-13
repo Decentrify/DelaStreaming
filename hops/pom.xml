@@ -13,5 +13,6 @@
     <modules>
         <module>core</module>
         <module>network</module>
+        <module>api</module>
     </modules>
 </project>

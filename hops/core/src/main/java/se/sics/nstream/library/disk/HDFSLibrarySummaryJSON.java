@@ -22,13 +22,13 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import org.javatuples.Pair;
+import se.sics.gvod.hops.api.Torrent;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.hops.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSResource;
-import se.sics.nstream.library.Library;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.transfer.MyTorrent;
@@ -163,7 +163,7 @@ public class HDFSLibrarySummaryJSON {
       this.partners = partners;
     }
 
-    public static TorrentJSON toJSON(OverlayId tId, Library.Torrent t) {
+    public static TorrentJSON toJSON(OverlayId tId, Torrent t) {
       HDFSLibrarySummaryJSON.TorrentJSON torrentJSON = new HDFSLibrarySummaryJSON.TorrentJSON(t.projectId, 
         t.torrentName, t.getTorrentStatus().toString(), tId.baseId.toString());
       //endpoint
@@ -181,10 +181,10 @@ public class HDFSLibrarySummaryJSON {
       return torrentJSON;
     }
 
-    public Pair<OverlayId, Library.Torrent> fromJSON(OverlayIdFactory torrentIdFactory) {
+    public Pair<OverlayId, Torrent> fromJSON(OverlayIdFactory torrentIdFactory) {
       OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(baseId));
       TorrentState status = TorrentState.valueOf(torrentStatus);
-      Library.Torrent t = new Library.Torrent(projectId, torrentName, status);
+      Torrent t = new Torrent(projectId, torrentName, status);
       
       HDFSEndpoint hdfsEndpoint = HDFSEndpoint.getBasic(endpoint.getUrl(), endpoint.getUser());
       HDFSResource manifestResource = new HDFSResource(dirPath, MyTorrent.MANIFEST_NAME);

@@ -20,7 +20,7 @@ package se.sics.nstream.library.event.torrent;
 
 import java.util.List;
 import java.util.Map;
-import se.sics.gvod.mngr.util.ElementSummary;
+import se.sics.nstream.mngr.util.ElementSummary;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;

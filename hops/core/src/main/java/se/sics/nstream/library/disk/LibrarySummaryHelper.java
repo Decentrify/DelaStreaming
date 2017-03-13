@@ -29,12 +29,12 @@ import java.util.Scanner;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.gvod.hops.api.Torrent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.hdfs.HDFSResource;
-import se.sics.nstream.library.Library;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.disk.DiskResource;
 import se.sics.nstream.storage.durable.util.MyStream;
@@ -46,14 +46,14 @@ public class LibrarySummaryHelper {
 
   private static final Logger LOG = LoggerFactory.getLogger(LibrarySummaryHelper.class);
 
-  public static LibrarySummaryJSON toSummary(Map<OverlayId, Library.Torrent> torrents) {
+  public static LibrarySummaryJSON toSummary(Map<OverlayId, Torrent> torrents) {
     LibrarySummaryJSON library = new LibrarySummaryJSON();
     DiskLibrarySummaryJSON disk = new DiskLibrarySummaryJSON();
     library.setDiskLibrary(disk);
     HDFSLibrarySummaryJSON hdfs = new HDFSLibrarySummaryJSON();
     library.setHdfsLibrary(hdfs);
 
-    for (Map.Entry<OverlayId, Library.Torrent> torrent : torrents.entrySet()) {
+    for (Map.Entry<OverlayId, Torrent> torrent : torrents.entrySet()) {
       if(!(torrent.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)
         || torrent.getValue().getTorrentStatus().equals(TorrentState.UPLOADING))) {
         continue;
@@ -69,15 +69,15 @@ public class LibrarySummaryHelper {
     return library;
   }
 
-  public static Map<OverlayId, Library.Torrent> fromSummary(LibrarySummaryJSON summary,
+  public static Map<OverlayId, Torrent> fromSummary(LibrarySummaryJSON summary,
     OverlayIdFactory torrentIdFactory) {
-    Map<OverlayId, Library.Torrent> library = new HashMap<>();
+    Map<OverlayId, Torrent> library = new HashMap<>();
     for (DiskLibrarySummaryJSON.TorrentJSON t : summary.getDiskLibrary().getTorrents()) {
-      Pair<OverlayId, Library.Torrent> torrent = t.fromJSON(torrentIdFactory);
+      Pair<OverlayId, Torrent> torrent = t.fromJSON(torrentIdFactory);
       library.put(torrent.getValue0(), torrent.getValue1());
     }
     for (HDFSLibrarySummaryJSON.TorrentJSON t : summary.getHdfsLibrary().getTorrents()) {
-      Pair<OverlayId, Library.Torrent> torrent = t.fromJSON(torrentIdFactory);
+      Pair<OverlayId, Torrent> torrent = t.fromJSON(torrentIdFactory);
       library.put(torrent.getValue0(), torrent.getValue1());
     }
     return library;

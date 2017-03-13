@@ -16,32 +16,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library;
+package se.sics.nstream.library.disk;
 
-import com.google.common.base.Optional;
-import se.sics.gvod.hops.api.LibraryType;
 import se.sics.kompics.config.Config;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsLibraryKConfig {
+public class DiskLibraryConfig {
   public static class Names {
-    public static final String LIBRARY_TYPE = "hops.library.type";
-    public static final String STORAGE_TYPE = "hops.storage.type";
+    public static final String LIBRARY_SUMMARY = "hops.library.disk.summary";
   }
-
-  public final Config configCore;
-  public final Details.Types baseEndpointType;
-  public final LibraryType libraryType;
-
-  public HopsLibraryKConfig(Config config) {
-    this.configCore = config;
-    Optional<String> baseEndpointString = config.readValue(Names.STORAGE_TYPE, String.class);
-    if(!baseEndpointString.isPresent()) {
-      throw new RuntimeException("storage type undefined");
+  
+  public final String librarySummary;
+  
+  public DiskLibraryConfig(Config config) {
+    librarySummary = config.getValue(Names.LIBRARY_SUMMARY, String.class);
+    if(librarySummary == null) {
+      throw new RuntimeException("disk library path not configured");
     }
-    baseEndpointType = Details.Types.valueOf(baseEndpointString.get());
-    libraryType = config.getValueOrDefault(Names.LIBRARY_TYPE, LibraryType.DISK);
   }
 }

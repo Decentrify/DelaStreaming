@@ -16,23 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.util;
-
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.nstream.library.util.TorrentState;
+package se.sics.gvod.hops.api;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ElementSummary {
-
-    public final String fileName;
-    public final OverlayId torrentId;
-    public final TorrentState status;
-
-    public ElementSummary(String name, OverlayId torrentId, TorrentState status) {
-        this.fileName = name;
-        this.torrentId = torrentId;
-        this.status = status;
-    }
+public enum LibraryType {
+  DISK, MYSQL
 }
