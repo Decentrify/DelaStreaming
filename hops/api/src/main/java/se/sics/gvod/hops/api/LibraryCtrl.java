@@ -32,9 +32,9 @@ public interface LibraryCtrl {
   public Map<OverlayId, Torrent> getTorrents();
   public boolean containsTorrent(OverlayId tId);
   public TorrentState stateOf(OverlayId tId);
-  public void prepareUpload(Integer projectId, OverlayId torrentId, String torrentName);
+  public void prepareUpload(OverlayId torrentId, Integer projectId, Integer datasetId, String torrentName);
   public void upload(OverlayId torrentId, MyStream manifestStream);
-  public void prepareDownload(Integer projectId, OverlayId torrentId, String torrentName, List<KAddress> partners);
+  public void prepareDownload(OverlayId torrentId, Integer projectId, Integer datasetId, String torrentName, List<KAddress> partners);
   public void download(OverlayId torrentId, MyStream manifestStream);
   public void finishDownload(OverlayId torrentId);
   public void killing(OverlayId torrentId);

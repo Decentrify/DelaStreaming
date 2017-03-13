@@ -90,6 +90,7 @@ public class HDFSLibrarySummaryJSON {
   public static class TorrentJSON {
 
     private Integer projectId;
+    private Integer datasetId;
     private String torrentName;
     private String torrentStatus;
     private String baseId;
@@ -100,8 +101,9 @@ public class HDFSLibrarySummaryJSON {
     public TorrentJSON() {
     }
     
-    public TorrentJSON(Integer projectId, String torrentName, String torrentStatus, String baseId) {
+    public TorrentJSON(Integer projectId, Integer datasetId, String torrentName, String torrentStatus, String baseId) {
       this.projectId = projectId;
+      this.datasetId = datasetId;
       this.torrentName = torrentName;
       this.torrentStatus = torrentStatus;
       this.baseId = baseId;
@@ -115,6 +117,14 @@ public class HDFSLibrarySummaryJSON {
       this.projectId = projectId;
     }
 
+    public Integer getDatasetId() {
+      return datasetId;
+    }
+
+    public void setDatasetId(Integer datasetId) {
+      this.datasetId = datasetId;
+    }
+    
     public String getTorrentName() {
       return torrentName;
     }
@@ -164,7 +174,7 @@ public class HDFSLibrarySummaryJSON {
     }
 
     public static TorrentJSON toJSON(OverlayId tId, Torrent t) {
-      HDFSLibrarySummaryJSON.TorrentJSON torrentJSON = new HDFSLibrarySummaryJSON.TorrentJSON(t.projectId, 
+      HDFSLibrarySummaryJSON.TorrentJSON torrentJSON = new HDFSLibrarySummaryJSON.TorrentJSON(t.projectId, t.datasetId,
         t.torrentName, t.getTorrentStatus().toString(), tId.baseId.toString());
       //endpoint
       HDFSEndpoint hdfsEndpoint = (HDFSEndpoint) t.getManifestStream().endpoint;
@@ -184,7 +194,7 @@ public class HDFSLibrarySummaryJSON {
     public Pair<OverlayId, Torrent> fromJSON(OverlayIdFactory torrentIdFactory) {
       OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(baseId));
       TorrentState status = TorrentState.valueOf(torrentStatus);
-      Torrent t = new Torrent(projectId, torrentName, status);
+      Torrent t = new Torrent(projectId, datasetId, torrentName, status);
       
       HDFSEndpoint hdfsEndpoint = HDFSEndpoint.getBasic(endpoint.getUrl(), endpoint.getUser());
       HDFSResource manifestResource = new HDFSResource(dirPath, MyTorrent.MANIFEST_NAME);

@@ -31,13 +31,15 @@ import se.sics.nstream.storage.durable.util.MyStream;
 public class Torrent {
 
   public final Integer projectId;
+  public final Integer datasetId;
   public final String torrentName;
   private TorrentState torrentStatus = TorrentState.NONE;
   private Optional<MyStream> manifestStream = Optional.absent();
   private List<KAddress> partners = new LinkedList<>();
 
-  public Torrent(Integer projectId, String torrentName, TorrentState torrentStatus) {
+  public Torrent(Integer projectId, Integer datasetId, String torrentName, TorrentState torrentStatus) {
     this.projectId = projectId;
+    this.datasetId = datasetId;
     this.torrentName = torrentName;
     this.torrentStatus = torrentStatus;
   }

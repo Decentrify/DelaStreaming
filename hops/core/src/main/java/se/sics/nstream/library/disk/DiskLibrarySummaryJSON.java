@@ -60,6 +60,7 @@ public class DiskLibrarySummaryJSON {
   public static class TorrentJSON {
 
     private Integer projectId;
+    private Integer datasetId;
     private String torrentName;
     private String torrentStatus;
     private String baseId;
@@ -69,8 +70,9 @@ public class DiskLibrarySummaryJSON {
     public TorrentJSON() {
     }
 
-    public TorrentJSON(Integer projectId, String torrentName, String torrentStatus, String baseId) {
+    public TorrentJSON(Integer projectId, Integer datasetId, String torrentName, String torrentStatus, String baseId) {
       this.projectId = projectId;
+      this.datasetId = datasetId;
       this.torrentName = torrentName;
       this.torrentStatus = torrentStatus;
       this.baseId = baseId;
@@ -84,6 +86,14 @@ public class DiskLibrarySummaryJSON {
       this.projectId = projectId;
     }
 
+    public Integer getDatasetId() {
+      return datasetId;
+    }
+
+    public void setDatasetId(Integer datasetId) {
+      this.datasetId = datasetId;
+    }
+    
     public String getTorrentName() {
       return torrentName;
     }
@@ -125,7 +135,7 @@ public class DiskLibrarySummaryJSON {
     }
 
     public static TorrentJSON toJSON(OverlayId tId, Torrent t) {
-      DiskLibrarySummaryJSON.TorrentJSON torrentJSON = new DiskLibrarySummaryJSON.TorrentJSON(t.projectId,
+      DiskLibrarySummaryJSON.TorrentJSON torrentJSON = new DiskLibrarySummaryJSON.TorrentJSON(t.projectId, t.datasetId,
         t.torrentName, t.getTorrentStatus().toString(), tId.baseId.toString());
       torrentJSON.setDirPath(((DiskResource) t.getManifestStream().resource).dirPath);
       List<AddressJSON> partners = new LinkedList<>();
@@ -139,7 +149,7 @@ public class DiskLibrarySummaryJSON {
     public Pair<OverlayId, Torrent> fromJSON(OverlayIdFactory torrentIdFactory) {
       OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(baseId));
       TorrentState status = TorrentState.valueOf(torrentStatus);
-      Torrent t = new Torrent(projectId, torrentName, status);
+      Torrent t = new Torrent(projectId, datasetId, torrentName, status);
       
       DiskResource manifestResource = new DiskResource(dirPath, MyTorrent.MANIFEST_NAME);
       MyStream manifestStream = new MyStream(new DiskEndpoint(), manifestResource);

@@ -75,24 +75,23 @@ public class HopsLibraryMngr {
     this.config = config;
     this.selfAdr = selfAdr;
     this.restart = new Restart(proxy);
-    
+
     hopsLibraryConfig = new HopsLibraryKConfig(config);
-    
+
     OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory();
-    if(LibraryType.DISK.equals(hopsLibraryConfig.libraryType)) {
+    if (LibraryType.DISK.equals(hopsLibraryConfig.libraryType)) {
       library = new DiskLibrary(torrentIdFactory, config);
     } else {
       library = null;
     }
-    
+
     this.libraryDetails = new LibraryDetails(proxy, library);
 
-    
     fsm = LibTFSM.getFSM(new LibTExternal(selfAdr, library, new EndpointIdRegistry(),
       hopsLibraryConfig.baseEndpointType), oexa);
     fsm.setProxy(proxy);
   }
-  
+
   public void start() {
     //not sure when the provided ports are set, but for sure they are set after Start event. Ports are not set in constructor
     //TODO Alex - might lose some msg between Start and process of Start
@@ -129,12 +128,13 @@ public class HopsLibraryMngr {
       Map<OverlayId, Torrent> torrents = library.getTorrents();
 
       for (Map.Entry<OverlayId, Torrent> t : torrents.entrySet()) {
+        Torrent torrent = t.getValue();
         if (t.getValue().getTorrentStatus().equals(TorrentState.UPLOADING)) {
-          proxy.trigger(new TorrentRestart.UpldReq(t.getKey(), t.getValue().torrentName, t.getValue().projectId,
-            t.getValue().getPartners(), t.getValue().getManifestStream()), restartPort);
+          proxy.trigger( new TorrentRestart.UpldReq(t.getKey(), torrent.torrentName, torrent.projectId, 
+            torrent.datasetId, torrent.getPartners(), torrent.getManifestStream()), restartPort);
         } else if (t.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)) {
-          proxy.trigger(new TorrentRestart.DwldReq(t.getKey(), t.getValue().torrentName, t.getValue().projectId,
-            t.getValue().getPartners(), t.getValue().getManifestStream()), restartPort);
+          proxy.trigger(new TorrentRestart.DwldReq(t.getKey(), torrent.torrentName, torrent.projectId,
+            torrent.datasetId, torrent.getPartners(), torrent.getManifestStream()), restartPort);
         }
       }
     }

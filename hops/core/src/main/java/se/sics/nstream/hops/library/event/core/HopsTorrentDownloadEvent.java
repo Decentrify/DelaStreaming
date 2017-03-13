@@ -46,26 +46,26 @@ public class HopsTorrentDownloadEvent {
     public final OverlayId torrentId;
     public final String torrentName;
     public final Integer projectId;
+    public final Integer datasetId;
     public final HDFSEndpoint hdfsEndpoint;
     public final HDFSResource manifest;
     public final List<KAddress> partners;
 
-    public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, Integer projectId,
-      HDFSEndpoint hdfsEndpoint,
-      HDFSResource manifest, List<KAddress> partners) {
+    public StartRequest(Identifier eventId, OverlayId torrentId, String torrentName, Integer projectId, 
+      Integer datasetId, HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
       this.eventId = eventId;
       this.torrentId = torrentId;
       this.torrentName = torrentName;
       this.projectId = projectId;
+      this.datasetId = datasetId;
       this.hdfsEndpoint = hdfsEndpoint;
       this.manifest = manifest;
       this.partners = partners;
     }
 
-    public StartRequest(OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint,
-      HDFSResource manifest,
-      List<KAddress> partners) {
-      this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, hdfsEndpoint, manifest, partners);
+    public StartRequest(OverlayId torrentId, String torrentName, Integer projectId, Integer datasetId, 
+      HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
+      this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, datasetId, hdfsEndpoint, manifest, partners);
     }
 
     @Override
