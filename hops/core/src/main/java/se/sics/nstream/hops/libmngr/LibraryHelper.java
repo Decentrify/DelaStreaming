@@ -22,8 +22,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import se.sics.gvod.hops.api.LibraryCtrl;
-import se.sics.gvod.hops.api.Torrent;
+import se.sics.nstream.hops.library.LibraryCtrl;
+import se.sics.nstream.hops.library.Torrent;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.mngr.util.ElementSummary;
 

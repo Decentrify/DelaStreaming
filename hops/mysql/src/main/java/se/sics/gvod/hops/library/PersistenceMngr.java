@@ -18,26 +18,35 @@
  */
 package se.sics.gvod.hops.library;
 
-import javax.persistence.EntityManager;
+import java.util.Properties;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+import se.sics.kompics.config.Config;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public enum PersistenceMngr {
-  INSTANCE;
-  private final EntityManagerFactory emFactory;
-  private PersistenceMngr() {
-    // "jpa-example" was the value of the name attribute of the
-    // persistence-unit element.
-    emFactory = Persistence.createEntityManagerFactory("jpa-example");
-  }
-  public EntityManager getEntityManager() {
-    return emFactory.createEntityManager();
-  }
-  public void close() {
-    emFactory.close();
+public class PersistenceMngr {
+
+  public static EntityManagerFactory getEMF(Config config) {
+    PersistenceConfig c = new PersistenceConfig(config);
+    String mysqlURL = "jdbc:mysql://" + c.mysqlIp + ":" + c.mysqlPort + "/hopsworks";
+    Properties props = new Properties();
+    props.setProperty("javax.persistence.jdbc.url", mysqlURL);
+    props.setProperty("javax.persistence.jdbc.user", c.mysqlUser);
+    props.setProperty("javax.persistence.jdbc.password", c.mysqlPassword);
+    props.setProperty("javax.persistence.jdbc.driver", "com.mysql.jdbc.Driver");
+    props.setProperty("hibernate.show_sql", "true");
+    props.setProperty("hibernate.format_sql", "true");
+    props.setProperty("hibernate.dialect", "org.hibernate.dialect.MySQL5InnoDBDialect");
+    props.setProperty("hibernate.hbm2ddl.auto", "validate");
+    props.setProperty("hibernate.c3p0.min_size", "5");
+    props.setProperty("hibernate.c3p0.max_size", "20");
+    props.setProperty("hibernate.c3p0.timeout", "500");
+    props.setProperty("hibernate.c3p0.max_statements", "50");
+    props.setProperty("hibernate.c3p0.idle_test_period", "2000");
+    
+    return Persistence.createEntityManagerFactory("jpa-example", props);
   }
 }

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.hops.api;
+package se.sics.nstream.hops.library;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +29,9 @@ import se.sics.nstream.storage.durable.util.MyStream;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface LibraryCtrl {
+  public void start();
+  public void stop();
+  
   public Map<OverlayId, Torrent> getTorrents();
   public boolean containsTorrent(OverlayId tId);
   public TorrentState stateOf(OverlayId tId);

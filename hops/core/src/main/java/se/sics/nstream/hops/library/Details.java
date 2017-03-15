@@ -22,12 +22,12 @@ import java.util.HashMap;
 import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.nstream.hops.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.hdfs.HDFSResource;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
-import se.sics.nstream.storage.durable.disk.DiskEndpoint;
-import se.sics.nstream.storage.durable.disk.DiskResource;
+import se.sics.nstream.hops.storage.disk.DiskEndpoint;
+import se.sics.nstream.hops.storage.disk.DiskResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

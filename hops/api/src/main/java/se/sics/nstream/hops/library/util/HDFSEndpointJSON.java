@@ -16,31 +16,47 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library;
+package se.sics.nstream.hops.library.util;
 
-import com.google.common.base.Optional;
-import se.sics.kompics.config.Config;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HopsLibraryKConfig {
-  public static class Names {
-    public static final String LIBRARY_TYPE = "hops.library.type";
-    public static final String STORAGE_TYPE = "hops.storage.type";
+public class HDFSEndpointJSON implements EndpointJSON {
+
+  private String url;
+  private String user;
+
+  public HDFSEndpointJSON() {
   }
 
-  public final Config configCore;
-  public final Details.Types baseEndpointType;
-  public final LibraryType libraryType;
+  public HDFSEndpointJSON(String url, String user) {
+    this.url = url;
+    this.user = user;
+  }
 
-  public HopsLibraryKConfig(Config config) {
-    this.configCore = config;
-    Optional<String> baseEndpointString = config.readValue(Names.STORAGE_TYPE, String.class);
-    if(!baseEndpointString.isPresent()) {
-      throw new RuntimeException("storage type undefined");
-    }
-    baseEndpointType = Details.Types.valueOf(baseEndpointString.get());
-    libraryType = config.getValueOrDefault(Names.LIBRARY_TYPE, LibraryType.DISK);
+  public String getUrl() {
+    return url;
+  }
+
+  public void setUrl(String url) {
+    this.url = url;
+  }
+
+  public String getUser() {
+    return user;
+  }
+
+  public void setUser(String user) {
+    this.user = user;
+  }
+  
+  public HDFSEndpoint fromJSON() {
+    return HDFSEndpoint.getBasic(url, user);
+  }
+  
+  public static EndpointJSON toJSON(HDFSEndpoint endpoint) {
+    return new HDFSEndpointJSON(endpoint.hopsURL, endpoint.user);
   }
 }

@@ -16,36 +16,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage.durable.disk;
+package se.sics.nstream.hops.library.util;
 
-import java.util.ArrayList;
-import java.util.List;
-import org.javatuples.Pair;
-import se.sics.nstream.StreamId;
-import se.sics.nstream.storage.durable.util.FileExtendedDetails;
+import org.junit.Assert;
+import org.junit.Test;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.storage.durable.util.MyStream;
+
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DiskFED implements FileExtendedDetails {
-    public final Pair<StreamId, MyStream> diskStream;
-    
-    public DiskFED(Pair<StreamId, MyStream> diskStream) {
-        this.diskStream = diskStream;
-    }
-    
-    public DiskFED(StreamId streamId, MyStream stream) {
-        this(Pair.with(streamId, stream));
-    }
-    
-    @Override
-    public Pair<StreamId, MyStream> getMainStream() {
-        return diskStream;
-    }
-
-    @Override
-    public List<Pair<StreamId, MyStream>> getSecondaryStreams() {
-        return new ArrayList<Pair<StreamId, MyStream>>();
-    }
+public class LibrarySummaryHelperTest {
+  @Test
+  public void hdfsTest() {
+    MyStream writeStream = new MyStream(HDFSEndpoint.getBasic("http://bbc1.sics.se:12345", "user1"), new HDFSResource("/my/directory", "manifest.json"));
+    String s = LibrarySummaryHelper.streamToJSON(writeStream);
+    System.out.println(s);
+    MyStream readStream  = LibrarySummaryHelper.streamFromJSON(s);
+    Assert.assertTrue(true);
+  }
 }

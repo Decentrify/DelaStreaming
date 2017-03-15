@@ -16,29 +16,36 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.library.disk;
+package se.sics.nstream.hops.hdfs.disk;
+
+import java.util.ArrayList;
+import java.util.List;
+import org.javatuples.Pair;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.util.FileExtendedDetails;
+import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LibrarySummaryJSON {
-    private DiskLibrarySummaryJSON diskLibrary;
-    private HDFSLibrarySummaryJSON hdfsLibrary;
-
-    public DiskLibrarySummaryJSON getDiskLibrary() {
-        return diskLibrary;
+public class DiskFED implements FileExtendedDetails {
+    public final Pair<StreamId, MyStream> diskStream;
+    
+    public DiskFED(Pair<StreamId, MyStream> diskStream) {
+        this.diskStream = diskStream;
+    }
+    
+    public DiskFED(StreamId streamId, MyStream stream) {
+        this(Pair.with(streamId, stream));
+    }
+    
+    @Override
+    public Pair<StreamId, MyStream> getMainStream() {
+        return diskStream;
     }
 
-    public void setDiskLibrary(DiskLibrarySummaryJSON diskLibrary) {
-        this.diskLibrary = diskLibrary;
-    }
-
-    public HDFSLibrarySummaryJSON getHdfsLibrary() {
-        return hdfsLibrary;
-    }
-
-    public void setHdfsLibrary(HDFSLibrarySummaryJSON hdfsLibrary) {
-        this.hdfsLibrary = hdfsLibrary;
+    @Override
+    public List<Pair<StreamId, MyStream>> getSecondaryStreams() {
+        return new ArrayList<Pair<StreamId, MyStream>>();
     }
 }

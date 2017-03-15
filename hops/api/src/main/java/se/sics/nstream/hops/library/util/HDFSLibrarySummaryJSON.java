@@ -16,20 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.library.disk;
+package se.sics.nstream.hops.library.util;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import org.javatuples.Pair;
-import se.sics.gvod.hops.api.Torrent;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.hops.library.Torrent;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.library.util.TorrentState;
-import se.sics.nstream.storage.durable.disk.DiskEndpoint;
-import se.sics.nstream.storage.durable.disk.DiskResource;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.transfer.MyTorrent;
 
@@ -37,7 +37,7 @@ import se.sics.nstream.transfer.MyTorrent;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DiskLibrarySummaryJSON {
+public class HDFSLibrarySummaryJSON {
 
   private List<TorrentJSON> torrents = new ArrayList<>();
 
@@ -57,6 +57,36 @@ public class DiskLibrarySummaryJSON {
     return torrents.isEmpty();
   }
 
+  public static class HDFSEndpointJSON {
+
+    private String url;
+    private String user;
+
+    public HDFSEndpointJSON() {
+    }
+    
+    public HDFSEndpointJSON(String url, String user) {
+      this.url = url;
+      this.user = user;
+    }
+    
+    public String getUrl() {
+      return url;
+    }
+
+    public void setUrl(String url) {
+      this.url = url;
+    }
+
+    public String getUser() {
+      return user;
+    }
+
+    public void setUser(String user) {
+      this.user = user;
+    }
+  }
+
   public static class TorrentJSON {
 
     private Integer projectId;
@@ -64,12 +94,13 @@ public class DiskLibrarySummaryJSON {
     private String torrentName;
     private String torrentStatus;
     private String baseId;
+    private HDFSEndpointJSON endpoint;
     private String dirPath;
     private List<AddressJSON> partners;
 
     public TorrentJSON() {
     }
-
+    
     public TorrentJSON(Integer projectId, Integer datasetId, String torrentName, String torrentStatus, String baseId) {
       this.projectId = projectId;
       this.datasetId = datasetId;
@@ -110,6 +141,14 @@ public class DiskLibrarySummaryJSON {
       this.torrentStatus = torrentStatus;
     }
 
+    public String getDirPath() {
+      return dirPath;
+    }
+
+    public void setDirPath(String dirPath) {
+      this.dirPath = dirPath;
+    }
+
     public String getBaseId() {
       return baseId;
     }
@@ -118,12 +157,12 @@ public class DiskLibrarySummaryJSON {
       this.baseId = baseId;
     }
 
-    public String getDirPath() {
-      return dirPath;
+    public HDFSEndpointJSON getEndpoint() {
+      return endpoint;
     }
 
-    public void setDirPath(String dirPath) {
-      this.dirPath = dirPath;
+    public void setEndpoint(HDFSEndpointJSON endpoint) {
+      this.endpoint = endpoint;
     }
 
     public List<AddressJSON> getPartners() {
@@ -135,9 +174,15 @@ public class DiskLibrarySummaryJSON {
     }
 
     public static TorrentJSON toJSON(OverlayId tId, Torrent t) {
-      DiskLibrarySummaryJSON.TorrentJSON torrentJSON = new DiskLibrarySummaryJSON.TorrentJSON(t.projectId, t.datasetId,
+      HDFSLibrarySummaryJSON.TorrentJSON torrentJSON = new HDFSLibrarySummaryJSON.TorrentJSON(t.projectId, t.datasetId,
         t.torrentName, t.getTorrentStatus().toString(), tId.baseId.toString());
-      torrentJSON.setDirPath(((DiskResource) t.getManifestStream().resource).dirPath);
+      //endpoint
+      HDFSEndpoint hdfsEndpoint = (HDFSEndpoint) t.getManifestStream().endpoint;
+      HDFSEndpointJSON endpoint = new HDFSEndpointJSON(hdfsEndpoint.hopsURL, hdfsEndpoint.user);
+      torrentJSON.setEndpoint(endpoint);
+      //resource
+      HDFSResource hdfsResource = (HDFSResource) t.getManifestStream().resource;
+      torrentJSON.setDirPath(hdfsResource.dirPath);
       List<AddressJSON> partners = new LinkedList<>();
       for (KAddress p : t.getPartners()) {
         partners.add(AddressJSON.toJSON(p));
@@ -151,8 +196,9 @@ public class DiskLibrarySummaryJSON {
       TorrentState status = TorrentState.valueOf(torrentStatus);
       Torrent t = new Torrent(projectId, datasetId, torrentName, status);
       
-      DiskResource manifestResource = new DiskResource(dirPath, MyTorrent.MANIFEST_NAME);
-      MyStream manifestStream = new MyStream(new DiskEndpoint(), manifestResource);
+      HDFSEndpoint hdfsEndpoint = HDFSEndpoint.getBasic(endpoint.getUrl(), endpoint.getUser());
+      HDFSResource manifestResource = new HDFSResource(dirPath, MyTorrent.MANIFEST_NAME);
+      MyStream manifestStream = new MyStream(hdfsEndpoint, manifestResource);
       t.setManifestStream(manifestStream);
       
       List<KAddress> p = new LinkedList<>();
@@ -160,7 +206,6 @@ public class DiskLibrarySummaryJSON {
         p.add(e.fromJSON());
       }
       t.setPartners(p);
-      
       return Pair.with(tId, t);
     }
   }

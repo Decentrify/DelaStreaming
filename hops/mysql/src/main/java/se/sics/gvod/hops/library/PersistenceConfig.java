@@ -16,11 +16,30 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.hops.api;
+package se.sics.gvod.hops.library;
+
+import se.sics.kompics.config.Config;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public enum LibraryType {
-  DISK, MYSQL
+public class PersistenceConfig {
+  public static class Names {
+    public static String MYSQL_IP = "hops.library.mysql.ip";
+    public static String MYSQL_PORT = "hops.library.mysql.port";
+    public static String MYSQL_USER = "hops.library.mysql.user";
+    public static String MYSQL_PASSWORD = "hops.library.mysql.password";
+  }
+  
+  public final String mysqlIp;
+  public final int mysqlPort;
+  public final String mysqlUser;
+  public final String mysqlPassword;
+  
+  public PersistenceConfig(Config config) {
+    mysqlIp = config.getValue(Names.MYSQL_IP, String.class);
+    mysqlPort = config.getValue(Names.MYSQL_PORT, Integer.class);
+    mysqlUser = config.getValue(Names.MYSQL_USER, String.class);
+    mysqlPassword = config.getValue(Names.MYSQL_PASSWORD, String.class);
+  }
 }

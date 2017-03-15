@@ -16,11 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.hdfs;
+package se.sics.nstream.hops.storage.hdfs;
 
 import java.io.File;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
 import se.sics.nstream.storage.durable.util.StreamEndpoint;
 
 /**

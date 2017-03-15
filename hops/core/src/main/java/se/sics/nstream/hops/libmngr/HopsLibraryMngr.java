@@ -23,9 +23,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.hops.api.LibraryCtrl;
-import se.sics.gvod.hops.api.LibraryType;
-import se.sics.gvod.hops.api.Torrent;
+import se.sics.gvod.hops.library.MysqlLibrary;
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
@@ -42,6 +40,9 @@ import se.sics.nstream.hops.libmngr.fsm.LibTExternal;
 import se.sics.nstream.hops.libmngr.fsm.LibTFSM;
 import se.sics.nstream.hops.library.HopsLibraryKConfig;
 import se.sics.nstream.hops.library.HopsTorrentPort;
+import se.sics.nstream.hops.library.LibraryCtrl;
+import se.sics.nstream.hops.library.LibraryType;
+import se.sics.nstream.hops.library.Torrent;
 import se.sics.nstream.library.disk.DiskLibrary;
 import se.sics.nstream.library.endpointmngr.EndpointIdRegistry;
 import se.sics.nstream.library.event.torrent.HopsContentsEvent;
@@ -81,8 +82,10 @@ public class HopsLibraryMngr {
     OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory();
     if (LibraryType.DISK.equals(hopsLibraryConfig.libraryType)) {
       library = new DiskLibrary(torrentIdFactory, config);
+    } else if(LibraryType.MYSQL.equals(hopsLibraryConfig.libraryType)){
+      library = new MysqlLibrary(torrentIdFactory, config);
     } else {
-      library = null;
+      throw new RuntimeException("incomplete");
     }
 
     this.libraryDetails = new LibraryDetails(proxy, library);
@@ -93,15 +96,18 @@ public class HopsLibraryMngr {
   }
 
   public void start() {
+    library.start();
     //not sure when the provided ports are set, but for sure they are set after Start event. Ports are not set in constructor
     //TODO Alex - might lose some msg between Start and process of Start
     fsm.setupHandlers();
     restart.setup();
     restart.start(library);
     libraryDetails.setup();
+    
   }
 
   public void close() {
+    library.stop();
   }
 
   public static class Restart {

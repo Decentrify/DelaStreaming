@@ -20,13 +20,15 @@ package se.sics.nstream.library.disk;
 
 import java.util.List;
 import java.util.Map;
-import se.sics.gvod.hops.api.LibraryCtrl;
-import se.sics.gvod.hops.api.Torrent;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.hops.library.LibraryCtrl;
+import se.sics.nstream.hops.library.Torrent;
+import se.sics.nstream.hops.library.util.LibrarySummaryHelper;
+import se.sics.nstream.hops.library.util.LibrarySummaryJSON;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.util.MyStream;
 
@@ -43,7 +45,15 @@ public class DiskLibrary implements LibraryCtrl {
   public DiskLibrary(OverlayIdFactory torrentIdFactory, Config config) {
     this.torrentIdFactory = torrentIdFactory;
     this.config = new DiskLibraryConfig(config);
+  }
+  
+  @Override
+  public void start() {
     readTorrents();
+  }
+
+  @Override
+  public void stop() {
   }
   
   private void readTorrents() {

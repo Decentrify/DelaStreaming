@@ -22,13 +22,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityManager;
-import se.sics.gvod.hops.api.LibraryCtrl;
-import se.sics.gvod.hops.api.Torrent;
+import javax.persistence.EntityManagerFactory;
 import se.sics.gvod.hops.library.dao.TorrentDAO;
+import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.hops.library.LibraryCtrl;
+import se.sics.nstream.hops.library.Torrent;
+import se.sics.nstream.hops.library.util.LibrarySummaryHelper;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.util.MyStream;
 
@@ -37,23 +40,29 @@ import se.sics.nstream.storage.durable.util.MyStream;
  */
 public class MysqlLibrary implements LibraryCtrl {
 
+  private final Config config;
   private final OverlayIdFactory torrentIdFactory;
+  private EntityManagerFactory emf;
   private EntityManager em;
   private Map<OverlayId, Torrent> torrents;
   private Map<OverlayId, TorrentDAO> tdaos;
 
-  public MysqlLibrary(OverlayIdFactory torrentIdFactory) {
+  public MysqlLibrary(OverlayIdFactory torrentIdFactory, Config config) {
+    this.config = config;
     this.torrentIdFactory = torrentIdFactory;
   }
 
+  @Override
   public void start() {
-    em = PersistenceMngr.INSTANCE.getEntityManager();
+    emf = PersistenceMngr.getEMF(config);
+    em = emf.createEntityManager();
     readTorrents();
   }
 
+  @Override
   public void stop() {
     em.close();
-    PersistenceMngr.INSTANCE.close();
+    emf.close();
   }
 
   private void readTorrents() {
@@ -63,6 +72,8 @@ public class MysqlLibrary implements LibraryCtrl {
     for (TorrentDAO t : ts) {
       OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(t.getId()));
       Torrent tt = new Torrent(t.getPid(), t.getDid(), t.getName(), TorrentState.valueOf(t.getStatus()));
+      tt.setManifestStream(LibrarySummaryHelper.streamFromJSON(t.getStream()));
+      tt.setPartners(LibrarySummaryHelper.partnersFromJSON(t.getPartners()));
       torrents.put(tId, tt);
       tdaos.put(tId, t);
     }
@@ -121,6 +132,7 @@ public class MysqlLibrary implements LibraryCtrl {
 
     TorrentDAO tdao = tdaos.get(torrentId);
     tdao.setStatus(TorrentState.UPLOADING.name());
+    tdao.setStream(LibrarySummaryHelper.streamToJSON(manifestStream));
   }
 
   @Override
@@ -136,6 +148,7 @@ public class MysqlLibrary implements LibraryCtrl {
     tdao.setDid(datasetId);
     tdao.setName(torrentName);
     tdao.setStatus(TorrentState.PREPARE_DOWNLOAD.name());
+    tdao.setPartners(LibrarySummaryHelper.partnersToJSON(partners));
     tdaos.put(torrentId, tdao);
     persist(tdao);
   }
@@ -148,6 +161,7 @@ public class MysqlLibrary implements LibraryCtrl {
 
     TorrentDAO tdao = tdaos.get(torrentId);
     tdao.setStatus(TorrentState.DOWNLOADING.name());
+    tdao.setStream(LibrarySummaryHelper.streamToJSON(manifestStream));
   }
 
   @Override

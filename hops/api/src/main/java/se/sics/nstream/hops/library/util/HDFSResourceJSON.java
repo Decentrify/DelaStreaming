@@ -16,29 +16,36 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.hdfs;
+package se.sics.nstream.hops.library.util;
 
-import se.sics.nstream.storage.durable.util.StreamResource;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.nstream.transfer.MyTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSResource implements StreamResource {
+public class HDFSResourceJSON implements ResourceJSON {
+  private String dir;
+  
+  public HDFSResourceJSON() {}
 
-    public final String dirPath;
-    public final String fileName;
+  public HDFSResourceJSON(String dir) {
+    this.dir = dir;
+  }
 
-    public HDFSResource(String dirPath, String fileName) {
-        this.dirPath = dirPath;
-        this.fileName = fileName;
-    }
-    
-    public HDFSResource withFile(String fileName) {
-        return new HDFSResource(dirPath, fileName);
-    }
+  public String getDir() {
+    return dir;
+  }
 
-    @Override
-    public String getSinkName() {
-        return "hdfs://" + dirPath + "/" + fileName;
-    }
+  public void setDir(String dir) {
+    this.dir = dir;
+  }
+  
+  public HDFSResource fromJSON() {
+    return new HDFSResource(dir, MyTorrent.MANIFEST_NAME);
+  }
+  
+  public static ResourceJSON toJSON(HDFSResource resource) {
+    return new HDFSResourceJSON(resource.dirPath);
+  }
 }

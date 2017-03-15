@@ -16,8 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage.durable.disk;
+package se.sics.nstream.hops.hdfs.disk;
 
+import se.sics.nstream.hops.storage.disk.DiskResource;
+import se.sics.nstream.hops.storage.disk.DiskEndpoint;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;

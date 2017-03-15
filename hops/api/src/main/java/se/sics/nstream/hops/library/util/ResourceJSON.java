@@ -16,30 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage.durable.disk;
-
-import se.sics.nstream.storage.durable.util.StreamResource;
+package se.sics.nstream.hops.library.util;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DiskResource implements StreamResource {
-
-    public final String dirPath;
-    public final String fileName;
-    
-    public DiskResource(String dirPath, String fileName) {
-        this.dirPath = dirPath;
-        this.fileName = fileName;
-    }
-    
-    @Override
-    public String getSinkName() {
-        return "file:/" + dirPath + "/" + fileName;
-    }
-    
-    public DiskResource withFile(String fileName) {
-        return new DiskResource(dirPath, fileName);
-    }
+public interface ResourceJSON {
 }

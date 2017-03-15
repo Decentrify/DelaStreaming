@@ -16,19 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.storage.durable.disk;
-
-import se.sics.nstream.storage.durable.util.StreamEndpoint;
+package se.sics.nstream.hops.library;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DiskEndpoint implements StreamEndpoint {
-    public static String DISK_ENDPOINT_NAME = "disk";
-    
-    @Override
-    public String getEndpointName() {
-        return DISK_ENDPOINT_NAME;
-    }
+public enum LibraryType {
+  DISK, MYSQL
 }

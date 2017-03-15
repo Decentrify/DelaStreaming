@@ -16,27 +16,34 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.library.disk;
+package se.sics.nstream.hops.library.util;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.hops.api.Torrent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
+import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.hops.hdfs.HDFSResource;
+import se.sics.nstream.hops.library.Torrent;
+import se.sics.nstream.hops.storage.disk.DiskResource;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.library.util.TorrentState;
-import se.sics.nstream.storage.durable.disk.DiskResource;
 import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
@@ -46,6 +53,7 @@ public class LibrarySummaryHelper {
 
   private static final Logger LOG = LoggerFactory.getLogger(LibrarySummaryHelper.class);
 
+  
   public static LibrarySummaryJSON toSummary(Map<OverlayId, Torrent> torrents) {
     LibrarySummaryJSON library = new LibrarySummaryJSON();
     DiskLibrarySummaryJSON disk = new DiskLibrarySummaryJSON();
@@ -129,5 +137,47 @@ public class LibrarySummaryHelper {
       fileWriter.write(jsonContent);
     }
     return Result.success(emptyContent);
+  }
+  
+  public static MyStream streamFromJSON(String val) {
+    Gson gson = new Gson();
+    MyStreamJSON.Read readVal = gson.fromJson(val, MyStreamJSON.Read.class);
+    if(readVal.getType().equals("hdfs")) {
+      HDFSEndpointJSON endpoint = gson.fromJson(readVal.getEndpoint(), HDFSEndpointJSON.class);
+      HDFSResourceJSON resource = gson.fromJson(readVal.getResource(), HDFSResourceJSON.class);
+      return new MyStream(endpoint.fromJSON(), resource.fromJSON());
+    } else {
+      throw new RuntimeException("incomplete");
+    }
+  }
+  
+  public static String streamToJSON(MyStream stream) {
+    Gson gson = new Gson();
+    if(stream.endpoint instanceof HDFSEndpoint) {
+      MyStreamJSON.Write writeVal = new MyStreamJSON.Write("hdfs", HDFSEndpointJSON.toJSON((HDFSEndpoint)stream.endpoint), HDFSResourceJSON.toJSON((HDFSResource)stream.resource));
+      return gson.toJson(writeVal);
+    } else {
+       throw new RuntimeException("incomplete");
+    }
+  }
+  
+  public static String partnersToJSON(List<KAddress> partners) {
+    Gson gson = new Gson();
+    List<AddressJSON> ps = new LinkedList<>();
+    for(KAddress p : partners) {
+      ps.add(AddressJSON.toJSON(p));
+    }
+    return gson.toJson(ps);
+  }
+
+  public static List<KAddress> partnersFromJSON(String stringP) {
+    Gson gson = new Gson();
+    Type listType = new TypeToken<ArrayList<AddressJSON>>(){}.getType();
+    List<AddressJSON> partners = new Gson().fromJson(stringP, listType);
+    List<KAddress> ps = new LinkedList<>();
+    for(AddressJSON p : partners) {
+      ps.add(p.fromJSON());
+    }
+    return ps;
   }
 }

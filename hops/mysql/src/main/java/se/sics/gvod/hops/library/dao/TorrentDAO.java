@@ -61,6 +61,12 @@ public class TorrentDAO implements Serializable {
   @Basic(optional = false)
   @Column(name = "status")
   private String status;
+  
+  @Column(name = "stream")
+  private String stream;
+  
+   @Column(name = "partners")
+  private String partners;
 
   public TorrentDAO() {
   }
@@ -107,6 +113,22 @@ public class TorrentDAO implements Serializable {
 
   public void setStatus(String status) {
     this.status = status;
+  }
+
+  public String getStream() {
+    return stream;
+  }
+
+  public void setStream(String stream) {
+    this.stream = stream;
+  }
+
+  public String getPartners() {
+    return partners;
+  }
+
+  public void setPartners(String partners) {
+    this.partners = partners;
   }
 
   @Override
