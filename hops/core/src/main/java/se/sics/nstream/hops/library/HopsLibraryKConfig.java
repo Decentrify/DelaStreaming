@@ -26,21 +26,25 @@ import se.sics.kompics.config.Config;
  */
 public class HopsLibraryKConfig {
   public static class Names {
-    public static final String LIBRARY_TYPE = "hops.library.type";
     public static final String STORAGE_TYPE = "hops.storage.type";
+    public static final String LIBRARY_TYPE = "hops.library.type";
   }
 
   public final Config configCore;
-  public final Details.Types baseEndpointType;
+  public final Details.Types storageType;
   public final LibraryType libraryType;
 
   public HopsLibraryKConfig(Config config) {
     this.configCore = config;
-    Optional<String> baseEndpointString = config.readValue(Names.STORAGE_TYPE, String.class);
-    if(!baseEndpointString.isPresent()) {
+    Optional<String> storageTypeString = config.readValue(Names.STORAGE_TYPE, String.class);
+    if(!storageTypeString.isPresent()) {
       throw new RuntimeException("storage type undefined");
     }
-    baseEndpointType = Details.Types.valueOf(baseEndpointString.get());
-    libraryType = config.getValueOrDefault(Names.LIBRARY_TYPE, LibraryType.DISK);
+    storageType = Details.Types.valueOf(storageTypeString.get());
+    Optional<String> libraryTypeString = config.readValue(Names.LIBRARY_TYPE, String.class);
+    if(!libraryTypeString.isPresent()) {
+      throw new RuntimeException("library type undefined");
+    }
+    libraryType = LibraryType.valueOf(libraryTypeString.get());
   }
 }

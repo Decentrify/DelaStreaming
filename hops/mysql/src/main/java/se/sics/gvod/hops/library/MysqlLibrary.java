@@ -66,7 +66,7 @@ public class MysqlLibrary implements LibraryCtrl {
   }
 
   private void readTorrents() {
-    List<TorrentDAO> ts = (List<TorrentDAO>) em.createNamedQuery("Dela.findAll").getResultList();
+    List<TorrentDAO> ts = em.createNamedQuery("dela.findAll", TorrentDAO.class).getResultList();
     torrents = new HashMap<>();
     tdaos = new HashMap<>();
     for (TorrentDAO t : ts) {
@@ -89,6 +89,13 @@ public class MysqlLibrary implements LibraryCtrl {
     em.getTransaction().begin();
     em.remove(torrent);
     em.getTransaction().commit();
+  }
+
+  private TorrentDAO merge(TorrentDAO torrent) {
+    em.getTransaction().begin();
+    TorrentDAO res = em.merge(torrent);
+    em.getTransaction().commit();
+    return res;
   }
 
   @Override
@@ -133,6 +140,8 @@ public class MysqlLibrary implements LibraryCtrl {
     TorrentDAO tdao = tdaos.get(torrentId);
     tdao.setStatus(TorrentState.UPLOADING.name());
     tdao.setStream(LibrarySummaryHelper.streamToJSON(manifestStream));
+    tdao = merge(tdao);
+    tdaos.put(torrentId, tdao);
   }
 
   @Override
@@ -171,17 +180,26 @@ public class MysqlLibrary implements LibraryCtrl {
 
     TorrentDAO tdao = tdaos.get(torrentId);
     tdao.setStatus(TorrentState.UPLOADING.name());
+    tdao = merge(tdao);
+    tdaos.put(torrentId, tdao);
   }
 
   @Override
   public void killing(OverlayId torrentId) {
     torrents.get(torrentId).setTorrentStatus(TorrentState.KILLING);
-    tdaos.get(torrentId).setStatus(TorrentState.KILLING.name());
+
+    TorrentDAO tdao = tdaos.get(torrentId);
+    tdao.setStatus(TorrentState.KILLING.name());
+    tdao = merge(tdao);
+    tdaos.put(torrentId, tdao);
   }
 
   @Override
   public void killed(OverlayId torrentId) {
     torrents.remove(torrentId);
-    delete(tdaos.remove(torrentId));
+    TorrentDAO tdao = tdaos.remove(torrentId);
+    if (tdao != null) {
+      delete(tdao);
+    }
   }
 }

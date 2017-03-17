@@ -91,7 +91,7 @@ public class HopsLibraryMngr {
     this.libraryDetails = new LibraryDetails(proxy, library);
 
     fsm = LibTFSM.getFSM(new LibTExternal(selfAdr, library, new EndpointIdRegistry(),
-      hopsLibraryConfig.baseEndpointType), oexa);
+      hopsLibraryConfig.storageType), oexa);
     fsm.setProxy(proxy);
   }
 

@@ -31,18 +31,18 @@ import javax.xml.bind.annotation.XmlRootElement;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-@Entity
+@Entity(name = "dela")
 @Table(name = "dela",
   catalog = "hopsworks",
   schema = "")
 @XmlRootElement
 @NamedQueries({
-  @NamedQuery(name = "Dela.findAll",
-    query = "SELECT d FROM Dela d"),
-  @NamedQuery(name = "Dela.findById",
-    query = "SELECT d FROM Dela d WHERE d.id = :id"),
-  @NamedQuery(name = "Dela.findByPid",
-    query = "SELECT d FROM Dela d WHERE d.pid = :pid")})
+  @NamedQuery(name = "dela.findAll",
+    query = "SELECT d FROM dela d"),
+  @NamedQuery(name = "dela.findById",
+    query = "SELECT d FROM dela d WHERE d.id = :id"),
+  @NamedQuery(name = "dela.findByPid",
+    query = "SELECT d FROM dela d WHERE d.pid = :pid")})
 public class TorrentDAO implements Serializable {
   private static final long serialVersionUID = 1L;
   @Id
