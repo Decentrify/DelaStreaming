@@ -82,17 +82,6 @@ public class MysqlLibrary implements LibraryCtrl {
     }
   }
 
-  private void persist(TorrentDAO torrent) {
-    EntityManager em = emf.createEntityManager();
-    try {
-      em.getTransaction().begin();
-      em.persist(torrent);
-      em.getTransaction().commit();
-    } finally {
-      em.close();
-    }
-  }
-
   private void delete(TorrentDAO torrent) {
     EntityManager em = emf.createEntityManager();
     try {
@@ -146,7 +135,7 @@ public class MysqlLibrary implements LibraryCtrl {
     tdao.setName(torrentName);
     tdao.setStatus(TorrentState.PREPARE_UPLOAD.name());
     tdaos.put(torrentId, tdao);
-    persist(tdao);
+    merge(tdao);
   }
 
   @Override
@@ -177,7 +166,7 @@ public class MysqlLibrary implements LibraryCtrl {
     tdao.setStatus(TorrentState.PREPARE_DOWNLOAD.name());
     tdao.setPartners(LibrarySummaryHelper.partnersToJSON(partners));
     tdaos.put(torrentId, tdao);
-    persist(tdao);
+    merge(tdao);
   }
 
   @Override
