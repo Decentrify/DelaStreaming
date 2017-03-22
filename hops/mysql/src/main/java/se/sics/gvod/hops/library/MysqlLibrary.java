@@ -43,7 +43,6 @@ public class MysqlLibrary implements LibraryCtrl {
   private final Config config;
   private final OverlayIdFactory torrentIdFactory;
   private EntityManagerFactory emf;
-  private EntityManager em;
   private Map<OverlayId, Torrent> torrents;
   private Map<OverlayId, TorrentDAO> tdaos;
 
@@ -55,47 +54,65 @@ public class MysqlLibrary implements LibraryCtrl {
   @Override
   public void start() {
     emf = PersistenceMngr.getEMF(config);
-    em = emf.createEntityManager();
     readTorrents();
   }
 
   @Override
   public void stop() {
-    em.close();
     emf.close();
   }
 
   private void readTorrents() {
-    List<TorrentDAO> ts = em.createNamedQuery("dela.findAll", TorrentDAO.class).getResultList();
-    torrents = new HashMap<>();
-    tdaos = new HashMap<>();
-    for (TorrentDAO t : ts) {
-      OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(t.getId()));
-      Torrent tt = new Torrent(t.getPid(), t.getDid(), t.getName(), TorrentState.valueOf(t.getStatus()));
-      tt.setManifestStream(LibrarySummaryHelper.streamFromJSON(t.getStream()));
-      tt.setPartners(LibrarySummaryHelper.partnersFromJSON(t.getPartners()));
-      torrents.put(tId, tt);
-      tdaos.put(tId, t);
+    EntityManager em = emf.createEntityManager();
+    try {
+      List<TorrentDAO> ts = em.createNamedQuery("dela.findAll", TorrentDAO.class).getResultList();
+      torrents = new HashMap<>();
+      tdaos = new HashMap<>();
+      for (TorrentDAO t : ts) {
+        OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(t.getId()));
+        Torrent tt = new Torrent(t.getPid(), t.getDid(), t.getName(), TorrentState.valueOf(t.getStatus()));
+        tt.setManifestStream(LibrarySummaryHelper.streamFromJSON(t.getStream()));
+        tt.setPartners(LibrarySummaryHelper.partnersFromJSON(t.getPartners()));
+        torrents.put(tId, tt);
+        tdaos.put(tId, t);
+      }
+    } finally {
+      em.close();
     }
   }
 
   private void persist(TorrentDAO torrent) {
-    em.getTransaction().begin();
-    em.persist(torrent);
-    em.getTransaction().commit();
+    EntityManager em = emf.createEntityManager();
+    try {
+      em.getTransaction().begin();
+      em.persist(torrent);
+      em.getTransaction().commit();
+    } finally {
+      em.close();
+    }
   }
 
   private void delete(TorrentDAO torrent) {
-    em.getTransaction().begin();
-    em.remove(torrent);
-    em.getTransaction().commit();
+    EntityManager em = emf.createEntityManager();
+    try {
+      em.getTransaction().begin();
+      em.remove(torrent);
+      em.getTransaction().commit();
+    } finally {
+      em.close();
+    }
   }
 
   private TorrentDAO merge(TorrentDAO torrent) {
-    em.getTransaction().begin();
-    TorrentDAO res = em.merge(torrent);
-    em.getTransaction().commit();
-    return res;
+    EntityManager em = emf.createEntityManager();
+    try {
+      em.getTransaction().begin();
+      TorrentDAO res = em.merge(torrent);
+      em.getTransaction().commit();
+      return res;
+    } finally {
+      em.close();
+    }
   }
 
   @Override
