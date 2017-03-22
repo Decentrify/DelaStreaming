@@ -53,7 +53,6 @@ public class LibrarySummaryHelper {
 
   private static final Logger LOG = LoggerFactory.getLogger(LibrarySummaryHelper.class);
 
-  
   public static LibrarySummaryJSON toSummary(Map<OverlayId, Torrent> torrents) {
     LibrarySummaryJSON library = new LibrarySummaryJSON();
     DiskLibrarySummaryJSON disk = new DiskLibrarySummaryJSON();
@@ -62,10 +61,10 @@ public class LibrarySummaryHelper {
     library.setHdfsLibrary(hdfs);
 
     for (Map.Entry<OverlayId, Torrent> torrent : torrents.entrySet()) {
-      if(!(torrent.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)
+      if (!(torrent.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)
         || torrent.getValue().getTorrentStatus().equals(TorrentState.UPLOADING))) {
         continue;
-      } 
+      }
       Identifier torrentBaseId = torrent.getKey().baseId;
       MyStream manifestStream = torrent.getValue().getManifestStream();
       if (manifestStream.resource instanceof DiskResource) {
@@ -138,11 +137,11 @@ public class LibrarySummaryHelper {
     }
     return Result.success(emptyContent);
   }
-  
+
   public static MyStream streamFromJSON(String val) {
     Gson gson = new Gson();
     MyStreamJSON.Read readVal = gson.fromJson(val, MyStreamJSON.Read.class);
-    if(readVal.getType().equals("hdfs")) {
+    if (readVal.getType().equals("hdfs")) {
       HDFSEndpointJSON endpoint = gson.fromJson(readVal.getEndpoint(), HDFSEndpointJSON.class);
       HDFSResourceJSON resource = gson.fromJson(readVal.getResource(), HDFSResourceJSON.class);
       return new MyStream(endpoint.fromJSON(), resource.fromJSON());
@@ -150,21 +149,22 @@ public class LibrarySummaryHelper {
       throw new RuntimeException("incomplete");
     }
   }
-  
+
   public static String streamToJSON(MyStream stream) {
     Gson gson = new Gson();
-    if(stream.endpoint instanceof HDFSEndpoint) {
-      MyStreamJSON.Write writeVal = new MyStreamJSON.Write("hdfs", HDFSEndpointJSON.toJSON((HDFSEndpoint)stream.endpoint), HDFSResourceJSON.toJSON((HDFSResource)stream.resource));
+    if (stream.endpoint instanceof HDFSEndpoint) {
+      MyStreamJSON.Write writeVal = new MyStreamJSON.Write("hdfs", HDFSEndpointJSON.toJSON(
+        (HDFSEndpoint) stream.endpoint), HDFSResourceJSON.toJSON((HDFSResource) stream.resource));
       return gson.toJson(writeVal);
     } else {
-       throw new RuntimeException("incomplete");
+      throw new RuntimeException("incomplete");
     }
   }
-  
+
   public static String partnersToJSON(List<KAddress> partners) {
     Gson gson = new Gson();
     List<AddressJSON> ps = new LinkedList<>();
-    for(KAddress p : partners) {
+    for (KAddress p : partners) {
       ps.add(AddressJSON.toJSON(p));
     }
     return gson.toJson(ps);
@@ -172,11 +172,14 @@ public class LibrarySummaryHelper {
 
   public static List<KAddress> partnersFromJSON(String stringP) {
     Gson gson = new Gson();
-    Type listType = new TypeToken<ArrayList<AddressJSON>>(){}.getType();
+    Type listType = new TypeToken<ArrayList<AddressJSON>>() {
+    }.getType();
     List<AddressJSON> partners = new Gson().fromJson(stringP, listType);
     List<KAddress> ps = new LinkedList<>();
-    for(AddressJSON p : partners) {
-      ps.add(p.fromJSON());
+    if (partners != null) {
+      for (AddressJSON p : partners) {
+        ps.add(p.fromJSON());
+      }
     }
     return ps;
   }
