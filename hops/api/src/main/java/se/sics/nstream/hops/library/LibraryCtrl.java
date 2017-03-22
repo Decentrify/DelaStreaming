@@ -29,7 +29,7 @@ import se.sics.nstream.storage.durable.util.MyStream;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface LibraryCtrl {
-  public void start();
+  public Map<OverlayId, Torrent> start();
   public void stop();
   
   public Map<OverlayId, Torrent> getTorrents();

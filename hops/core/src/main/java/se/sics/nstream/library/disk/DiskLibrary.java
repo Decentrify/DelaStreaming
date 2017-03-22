@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.library.disk;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import se.sics.kompics.config.Config;
@@ -40,7 +41,7 @@ public class DiskLibrary implements LibraryCtrl {
   private final DiskLibraryConfig config;
   private final OverlayIdFactory torrentIdFactory;
 
-  private Map<OverlayId, Torrent> torrents;
+  private Map<OverlayId, Torrent> torrents = new HashMap<>();
 
   public DiskLibrary(OverlayIdFactory torrentIdFactory, Config config) {
     this.torrentIdFactory = torrentIdFactory;
@@ -48,20 +49,20 @@ public class DiskLibrary implements LibraryCtrl {
   }
   
   @Override
-  public void start() {
-    readTorrents();
+  public Map<OverlayId, Torrent> start() {
+    return readTorrents();
   }
 
   @Override
   public void stop() {
   }
   
-  private void readTorrents() {
+  private Map<OverlayId, Torrent> readTorrents() {
      Result<LibrarySummaryJSON> librarySummary = LibrarySummaryHelper.readTorrentList(config.librarySummary);
       if (!librarySummary.isSuccess()) {
         throw new RuntimeException("TODO fix me - corrupted library");
       }
-      torrents =  LibrarySummaryHelper.fromSummary(librarySummary.getValue(), torrentIdFactory);
+      return LibrarySummaryHelper.fromSummary(librarySummary.getValue(), torrentIdFactory);
   }
 
   @Override

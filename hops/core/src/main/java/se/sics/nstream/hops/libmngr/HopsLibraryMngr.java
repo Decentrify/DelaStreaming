@@ -96,7 +96,6 @@ public class HopsLibraryMngr {
   }
 
   public void start() {
-    library.start();
     //not sure when the provided ports are set, but for sure they are set after Start event. Ports are not set in constructor
     //TODO Alex - might lose some msg between Start and process of Start
     fsm.setupHandlers();
@@ -131,7 +130,7 @@ public class HopsLibraryMngr {
     }
 
     public void start(LibraryCtrl library) {
-      Map<OverlayId, Torrent> torrents = library.getTorrents();
+      Map<OverlayId, Torrent> torrents = library.start();
 
       for (Map.Entry<OverlayId, Torrent> t : torrents.entrySet()) {
         Torrent torrent = t.getValue();

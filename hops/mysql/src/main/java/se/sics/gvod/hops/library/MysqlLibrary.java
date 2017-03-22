@@ -43,7 +43,7 @@ public class MysqlLibrary implements LibraryCtrl {
   private final Config config;
   private final OverlayIdFactory torrentIdFactory;
   private EntityManagerFactory emf;
-  private Map<OverlayId, Torrent> torrents;
+  private Map<OverlayId, Torrent> torrents = new HashMap<>();
   private Map<OverlayId, TorrentDAO> tdaos;
 
   public MysqlLibrary(OverlayIdFactory torrentIdFactory, Config config) {
@@ -52,9 +52,9 @@ public class MysqlLibrary implements LibraryCtrl {
   }
 
   @Override
-  public void start() {
+  public Map<OverlayId, Torrent> start() {
     emf = PersistenceMngr.getEMF(config);
-    readTorrents();
+    return readTorrents();
   }
 
   @Override
@@ -62,20 +62,21 @@ public class MysqlLibrary implements LibraryCtrl {
     emf.close();
   }
 
-  private void readTorrents() {
+  private Map<OverlayId, Torrent> readTorrents() {
     EntityManager em = emf.createEntityManager();
     try {
       List<TorrentDAO> ts = em.createNamedQuery("dela.findAll", TorrentDAO.class).getResultList();
-      torrents = new HashMap<>();
+      Map<OverlayId, Torrent> readTorrents = new HashMap<>();
       tdaos = new HashMap<>();
       for (TorrentDAO t : ts) {
         OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(t.getId()));
         Torrent tt = new Torrent(t.getPid(), t.getDid(), t.getName(), TorrentState.valueOf(t.getStatus()));
         tt.setManifestStream(LibrarySummaryHelper.streamFromJSON(t.getStream()));
         tt.setPartners(LibrarySummaryHelper.partnersFromJSON(t.getPartners()));
-        torrents.put(tId, tt);
+        readTorrents.put(tId, tt);
         tdaos.put(tId, t);
       }
+      return readTorrents;
     } finally {
       em.close();
     }
