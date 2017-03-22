@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.mngr.util.ElementSummary;
+import se.sics.gvod.hops.library.MysqlLibrary;
 import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
@@ -35,21 +35,22 @@ import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.TorrentIds;
 import se.sics.nstream.hops.libmngr.fsm.LibTExternal;
 import se.sics.nstream.hops.libmngr.fsm.LibTFSM;
 import se.sics.nstream.hops.library.HopsLibraryKConfig;
 import se.sics.nstream.hops.library.HopsTorrentPort;
-import se.sics.nstream.library.Library;
-import se.sics.nstream.library.disk.LibrarySummaryHelper;
-import se.sics.nstream.library.disk.LibrarySummaryJSON;
+import se.sics.nstream.hops.library.LibraryCtrl;
+import se.sics.nstream.hops.library.LibraryType;
+import se.sics.nstream.hops.library.Torrent;
+import se.sics.nstream.library.disk.DiskLibrary;
 import se.sics.nstream.library.endpointmngr.EndpointIdRegistry;
 import se.sics.nstream.library.event.torrent.HopsContentsEvent;
 import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.library.restart.TorrentRestartPort;
 import se.sics.nstream.library.util.TorrentState;
+import se.sics.nstream.mngr.util.ElementSummary;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 
@@ -65,7 +66,7 @@ public class HopsLibraryMngr {
   private final HopsLibraryKConfig hopsLibraryConfig;
   private final KAddress selfAdr;
   private final MultiFSM fsm;
-  private final Library library;
+  private final LibraryCtrl library;
   private final Restart restart;
   private final LibraryDetails libraryDetails;
 
@@ -74,13 +75,23 @@ public class HopsLibraryMngr {
     this.logPrefix = logPrefix;
     this.config = config;
     this.selfAdr = selfAdr;
-    this.library = new Library(config.getValue("library.summary", String.class));
     this.restart = new Restart(proxy);
-    this.libraryDetails = new LibraryDetails(proxy, library);
 
     hopsLibraryConfig = new HopsLibraryKConfig(config);
+
+    OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory();
+    if (LibraryType.DISK.equals(hopsLibraryConfig.libraryType)) {
+      library = new DiskLibrary(torrentIdFactory, config);
+    } else if(LibraryType.MYSQL.equals(hopsLibraryConfig.libraryType)){
+      library = new MysqlLibrary(torrentIdFactory, config);
+    } else {
+      throw new RuntimeException("incomplete");
+    }
+
+    this.libraryDetails = new LibraryDetails(proxy, library);
+
     fsm = LibTFSM.getFSM(new LibTExternal(selfAdr, library, new EndpointIdRegistry(),
-      hopsLibraryConfig.baseEndpointType), oexa);
+      hopsLibraryConfig.storageType), oexa);
     fsm.setProxy(proxy);
   }
 
@@ -89,11 +100,13 @@ public class HopsLibraryMngr {
     //TODO Alex - might lose some msg between Start and process of Start
     fsm.setupHandlers();
     restart.setup();
-    restart.start(hopsLibraryConfig);
+    restart.start(library);
     libraryDetails.setup();
+    
   }
 
   public void close() {
+    library.stop();
   }
 
   public static class Restart {
@@ -116,24 +129,17 @@ public class HopsLibraryMngr {
       proxy.subscribe(handleUploadRestartFail, restartPort);
     }
 
-    public void start(HopsLibraryKConfig hopsLibraryConfig) {
-      OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory();
+    public void start(LibraryCtrl library) {
+      Map<OverlayId, Torrent> torrents = library.start();
 
-      Result<LibrarySummaryJSON> librarySummary = LibrarySummaryHelper.readTorrentList(
-        hopsLibraryConfig.librarySummaryPath);
-      if (!librarySummary.isSuccess()) {
-        throw new RuntimeException("TODO fix me - corrupted library");
-      }
-      Map<OverlayId, Library.Torrent> torrents
-        = LibrarySummaryHelper.fromSummary(librarySummary.getValue(), TorrentIds.torrentIdFactory());
-
-      for (Map.Entry<OverlayId, Library.Torrent> t : torrents.entrySet()) {
+      for (Map.Entry<OverlayId, Torrent> t : torrents.entrySet()) {
+        Torrent torrent = t.getValue();
         if (t.getValue().getTorrentStatus().equals(TorrentState.UPLOADING)) {
-          proxy.trigger(new TorrentRestart.UpldReq(t.getKey(), t.getValue().torrentName, t.getValue().projectId,
-            t.getValue().getPartners(), t.getValue().getManifestStream()), restartPort);
+          proxy.trigger( new TorrentRestart.UpldReq(t.getKey(), torrent.torrentName, torrent.projectId, 
+            torrent.datasetId, torrent.getPartners(), torrent.getManifestStream()), restartPort);
         } else if (t.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)) {
-          proxy.trigger(new TorrentRestart.DwldReq(t.getKey(), t.getValue().torrentName, t.getValue().projectId,
-            t.getValue().getPartners(), t.getValue().getManifestStream()), restartPort);
+          proxy.trigger(new TorrentRestart.DwldReq(t.getKey(), torrent.torrentName, torrent.projectId,
+            torrent.datasetId, torrent.getPartners(), torrent.getManifestStream()), restartPort);
         }
       }
     }
@@ -173,13 +179,13 @@ public class HopsLibraryMngr {
     private String logPrefix = "";
 
     private final ComponentProxy proxy;
-    private final Library library;
+    private final LibraryCtrl library;
     private Negative<HopsTorrentPort> libraryCtrlPort;
     private Positive<TorrentStatusPort> torrentStatusPort;
 
     private final Map<OverlayId, TorrentExtendedStatusEvent.Request> pendingTESE = new HashMap<>();
 
-    public LibraryDetails(ComponentProxy proxy, Library library) {
+    public LibraryDetails(ComponentProxy proxy, LibraryCtrl library) {
       this.proxy = proxy;
       this.library = library;
     }
@@ -197,13 +203,13 @@ public class HopsLibraryMngr {
       @Override
       public void handle(HopsContentsEvent.Request req) {
         LOG.trace("{}received:{}", logPrefix, req);
-        proxy.answer(req, req.success(library.getSummary(req.projectIds)));
+        proxy.answer(req, req.success(LibraryHelper.getSummary(library, req.projectIds)));
       }
     };
 
     private void torrentNotFound(OverlayId torrentId) {
       LOG.warn("{}torrent:{} not found", logPrefix, torrentId);
-      for (Map.Entry<Integer, List<ElementSummary>> projectSummary : library.getAllSummary().entrySet()) {
+      for (Map.Entry<Integer, List<ElementSummary>> projectSummary : LibraryHelper.getAllSummary(library).entrySet()) {
         for (ElementSummary es : projectSummary.getValue()) {
           LOG.warn("{}found project: {} torrent:{}", new Object[]{logPrefix, projectSummary.getKey(), es.torrentId});
         }

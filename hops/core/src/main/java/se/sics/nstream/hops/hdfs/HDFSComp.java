@@ -18,6 +18,8 @@
  */
 package se.sics.nstream.hops.hdfs;
 
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.security.UserGroupInformation;

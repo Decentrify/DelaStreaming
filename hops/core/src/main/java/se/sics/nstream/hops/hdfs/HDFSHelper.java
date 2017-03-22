@@ -18,6 +18,8 @@
  */
 package se.sics.nstream.hops.hdfs;
 
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;

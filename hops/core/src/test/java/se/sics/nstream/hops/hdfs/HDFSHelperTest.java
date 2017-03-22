@@ -18,6 +18,8 @@
  */
 package se.sics.nstream.hops.hdfs;
 
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import java.util.Random;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Test;

@@ -18,25 +18,33 @@
  */
 package se.sics.nstream.hops.library;
 
+import com.google.common.base.Optional;
 import se.sics.kompics.config.Config;
-import se.sics.ktoolbox.util.config.KConfigHelper;
-import se.sics.ktoolbox.util.config.KConfigOption;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsLibraryKConfig {
-    public final static KConfigOption.Basic<String> baseEndpointOpt = new KConfigOption.Basic("hops.library.baseEndpoint", String.class);
-    
-    public final Config configCore;
-    public final Details.Types baseEndpointType;
-    public final String librarySummaryPath;
-    
-    public HopsLibraryKConfig(Config configCore) {
-        this.configCore = configCore;
-        String baseEndpointString = KConfigHelper.read(configCore, baseEndpointOpt);
-        baseEndpointType = Details.Types.valueOf(baseEndpointString);
-        librarySummaryPath = configCore.getValue("library.summary", String.class);
+  public static class Names {
+    public static final String STORAGE_TYPE = "hops.storage.type";
+    public static final String LIBRARY_TYPE = "hops.library.type";
+  }
+
+  public final Config configCore;
+  public final Details.Types storageType;
+  public final LibraryType libraryType;
+
+  public HopsLibraryKConfig(Config config) {
+    this.configCore = config;
+    Optional<String> storageTypeString = config.readValue(Names.STORAGE_TYPE, String.class);
+    if(!storageTypeString.isPresent()) {
+      throw new RuntimeException("storage type undefined");
     }
+    storageType = Details.Types.valueOf(storageTypeString.get());
+    Optional<String> libraryTypeString = config.readValue(Names.LIBRARY_TYPE, String.class);
+    if(!libraryTypeString.isPresent()) {
+      throw new RuntimeException("library type undefined");
+    }
+    libraryType = LibraryType.valueOf(libraryTypeString.get());
+  }
 }

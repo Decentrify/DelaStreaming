@@ -45,9 +45,9 @@ import se.sics.nstream.StreamId;
 import se.sics.nstream.TorrentIds;
 import se.sics.nstream.hops.HopsFED;
 import se.sics.nstream.hops.hdfs.HDFSComp;
-import se.sics.nstream.hops.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSHelper;
-import se.sics.nstream.hops.hdfs.HDFSResource;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.hops.library.Details;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
@@ -57,10 +57,10 @@ import se.sics.nstream.hops.manifest.ManifestHelper;
 import se.sics.nstream.hops.manifest.ManifestJSON;
 import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
-import se.sics.nstream.storage.durable.disk.DiskComp;
-import se.sics.nstream.storage.durable.disk.DiskEndpoint;
-import se.sics.nstream.storage.durable.disk.DiskFED;
-import se.sics.nstream.storage.durable.disk.DiskResource;
+import se.sics.nstream.hops.hdfs.disk.DiskComp;
+import se.sics.nstream.hops.storage.disk.DiskEndpoint;
+import se.sics.nstream.hops.hdfs.disk.DiskFED;
+import se.sics.nstream.hops.storage.disk.DiskResource;
 import se.sics.nstream.storage.durable.events.DEndpoint;
 import se.sics.nstream.storage.durable.util.FileExtendedDetails;
 import se.sics.nstream.storage.durable.util.MyStream;
@@ -161,7 +161,8 @@ public class LibTHandlers {
         LOG.info("{}accepting new download:{}", req.getBaseId(), req.torrentName);
         is.setDownload(req);
         MyStream manifestStream = manifestStreamSetup(es, is, req.hdfsEndpoint, req.manifest);
-        return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, manifestStream, req.partners);
+        return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, req.datasetId, manifestStream,
+          req.partners);
       }
     };
 
@@ -172,16 +173,17 @@ public class LibTHandlers {
       throws FSMException {
         LOG.info("{}restarting download:{}", req.getBaseId(), req.torrentName);
         is.setDownloadRestart(req);
-        return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, req.manifestStream, req.partners);
+        return downloadInit(es, is, req.torrentId, req.torrentName, req.projectId, req.datasetId, req.manifestStream,
+          req.partners);
       }
     };
 
   private static LibTStates downloadInit(LibTExternal es, LibTInternal is, OverlayId torrentId, String torrentName,
-    Integer projectId, MyStream manifestStream, List<KAddress> partners) {
+    Integer projectId, Integer datasetId, MyStream manifestStream, List<KAddress> partners) {
     if (es.library.containsTorrent(torrentId)) {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
-    es.library.prepareDownload(projectId, torrentId, torrentName, partners);
+    es.library.prepareDownload(torrentId, projectId, datasetId, torrentName, partners);
     setupStorageEndpoints(es, is, manifestStream);
     setManifestStream(is, manifestStream);
     if (is.storageRegistry.isComplete()) {
@@ -201,7 +203,7 @@ public class LibTHandlers {
         LOG.info("<{}>accepting new upload:{}", req.getBaseId(), req.torrentName);
         is.setUpload(req);
         MyStream manifestStream = manifestStreamSetup(es, is, req.hdfsEndpoint, req.manifestResource);
-        return initUpload(es, is, req.torrentId, req.torrentName, req.projectId, manifestStream);
+        return initUpload(es, is, req.torrentId, req.torrentName, req.projectId, req.datasetId, manifestStream);
       }
     };
 
@@ -212,16 +214,16 @@ public class LibTHandlers {
       throws FSMException {
         LOG.info("<{}>accepting new upload:{}", req.getBaseId(), req.torrentName);
         is.setUploadRestart(req);
-        return initUpload(es, is, req.torrentId, req.torrentName, req.projectId, req.manifestStream);
+        return initUpload(es, is, req.torrentId, req.torrentName, req.projectId, req.datasetId, req.manifestStream);
       }
     };
 
   private static LibTStates initUpload(LibTExternal es, LibTInternal is, OverlayId torrentId, String torrentName,
-    Integer projectId, MyStream manifestStream) {
+    Integer projectId, Integer datasetId, MyStream manifestStream) {
     if (es.library.containsTorrent(torrentId)) {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
-    es.library.prepareUpload(projectId, torrentId, torrentName);
+    es.library.prepareUpload(torrentId, projectId, datasetId, torrentName);
     setupStorageEndpoints(es, is, manifestStream);
     setManifestStream(is, manifestStream);
     if (is.storageRegistry.isComplete()) {

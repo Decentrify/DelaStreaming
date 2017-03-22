@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.hops.library;
 
-import se.sics.nstream.hops.hdfs.HDFSResource;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 
 /**
  *

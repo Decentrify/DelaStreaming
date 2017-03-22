@@ -18,12 +18,12 @@
  */
 package se.sics.nstream.hops.libmngr.fsm;
 
+import se.sics.nstream.hops.library.LibraryCtrl;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Positive;
 import se.sics.ktoolbox.nutil.fsm.api.FSMExternalState;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.hops.library.Details;
-import se.sics.nstream.library.Library;
 import se.sics.nstream.library.endpointmngr.EndpointIdRegistry;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.torrent.TorrentMngrPort;
@@ -37,11 +37,11 @@ public class LibTExternal implements FSMExternalState {
 
   private ComponentProxy proxy;
   public final KAddress selfAdr;
-  public final Library library;
+  public final LibraryCtrl library;
   public final EndpointIdRegistry endpointIdRegistry;
   public final Details.Types fsmType;
 
-  public LibTExternal(KAddress selfAdr, Library library, EndpointIdRegistry endpointIdRegistry,
+  public LibTExternal(KAddress selfAdr, LibraryCtrl library, EndpointIdRegistry endpointIdRegistry,
     Details.Types fsmType) {
     this.selfAdr = selfAdr;
     this.library = library;

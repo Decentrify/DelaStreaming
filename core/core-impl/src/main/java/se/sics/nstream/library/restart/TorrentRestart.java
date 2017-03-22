@@ -38,15 +38,17 @@ public class TorrentRestart {
     public final OverlayId torrentId;
     public final String torrentName;
     public final Integer projectId;
+    public final Integer datasetId;
     public final List<KAddress> partners;
     public final MyStream manifestStream;
 
-    public UpldReq(OverlayId torrentId, String torrentName, Integer projectId, List<KAddress> partners,
-      MyStream manifestStream) {
+    public UpldReq(OverlayId torrentId, String torrentName, Integer projectId, Integer datasetId, 
+      List<KAddress> partners, MyStream manifestStream) {
       super();
       this.torrentId = torrentId;
       this.torrentName = torrentName;
       this.projectId = projectId;
+      this.datasetId = datasetId;
       this.partners = partners;
       this.manifestStream = manifestStream;
     }
@@ -95,15 +97,17 @@ public class TorrentRestart {
     public final OverlayId torrentId;
     public final String torrentName;
     public final Integer projectId;
+    public final Integer datasetId;
     public final List<KAddress> partners;
     public final MyStream manifestStream;
 
-    public DwldReq(OverlayId torrentId, String torrentName, Integer projectId, List<KAddress> partners,
+    public DwldReq(OverlayId torrentId, String torrentName, Integer projectId, Integer datasetId, List<KAddress> partners,
       MyStream manifestStream) {
       super();
       this.torrentId = torrentId;
       this.torrentName = torrentName;
       this.projectId = projectId;
+      this.datasetId = datasetId;
       this.partners = partners;
       this.manifestStream = manifestStream;
     }

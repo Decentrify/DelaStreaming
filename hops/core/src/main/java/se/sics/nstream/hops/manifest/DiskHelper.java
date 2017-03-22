@@ -25,7 +25,7 @@ import java.io.RandomAccessFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.storage.durable.disk.DiskResource;
+import se.sics.nstream.hops.storage.disk.DiskResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

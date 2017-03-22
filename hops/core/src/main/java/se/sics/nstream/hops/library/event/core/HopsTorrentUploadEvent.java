@@ -27,8 +27,8 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
-import se.sics.nstream.hops.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.hdfs.HDFSResource;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -41,22 +41,24 @@ public class HopsTorrentUploadEvent {
     public final OverlayId torrentId;
     public final String torrentName;
     public final Integer projectId;
+    public final Integer datasetId;
     public final HDFSEndpoint hdfsEndpoint;
     public final HDFSResource manifestResource;
 
-    public Request(Identifier eventId, OverlayId torrentId, String torrentName, Integer projectId,
+    public Request(Identifier eventId, OverlayId torrentId, String torrentName, Integer projectId, Integer datasetId,
       HDFSEndpoint hdfsEndpoint, HDFSResource manifestResource) {
       this.eventId = eventId;
       this.torrentId = torrentId;
       this.torrentName = torrentName;
       this.projectId = projectId;
+      this.datasetId = datasetId;
       this.hdfsEndpoint = hdfsEndpoint;
       this.manifestResource = manifestResource;
     }
 
-    public Request(OverlayId torrentId, String torrentName, Integer projectId, HDFSEndpoint hdfsEndpoint,
+    public Request(OverlayId torrentId, String torrentName, Integer projectId, Integer datasetId, HDFSEndpoint hdfsEndpoint,
       HDFSResource hdfsResource) {
-      this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, hdfsEndpoint, hdfsResource);
+      this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, datasetId, hdfsEndpoint, hdfsResource);
     }
 
     @Override
