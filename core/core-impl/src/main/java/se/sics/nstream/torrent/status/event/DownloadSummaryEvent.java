@@ -62,7 +62,7 @@ public class DownloadSummaryEvent implements StreamEvent, OverlayEvent, FSMEvent
     }
 
   @Override
-  public Identifier getBaseId() {
+  public Identifier getFSMBaseId() {
     return torrentId.baseId;
   }
 }

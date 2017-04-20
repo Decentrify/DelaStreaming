@@ -227,7 +227,7 @@ public class TransferComp extends ComponentDefinition {
         public void handle(GetRawTorrent.Request req) {
             rawTorrentReq = req;
             if (connMngr.hasConnCandidates()) {
-                trigger(new Seeder.Connect(connMngr.getConnCandidate()), connPort);
+                trigger(new Seeder.Connect(connMngr.getConnCandidate(), torrentId), connPort);
             } else {
                 answer(req, req.complete(Result.timeout(new NotFoundException("no peers to download manifest def"))));
             }
@@ -766,7 +766,7 @@ public class TransferComp extends ComponentDefinition {
                 pc = new LinkedList<>();
                 pendingPeerConnection.put(peerConnect.peer.getId(), pc);
                 LOG.info("{}get files - connecting to peer:{}", logPrefix, peerConnect.peer);
-                trigger(new Seeder.Connect(peerConnect.peer), connPort);
+                trigger(new Seeder.Connect(peerConnect.peer, torrentId), connPort);
             }
             pc.add(peerConnect);
             LOG.info("{}get files - waiting to establish peer connection:{}", logPrefix, peerConnect.peer);

@@ -21,9 +21,7 @@ package se.sics.nstream.hops.libmngr.fsm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.nutil.fsm.FSMBuilder;
-import se.sics.ktoolbox.nutil.fsm.FSMachineDef;
 import se.sics.ktoolbox.nutil.fsm.MultiFSM;
-import se.sics.ktoolbox.nutil.fsm.MultiFSMBuilder;
 import se.sics.ktoolbox.nutil.fsm.api.FSMBasicStateNames;
 import se.sics.ktoolbox.nutil.fsm.api.FSMException;
 import se.sics.ktoolbox.nutil.fsm.api.FSMInternalStateBuilder;
@@ -53,126 +51,89 @@ public class LibTFSM {
   private static final Logger LOG = LoggerFactory.getLogger(LibTFSM.class);
   public static final String NAME = "dela-torrent-library-fsm";
 
-  public static MultiFSM getFSM(LibTExternal es, OnFSMExceptionAction oexa) {
-    try {
-      FSMachineDef torrentFSM = build();
-      FSMInternalStateBuilder isBuilder = new LibTInternal.Builder();
-      MultiFSM fsm = MultiFSMBuilder.instance()
-        .events()
-          .positivePort(DEndpointCtrlPort.class)
-            .event(DEndpoint.Success.class)
-            .event(DEndpoint.Failed.class)
-            .event(DEndpoint.Disconnected.class)
-            .buildPort()
-          .positivePort(TorrentMngrPort.class)
-            .event(StartTorrent.Response.class)
-            .event(StopTorrent.Response.class)
-            .buildPort()
-          .positivePort(TransferCtrlPort.class)
-            .event(SetupTransfer.Response.class)
-            .event(GetRawTorrent.Response.class)
-            .buildPort()
-          .positivePort(TorrentStatusPort.class)
-            .event(DownloadSummaryEvent.class)
-            .buildPort()
-          .negativePort(HopsTorrentPort.class)
-            .event(HopsTorrentDownloadEvent.StartRequest.class)
-            .event(HopsTorrentDownloadEvent.AdvanceRequest.class)
-            .event(HopsTorrentUploadEvent.Request.class)
-            .event(HopsTorrentStopEvent.Request.class)
-            .buildPort()
-          .negativePort(TorrentRestartPort.class)
-            .event(TorrentRestart.DwldReq.class)
-            .event(TorrentRestart.UpldReq.class)
-            .buildPort()
-          .buildEvents()
-        .buildMultiFSM(torrentFSM, oexa, es, isBuilder);
-      return fsm;
-    } catch (FSMException ex) {
-      throw new RuntimeException(ex);
-    }
-  }
-
-  public static FSMachineDef build() throws FSMException {
+  public static MultiFSM build(LibTExternal es, OnFSMExceptionAction oexa) throws FSMException {
 
     FSMBuilder.Machine machine = FSMBuilder.machine()
       .onState(FSMBasicStateNames.START)
         .nextStates(LibTStates.PREPARE_STORAGE, LibTStates.PREPARE_TRANSFER)
-        .toFinal()
         .buildTransition()
       .onState(LibTStates.PREPARE_STORAGE)
-        .nextStates(LibTStates.PREPARE_STORAGE, LibTStates.PREPARE_TRANSFER)
-        .cleanup(LibTStates.CLEAN_STORAGE)
+        .nextStates(LibTStates.PREPARE_STORAGE, LibTStates.PREPARE_TRANSFER, LibTStates.CLEAN_STORAGE)
         .buildTransition()
       .onState(LibTStates.PREPARE_TRANSFER)
-        .nextStates(LibTStates.DOWNLOAD_MANIFEST, LibTStates.ADVANCE_TRANSFER)
-        .cleanup(LibTStates.CLEAN_TRANSFER)
+        .nextStates(LibTStates.DOWNLOAD_MANIFEST, LibTStates.ADVANCE_TRANSFER, LibTStates.CLEAN_TRANSFER)
         .buildTransition()
       .onState(LibTStates.DOWNLOAD_MANIFEST)
-        .nextStates(LibTStates.EXTENDED_DETAILS, LibTStates.ADVANCE_TRANSFER)
-        .cleanup(LibTStates.CLEAN_TRANSFER)
+        .nextStates(LibTStates.EXTENDED_DETAILS, LibTStates.ADVANCE_TRANSFER, LibTStates.CLEAN_TRANSFER)
         .buildTransition()
       .onState(LibTStates.EXTENDED_DETAILS)
-        .nextStates(LibTStates.ADVANCE_TRANSFER)
-        .cleanup(LibTStates.CLEAN_TRANSFER)
+        .nextStates(LibTStates.ADVANCE_TRANSFER, LibTStates.CLEAN_TRANSFER)
         .buildTransition()
       .onState(LibTStates.ADVANCE_TRANSFER)
-        .nextStates(LibTStates.DOWNLOADING, LibTStates.UPLOADING)
-        .cleanup(LibTStates.CLEAN_TRANSFER)
+        .nextStates(LibTStates.DOWNLOADING, LibTStates.UPLOADING, LibTStates.CLEAN_TRANSFER)
         .buildTransition()
       .onState(LibTStates.DOWNLOADING)
-        .nextStates(LibTStates.UPLOADING)
-        .cleanup(LibTStates.CLEAN_TRANSFER)
+        .nextStates(LibTStates.UPLOADING, LibTStates.CLEAN_TRANSFER)
         .buildTransition()
       .onState(LibTStates.UPLOADING)
-        .cleanup(LibTStates.CLEAN_TRANSFER)
+        .nextStates(LibTStates.CLEAN_TRANSFER)
         .buildTransition()
-        .onState(LibTStates.CLEAN_TRANSFER)
-        .cleanup(LibTStates.CLEAN_STORAGE)
-      .buildTransition()
-        .onState(LibTStates.CLEAN_STORAGE)
+      .onState(LibTStates.CLEAN_TRANSFER)
+        .nextStates(LibTStates.CLEAN_STORAGE)
+        .buildTransition()
+       .onState(LibTStates.CLEAN_STORAGE)
         .nextStates(LibTStates.CLEAN_STORAGE)
         .toFinal()
       .buildTransition();
 
-    FSMBuilder.Handlers handlers = FSMBuilder.handlers()
-      .events()
+    FSMBuilder.Handlers handlers = FSMBuilder.events()
+      .negativePort(TorrentRestartPort.class)
         .onEvent(TorrentRestart.DwldReq.class)
           .subscribe(LibTHandlers.initDownloadRestart, FSMBasicStateNames.START)
         .onEvent(TorrentRestart.UpldReq.class)
           .subscribe(LibTHandlers.initUploadRestart, FSMBasicStateNames.START)
+        .buildEvents()
+      .negativePort(HopsTorrentPort.class)
         .onEvent(HopsTorrentStopEvent.Request.class)
           .subscribe(LibTHandlers.stop0, FSMBasicStateNames.START)
           .subscribe(LibTHandlers.stop1, LibTStates.PREPARE_STORAGE)
           .subscribe(LibTHandlers.stop2, LibTStates.PREPARE_TRANSFER, LibTStates.DOWNLOAD_MANIFEST, LibTStates.EXTENDED_DETAILS, LibTStates.ADVANCE_TRANSFER)
           .subscribe(LibTHandlers.stop3, LibTStates.DOWNLOADING, LibTStates.UPLOADING)
           .subscribe(LibTHandlers.stop4, LibTStates.CLEAN_TRANSFER, LibTStates.CLEAN_STORAGE)
-        .onEvent(HopsTorrentDownloadEvent.StartRequest.class)
-          .subscribe(LibTHandlers.initDownload, FSMBasicStateNames.START)
         .onEvent(HopsTorrentUploadEvent.Request.class)
           .subscribe(LibTHandlers.initUpload, FSMBasicStateNames.START)
+          .fallback(LibTHandlers.fallbackUploadStart)
+         .onEvent(HopsTorrentDownloadEvent.StartRequest.class)
+          .subscribe(LibTHandlers.initDownload, FSMBasicStateNames.START)
+          .fallback(LibTHandlers.fallbackUploadStart)
         .onEvent(HopsTorrentDownloadEvent.AdvanceRequest.class)
           .subscribe(LibTHandlers.extendedDetails, LibTStates.EXTENDED_DETAILS)
+        .buildEvents()
+      .positivePort(TransferCtrlPort.class)
         .onEvent(GetRawTorrent.Response.class)
           .subscribe(LibTHandlers.downloadManifest, LibTStates.DOWNLOAD_MANIFEST)
         .onEvent(SetupTransfer.Response.class)
           .subscribe(LibTHandlers.advanceTransfer, LibTStates.ADVANCE_TRANSFER)
+        .buildEvents()
+      .positivePort(TorrentStatusPort.class)
         .onEvent(DownloadSummaryEvent.class)
           .subscribe(LibTHandlers.downloadCompleted, LibTStates.DOWNLOADING)
+        .buildEvents()
+      .positivePort(TorrentMngrPort.class)
         .onEvent(StartTorrent.Response.class)
           .subscribe(LibTHandlers.prepareTransfer, LibTStates.PREPARE_TRANSFER)
         .onEvent(StopTorrent.Response.class)
           .subscribe(LibTHandlers.transferCleaning, LibTStates.CLEAN_TRANSFER)
+        .buildEvents()
+      .positivePort(DEndpointCtrlPort.class)
         .onEvent(DEndpoint.Success.class)
           .subscribe(LibTHandlers.prepareStorage, LibTStates.PREPARE_STORAGE)
         .onEvent(DEndpoint.Disconnected.class)
           .subscribe(LibTHandlers.endpointCleaning, LibTStates.CLEAN_STORAGE)
-        .buildEvent()
-      .buildEvents()
-      .fallback(LibTHandlers.fallbackHandler)
-      .buildFallbacks();
+        .buildEvents();
 
-    FSMachineDef fsm = machine.complete(NAME, handlers);
+    FSMInternalStateBuilder isb = new LibTInternal.Builder();
+    MultiFSM fsm = FSMBuilder.multiFSM(NAME, machine, handlers, es, isb, oexa);
     return fsm;
   }
 }

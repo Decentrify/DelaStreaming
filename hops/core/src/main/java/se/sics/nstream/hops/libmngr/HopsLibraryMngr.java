@@ -31,6 +31,7 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.nutil.fsm.MultiFSM;
+import se.sics.ktoolbox.nutil.fsm.api.FSMException;
 import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
@@ -82,7 +83,7 @@ public class HopsLibraryMngr {
     OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory();
     if (LibraryType.DISK.equals(hopsLibraryConfig.libraryType)) {
       library = new DiskLibrary(torrentIdFactory, config);
-    } else if(LibraryType.MYSQL.equals(hopsLibraryConfig.libraryType)){
+    } else if (LibraryType.MYSQL.equals(hopsLibraryConfig.libraryType)) {
       library = new MysqlLibrary(torrentIdFactory, config);
     } else {
       throw new RuntimeException("incomplete");
@@ -90,9 +91,13 @@ public class HopsLibraryMngr {
 
     this.libraryDetails = new LibraryDetails(proxy, library);
 
-    fsm = LibTFSM.getFSM(new LibTExternal(selfAdr, library, new EndpointIdRegistry(),
-      hopsLibraryConfig.storageType), oexa);
-    fsm.setProxy(proxy);
+    try {
+      LibTExternal es = new LibTExternal(selfAdr, library, new EndpointIdRegistry(), hopsLibraryConfig.storageType);
+      fsm = LibTFSM.build(es, oexa);
+      fsm.setProxy(proxy);
+    } catch (FSMException ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
   public void start() {
@@ -102,7 +107,7 @@ public class HopsLibraryMngr {
     restart.setup();
     restart.start(library);
     libraryDetails.setup();
-    
+
   }
 
   public void close() {
@@ -135,7 +140,7 @@ public class HopsLibraryMngr {
       for (Map.Entry<OverlayId, Torrent> t : torrents.entrySet()) {
         Torrent torrent = t.getValue();
         if (t.getValue().getTorrentStatus().equals(TorrentState.UPLOADING)) {
-          proxy.trigger( new TorrentRestart.UpldReq(t.getKey(), torrent.torrentName, torrent.projectId, 
+          proxy.trigger(new TorrentRestart.UpldReq(t.getKey(), torrent.torrentName, torrent.projectId,
             torrent.datasetId, torrent.getPartners(), torrent.getManifestStream()), restartPort);
         } else if (t.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)) {
           proxy.trigger(new TorrentRestart.DwldReq(t.getKey(), torrent.torrentName, torrent.projectId,

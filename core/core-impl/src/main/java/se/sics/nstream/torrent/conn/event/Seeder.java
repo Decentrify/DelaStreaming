@@ -19,73 +19,101 @@
 package se.sics.nstream.torrent.conn.event;
 
 import se.sics.kompics.Direct;
+import se.sics.kompics.Promise;
+import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.torrent.conn.ConnectionId;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class Seeder {
-    public static class Connect extends Direct.Request<Indication> implements Identifiable {
-        public final Identifier eventId;
-        public final KAddress peer;
 
-        public Connect(KAddress peer) {
-            this.eventId = BasicIdentifiers.eventId();
-            this.peer = peer;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        public Success success() {
-            return new Success(this);
-        }
-        
-        public Timeout timeout() {
-            return new Timeout(this);
-        }
-        
-        public Suspect suspect() {
-            return new Suspect(this);
-        }
-    }
-    
-    public static abstract class Indication implements Direct.Response, Identifiable {
-        public final Identifier eventId;
-        public final KAddress target;
-        
-        public Indication(Connect req) {
-            this.eventId = req.eventId;
-            this.target = req.peer;
-        }
+  public static class Connect extends Promise<Indication> implements Identifiable, FSMEvent {
 
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
+    public final Identifier eventId;
+    public final KAddress peer;
+    public final OverlayId torrentId;
+
+    public Connect(KAddress peer, OverlayId torrentId) {
+      this.eventId = BasicIdentifiers.eventId();
+      this.peer = peer;
+      this.torrentId = torrentId;
     }
-    
-    public static class Success extends Indication {
-        private Success(Connect req) {
-            super(req);
-        }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
-    
-    public static class Timeout extends Indication {
-        private Timeout(Connect req) {
-            super(req);
-        }
+
+    public Success success() {
+      return new Success(this);
     }
-    
-    public static class Suspect extends Indication {
-        private Suspect(Connect req) {
-            super(req);
-        }
+
+    public Timeout timeout() {
+      return new Timeout(this);
     }
+
+    public Suspect suspect() {
+      return new Suspect(this);
+    }
+
+    @Override
+    public Identifier getFSMBaseId() {
+      return new ConnectionId(torrentId.baseId, peer.getId());
+    }
+
+    @Override
+    public Indication success(Result r) {
+      return new Success(this);
+    }
+
+    @Override
+    public Indication fail(Result r) {
+      return new Suspect(this);
+    }
+  }
+
+  public static abstract class Indication implements Direct.Response, Identifiable {
+
+    public final Identifier eventId;
+    public final KAddress target;
+
+    public Indication(Connect req) {
+      this.eventId = req.eventId;
+      this.target = req.peer;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+  }
+
+  public static class Success extends Indication {
+
+    private Success(Connect req) {
+      super(req);
+    }
+  }
+
+  public static class Timeout extends Indication {
+
+    private Timeout(Connect req) {
+      super(req);
+    }
+  }
+
+  public static class Suspect extends Indication {
+
+    private Suspect(Connect req) {
+      super(req);
+    }
+  }
 }

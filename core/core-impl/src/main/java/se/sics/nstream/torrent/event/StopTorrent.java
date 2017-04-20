@@ -55,7 +55,7 @@ public class StopTorrent {
     }
 
     @Override
-    public Identifier getBaseId() {
+    public Identifier getFSMBaseId() {
       return torrentId.baseId;
     }
   }
@@ -83,7 +83,7 @@ public class StopTorrent {
     }
 
     @Override
-    public Identifier getBaseId() {
+    public Identifier getFSMBaseId() {
       return torrentId.baseId;
     }
   }
