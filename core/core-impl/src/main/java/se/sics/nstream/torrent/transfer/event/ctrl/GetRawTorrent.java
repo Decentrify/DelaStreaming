@@ -57,7 +57,7 @@ public class GetRawTorrent {
     }
 
     @Override
-    public Identifier getBaseId() {
+    public Identifier getFSMBaseId() {
       return torrentId.baseId;
     }
   }
@@ -83,8 +83,8 @@ public class GetRawTorrent {
     }
 
     @Override
-    public Identifier getBaseId() {
-      return req.getBaseId();
+    public Identifier getFSMBaseId() {
+      return req.getFSMBaseId();
     }
   }
 }

@@ -61,7 +61,7 @@ public class StartTorrent {
     }
 
     @Override
-    public Identifier getBaseId() {
+    public Identifier getFSMBaseId() {
       return torrentId.baseId;
     }
   }
@@ -89,7 +89,7 @@ public class StartTorrent {
     }
 
     @Override
-    public Identifier getBaseId() {
+    public Identifier getFSMBaseId() {
       return torrentId.baseId;
     }
   }

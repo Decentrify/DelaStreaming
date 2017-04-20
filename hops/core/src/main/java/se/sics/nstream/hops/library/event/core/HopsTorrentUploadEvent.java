@@ -77,7 +77,7 @@ public class HopsTorrentUploadEvent {
     }
 
     @Override
-    public Identifier getBaseId() {
+    public Identifier getFSMBaseId() {
       return torrentId.baseId;
     }
   }
