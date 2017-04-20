@@ -27,7 +27,7 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.torrent.channel.ConnectionId;
+import se.sics.nstream.torrent.conn.ConnectionId;
 
 /**
  *

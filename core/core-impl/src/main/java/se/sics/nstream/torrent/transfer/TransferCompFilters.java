@@ -23,7 +23,6 @@ import java.util.Set;
 import se.sics.kompics.KompicsEvent;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.ports.ChannelFilter;
-import se.sics.nstream.torrent.channel.msg.TorrentMsg;
 import se.sics.nstream.torrent.conn.msg.NetCloseTransfer;
 import se.sics.nstream.torrent.conn.msg.NetConnect;
 import se.sics.nstream.torrent.conn.msg.NetDetailedState;
@@ -44,11 +43,6 @@ public class TransferCompFilters {
         private final Set<Class> allowedClasses = new HashSet<>();
 
         {
-            allowedClasses.add(TorrentMsg.Connect.class);
-            allowedClasses.add(TorrentMsg.Connected.class);
-            allowedClasses.add(TorrentMsg.Choke.class);
-            allowedClasses.add(TorrentMsg.Unchoke.class);
-            
             allowedClasses.add(NetConnect.Request.class);
             allowedClasses.add(NetConnect.Response.class);
             allowedClasses.add(NetDetailedState.Request.class);
