@@ -66,6 +66,11 @@ public class LibTInternal implements FSMInternalState {
     this.fsmName = LibTFSM.NAME;
     this.ar = new ActiveRequest();
   }
+  
+  @Override
+  public FSMId getFSMId() {
+    return fsmId;
+  }
 
   public void setUpload(HopsTorrentUploadEvent.Request req) throws FSMException {
     ar.setActive(req);

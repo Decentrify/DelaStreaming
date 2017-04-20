@@ -31,7 +31,6 @@ import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Promise;
 import se.sics.ktoolbox.nutil.fsm.api.FSMBasicStateNames;
-import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.nutil.fsm.api.FSMException;
 import se.sics.ktoolbox.nutil.fsm.api.FSMStateName;
 import se.sics.ktoolbox.nutil.fsm.handler.FSMEventHandler;
@@ -45,9 +44,9 @@ import se.sics.nstream.StreamId;
 import se.sics.nstream.TorrentIds;
 import se.sics.nstream.hops.HopsFED;
 import se.sics.nstream.hops.hdfs.HDFSComp;
-import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.hdfs.HDFSHelper;
-import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.nstream.hops.hdfs.disk.DiskComp;
+import se.sics.nstream.hops.hdfs.disk.DiskFED;
 import se.sics.nstream.hops.library.Details;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
@@ -55,12 +54,12 @@ import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
 import se.sics.nstream.hops.manifest.DiskHelper;
 import se.sics.nstream.hops.manifest.ManifestHelper;
 import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.hops.storage.disk.DiskEndpoint;
+import se.sics.nstream.hops.storage.disk.DiskResource;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
-import se.sics.nstream.hops.hdfs.disk.DiskComp;
-import se.sics.nstream.hops.storage.disk.DiskEndpoint;
-import se.sics.nstream.hops.hdfs.disk.DiskFED;
-import se.sics.nstream.hops.storage.disk.DiskResource;
 import se.sics.nstream.storage.durable.events.DEndpoint;
 import se.sics.nstream.storage.durable.util.FileExtendedDetails;
 import se.sics.nstream.storage.durable.util.MyStream;
@@ -79,21 +78,25 @@ public class LibTHandlers {
 
   private static final Logger LOG = LoggerFactory.getLogger(LibTFSM.class);
 
-  static FSMEventHandler fallbackHandler = new FSMEventHandler<LibTExternal, LibTInternal, FSMEvent>() {
-    @Override
-    public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, FSMEvent event) {
-      if (event instanceof HopsTorrentDownloadEvent.StartRequest) {
-        HopsTorrentDownloadEvent.StartRequest req = (HopsTorrentDownloadEvent.StartRequest) event;
+  static FSMEventHandler fallbackDownloadStart
+    = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.StartRequest>() {
+      @Override
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
+        HopsTorrentDownloadEvent.StartRequest req) {
         es.getProxy().answer(req, req.fail(Result.logicalFail("torrent:" + is.getTorrentId() + "is active already")));
-      } else if (event instanceof HopsTorrentUploadEvent.Request) {
-        HopsTorrentUploadEvent.Request req = (HopsTorrentUploadEvent.Request) event;
-        es.getProxy().answer(req, req.fail(Result.logicalFail("torrent:" + is.getTorrentId() + "is active already")));
-      } else {
-        LOG.warn("state:{} does not handle event:{} and does not register owsa behaviour", state, event);
+        return state;
       }
-      return state;
-    }
-  };
+    };
+
+  static FSMEventHandler fallbackUploadStart
+    = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentUploadEvent.Request>() {
+      @Override
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
+        HopsTorrentUploadEvent.Request req) {
+        es.getProxy().answer(req, req.fail(Result.logicalFail("torrent:" + is.getTorrentId() + "is active already")));
+        return state;
+      }
+    };
 
   static FSMEventHandler stop0 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
