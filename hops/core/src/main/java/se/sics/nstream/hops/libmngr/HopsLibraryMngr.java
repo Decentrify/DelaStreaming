@@ -73,6 +73,7 @@ public class HopsLibraryMngr {
 
   public HopsLibraryMngr(OnFSMExceptionAction oexa, ComponentProxy proxy, Config config, String logPrefix,
     KAddress selfAdr) {
+    LOG.info("{}initing", logPrefix);
     this.logPrefix = logPrefix;
     this.config = config;
     this.selfAdr = selfAdr;
@@ -101,6 +102,7 @@ public class HopsLibraryMngr {
   }
 
   public void start() {
+    LOG.info("{}starting", logPrefix);
     //not sure when the provided ports are set, but for sure they are set after Start event. Ports are not set in constructor
     //TODO Alex - might lose some msg between Start and process of Start
     fsm.setupHandlers();
@@ -127,6 +129,7 @@ public class HopsLibraryMngr {
     }
 
     public void setup() {
+      LOG.info("{}restart init", logPrefix);
       restartPort = proxy.getNegative(TorrentRestartPort.class).getPair();
       proxy.subscribe(handleDownloadRestartSuccess, restartPort);
       proxy.subscribe(handleDownloadRestartFail, restartPort);
@@ -135,10 +138,12 @@ public class HopsLibraryMngr {
     }
 
     public void start(LibraryCtrl library) {
+      LOG.info("{}restart start", logPrefix);
       Map<OverlayId, Torrent> torrents = library.start();
 
       for (Map.Entry<OverlayId, Torrent> t : torrents.entrySet()) {
         Torrent torrent = t.getValue();
+        LOG.debug("{}restarting torrent:{}", logPrefix, t.getKey());
         if (t.getValue().getTorrentStatus().equals(TorrentState.UPLOADING)) {
           proxy.trigger(new TorrentRestart.UpldReq(t.getKey(), torrent.torrentName, torrent.projectId,
             torrent.datasetId, torrent.getPartners(), torrent.getManifestStream()), restartPort);

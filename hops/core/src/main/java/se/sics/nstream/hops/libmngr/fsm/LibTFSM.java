@@ -132,6 +132,7 @@ public class LibTFSM {
       .positivePort(DEndpointCtrlPort.class)
         .onEvent(DEndpoint.Success.class)
           .subscribe(LibTHandlers.prepareManifestStorage, LibTStates.PREPARE_MANIFEST_STORAGE)
+          .subscribe(LibTHandlers.prepareFilesStorage, LibTStates.PREPARE_FILES_STORAGE)
         .onEvent(DEndpoint.Disconnected.class)
           .subscribe(LibTHandlers.endpointCleaning, LibTStates.CLEAN_STORAGE)
         .buildEvents();
