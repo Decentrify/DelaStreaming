@@ -24,10 +24,11 @@ import se.sics.ktoolbox.nutil.fsm.api.FSMStateName;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public enum LibTStates implements FSMStateName {
-  PREPARE_STORAGE,
+  PREPARE_MANIFEST_STORAGE,
   PREPARE_TRANSFER,
   DOWNLOAD_MANIFEST,
   EXTENDED_DETAILS,
+  PREPARE_FILES_STORAGE,
   ADVANCE_TRANSFER,
   DOWNLOADING,
   UPLOADING,

@@ -18,11 +18,10 @@
  */
 package se.sics.nstream.hops.kafka;
 
-import io.hops.util.HopsUtil;
 import io.hops.util.SchemaNotFoundException;
-import io.hops.util.dela.HopsConsumer;
-import io.hops.util.dela.HopsHelper;
-import io.hops.util.dela.HopsProducer;
+import io.hops.util.dela.DelaConsumer;
+import io.hops.util.dela.DelaHelper;
+import io.hops.util.dela.DelaProducer;
 import org.apache.avro.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,59 +31,52 @@ import org.slf4j.LoggerFactory;
  */
 public class KafkaHelper {
 
-    private static final Logger LOG = LoggerFactory.getLogger(KafkaHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(KafkaHelper.class);
 
-    public static HopsProducer getKafkaProducer(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
-        LOG.warn("do not start multiple kafka workers in parallel - risk of race condition (setup/getProducer/getConsumer");
-        setKafkaProperties(kafkaEndpoint, kafkaResource);
-        HopsProducer kp;
-        try {
-            //TODO Alex - hardcoded linger delay
-            kp = HopsHelper.getHopsProducer(kafkaResource.topicName, 5);
-            return kp;
-        } catch (SchemaNotFoundException ex) {
-            throw new RuntimeException(ex);
-        }
+  public static DelaProducer getKafkaProducer(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
+    LOG.warn("do not start multiple kafka workers in parallel - risk of race condition (setup/getProducer/getConsumer");
+    try {
+      //TODO Alex - hardcoded
+      String keystorePwd = "adminpw";
+      String truststorePwd = "adminpw";
+      long lingerDelay = 5;
+      int projectId = Integer.parseInt(kafkaEndpoint.projectId);
+      DelaProducer kp = DelaHelper.getHopsProducer(projectId, kafkaResource.topicName, kafkaEndpoint.brokerEndpoint,
+        kafkaEndpoint.restEndpoint, kafkaEndpoint.keyStore, kafkaEndpoint.trustStore, keystorePwd, truststorePwd,
+        lingerDelay);
+      return kp;
+    } catch (SchemaNotFoundException ex) {
+      throw new RuntimeException(ex);
     }
+  }
 
-    public static HopsConsumer getKafkaConsumer(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
-        LOG.warn("do not start multiple kafka workers in parallel - risk of race condition (setup/getProducer/getConsumer");
-        setKafkaProperties(kafkaEndpoint, kafkaResource);
-        HopsConsumer kc;
-        try {
-            kc = HopsHelper.getHopsConsumer(kafkaResource.topicName);
-            return kc;
-        } catch (SchemaNotFoundException ex) {
-            throw new RuntimeException(ex);
-        }
+  public static DelaConsumer getKafkaConsumer(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
+    LOG.warn("do not start multiple kafka workers in parallel - risk of race condition (setup/getProducer/getConsumer");
+    try {
+      //TODO Alex - hardcoded
+      String keystorePwd = "adminpw";
+      String truststorePwd = "adminpw";
+      long lingerDelay = 5;
+      int projectId = Integer.parseInt(kafkaEndpoint.projectId);
+      DelaConsumer kc = DelaHelper.getHopsConsumer(projectId, kafkaResource.topicName, kafkaEndpoint.brokerEndpoint,
+        kafkaEndpoint.restEndpoint, kafkaEndpoint.keyStore, kafkaEndpoint.trustStore, keystorePwd, truststorePwd);
+      return kc;
+    } catch (SchemaNotFoundException ex) {
+      throw new RuntimeException(ex);
     }
+  }
 
-    public static Schema getKafkaSchemaByTopic(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
-        HopsUtil kafkaConfig = setKafkaProperties(kafkaEndpoint, kafkaResource);
-        String stringSchema;
-        try {
-            stringSchema = HopsHelper.getSchemaByTopic(kafkaConfig, kafkaResource.topicName);
-        } catch (SchemaNotFoundException ex) {
-            throw new RuntimeException(ex);
-        }
-        LOG.info("schema:{}", stringSchema);
-        Schema.Parser parser = new Schema.Parser();
-        Schema schema = parser.parse(stringSchema);
-        return schema;
+  public static Schema getKafkaSchemaByTopic(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
+    String stringSchema;
+    try {
+      int projectId = Integer.parseInt(kafkaEndpoint.projectId);
+      stringSchema = DelaHelper.getSchemaByTopic(kafkaEndpoint.restEndpoint, projectId, kafkaResource.topicName);
+    } catch (SchemaNotFoundException ex) {
+      throw new RuntimeException(ex);
     }
-    
-    private static HopsUtil setKafkaProperties(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
-        HopsUtil hopsUtil = HopsUtil.getInstance();
-        int projectId = Integer.parseInt(kafkaEndpoint.projectId);
-        LOG.info("setting hops-kafka properties - session:{}, project:{} topic:{} broker:{} rest:{} key:{} trust:{}",
-                new Object[]{kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
-                    kafkaEndpoint.keyStore, kafkaEndpoint.trustStore});
-        //TODO Alex - important - set pwd as config params. Have hopsworks send them to me, by reading them from Settings
-        String keystorePwd = "adminpw";
-        String truststorePwd = "adminpw";
-        hopsUtil.setup(kafkaResource.sessionId, projectId, kafkaResource.topicName, kafkaEndpoint.brokerEndpoint, kafkaEndpoint.restEndpoint,
-                kafkaEndpoint.keyStore, kafkaEndpoint.trustStore, keystorePwd, truststorePwd);
-        return hopsUtil;
-    }
-    
+    LOG.info("schema:{}", stringSchema);
+    Schema.Parser parser = new Schema.Parser();
+    Schema schema = parser.parse(stringSchema);
+    return schema;
+  }
 }

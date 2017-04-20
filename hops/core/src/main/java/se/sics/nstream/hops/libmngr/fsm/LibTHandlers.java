@@ -19,8 +19,8 @@
 package se.sics.nstream.hops.libmngr.fsm;
 
 import com.google.common.base.Optional;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,6 +47,8 @@ import se.sics.nstream.hops.hdfs.HDFSComp;
 import se.sics.nstream.hops.hdfs.HDFSHelper;
 import se.sics.nstream.hops.hdfs.disk.DiskComp;
 import se.sics.nstream.hops.hdfs.disk.DiskFED;
+import se.sics.nstream.hops.kafka.KafkaComp;
+import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.library.Details;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
@@ -71,7 +73,6 @@ import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
 import se.sics.nstream.transfer.MyTorrent;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LibTHandlers {
@@ -187,14 +188,14 @@ public class LibTHandlers {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
     es.library.prepareDownload(torrentId, projectId, datasetId, torrentName, partners);
-    setupStorageEndpoints(es, is, manifestStream);
-    setManifestStream(is, manifestStream);
+    saveManifestStream(is, manifestStream);
+    setupManifestStorageEndpoint(es, is);
     if (is.storageRegistry.isComplete()) {
       is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
       setupTransfer(es, is);
       return LibTStates.PREPARE_TRANSFER;
     } else {
-      return LibTStates.PREPARE_STORAGE;
+      return LibTStates.PREPARE_MANIFEST_STORAGE;
     }
   }
 
@@ -227,18 +228,18 @@ public class LibTHandlers {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
     es.library.prepareUpload(torrentId, projectId, datasetId, torrentName);
-    setupStorageEndpoints(es, is, manifestStream);
-    setManifestStream(is, manifestStream);
+    saveManifestStream(is, manifestStream);
+    setupManifestStorageEndpoint(es, is);
     if (is.storageRegistry.isComplete()) {
       is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
       setupTransfer(es, is);
       return LibTStates.PREPARE_TRANSFER;
     } else {
-      return LibTStates.PREPARE_STORAGE;
+      return LibTStates.PREPARE_MANIFEST_STORAGE;
     }
   }
 
-  static FSMEventHandler prepareStorage
+  static FSMEventHandler prepareManifestStorage
     = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
       @Override
       public FSMStateName handle(FSMStateName stateName, LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
@@ -249,7 +250,7 @@ public class LibTHandlers {
           setupTransfer(es, is);
           return LibTStates.PREPARE_TRANSFER;
         } else {
-          return LibTStates.PREPARE_STORAGE;
+          return LibTStates.PREPARE_MANIFEST_STORAGE;
         }
       }
     };
@@ -312,13 +313,33 @@ public class LibTHandlers {
         if (req.result.isSuccess()) {
           LOG.debug("<{}>torrent:{} - extended details", req.getFSMBaseId(), req.torrentId);
           is.setDownloadAdvance(req);
-          prepareDetails(es, is);
-          is.advanceTransfer();
-          advanceTransfer(es, is);
-          return LibTStates.ADVANCE_TRANSFER;
+          if (setupFileStorageEndpoints(es, is, req.kafkaEndpoint)) {
+            return LibTStates.PREPARE_FILES_STORAGE;
+          } else {
+            prepareDetails(es, is);
+            is.advanceTransfer();
+            advanceTransfer(es, is);
+            return LibTStates.ADVANCE_TRANSFER;
+          }
         } else {
           LOG.warn("<{}>torrent:{} - start failed", req.getFSMBaseId(), req.torrentId);
           throw new RuntimeException("todo deal with failure");
+        }
+      }
+    };
+  
+  static FSMEventHandler prepareFilesStorage
+    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
+      @Override
+      public FSMStateName handle(FSMStateName stateName, LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
+        LOG.debug("<{}>endpoint:{} prepared", resp.getFSMBaseId(), resp.req.endpointProvider.getName());
+        is.storageRegistry.connected(resp.req.endpointId);
+        if (is.storageRegistry.isComplete()) {
+          is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
+          setupTransfer(es, is);
+          return LibTStates.ADVANCE_TRANSFER;
+        } else {
+          return LibTStates.PREPARE_FILES_STORAGE;
         }
       }
     };
@@ -391,30 +412,38 @@ public class LibTHandlers {
       }
     };
 
-  private static void setManifestStream(LibTInternal is, MyStream manifestStream) {
+  private static void saveManifestStream(LibTInternal is, MyStream manifestStream) {
     Identifier manifestEndpointId = is.storageRegistry.nameToId(manifestStream.endpoint.getEndpointName());
     FileId manifestFileId = TorrentIds.fileId(is.getTorrentId(), MyTorrent.MANIFEST_ID);
     StreamId manifestStreamId = TorrentIds.streamId(manifestEndpointId, manifestFileId);
     is.getSetupState().setManifestStream(manifestStreamId, manifestStream);
   }
 
-  private static void setupStorageEndpoints(LibTExternal es, LibTInternal is, MyStream manifestStream) {
+  private static void setupManifestStorageEndpoint(LibTExternal es, LibTInternal is) {
+    List<DurableStorageProvider> storageProviders = new LinkedList<>();
+    storageProviders.add(getManifestStorageProvider(es, is));
+    setupStorageEndpoints(es, is, storageProviders);
+  }
 
-    List<DurableStorageProvider> storageProviders = new ArrayList<>();
-    DurableStorageProvider storageProvider = getStorageProvider(es, manifestStream);
-    storageProviders.add(storageProvider);
+  private static boolean setupFileStorageEndpoints(LibTExternal es, LibTInternal is,
+    Optional<KafkaEndpoint> kafkaEndpoint) {
+    List<DurableStorageProvider> storageProviders = getFilesStorageProvider(es, is, kafkaEndpoint);
+    return setupStorageEndpoints(es, is, storageProviders);
+  }
 
-    for (DurableStorageProvider dsp : storageProviders) {
-      String endpointName = dsp.getName();
+  private static boolean setupStorageEndpoints(LibTExternal es, LibTInternal is, List<DurableStorageProvider> providers) {
+    boolean waiting = false;
+    for (DurableStorageProvider provider : providers) {
+      String endpointName = provider.getName();
       Identifier endpointId;
-      if (es.endpointIdRegistry.registered(endpointName)) {
-        endpointId = es.endpointIdRegistry.lookup(endpointName);
-      } else {
+      if (!es.endpointIdRegistry.registered(endpointName)) {
         endpointId = es.endpointIdRegistry.register(endpointName);
+        is.storageRegistry.addWaiting(endpointName, endpointId, provider.getEndpoint());
+        es.getProxy().trigger(new DEndpoint.Connect(is.getTorrentId(), endpointId, provider), es.endpointPort());
+        waiting = true;
       }
-      is.storageRegistry.addWaiting(endpointName, endpointId, dsp.getEndpoint());
-      es.getProxy().trigger(new DEndpoint.Connect(is.getTorrentId(), endpointId, storageProvider), es.endpointPort());
     }
+    return waiting;
   }
 
   private static void cleanStorage(LibTExternal es, LibTInternal is) {
@@ -461,12 +490,28 @@ public class LibTHandlers {
   }
 
   //DISK/HDFS hack
-  private static DurableStorageProvider getStorageProvider(LibTExternal es, MyStream manifestStream) {
+  private static DurableStorageProvider getManifestStorageProvider(LibTExternal es, LibTInternal is) {
     if (es.fsmType.equals(Details.Types.DISK)) {
       return new DiskComp.StorageProvider(es.selfAdr.getId());
     } else {
-      return new HDFSComp.StorageProvider(es.selfAdr.getId(), (HDFSEndpoint) (manifestStream.endpoint));
+      HDFSEndpoint manifestEndpoint = (HDFSEndpoint)is.getSetupState().getManifestStream().endpoint;
+      return new HDFSComp.StorageProvider(es.selfAdr.getId(), manifestEndpoint);
     }
+  }
+
+  private static List<DurableStorageProvider> getFilesStorageProvider(LibTExternal es, LibTInternal is,
+    Optional<KafkaEndpoint> kafka) {
+    List<DurableStorageProvider> providers = new LinkedList<>();
+    if (es.fsmType.equals(Details.Types.DISK)) {
+      providers.add(new DiskComp.StorageProvider(es.selfAdr.getId()));
+    } else {
+      HDFSEndpoint manifestEndpoint = (HDFSEndpoint)is.getSetupState().getManifestStream().endpoint;
+      providers.add(new HDFSComp.StorageProvider(es.selfAdr.getId(), manifestEndpoint));
+      if (kafka.isPresent()) {
+        providers.add(new KafkaComp.StorageProvider(es.selfAdr.getId(), kafka.get()));
+      }
+    }
+    return providers;
   }
 
   private static MyStream manifestStreamSetup(LibTExternal es, LibTInternal is, HDFSEndpoint endpoint,
@@ -524,7 +569,8 @@ public class LibTHandlers {
         StreamId fileStreamId = manifestStreamId.withFile(file.getValue());
         HDFSResource fileResource = manifestResource.withFile(file.getKey());
         MyStream fileStream = manifestStream.withResource(fileResource);
-        //TODO Alex critical - kafka
+
+        //KAFKA
         Optional<Pair<StreamId, MyStream>> kafkaStream = Optional.absent();
         ed.put(file.getValue(), new HopsFED(Pair.with(fileStreamId, fileStream), kafkaStream));
       }
