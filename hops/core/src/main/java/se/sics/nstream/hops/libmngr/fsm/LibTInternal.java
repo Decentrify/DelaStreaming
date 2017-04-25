@@ -34,6 +34,8 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
+import se.sics.nstream.hops.kafka.KafkaEndpoint;
+import se.sics.nstream.hops.kafka.KafkaResource;
 import se.sics.nstream.hops.libmngr.TorrentBuilder;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
@@ -53,11 +55,13 @@ public class LibTInternal implements FSMInternalState {
   public final FSMId fsmId;
   public final String fsmName;
 
+  //intermediary state
   public final ActiveRequest ar;
-  private OverlayId torrentId;
   private TorrentState torrentState;
+  public final AuxState auxState = new AuxState();
+  //final state
+  private OverlayId torrentId;
   public final LibTEndpointRegistry storageRegistry = new LibTEndpointRegistry();
-
   private List<KAddress> partners;
   private MyTorrent torrent;
 
@@ -66,7 +70,7 @@ public class LibTInternal implements FSMInternalState {
     this.fsmName = LibTFSM.NAME;
     this.ar = new ActiveRequest();
   }
-  
+
   @Override
   public FSMId getFSMId() {
     return fsmId;
@@ -95,6 +99,8 @@ public class LibTInternal implements FSMInternalState {
 
   public void setDownloadAdvance(HopsTorrentDownloadEvent.AdvanceRequest req) throws FSMException {
     ar.setActive(req);
+    auxState.setKafkaEndpointName(req.kafkaEndpoint);
+    auxState.setKafkaDetails(req.kafkaDetails);
   }
 
   public void setDownloadRestart(TorrentRestart.DwldReq req) throws FSMException {
@@ -107,7 +113,7 @@ public class LibTInternal implements FSMInternalState {
   public void setStop(HopsTorrentStopEvent.Request req) throws FSMException {
     ar.setActive(req);
   }
-  
+
   public void advanceTransfer() {
     torrentState = ((TSetup) torrentState).finish();
   }
@@ -115,7 +121,7 @@ public class LibTInternal implements FSMInternalState {
   public TSetup getSetupState() {
     return (TSetup) torrentState;
   }
-  
+
   public TComplete getCompleteState() {
     return (TComplete) torrentState;
   }
@@ -205,7 +211,7 @@ public class LibTInternal implements FSMInternalState {
       return torrentBuilder.getFiles();
     }
 
-    public void setExtendedDetails(Map<FileId, FileExtendedDetails> extendedDetails) {
+    public void setDetails(Map<FileId, FileExtendedDetails> extendedDetails) {
       torrentBuilder.setExtendedDetails(extendedDetails);
     }
 
@@ -224,6 +230,30 @@ public class LibTInternal implements FSMInternalState {
       this.torrent = torrent;
       this.manifestStream = manifestStream;
       this.download = download;
+    }
+  }
+
+  public static class AuxState {
+
+    private String kafkaEndpointName;
+    private Map<String, KafkaResource> kafkaDetails;
+
+    private void setKafkaDetails(Map<String, KafkaResource> kafkaDetails) {
+      this.kafkaDetails = kafkaDetails;
+    }
+
+    public Map<String, KafkaResource> getKafkaDetails() {
+      return kafkaDetails;
+    }
+
+    public String getKafkaEndpointName() {
+      return kafkaEndpointName;
+    }
+
+    private void setKafkaEndpointName(Optional<KafkaEndpoint> kafkaEndpoint) {
+      if (kafkaEndpoint.isPresent()) {
+        this.kafkaEndpointName = kafkaEndpoint.get().getEndpointName();
+      }
     }
   }
 

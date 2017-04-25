@@ -50,6 +50,7 @@ import se.sics.nstream.hops.hdfs.disk.DiskComp;
 import se.sics.nstream.hops.hdfs.disk.DiskFED;
 import se.sics.nstream.hops.kafka.KafkaComp;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
+import se.sics.nstream.hops.kafka.KafkaResource;
 import se.sics.nstream.hops.library.Details;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
@@ -66,6 +67,7 @@ import se.sics.nstream.storage.durable.DurableStorageProvider;
 import se.sics.nstream.storage.durable.events.DEndpoint;
 import se.sics.nstream.storage.durable.util.FileExtendedDetails;
 import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.storage.durable.util.StreamEndpoint;
 import se.sics.nstream.torrent.event.StartTorrent;
 import se.sics.nstream.torrent.event.StopTorrent;
 import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
@@ -269,7 +271,7 @@ public class LibTHandlers {
             //on download restart the manifest is present on endpoint
             //on upload req/restart the manifest is present on endpoint
             readManifest(es, is);
-            prepareDetails(es, is);
+            prepareBasicDetails(es, is);
             is.advanceTransfer();
             advanceTransfer(es, is);
             return LibTStates.ADVANCE_TRANSFER;
@@ -293,7 +295,7 @@ public class LibTHandlers {
             success(is, es.getProxy(), Result.success(true));
             return LibTStates.EXTENDED_DETAILS;
           } else {
-            prepareDetails(es, is);
+            prepareBasicDetails(es, is);
             is.advanceTransfer();
             advanceTransfer(es, is);
             return LibTStates.ADVANCE_TRANSFER;
@@ -317,7 +319,7 @@ public class LibTHandlers {
           if (setupFileStorageEndpoints(es, is, req.kafkaEndpoint)) {
             return LibTStates.PREPARE_FILES_STORAGE;
           } else {
-            prepareDetails(es, is);
+            prepareBasicDetails(es, is);
             is.advanceTransfer();
             advanceTransfer(es, is);
             return LibTStates.ADVANCE_TRANSFER;
@@ -336,9 +338,11 @@ public class LibTHandlers {
         LOG.debug("<{}>endpoint:{} prepared", resp.getFSMBaseId(), resp.req.endpointProvider.getName());
         is.storageRegistry.connected(resp.req.endpointId);
         if (is.storageRegistry.isComplete()) {
+          prepareExtendedDetails(es, is);
           is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
-          setupTransfer(es, is);
-          return LibTStates.PREPARE_TRANSFER;
+          is.advanceTransfer();
+          advanceTransfer(es, is);
+          return LibTStates.ADVANCE_TRANSFER;
         } else {
           return LibTStates.PREPARE_FILES_STORAGE;
         }
@@ -447,7 +451,7 @@ public class LibTHandlers {
       Identifier endpointId = es.endpointIdRegistry.lookup(endpointName);
       if (endpointId == null) {
         endpointId = es.endpointIdRegistry.register(endpointName);
-      } else if(preRegisteredEndpoints.contains(endpointName)) {
+      } else if (preRegisteredEndpoints.contains(endpointName)) {
         //endpoint registered, but not setup
       } else {
         //no setup needed
@@ -565,8 +569,8 @@ public class LibTHandlers {
     }
   }
 
-  private static void prepareDetails(LibTExternal es, LibTInternal is) {
-    Map<FileId, FileExtendedDetails> ed = new HashMap<>();
+  private static void prepareBasicDetails(LibTExternal es, LibTInternal is) {
+    Map<FileId, FileExtendedDetails> basicDetails = new HashMap<>();
     StreamId manifestStreamId = is.getSetupState().getManifestStreamId();
     MyStream manifestStream = is.getSetupState().getManifestStream();
     if (es.fsmType.equals(Details.Types.DISK)) {
@@ -575,7 +579,7 @@ public class LibTHandlers {
         StreamId fileStreamId = manifestStreamId.withFile(file.getValue());
         DiskResource fileResource = manifestResource.withFile(file.getKey());
         MyStream fileStream = manifestStream.withResource(fileResource);
-        ed.put(file.getValue(), new DiskFED(fileStreamId, fileStream));
+        basicDetails.put(file.getValue(), new DiskFED(fileStreamId, fileStream));
       }
     } else {
       HDFSResource manifestResource = (HDFSResource) manifestStream.resource;
@@ -584,12 +588,12 @@ public class LibTHandlers {
         HDFSResource fileResource = manifestResource.withFile(file.getKey());
         MyStream fileStream = manifestStream.withResource(fileResource);
 
-        //KAFKA
+        //KAFKA - basic details do not have kafka details
         Optional<Pair<StreamId, MyStream>> kafkaStream = Optional.absent();
-        ed.put(file.getValue(), new HopsFED(Pair.with(fileStreamId, fileStream), kafkaStream));
+        basicDetails.put(file.getValue(), new HopsFED(Pair.with(fileStreamId, fileStream), kafkaStream));
       }
     }
-    is.getSetupState().setExtendedDetails(ed);
+    is.getSetupState().setDetails(basicDetails);
   }
 
   private static boolean withExtendedDetails(LibTExternal es) {
@@ -598,6 +602,32 @@ public class LibTHandlers {
     } else {
       return true;
     }
+  }
+
+  //only for hops - extended is hdfs + kafka
+  private static void prepareExtendedDetails(LibTExternal es, LibTInternal is) {
+    Map<FileId, FileExtendedDetails> extDetails = new HashMap<>();
+    StreamId manifestStreamId = is.getSetupState().getManifestStreamId();
+    MyStream manifestStream = is.getSetupState().getManifestStream();
+    HDFSResource manifestResource = (HDFSResource) manifestStream.resource;
+    for (Map.Entry<String, FileId> file : is.getSetupState().getFiles().entrySet()) {
+      StreamId fileStreamId = manifestStreamId.withFile(file.getValue());
+      HDFSResource fileResource = manifestResource.withFile(file.getKey());
+      MyStream fileStream = manifestStream.withResource(fileResource);
+
+      //KAFKA
+      Optional<Pair<StreamId, MyStream>> kafkaStream = Optional.absent();
+      KafkaResource kafkaResource = is.auxState.getKafkaDetails().get(file.getKey());
+      if(kafkaResource != null) {
+        Identifier kafkaEndpointId = is.storageRegistry.nameToId(is.auxState.getKafkaEndpointName());
+        StreamEndpoint kafkaEndpoint = is.storageRegistry.getEndpoint(kafkaEndpointId);
+        MyStream ks = new MyStream(kafkaEndpoint, kafkaResource);
+        StreamId kafkaStreamId = TorrentIds.streamId(kafkaEndpointId, file.getValue());
+        kafkaStream = Optional.of(Pair.with(kafkaStreamId, ks));
+      }
+      extDetails.put(file.getValue(), new HopsFED(Pair.with(fileStreamId, fileStream), kafkaStream));
+    }
+    is.getSetupState().setDetails(extDetails);
   }
 
   public static void failed(LibTInternal is, ComponentProxy proxy, Result r) throws FSMException {

@@ -59,6 +59,10 @@ public class LibTEndpointRegistry {
     return nameToId.get(endpointName);
   }
   
+  public StreamEndpoint getEndpoint(Identifier endpointId) {
+    return endpoints.get(endpointId);
+  }
+  
   public Set<Identifier> selfCleaning() {
     selfCleaning.addAll(endpoints.keySet());
     selfCleaning.addAll(connecting);
