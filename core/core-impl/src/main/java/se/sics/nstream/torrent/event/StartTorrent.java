@@ -20,6 +20,7 @@ package se.sics.nstream.torrent.event;
 
 import java.util.List;
 import se.sics.kompics.Direct;
+import se.sics.kompics.Promise;
 import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
@@ -34,7 +35,7 @@ import se.sics.ktoolbox.util.result.Result;
  */
 public class StartTorrent {
 
-  public static class Request extends Direct.Request<Response> implements OverlayEvent, FSMEvent {
+  public static class Request extends Promise<Response> implements OverlayEvent, FSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -56,13 +57,19 @@ public class StartTorrent {
       return torrentId;
     }
 
-    public Response success() {
-      return new Response(this, Result.success(true));
+    @Override
+    public Response success(Result r) {
+      return new Response(this, r);
     }
 
     @Override
     public Identifier getFSMBaseId() {
       return torrentId.baseId;
+    }
+
+    @Override
+    public Response fail(Result r) {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
   }
 

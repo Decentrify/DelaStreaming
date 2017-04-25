@@ -300,7 +300,7 @@ public class TransferComp extends ComponentDefinition {
             initializeTorrent(serveDefState.td, resp.streamsInfo);
             trigger(Start.event, transferTrackingComp.control());
 
-            answer(setupTransferReq, setupTransferReq.complete(Result.success(true)));
+            answer(setupTransferReq, setupTransferReq.success(Result.success(true)));
             trigger(new TorrentTracking.TransferSetUp(torrentId, fileMngr.report()), statusPort);
             scheduleAdvance();
             tryAdvance();

@@ -20,6 +20,7 @@ package se.sics.nstream.hops.libmngr.fsm;
 
 import com.google.common.base.Optional;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -188,8 +189,8 @@ public class LibTHandlers {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
     es.library.prepareDownload(torrentId, projectId, datasetId, torrentName, partners);
-    saveManifestStream(is, manifestStream);
-    setupManifestStorageEndpoint(es, is);
+    Set<String> preRegisteredEndpoints = saveManifestStream(es, is, manifestStream);
+    setupManifestStorageEndpoint(es, is, preRegisteredEndpoints);
     if (is.storageRegistry.isComplete()) {
       is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
       setupTransfer(es, is);
@@ -228,8 +229,8 @@ public class LibTHandlers {
       throw new RuntimeException("library and fsm do not agree - cannot fix it while running - logic error");
     }
     es.library.prepareUpload(torrentId, projectId, datasetId, torrentName);
-    saveManifestStream(is, manifestStream);
-    setupManifestStorageEndpoint(es, is);
+    Set<String> preRegisteredEndpoints = saveManifestStream(es, is, manifestStream);
+    setupManifestStorageEndpoint(es, is, preRegisteredEndpoints);
     if (is.storageRegistry.isComplete()) {
       is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
       setupTransfer(es, is);
@@ -327,7 +328,7 @@ public class LibTHandlers {
         }
       }
     };
-  
+
   static FSMEventHandler prepareFilesStorage
     = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
       @Override
@@ -337,7 +338,7 @@ public class LibTHandlers {
         if (is.storageRegistry.isComplete()) {
           is.getSetupState().storageSetupComplete(is.storageRegistry.getSetup());
           setupTransfer(es, is);
-          return LibTStates.ADVANCE_TRANSFER;
+          return LibTStates.PREPARE_TRANSFER;
         } else {
           return LibTStates.PREPARE_FILES_STORAGE;
         }
@@ -412,36 +413,49 @@ public class LibTHandlers {
       }
     };
 
-  private static void saveManifestStream(LibTInternal is, MyStream manifestStream) {
-    Identifier manifestEndpointId = is.storageRegistry.nameToId(manifestStream.endpoint.getEndpointName());
+  private static Set<String> saveManifestStream(LibTExternal es, LibTInternal is, MyStream manifestStream) {
+    Set<String> preRegisteredEndpoints = new HashSet<>();
+    Identifier manifestEndpointId = es.endpointIdRegistry.lookup(manifestStream.endpoint.getEndpointName());
+    if (manifestEndpointId == null) {
+      preRegisteredEndpoints.add(manifestStream.endpoint.getEndpointName());
+      manifestEndpointId = es.endpointIdRegistry.register(manifestStream.endpoint.getEndpointName());
+    }
     FileId manifestFileId = TorrentIds.fileId(is.getTorrentId(), MyTorrent.MANIFEST_ID);
     StreamId manifestStreamId = TorrentIds.streamId(manifestEndpointId, manifestFileId);
     is.getSetupState().setManifestStream(manifestStreamId, manifestStream);
+    return preRegisteredEndpoints;
   }
 
-  private static void setupManifestStorageEndpoint(LibTExternal es, LibTInternal is) {
+  private static void setupManifestStorageEndpoint(LibTExternal es, LibTInternal is,
+    Set<String> preRegisteredEndpoints) {
     List<DurableStorageProvider> storageProviders = new LinkedList<>();
     storageProviders.add(getManifestStorageProvider(es, is));
-    setupStorageEndpoints(es, is, storageProviders);
+    setupStorageEndpoints(es, is, storageProviders, preRegisteredEndpoints);
   }
 
   private static boolean setupFileStorageEndpoints(LibTExternal es, LibTInternal is,
     Optional<KafkaEndpoint> kafkaEndpoint) {
     List<DurableStorageProvider> storageProviders = getFilesStorageProvider(es, is, kafkaEndpoint);
-    return setupStorageEndpoints(es, is, storageProviders);
+    return setupStorageEndpoints(es, is, storageProviders, new HashSet<String>());
   }
 
-  private static boolean setupStorageEndpoints(LibTExternal es, LibTInternal is, List<DurableStorageProvider> providers) {
+  private static boolean setupStorageEndpoints(LibTExternal es, LibTInternal is, List<DurableStorageProvider> providers,
+    Set<String> preRegisteredEndpoints) {
     boolean waiting = false;
     for (DurableStorageProvider provider : providers) {
       String endpointName = provider.getName();
-      Identifier endpointId;
-      if (!es.endpointIdRegistry.registered(endpointName)) {
+      Identifier endpointId = es.endpointIdRegistry.lookup(endpointName);
+      if (endpointId == null) {
         endpointId = es.endpointIdRegistry.register(endpointName);
-        is.storageRegistry.addWaiting(endpointName, endpointId, provider.getEndpoint());
-        es.getProxy().trigger(new DEndpoint.Connect(is.getTorrentId(), endpointId, provider), es.endpointPort());
-        waiting = true;
+      } else if(preRegisteredEndpoints.contains(endpointName)) {
+        //endpoint registered, but not setup
+      } else {
+        //no setup needed
+        continue;
       }
+      is.storageRegistry.addWaiting(endpointName, endpointId, provider.getEndpoint());
+      es.getProxy().trigger(new DEndpoint.Connect(is.getTorrentId(), endpointId, provider), es.endpointPort());
+      waiting = true;
     }
     return waiting;
   }
@@ -494,7 +508,7 @@ public class LibTHandlers {
     if (es.fsmType.equals(Details.Types.DISK)) {
       return new DiskComp.StorageProvider(es.selfAdr.getId());
     } else {
-      HDFSEndpoint manifestEndpoint = (HDFSEndpoint)is.getSetupState().getManifestStream().endpoint;
+      HDFSEndpoint manifestEndpoint = (HDFSEndpoint) is.getSetupState().getManifestStream().endpoint;
       return new HDFSComp.StorageProvider(es.selfAdr.getId(), manifestEndpoint);
     }
   }
@@ -505,7 +519,7 @@ public class LibTHandlers {
     if (es.fsmType.equals(Details.Types.DISK)) {
       providers.add(new DiskComp.StorageProvider(es.selfAdr.getId()));
     } else {
-      HDFSEndpoint manifestEndpoint = (HDFSEndpoint)is.getSetupState().getManifestStream().endpoint;
+      HDFSEndpoint manifestEndpoint = (HDFSEndpoint) is.getSetupState().getManifestStream().endpoint;
       providers.add(new HDFSComp.StorageProvider(es.selfAdr.getId(), manifestEndpoint));
       if (kafka.isPresent()) {
         providers.add(new KafkaComp.StorageProvider(es.selfAdr.getId(), kafka.get()));

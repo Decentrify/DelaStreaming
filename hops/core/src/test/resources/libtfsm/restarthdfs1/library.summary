@@ -1,0 +1,1 @@
+{"diskLibrary":{"torrents":[]},"hdfsLibrary":{"torrents":[{"projectId":1,"datasetId":17,"torrentName":"t1","torrentStatus":"UPLOADING","baseId":"1e1d968c-2458-49e4-b32c-78af06754dca_demo_testavro1491398341","endpoint":{"url":"hdfs://10.0.2.15:8020","user":"demo__meb10000"},"dirPath":"/Projects/demo/testavro/","partners":[]}]}}

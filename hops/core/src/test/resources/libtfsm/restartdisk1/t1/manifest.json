@@ -1,0 +1,15 @@
+{
+  "fileInfos": [{
+      "fileName": "file1",
+      "length": 1000
+    },{
+      "fileName": "file2",
+      "length": 1000
+    }],
+  "datasetName": "fileDataset",
+  "metaDataJsons": [],
+  "datasetDescription": "myDatasetTest",
+  "creatorDate": "2016/07/27 19:10:46",
+  "creatorEmail": "admin@kth.se",
+  "kafkaSupport": true
+}

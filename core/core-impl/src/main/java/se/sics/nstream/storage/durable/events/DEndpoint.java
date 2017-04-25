@@ -19,11 +19,13 @@
 package se.sics.nstream.storage.durable.events;
 
 import se.sics.kompics.Direct;
+import se.sics.kompics.Promise;
 import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifiable;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
 
 /**
@@ -32,7 +34,7 @@ import se.sics.nstream.storage.durable.DurableStorageProvider;
  */
 public class DEndpoint {
 
-  public static class Connect extends Direct.Request<Success> implements Identifiable, FSMEvent {
+  public static class Connect extends Promise<Indication> implements Identifiable, FSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -51,12 +53,14 @@ public class DEndpoint {
       return eventId;
     }
 
-    public Success success() {
+    @Override
+    public Indication success(Result r) {
       return new Success(this);
     }
     
-    public Failed failed(Throwable cause) {
-      return new Failed(this, cause);
+    @Override
+    public Indication fail(Result r) {
+      return new Failed(this, r);
     }
 
     @Override
@@ -93,9 +97,9 @@ public class DEndpoint {
   
   public static class Failed extends Indication {
     public final Throwable cause;
-    public Failed(Connect req, Throwable cause) {
+    public Failed(Connect req, Result r) {
       super(req);
-      this.cause = cause;
+      this.cause = r.getException();
     }
   }
   

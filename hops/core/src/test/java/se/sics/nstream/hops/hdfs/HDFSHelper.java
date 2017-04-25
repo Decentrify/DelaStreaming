@@ -16,34 +16,28 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.storage.hdfs;
+package se.sics.nstream.hops.hdfs;
 
-import se.sics.nstream.storage.durable.util.StreamResource;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSResource implements StreamResource {
+public class HDFSHelper {
 
-    public final String dirPath;
-    public final String fileName;
-
-    public HDFSResource(String dirPath, String fileName) {
-        this.dirPath = dirPath;
-        this.fileName = fileName;
-    }
-    
-    public HDFSResource withFile(String fileName) {
-        return new HDFSResource(dirPath, fileName);
-    }
-
-    @Override
-    public String getSinkName() {
-        return "hdfs://" + dirPath + "/" + fileName;
-    }
-
-  @Override
-  public String toString() {
-    return "HDFSResource{" + "dirPath=" + dirPath + ", fileName=" + fileName + '}';
+  private final static Logger LOG = LoggerFactory.getLogger(HDFSHelper.class);
+  private static String logPrefix = "";
+  
+  public static HDFSHelperMock mock = null;
+  
+  public static Result<ManifestJSON> readManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource) {
+    LOG.info("{}loading manifest from endpoint:{} resource:{}", new Object[]{logPrefix, hdfsEndpoint, hdfsResource});
+    return mock.readManifest(ugi, hdfsEndpoint, hdfsResource);
   }
 }

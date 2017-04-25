@@ -43,7 +43,7 @@ import se.sics.nstream.storage.durable.events.DStreamDisconnect;
  */
 public class DStreamMngrComp extends ComponentDefinition {
 
-  private static final Logger LOG = LoggerFactory.getLogger(DStorageMngrComp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DStreamMngrComp.class);
   private final String logPrefix;
 
   private final Negative<DStoragePort> storagePort = provides(DStoragePort.class);

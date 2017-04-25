@@ -59,7 +59,6 @@ public class LibTFSM {
         .buildTransition()
       .onState(LibTStates.PREPARE_MANIFEST_STORAGE)
         .nextStates(LibTStates.PREPARE_MANIFEST_STORAGE, LibTStates.PREPARE_TRANSFER, LibTStates.CLEAN_STORAGE)
-        .nextStates(LibTStates.PREPARE_MANIFEST_STORAGE, LibTStates.PREPARE_TRANSFER)
         .buildTransition()
       .onState(LibTStates.PREPARE_TRANSFER)
         .nextStates(LibTStates.DOWNLOAD_MANIFEST, LibTStates.ADVANCE_TRANSFER, LibTStates.CLEAN_TRANSFER)

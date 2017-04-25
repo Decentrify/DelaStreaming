@@ -16,34 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.storage.hdfs;
+package se.sics.nstream.hops.hdfs;
 
-import se.sics.nstream.storage.durable.util.StreamResource;
+import org.apache.hadoop.security.UserGroupInformation;
+import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSResource implements StreamResource {
-
-    public final String dirPath;
-    public final String fileName;
-
-    public HDFSResource(String dirPath, String fileName) {
-        this.dirPath = dirPath;
-        this.fileName = fileName;
-    }
-    
-    public HDFSResource withFile(String fileName) {
-        return new HDFSResource(dirPath, fileName);
-    }
-
-    @Override
-    public String getSinkName() {
-        return "hdfs://" + dirPath + "/" + fileName;
-    }
-
-  @Override
-  public String toString() {
-    return "HDFSResource{" + "dirPath=" + dirPath + ", fileName=" + fileName + '}';
-  }
+public interface HDFSHelperMock {
+  public Result<ManifestJSON> readManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource);
 }

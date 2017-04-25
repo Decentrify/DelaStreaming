@@ -34,6 +34,7 @@ import se.sics.kompics.Start;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
+import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.durable.events.DEndpoint;
 
 /**
@@ -94,7 +95,7 @@ public class DStorageMngrComp extends ComponentDefinition {
     Throwable cause = fault.getCause();
     reportedFaulty.put(endpointId, cause);
     for (DEndpoint.Connect c : clients.get(endpointId).values()) {
-      answer(c, c.failed(cause));
+      answer(c, c.fail(Result.internalFailure((Exception)cause)));
     }
 
     Component endpointComp = storageEndpoints.get(endpointId);
@@ -118,7 +119,7 @@ public class DStorageMngrComp extends ComponentDefinition {
     public void handle(DEndpoint.Connect req) {
       LOG.info("{}connecting endpoint:{}", logPrefix, req.endpointId);
       if(reportedFaulty.containsKey(req.endpointId)) {
-        answer(req, req.failed(reportedFaulty.get(req.endpointId)));
+        answer(req, req.fail(Result.internalFailure((Exception)reportedFaulty.get(req.endpointId))));
       }
       Map<OverlayId, DEndpoint.Connect> endpointClients;
       if (!storageEndpoints.containsKey(req.endpointId)) {
@@ -137,7 +138,7 @@ public class DStorageMngrComp extends ComponentDefinition {
         endpointClients = clients.get(req.endpointId);
       }
       endpointClients.put(req.torrentId, req);
-      answer(req, req.success());
+      answer(req, req.success(Result.success(true)));
     }
   };
 

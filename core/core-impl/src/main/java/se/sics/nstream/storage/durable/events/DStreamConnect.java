@@ -30,47 +30,55 @@ import se.sics.nstream.storage.durable.util.MyStream;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DStreamConnect {
-    public static class Request extends Direct.Request<Success> implements DStreamEvent {
-        public final Identifier eventId;
-        public final Pair<StreamId, MyStream> stream;
-        
-        public Request(Pair<StreamId, MyStream> stream) {
-            this.eventId = BasicIdentifiers.eventId();
-            this.stream = stream;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        public Success success(long filePos) {
-            return new Success(this, filePos);
-        }
 
-        @Override
-        public StreamId getStreamId() {
-            return stream.getValue0();
-        }
+  public static class Request extends Direct.Request<Success> implements DStreamEvent {
 
-        @Override
-        public Identifier getEndpointId() {
-            return stream.getValue0().endpointId;
-        }
+    public final Identifier eventId;
+    public final Pair<StreamId, MyStream> stream;
+
+    public Request(Pair<StreamId, MyStream> stream) {
+      this.eventId = BasicIdentifiers.eventId();
+      this.stream = stream;
     }
-    
-    public static class Success implements Direct.Response, Identifiable {
-        public final Request req;
-        public final long streamPos;
-        
-        private Success(Request req, long streamPos) {
-            this.req = req;
-            this.streamPos = streamPos;
-        }
 
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+
+    public Success success(long filePos) {
+      return new Success(this, filePos);
+    }
+
+    @Override
+    public StreamId getStreamId() {
+      return stream.getValue0();
+    }
+
+    @Override
+    public Identifier getEndpointId() {
+      return stream.getValue0().endpointId;
+    }
+
+    @Override
+    public String toString() {
+      return "Request{" + "streamId=<" + stream.getValue0().toString() + ">}";
+    }
+  }
+
+  public static class Success implements Direct.Response, Identifiable {
+
+    public final Request req;
+    public final long streamPos;
+
+    private Success(Request req, long streamPos) {
+      this.req = req;
+      this.streamPos = streamPos;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+  }
 }
