@@ -40,4 +40,9 @@ public class HDFSHelper {
     LOG.info("{}loading manifest from endpoint:{} resource:{}", new Object[]{logPrefix, hdfsEndpoint, hdfsResource});
     return mock.readManifest(ugi, hdfsEndpoint, hdfsResource);
   }
+  
+  public static Result<Boolean> writeManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, final HDFSResource hdfsResource, final ManifestJSON manifest) {
+    LOG.info("{}writting manifest to endpoint:{} resource:{}", new Object[]{logPrefix, hdfsEndpoint, hdfsResource});
+    return mock.writeManifest(ugi, hdfsEndpoint, hdfsResource, manifest);
+  }
 }

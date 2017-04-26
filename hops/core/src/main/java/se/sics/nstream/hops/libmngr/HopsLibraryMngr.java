@@ -270,4 +270,9 @@ public class HopsLibraryMngr {
       }
     };
   }
+
+  //********************************INTROSPECTION METHODS FOR TESTING***************************************************
+  protected MultiFSM getFSM() {
+    return fsm;
+  }
 }

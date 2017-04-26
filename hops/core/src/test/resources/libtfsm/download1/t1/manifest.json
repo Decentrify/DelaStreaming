@@ -1,0 +1,13 @@
+{
+  "fileInfos": [{
+      "schema": "{\"namespace\": \"file1.avro\",\n\"type\": \"record\",\n\"name\": \"testRecord\",\n\"fields\": [\n    {\"name\": \"field1\", \"type\": \"string\"},\n    {\"name\": \"field2\", \"type\": \"string\"},\n    {\"name\": \"field3\", \"type\": \"string\"}\n]\n}",
+      "fileName": "file1",
+      "length": 1000
+    }],
+  "datasetName": "fileDataset",
+  "metaDataJsons": [],
+  "datasetDescription": "myDatasetTest",
+  "creatorDate": "2016/07/27 19:10:46",
+  "creatorEmail": "admin@kth.se",
+  "kafkaSupport": true
+}

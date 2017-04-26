@@ -122,4 +122,9 @@ public class LibraryMngrComp extends ComponentDefinition {
             this.libraryProvider = libraryProvider;
         }
     }
+    
+    //********************************INTROSPECTION METHODS FOR TESTING*************************************************
+    protected LibraryProvider getLibraryProvider() {
+      return torrentProvider;
+    }
 }

@@ -61,4 +61,8 @@ public class HopsLibraryProvider implements LibraryProvider {
         hopsHelper.close();
         hopsTorrent.close();
     }
+    //********************************INTROSPECTION METHODS FOR TESTING*************************************************
+    protected HopsLibraryMngr getHopsLibraryMngr() {
+      return hopsTorrent;
+    }
 }

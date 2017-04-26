@@ -90,7 +90,7 @@ public class KafkaComp extends ComponentDefinition {
 
         @Override
         public String getName() {
-            return "hdfs";
+            return endpoint.getEndpointName();
         }
 
         @Override

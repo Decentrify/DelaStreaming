@@ -16,18 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.hdfs;
+package se.sics.nstream.hops.library;
 
-import org.apache.hadoop.security.UserGroupInformation;
-import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.hops.manifest.ManifestJSON;
-import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.nstream.hops.libmngr.HopsLibraryMngr;
+import se.sics.nstream.library.LibraryProvider;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface HDFSHelperMock {
-  public Result<ManifestJSON> readManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource);
-  public Result<Boolean> writeManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, final HDFSResource hdfsResource, final ManifestJSON manifest);
+public class HopsLibraryProviderTestHelper {
+   public static HopsLibraryMngr getHopsLibraryMngr(LibraryProvider instance) {
+     return ((HopsLibraryProvider)instance).getHopsLibraryMngr();
+   }
 }

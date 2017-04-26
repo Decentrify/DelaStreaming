@@ -229,7 +229,7 @@ public class TransferComp extends ComponentDefinition {
             if (connMngr.hasConnCandidates()) {
                 trigger(new Seeder.Connect(connMngr.getConnCandidate(), torrentId), connPort);
             } else {
-                answer(req, req.complete(Result.timeout(new NotFoundException("no peers to download manifest def"))));
+                answer(req, req.success(Result.timeout(new NotFoundException("no peers to download manifest def"))));
             }
         }
     };
@@ -264,7 +264,7 @@ public class TransferComp extends ComponentDefinition {
         public void handle(DetailedState.Deliver event) {
             if (!event.manifestDef.isSuccess()) {
                 LOG.warn("{}manifest def - failed", logPrefix);
-                answer(rawTorrentReq, rawTorrentReq.complete(event.manifestDef));
+                answer(rawTorrentReq, rawTorrentReq.success(event.manifestDef));
                 return;
             }
             LOG.info("{}detailed state - success", logPrefix);
@@ -668,7 +668,7 @@ public class TransferComp extends ComponentDefinition {
 
         private void interpretManifest(Manifest manifest) {
             trigger(new TorrentTracking.DownloadedManifest(torrentId, Result.success(manifest)), statusPort);
-            answer(rawTorrentReq, rawTorrentReq.complete(Result.success(manifest)));
+            answer(rawTorrentReq, rawTorrentReq.success(Result.success(manifest)));
             trigger(new CloseTransfer.Request(connId), connPort);
             killInstance();
         }

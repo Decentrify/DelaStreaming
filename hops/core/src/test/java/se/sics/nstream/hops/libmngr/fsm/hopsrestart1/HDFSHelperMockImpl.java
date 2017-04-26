@@ -33,8 +33,9 @@ import se.sics.nstream.hops.storage.hdfs.HDFSResource;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HDFSHelperMockImpl implements HDFSHelperMock {
+
   private final String manifestFile;
-  
+
   public HDFSHelperMockImpl(String manifestFile) {
     this.manifestFile = manifestFile;
   }
@@ -50,5 +51,11 @@ public class HDFSHelperMockImpl implements HDFSHelperMock {
     } catch (FileNotFoundException ex) {
       throw new RuntimeException(ex);
     }
+  }
+
+  @Override
+  public Result<Boolean> writeManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint,
+    final HDFSResource hdfsResource, final ManifestJSON manifest) {
+    return Result.success(true);
   }
 }
