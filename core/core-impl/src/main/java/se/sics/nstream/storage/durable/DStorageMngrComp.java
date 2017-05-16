@@ -95,7 +95,7 @@ public class DStorageMngrComp extends ComponentDefinition {
     Throwable cause = fault.getCause();
     reportedFaulty.put(endpointId, cause);
     for (DEndpoint.Connect c : clients.get(endpointId).values()) {
-      answer(c, c.fail(Result.internalFailure((Exception)cause)));
+      answer(c, c.fail(Result.internalFailure((Exception) cause)));
     }
 
     Component endpointComp = storageEndpoints.get(endpointId);
@@ -118,8 +118,8 @@ public class DStorageMngrComp extends ComponentDefinition {
     @Override
     public void handle(DEndpoint.Connect req) {
       LOG.info("{}connecting endpoint:{}", logPrefix, req.endpointId);
-      if(reportedFaulty.containsKey(req.endpointId)) {
-        answer(req, req.fail(Result.internalFailure((Exception)reportedFaulty.get(req.endpointId))));
+      if (reportedFaulty.containsKey(req.endpointId)) {
+        answer(req, req.fail(Result.internalFailure((Exception) reportedFaulty.get(req.endpointId))));
       }
       Map<OverlayId, DEndpoint.Connect> endpointClients;
       if (!storageEndpoints.containsKey(req.endpointId)) {
@@ -158,10 +158,11 @@ public class DStorageMngrComp extends ComponentDefinition {
       if (endpointComp == null) {
         throw new RuntimeException("weird behaviour - someone is not keeping track of things right");
       }
-      streamControlChannel.removeChannel(req.endpointId, endpointComp.getPositive(DStreamControlPort.class));
-      storageChannel.removeChannel(req.endpointId, endpointComp.getPositive(DStoragePort.class));
 
       if (endpointClients.isEmpty()) {
+        streamControlChannel.removeChannel(req.endpointId, endpointComp.getPositive(DStreamControlPort.class));
+        storageChannel.removeChannel(req.endpointId, endpointComp.getPositive(DStoragePort.class));
+
         clients.remove(req.endpointId);
         storageEndpoints.remove(req.endpointId);
         compIdToEndpointId.remove(endpointComp.id());

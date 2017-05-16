@@ -24,32 +24,33 @@ import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 
 /**
+ * TODO Alex - nameToId is memory leak, move to EndpointManager
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class EndpointIdRegistry {
 
-    private final IntIdFactory storageIdFactory;
-    private final Map<String, Identifier> nameToId = new HashMap<>();
-    private int id = 0;
-    
-    public EndpointIdRegistry() {
-        storageIdFactory = new IntIdFactory(null); //no random ids
+  private final IntIdFactory storageIdFactory;
+  private final Map<String, Identifier> nameToId = new HashMap<>();
+  private int id = 0;
+  
+  public EndpointIdRegistry() {
+    storageIdFactory = new IntIdFactory(null); //no random ids
+  }
+
+  public boolean registered(String endpointName) {
+    return nameToId.containsKey(endpointName);
+  }
+
+  public Identifier register(String endpointName) {
+    if (registered(endpointName)) {
+      throw new RuntimeException("already registered - logic exception");
     }
-    
-    public boolean registered(String endpointName) {
-        return nameToId.containsKey(endpointName);
-    }
-    
-    public Identifier register(String endpointName) {
-        if(registered(endpointName)) {
-            throw new RuntimeException("already registered - logic exception");
-        }
-        Identifier endpointId = storageIdFactory.rawId(id++);
-        nameToId.put(endpointName, endpointId);
-        return endpointId;
-    }
-    
-    public Identifier lookup(String endpointName) {
-        return nameToId.get(endpointName);
-    }
+    Identifier endpointId = storageIdFactory.rawId(id++);
+    nameToId.put(endpointName, endpointId);
+    return endpointId;
+  }
+
+  public Identifier lookup(String endpointName) {
+    return nameToId.get(endpointName);
+  }
 }

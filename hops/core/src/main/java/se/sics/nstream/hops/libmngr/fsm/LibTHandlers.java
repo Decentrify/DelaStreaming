@@ -393,11 +393,15 @@ public class LibTHandlers {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, DEndpoint.Disconnected resp)
       throws FSMException {
-        LOG.debug("<{}>endpoint:{} cleaned", resp.getFSMBaseId(), resp.req.endpointId);
+        LOG.debug("<{}>endpoint:{} cleaned", 
+          new Object[]{resp.getFSMBaseId(), resp.req.endpointId});
         is.storageRegistry.cleaned(resp.req.endpointId);
+        LOG.debug("<{}> active:{} endpoints:{}", 
+          new Object[]{resp.getFSMBaseId(), is.storageRegistry.endpointView().size(), is.storageRegistry.endpointView()});
         if (is.storageRegistry.cleaningComplete()) {
           success(is, es.getProxy(), Result.success(true));
           es.library.killed(is.getTorrentId());
+          LOG.info("<{}>terminating fsm", resp.getFSMBaseId());
           return FSMBasicStateNames.FINAL;
         }
         return LibTStates.CLEAN_STORAGE;
@@ -451,11 +455,6 @@ public class LibTHandlers {
       Identifier endpointId = es.endpointIdRegistry.lookup(endpointName);
       if (endpointId == null) {
         endpointId = es.endpointIdRegistry.register(endpointName);
-      } else if (preRegisteredEndpoints.contains(endpointName)) {
-        //endpoint registered, but not setup
-      } else {
-        //no setup needed
-        continue;
       }
       is.storageRegistry.addWaiting(endpointName, endpointId, provider.getEndpoint());
       es.getProxy().trigger(new DEndpoint.Connect(is.getTorrentId(), endpointId, provider), es.endpointPort());
