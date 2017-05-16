@@ -18,8 +18,11 @@
  */
 package se.sics.nstream.library.endpointmngr;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 
@@ -30,8 +33,9 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 public class EndpointIdRegistry {
 
   private final IntIdFactory storageIdFactory;
-  private final Map<String, Identifier> nameToId = new HashMap<>();
+  private final BiMap<String, Identifier> nameToId = HashBiMap.create();
   private int id = 0;
+  private final Map<Identifier, AtomicInteger> idRef = new HashMap<>();
   
   public EndpointIdRegistry() {
     storageIdFactory = new IntIdFactory(null); //no random ids
@@ -47,10 +51,23 @@ public class EndpointIdRegistry {
     }
     Identifier endpointId = storageIdFactory.rawId(id++);
     nameToId.put(endpointName, endpointId);
+    idRef.put(endpointId, new AtomicInteger(0));
     return endpointId;
   }
 
   public Identifier lookup(String endpointName) {
     return nameToId.get(endpointName);
+  }
+  
+  public void use(Identifier endpointId) {
+    idRef.get(endpointId).incrementAndGet();
+  }
+  
+  public void release(Identifier endpointId) {
+    int refCount = idRef.get(endpointId).decrementAndGet();
+    if(refCount == 0) {
+      nameToId.inverse().remove(endpointId);
+      idRef.remove(endpointId);
+    }
   }
 }

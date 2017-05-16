@@ -396,6 +396,7 @@ public class LibTHandlers {
         LOG.debug("<{}>endpoint:{} cleaned", 
           new Object[]{resp.getFSMBaseId(), resp.req.endpointId});
         is.storageRegistry.cleaned(resp.req.endpointId);
+        es.endpointIdRegistry.release(resp.req.endpointId);
         LOG.debug("<{}> active:{} endpoints:{}", 
           new Object[]{resp.getFSMBaseId(), is.storageRegistry.endpointView().size(), is.storageRegistry.endpointView()});
         if (is.storageRegistry.cleaningComplete()) {
@@ -457,6 +458,7 @@ public class LibTHandlers {
         endpointId = es.endpointIdRegistry.register(endpointName);
       }
       is.storageRegistry.addWaiting(endpointName, endpointId, provider.getEndpoint());
+      es.endpointIdRegistry.use(endpointId);
       es.getProxy().trigger(new DEndpoint.Connect(is.getTorrentId(), endpointId, provider), es.endpointPort());
       waiting = true;
     }
