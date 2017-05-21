@@ -85,7 +85,9 @@ public class KafkaComp extends ComponentDefinition {
         @Override
         public Pair<KafkaComp.Init, Long> initiate(StreamResource resource) {
             KafkaResource kafkaResource = (KafkaResource) resource;
-            throw new UnsupportedOperationException("not yet");
+            KafkaComp.Init init = new KafkaComp.Init(endpoint, kafkaResource);
+            //TODO Alex - any way to find the actual kafka position?
+            return Pair.with(init, 0l);
         }
 
         @Override

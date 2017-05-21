@@ -70,7 +70,7 @@ public class LibTFSM {
         .nextStates(LibTStates.PREPARE_FILES_STORAGE, LibTStates.ADVANCE_TRANSFER, LibTStates.CLEAN_TRANSFER)
         .buildTransition()
       .onState(LibTStates.PREPARE_FILES_STORAGE)
-        .nextStates(LibTStates.ADVANCE_TRANSFER, LibTStates.CLEAN_TRANSFER)
+        .nextStates(LibTStates.PREPARE_FILES_STORAGE, LibTStates.ADVANCE_TRANSFER, LibTStates.CLEAN_TRANSFER)
         .buildTransition()
       .onState(LibTStates.ADVANCE_TRANSFER)
         .nextStates(LibTStates.DOWNLOADING, LibTStates.UPLOADING, LibTStates.CLEAN_TRANSFER)
