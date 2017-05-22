@@ -41,6 +41,7 @@ public class KafkaHelper {
       String truststorePwd = "adminpw";
       long lingerDelay = 5;
       int projectId = Integer.parseInt(kafkaEndpoint.projectId);
+      LOG.info("project:{} topic:{} endpoint:{}", new Object[]{projectId, kafkaResource.topicName, kafkaEndpoint.restEndpoint});
       DelaProducer kp = DelaHelper.getHopsProducer(projectId, kafkaResource.topicName, kafkaEndpoint.brokerEndpoint,
         kafkaEndpoint.restEndpoint, kafkaEndpoint.keyStore, kafkaEndpoint.trustStore, keystorePwd, truststorePwd,
         lingerDelay);
