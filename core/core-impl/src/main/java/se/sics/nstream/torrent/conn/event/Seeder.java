@@ -30,7 +30,6 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.torrent.conn.ConnectionId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class Seeder {
@@ -64,8 +63,7 @@ public class Seeder {
       return new Suspect(this);
     }
 
-    @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getFSMId() {
       return new ConnectionId(torrentId.baseId, peer.getId());
     }
 

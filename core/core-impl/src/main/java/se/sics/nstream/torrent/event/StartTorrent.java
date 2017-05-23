@@ -21,21 +21,20 @@ package se.sics.nstream.torrent.event;
 import java.util.List;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
-import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.library.restart.LibTFSMEvent;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class StartTorrent {
 
-  public static class Request extends Promise<Response> implements OverlayEvent, FSMEvent {
+  public static class Request extends Promise<Response> implements OverlayEvent, LibTFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -63,7 +62,7 @@ public class StartTorrent {
     }
 
     @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getLibTFSMId() {
       return torrentId.baseId;
     }
 
@@ -73,7 +72,7 @@ public class StartTorrent {
     }
   }
 
-  public static class Response implements Direct.Response, OverlayEvent, FSMEvent {
+  public static class Response implements Direct.Response, OverlayEvent, LibTFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -96,7 +95,7 @@ public class StartTorrent {
     }
 
     @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getLibTFSMId() {
       return torrentId.baseId;
     }
   }

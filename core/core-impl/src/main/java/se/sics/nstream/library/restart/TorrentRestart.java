@@ -21,7 +21,6 @@ package se.sics.nstream.library.restart;
 import java.util.List;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
-import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -33,7 +32,7 @@ import se.sics.nstream.storage.durable.util.MyStream;
  */
 public class TorrentRestart {
 
-  public static class UpldReq extends Promise<UpldIndication> implements FSMEvent {
+  public static class UpldReq extends Promise<UpldIndication> implements LibTFSMEvent {
 
     public final OverlayId torrentId;
     public final String torrentName;
@@ -64,7 +63,7 @@ public class TorrentRestart {
     }
 
     @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getLibTFSMId() {
       return torrentId.baseId;
     }
   }
@@ -92,7 +91,7 @@ public class TorrentRestart {
     }
   }
 
-  public static class DwldReq extends Promise<DwldIndication> implements FSMEvent {
+  public static class DwldReq extends Promise<DwldIndication> implements LibTFSMEvent {
 
     public final OverlayId torrentId;
     public final String torrentName;
@@ -123,7 +122,7 @@ public class TorrentRestart {
     }
 
     @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getLibTFSMId() {
       return torrentId.baseId;
     }
   }

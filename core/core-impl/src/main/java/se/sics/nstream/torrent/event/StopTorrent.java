@@ -19,18 +19,18 @@
 package se.sics.nstream.torrent.event;
 
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.library.restart.LibTFSMEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class StopTorrent {
-  public static class Request extends Direct.Request<Response> implements OverlayEvent, FSMEvent {
+  public static class Request extends Direct.Request<Response> implements OverlayEvent, LibTFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -55,12 +55,12 @@ public class StopTorrent {
     }
 
     @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getLibTFSMId() {
       return torrentId.baseId;
     }
   }
 
-  public static class Response implements Direct.Response, OverlayEvent, FSMEvent {
+  public static class Response implements Direct.Response, OverlayEvent, LibTFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -83,7 +83,7 @@ public class StopTorrent {
     }
 
     @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getLibTFSMId() {
       return torrentId.baseId;
     }
   }
