@@ -28,7 +28,7 @@ import java.util.TreeMap;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
+import se.sics.nstream.util.TorrentExtendedStatus;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;

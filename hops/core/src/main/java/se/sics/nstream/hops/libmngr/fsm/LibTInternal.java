@@ -41,6 +41,7 @@ import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
 import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.storage.durable.util.FileExtendedDetails;
 import se.sics.nstream.storage.durable.util.MyStream;
@@ -64,6 +65,8 @@ public class LibTInternal implements FSMInternalState {
   public final LibTEndpointRegistry storageRegistry = new LibTEndpointRegistry();
   private List<KAddress> partners;
   private MyTorrent torrent;
+  
+  public Optional<TorrentExtendedStatusEvent.Request> statusReq;
 
   public LibTInternal(FSMId fsmId) {
     this.fsmId = fsmId;

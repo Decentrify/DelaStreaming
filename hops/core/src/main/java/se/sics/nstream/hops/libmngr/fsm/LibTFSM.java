@@ -35,6 +35,7 @@ import se.sics.nstream.hops.library.HopsTorrentPort;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
+import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 import se.sics.nstream.library.restart.LibTFSMEvent;
 import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.library.restart.TorrentRestartPort;
@@ -45,6 +46,7 @@ import se.sics.nstream.torrent.event.StartTorrent;
 import se.sics.nstream.torrent.event.StopTorrent;
 import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
+import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
 import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
@@ -82,7 +84,7 @@ public class LibTFSM {
       .nextStates(LibTStates.DOWNLOADING, LibTStates.UPLOADING, LibTStates.CLEAN_TRANSFER)
       .buildTransition()
       .onState(LibTStates.DOWNLOADING)
-      .nextStates(LibTStates.UPLOADING, LibTStates.CLEAN_TRANSFER)
+      .nextStates(LibTStates.DOWNLOADING, LibTStates.UPLOADING, LibTStates.CLEAN_TRANSFER)
       .buildTransition()
       .onState(LibTStates.UPLOADING)
       .nextStates(LibTStates.CLEAN_TRANSFER)
@@ -103,6 +105,8 @@ public class LibTFSM {
       .subscribe(LibTHandlers.initUploadRestart, FSMBasicStateNames.START)
       .buildEvents()
       .negativePort(HopsTorrentPort.class)
+      .onEvent(TorrentExtendedStatusEvent.Request.class)
+        .subscribe(LibTHandlers.status, LibTStates.DOWNLOADING)
       .onEvent(HopsTorrentStopEvent.Request.class)
       .subscribe(LibTHandlers.stop0, FSMBasicStateNames.START)
       .subscribe(LibTHandlers.stop1, LibTStates.PREPARE_MANIFEST_STORAGE)
@@ -126,8 +130,10 @@ public class LibTFSM {
       .subscribe(LibTHandlers.advanceTransfer, LibTStates.ADVANCE_TRANSFER)
       .buildEvents()
       .positivePort(TorrentStatusPort.class)
-      .onEvent(DownloadSummaryEvent.class)
-      .subscribe(LibTHandlers.downloadCompleted, LibTStates.DOWNLOADING)
+        .onEvent(DownloadSummaryEvent.class)
+          .subscribe(LibTHandlers.downloadCompleted, LibTStates.DOWNLOADING)
+        .onEvent(StatusSummaryEvent.Response.class)
+          .subscribe(LibTHandlers.statusReport, LibTStates.DOWNLOADING)
       .buildEvents()
       .positivePort(TorrentMngrPort.class)
       .onEvent(StartTorrent.Response.class)

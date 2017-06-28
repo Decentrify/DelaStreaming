@@ -39,6 +39,7 @@ public interface LibraryCtrl {
   public void upload(OverlayId torrentId, MyStream manifestStream);
   public void prepareDownload(OverlayId torrentId, Integer projectId, Integer datasetId, String torrentName, List<KAddress> partners);
   public void download(OverlayId torrentId, MyStream manifestStream);
+  public void updateDownload(OverlayId torrentId, long speed, double dynamic);
   public void finishDownload(OverlayId torrentId);
   public void killing(OverlayId torrentId);
   public void killed(OverlayId torrentId);

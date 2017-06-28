@@ -32,6 +32,7 @@ import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.transfer.MyTorrent;
+import se.sics.nstream.util.TorrentExtendedStatus;
 
 /**
  *
@@ -194,7 +195,8 @@ public class HDFSLibrarySummaryJSON {
     public Pair<OverlayId, Torrent> fromJSON(OverlayIdFactory torrentIdFactory) {
       OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(baseId));
       TorrentState status = TorrentState.valueOf(torrentStatus);
-      Torrent t = new Torrent(projectId, datasetId, torrentName, status);
+      TorrentExtendedStatus extendedStatus = new TorrentExtendedStatus(tId, status, 0, 0);
+      Torrent t = new Torrent(projectId, datasetId, torrentName, extendedStatus);
       
       HDFSEndpoint hdfsEndpoint = HDFSEndpoint.getBasic(endpoint.getUrl(), endpoint.getUser());
       HDFSResource manifestResource = new HDFSResource(dirPath, MyTorrent.MANIFEST_NAME);

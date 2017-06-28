@@ -62,6 +62,7 @@ import se.sics.nstream.hops.storage.disk.DiskEndpoint;
 import se.sics.nstream.hops.storage.disk.DiskResource;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
 import se.sics.nstream.storage.durable.events.DEndpoint;
@@ -71,6 +72,7 @@ import se.sics.nstream.storage.durable.util.StreamEndpoint;
 import se.sics.nstream.torrent.event.StartTorrent;
 import se.sics.nstream.torrent.event.StopTorrent;
 import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
+import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
 import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
 import se.sics.nstream.transfer.MyTorrent;
@@ -159,6 +161,30 @@ public class LibTHandlers {
       return state;
     }
   };
+
+  static FSMEventHandler status
+    = new FSMEventHandler<LibTExternal, LibTInternal, TorrentExtendedStatusEvent.Request>() {
+
+      @Override
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
+        TorrentExtendedStatusEvent.Request event) throws FSMException {
+        is.statusReq = Optional.of(event);
+        es.getProxy().trigger(new StatusSummaryEvent.Request(is.getTorrentId()), es.torrentStatusPort());
+        return state;
+      }
+    };
+
+  static FSMEventHandler statusReport
+    = new FSMEventHandler<LibTExternal, LibTInternal, StatusSummaryEvent.Response>() {
+      @Override
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, StatusSummaryEvent.Response event)
+      throws FSMException {
+        if(is.statusReq.isPresent()) {
+          es.getProxy().answer(is.statusReq.get(), is.statusReq.get().succes(event.result));
+        }
+        return state;
+      }
+    };
 
   static FSMEventHandler initDownload
     = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.StartRequest>() {
@@ -393,12 +419,13 @@ public class LibTHandlers {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, DEndpoint.Disconnected resp)
       throws FSMException {
-        LOG.debug("<{}>endpoint:{} cleaned", 
+        LOG.debug("<{}>endpoint:{} cleaned",
           new Object[]{resp.getLibTFSMId(), resp.req.endpointId});
         is.storageRegistry.cleaned(resp.req.endpointId);
         es.endpointIdRegistry.release(resp.req.endpointId);
-        LOG.debug("<{}> active:{} endpoints:{}", 
-          new Object[]{resp.getLibTFSMId(), is.storageRegistry.endpointView().size(), is.storageRegistry.endpointView()});
+        LOG.debug("<{}> active:{} endpoints:{}",
+          new Object[]{resp.getLibTFSMId(), is.storageRegistry.endpointView().size(), is.storageRegistry.
+            endpointView()});
         if (is.storageRegistry.cleaningComplete()) {
           success(is, es.getProxy(), Result.success(true));
           es.library.killed(is.getTorrentId());
@@ -448,7 +475,8 @@ public class LibTHandlers {
     return setupStorageEndpoints(es, is, storageProviders, new HashSet<String>());
   }
 
-  private static boolean setupStorageEndpoints(LibTExternal es, LibTInternal is, List<DurableStorageProvider> providers,
+  private static boolean setupStorageEndpoints(LibTExternal es, LibTInternal is,
+    List<DurableStorageProvider> providers,
     Set<String> preRegisteredEndpoints) {
     boolean waiting = false;
     for (DurableStorageProvider provider : providers) {
@@ -611,7 +639,9 @@ public class LibTHandlers {
     StreamId manifestStreamId = is.getSetupState().getManifestStreamId();
     MyStream manifestStream = is.getSetupState().getManifestStream();
     HDFSResource manifestResource = (HDFSResource) manifestStream.resource;
+    LOG.debug("kafka files:{}", is.auxState.getKafkaDetails().size());
     for (Map.Entry<String, FileId> file : is.getSetupState().getFiles().entrySet()) {
+      LOG.debug("preparing file:{}", file.getKey());
       StreamId fileStreamId = manifestStreamId.withFile(file.getValue());
       HDFSResource fileResource = manifestResource.withFile(file.getKey());
       MyStream fileStream = manifestStream.withResource(fileResource);
@@ -619,7 +649,8 @@ public class LibTHandlers {
       //KAFKA
       Optional<Pair<StreamId, MyStream>> kafkaStream = Optional.absent();
       KafkaResource kafkaResource = is.auxState.getKafkaDetails().get(file.getKey());
-      if(kafkaResource != null) {
+      if (kafkaResource != null) {
+        LOG.debug("preparing kafka:{}", kafkaResource.getSinkName());
         Identifier kafkaEndpointId = is.storageRegistry.nameToId(is.auxState.getKafkaEndpointName());
         StreamEndpoint kafkaEndpoint = is.storageRegistry.getEndpoint(kafkaEndpointId);
         MyStream ks = new MyStream(kafkaEndpoint, kafkaResource);
@@ -649,7 +680,8 @@ public class LibTHandlers {
     is.ar.reset();
   }
 
-  public static void stop(LibTInternal is, ComponentProxy proxy, HopsTorrentStopEvent.Request stop) throws FSMException {
+  public static void stop(LibTInternal is, ComponentProxy proxy, HopsTorrentStopEvent.Request stop) throws
+    FSMException {
     if (is.ar.isStopping()) {
       proxy.answer(stop, stop.fail(Result.logicalFail("stop already in progress")));
     } else {

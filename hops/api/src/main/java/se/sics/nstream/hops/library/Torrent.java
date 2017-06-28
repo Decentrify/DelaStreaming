@@ -24,6 +24,7 @@ import java.util.List;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.util.TorrentExtendedStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -36,12 +37,14 @@ public class Torrent {
   private TorrentState torrentStatus = TorrentState.NONE;
   private Optional<MyStream> manifestStream = Optional.absent();
   private List<KAddress> partners = new LinkedList<>();
+  private TorrentExtendedStatus status;
 
-  public Torrent(Integer projectId, Integer datasetId, String torrentName, TorrentState torrentStatus) {
+  public Torrent(Integer projectId, Integer datasetId, String torrentName, TorrentExtendedStatus status) {
     this.projectId = projectId;
     this.datasetId = datasetId;
     this.torrentName = torrentName;
-    this.torrentStatus = torrentStatus;
+    this.torrentStatus = status.torrentStatus;
+    this.status = status;
   }
 
   public TorrentState getTorrentStatus() {
@@ -66,5 +69,13 @@ public class Torrent {
 
   public void setPartners(List<KAddress> partners) {
     this.partners = partners;
+  }
+  
+  public void setStatus(TorrentExtendedStatus st) {
+    this.status = st;
+  }
+  
+  public TorrentExtendedStatus getStatus() {
+    return status;
   }
 }

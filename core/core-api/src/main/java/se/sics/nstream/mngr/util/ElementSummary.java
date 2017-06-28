@@ -24,15 +24,33 @@ import se.sics.nstream.library.util.TorrentState;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ElementSummary {
+public abstract class ElementSummary {
 
-    public final String fileName;
-    public final OverlayId torrentId;
-    public final TorrentState status;
+  public final String fileName;
+  public final OverlayId torrentId;
+  public final TorrentState status;
 
-    public ElementSummary(String name, OverlayId torrentId, TorrentState status) {
-        this.fileName = name;
-        this.torrentId = torrentId;
-        this.status = status;
+  private ElementSummary(String name, OverlayId torrentId, TorrentState status) {
+    this.fileName = name;
+    this.torrentId = torrentId;
+    this.status = status;
+  }
+
+  public static class Download extends ElementSummary {
+    public final long speed;
+    public final double dynamic;
+    
+    public Download(String name, OverlayId torrentId, TorrentState status, long speed, double dynamic) {
+      super(name, torrentId, status);
+      this.speed = speed;
+      this.dynamic = dynamic;
     }
+  }
+  
+  public static class Upload extends ElementSummary {
+
+    public Upload(String name, OverlayId torrentId, TorrentState status) {
+      super(name, torrentId, status);
+    }
+  }
 }

@@ -18,13 +18,14 @@
  */
 package se.sics.nstream.torrent.tracking.event;
 
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
+import se.sics.nstream.util.TorrentExtendedStatus;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.StreamEvent;
+import se.sics.nstream.library.restart.LibTFSMEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -58,7 +59,7 @@ public class StatusSummaryEvent {
         }
     }
     
-    public static class Response implements Direct.Response, StreamEvent, OverlayEvent {
+    public static class Response implements Direct.Response, StreamEvent, OverlayEvent, LibTFSMEvent {
         public final Request req;
         public final TorrentExtendedStatus result;
 
@@ -76,5 +77,10 @@ public class StatusSummaryEvent {
         public OverlayId overlayId() {
             return req.overlayId();
         }
+
+    @Override
+    public Identifier getLibTFSMId() {
+      return req.torrentId.baseId;
+    }
     }
 }

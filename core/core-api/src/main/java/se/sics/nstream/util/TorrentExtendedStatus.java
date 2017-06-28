@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.util;
+package se.sics.nstream.util;
 
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.library.util.TorrentState;
@@ -27,8 +27,8 @@ import se.sics.nstream.library.util.TorrentState;
 public class TorrentExtendedStatus {
     public final OverlayId torrentId;
     public final TorrentState torrentStatus;
-    public final double downloadSpeed;
-    public final double percentageComplete;
+    private double downloadSpeed;
+    private double percentageComplete;
     
     public TorrentExtendedStatus(OverlayId torrentId, TorrentState torrentStatus, double downloadSpeed, double percentageComplete) {
         this.torrentStatus = torrentStatus;
@@ -36,4 +36,20 @@ public class TorrentExtendedStatus {
         this.downloadSpeed = downloadSpeed;
         this.percentageComplete = percentageComplete;
     }
+
+  public double getDownloadSpeed() {
+    return downloadSpeed;
+  }
+
+  public void setDownloadSpeed(double downloadSpeed) {
+    this.downloadSpeed = downloadSpeed;
+  }
+
+  public double getPercentageComplete() {
+    return percentageComplete;
+  }
+
+  public void setPercentageComplete(double percentageComplete) {
+    this.percentageComplete = percentageComplete;
+  }
 }

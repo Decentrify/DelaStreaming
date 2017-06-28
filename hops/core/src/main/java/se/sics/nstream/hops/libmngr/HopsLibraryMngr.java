@@ -24,7 +24,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.hops.library.MysqlLibrary;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -54,6 +53,7 @@ import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.mngr.util.ElementSummary;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
+import se.sics.nstream.util.TorrentExtendedStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -262,7 +262,7 @@ public class HopsLibraryMngr {
           case DOWNLOADING:
           case UPLOADING:
             proxy.answer(req, req.succes(new TorrentExtendedStatus(req.torrentId, resp.result.torrentStatus,
-              resp.result.downloadSpeed, resp.result.percentageComplete)));
+              resp.result.getDownloadSpeed(), resp.result.getPercentageComplete())));
             break;
           default:
             proxy.answer(req, req.succes(new TorrentExtendedStatus(req.torrentId, ts, 0, 0)));

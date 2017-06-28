@@ -19,7 +19,7 @@
 package se.sics.nstream.library.event.torrent;
 
 import java.util.List;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
+import se.sics.nstream.util.TorrentExtendedStatus;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
