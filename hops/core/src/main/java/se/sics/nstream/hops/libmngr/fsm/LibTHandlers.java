@@ -31,12 +31,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Promise;
-import se.sics.ktoolbox.nutil.fsm.api.FSMBasicStateNames;
-import se.sics.ktoolbox.nutil.fsm.api.FSMException;
-import se.sics.ktoolbox.nutil.fsm.api.FSMStateName;
-import se.sics.ktoolbox.nutil.fsm.handler.FSMEventHandler;
+import se.sics.kompics.fsm.FSMBasicStateNames;
+import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.FSMStateName;
+import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.Either;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
@@ -84,8 +84,8 @@ public class LibTHandlers {
 
   private static final Logger LOG = LoggerFactory.getLogger(LibTFSM.class);
 
-  static FSMEventHandler fallbackDownloadStart
-    = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.StartRequest>() {
+  static FSMBasicEventHandler fallbackDownloadStart
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.StartRequest>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
         HopsTorrentDownloadEvent.StartRequest req) {
@@ -94,8 +94,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler fallbackUploadStart
-    = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentUploadEvent.Request>() {
+  static FSMBasicEventHandler fallbackUploadStart
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentUploadEvent.Request>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
         HopsTorrentUploadEvent.Request req) {
@@ -104,7 +104,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler stop0 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+  static FSMBasicEventHandler stop0 
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
     public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
       throws FSMException {
@@ -116,7 +117,8 @@ public class LibTHandlers {
     }
   };
 
-  static FSMEventHandler stop1 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+  static FSMBasicEventHandler stop1 
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
     public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
       throws FSMException {
@@ -128,7 +130,8 @@ public class LibTHandlers {
     }
   };
 
-  static FSMEventHandler stop2 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+  static FSMBasicEventHandler stop2 
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
     public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
       throws FSMException {
@@ -140,7 +143,8 @@ public class LibTHandlers {
     }
   };
 
-  static FSMEventHandler stop3 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+  static FSMBasicEventHandler stop3 
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
     public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
       throws FSMException {
@@ -152,7 +156,8 @@ public class LibTHandlers {
     }
   };
 
-  static FSMEventHandler stop4 = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
+  static FSMBasicEventHandler stop4 
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentStopEvent.Request>() {
     @Override
     public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, HopsTorrentStopEvent.Request req)
       throws FSMException {
@@ -162,8 +167,8 @@ public class LibTHandlers {
     }
   };
 
-  static FSMEventHandler status
-    = new FSMEventHandler<LibTExternal, LibTInternal, TorrentExtendedStatusEvent.Request>() {
+  static FSMBasicEventHandler status
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, TorrentExtendedStatusEvent.Request>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
@@ -174,8 +179,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler statusReport
-    = new FSMEventHandler<LibTExternal, LibTInternal, StatusSummaryEvent.Response>() {
+  static FSMBasicEventHandler statusReport
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, StatusSummaryEvent.Response>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, StatusSummaryEvent.Response event)
       throws FSMException {
@@ -186,8 +191,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler initDownload
-    = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.StartRequest>() {
+  static FSMBasicEventHandler initDownload
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.StartRequest>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
         HopsTorrentDownloadEvent.StartRequest req) throws FSMException {
@@ -199,8 +204,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler initDownloadRestart
-    = new FSMEventHandler<LibTExternal, LibTInternal, TorrentRestart.DwldReq>() {
+  static FSMBasicEventHandler initDownloadRestart
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, TorrentRestart.DwldReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, TorrentRestart.DwldReq req)
       throws FSMException {
@@ -228,8 +233,8 @@ public class LibTHandlers {
     }
   }
 
-  static FSMEventHandler initUpload
-    = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentUploadEvent.Request>() {
+  static FSMBasicEventHandler initUpload
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentUploadEvent.Request>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
         HopsTorrentUploadEvent.Request req) throws FSMException {
@@ -240,8 +245,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler initUploadRestart
-    = new FSMEventHandler<LibTExternal, LibTInternal, TorrentRestart.UpldReq>() {
+  static FSMBasicEventHandler initUploadRestart
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, TorrentRestart.UpldReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, TorrentRestart.UpldReq req)
       throws FSMException {
@@ -268,8 +273,8 @@ public class LibTHandlers {
     }
   }
 
-  static FSMEventHandler prepareManifestStorage
-    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
+  static FSMBasicEventHandler prepareManifestStorage
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
       @Override
       public FSMStateName handle(FSMStateName stateName, LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
         LOG.debug("<{}>endpoint:{} prepared", resp.getLibTFSMId(), resp.req.endpointProvider.getName());
@@ -284,8 +289,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler prepareTransfer
-    = new FSMEventHandler<LibTExternal, LibTInternal, StartTorrent.Response>() {
+  static FSMBasicEventHandler prepareTransfer
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, StartTorrent.Response>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, StartTorrent.Response resp) {
         if (resp.result.isSuccess()) {
@@ -309,8 +314,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler downloadManifest
-    = new FSMEventHandler<LibTExternal, LibTInternal, GetRawTorrent.Response>() {
+  static FSMBasicEventHandler downloadManifest
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, GetRawTorrent.Response>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, GetRawTorrent.Response resp)
       throws FSMException {
@@ -334,8 +339,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler extendedDetails
-    = new FSMEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.AdvanceRequest>() {
+  static FSMBasicEventHandler extendedDetails
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, HopsTorrentDownloadEvent.AdvanceRequest>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
         HopsTorrentDownloadEvent.AdvanceRequest req) throws FSMException {
@@ -357,8 +362,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler prepareFilesStorage
-    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
+  static FSMBasicEventHandler prepareFilesStorage
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, DEndpoint.Success>() {
       @Override
       public FSMStateName handle(FSMStateName stateName, LibTExternal es, LibTInternal is, DEndpoint.Success resp) {
         LOG.debug("<{}>endpoint:{} prepared", resp.getLibTFSMId(), resp.req.endpointProvider.getName());
@@ -375,8 +380,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler advanceTransfer
-    = new FSMEventHandler<LibTExternal, LibTInternal, SetupTransfer.Response>() {
+  static FSMBasicEventHandler advanceTransfer
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, SetupTransfer.Response>() {
       @Override
       public FSMStateName handle(FSMStateName stateName, LibTExternal es, LibTInternal is, SetupTransfer.Response resp)
       throws FSMException {
@@ -401,8 +406,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler downloadCompleted
-    = new FSMEventHandler<LibTExternal, LibTInternal, DownloadSummaryEvent>() {
+  static FSMBasicEventHandler downloadCompleted
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, DownloadSummaryEvent>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, DownloadSummaryEvent event) {
         LOG.debug("<{}>torrent:{} - download completed", event.getLibTFSMId(), event.torrentId);
@@ -414,8 +419,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler endpointCleaning
-    = new FSMEventHandler<LibTExternal, LibTInternal, DEndpoint.Disconnected>() {
+  static FSMBasicEventHandler endpointCleaning
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, DEndpoint.Disconnected>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, DEndpoint.Disconnected resp)
       throws FSMException {
@@ -436,8 +441,8 @@ public class LibTHandlers {
       }
     };
 
-  static FSMEventHandler transferCleaning
-    = new FSMEventHandler<LibTExternal, LibTInternal, StopTorrent.Response>() {
+  static FSMBasicEventHandler transferCleaning
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, StopTorrent.Response>() {
       @Override
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, StopTorrent.Response resp) {
         LOG.debug("<{}>torrent:{} cleaned", resp.getLibTFSMId(), resp.torrentId);

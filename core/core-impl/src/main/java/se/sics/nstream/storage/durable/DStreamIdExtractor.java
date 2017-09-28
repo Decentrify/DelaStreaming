@@ -18,12 +18,11 @@
  */
 package se.sics.nstream.storage.durable;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.nstream.storage.durable.events.DStreamEvent;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DStreamIdExtractor extends ChannelIdExtractor<DStreamEvent, Identifier> {

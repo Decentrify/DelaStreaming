@@ -24,12 +24,12 @@ import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.kompics.Promise;
-import se.sics.ktoolbox.nutil.fsm.api.FSMException;
-import se.sics.ktoolbox.nutil.fsm.api.FSMInternalState;
-import se.sics.ktoolbox.nutil.fsm.api.FSMInternalStateBuilder;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
+import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.FSMInternalState;
+import se.sics.kompics.fsm.FSMInternalStateBuilder;
+import se.sics.kompics.fsm.id.FSMIdentifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.Either;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.FileId;
@@ -53,7 +53,7 @@ import se.sics.nstream.transfer.MyTorrent;
  */
 public class LibTInternal implements FSMInternalState {
 
-  public final FSMId fsmId;
+  public final FSMIdentifier fsmId;
   public final String fsmName;
 
   //intermediary state
@@ -68,14 +68,14 @@ public class LibTInternal implements FSMInternalState {
   
   public Optional<TorrentExtendedStatusEvent.Request> statusReq;
 
-  public LibTInternal(FSMId fsmId) {
+  public LibTInternal(FSMIdentifier fsmId) {
     this.fsmId = fsmId;
     this.fsmName = LibTFSM.NAME;
     this.ar = new ActiveRequest();
   }
 
   @Override
-  public FSMId getFSMId() {
+  public FSMIdentifier getFSMId() {
     return fsmId;
   }
 
@@ -263,7 +263,7 @@ public class LibTInternal implements FSMInternalState {
   public static class Builder implements FSMInternalStateBuilder {
 
     @Override
-    public FSMInternalState newState(FSMId fsmId) {
+    public FSMInternalState newState(FSMIdentifier fsmId) {
       return new LibTInternal(fsmId);
     }
   }

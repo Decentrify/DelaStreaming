@@ -20,8 +20,8 @@ package se.sics.gvod.stream.congestion.event.external;
 
 import se.sics.gvod.stream.congestion.PLedbatEvent;
 import se.sics.kompics.Direct;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**

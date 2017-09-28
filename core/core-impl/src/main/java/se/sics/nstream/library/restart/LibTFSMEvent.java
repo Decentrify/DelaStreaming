@@ -18,8 +18,8 @@
  */
 package se.sics.nstream.library.restart;
 
-import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.fsm.FSMEvent;
+import se.sics.kompics.id.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

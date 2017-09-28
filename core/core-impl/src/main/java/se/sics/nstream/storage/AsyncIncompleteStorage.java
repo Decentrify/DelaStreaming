@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.storage;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.storage.buffer.KBuffer;
 import se.sics.nstream.storage.cache.KCache;

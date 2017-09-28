@@ -18,7 +18,8 @@
  */
 package se.sics.nstream.hops.libmngr;
 
-import se.sics.ktoolbox.nutil.fsm.MultiFSM;
+import se.sics.kompics.fsm.MultiFSM;
+
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

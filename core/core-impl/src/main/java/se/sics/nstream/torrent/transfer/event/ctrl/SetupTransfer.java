@@ -20,8 +20,8 @@ package se.sics.nstream.torrent.transfer.event.ctrl;
 
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;

@@ -18,8 +18,6 @@
  */
 package se.sics.nstream.hops.hdfs.disk;
 
-import se.sics.nstream.hops.storage.disk.DiskResource;
-import se.sics.nstream.hops.storage.disk.DiskEndpoint;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -31,8 +29,10 @@ import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.hops.storage.disk.DiskEndpoint;
+import se.sics.nstream.hops.storage.disk.DiskResource;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
 import se.sics.nstream.storage.durable.events.DStorageRead;

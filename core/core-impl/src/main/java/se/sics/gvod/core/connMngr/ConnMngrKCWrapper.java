@@ -22,9 +22,6 @@ package se.sics.gvod.core.connMngr;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.aggregation.AggregationLevel;
 import se.sics.ktoolbox.util.config.KConfigHelper;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.network.KAddress;
-
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>

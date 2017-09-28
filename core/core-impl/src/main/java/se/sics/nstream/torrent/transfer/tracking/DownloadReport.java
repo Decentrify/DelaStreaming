@@ -19,7 +19,7 @@
 package se.sics.nstream.torrent.transfer.tracking;
 
 import java.util.Map;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.nstream.FileId;
 
 /**

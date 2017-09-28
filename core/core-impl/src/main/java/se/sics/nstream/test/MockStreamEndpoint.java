@@ -18,8 +18,8 @@
  */
 package se.sics.nstream.test;
 
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.nstream.storage.durable.util.StreamEndpoint;
 

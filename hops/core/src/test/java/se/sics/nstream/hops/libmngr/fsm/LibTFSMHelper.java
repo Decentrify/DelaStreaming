@@ -26,13 +26,14 @@ import java.util.Properties;
 import se.sics.kompics.Direct;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Promise;
+import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.MultiFSM;
+import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.kompics.id.Identifier;
 import se.sics.kompics.testkit.TestContext;
 import se.sics.kompics.testkit.Testkit;
-import se.sics.ktoolbox.nutil.fsm.MultiFSM;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMIdRegistry;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -57,7 +58,7 @@ import se.sics.nstream.library.LibraryProvider;
  */
 public class LibTFSMHelper {
 
-  public static OverlayIdFactory systemSetup(String applicationConfPath) {
+  public static OverlayIdFactory systemSetup(String applicationConfPath) throws FSMException {
     Properties props = System.getProperties();
     props.setProperty("config.file", applicationConfPath);
 
@@ -77,8 +78,9 @@ public class LibTFSMHelper {
     return new OverlayIdFactory(torrentBaseIdFactory, TorrentIds.Types.TORRENT, torrentOwnerId);
   }
 
-  private static void fsmSetup() {
-    FSMIdRegistry.registerPrefix(LibTFSM.NAME, (byte) 1);
+  private static void fsmSetup() throws FSMException {
+    FSMIdentifierFactory fsmIdFactory = FSMIdentifierFactory.DEFAULT;
+    fsmIdFactory.registerFSMDefId(LibTFSM.NAME);
   }
 
   public static TestContext<LibraryMngrComp> getContext() {
@@ -129,7 +131,7 @@ public class LibTFSMHelper {
       LibraryProvider lp = LibraryMngrCompTestHelper.getLibraryProvider(lm);
       HopsLibraryMngr hlm = HopsLibraryProviderTestHelper.getHopsLibraryMngr(lp);
       MultiFSM mfsm = HopsLibraryMngrTestHelper.getFSM(hlm);
-      return expectedState.equals(mfsm.getFSMState(LibTFSM.NAME, torrentId.baseId));
+      return expectedState.equals(mfsm.getFSMState(torrentId.baseId));
     }
   };
 }

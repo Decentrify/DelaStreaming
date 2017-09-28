@@ -21,7 +21,7 @@ package se.sics.nstream.torrent.fileMngr;
 import java.util.HashMap;
 import java.util.Map;
 import org.javatuples.Pair;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.storage.managed.CompleteFileMngr;
 import se.sics.nstream.util.BlockDetails;

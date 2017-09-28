@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.hops.libmngr.fsm;
 
-import se.sics.ktoolbox.nutil.fsm.api.FSMStateName;
+import se.sics.kompics.fsm.FSMStateName;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

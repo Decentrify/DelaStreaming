@@ -23,11 +23,10 @@ import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.gvod.common.util.VodDescriptor;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ConnMngr {

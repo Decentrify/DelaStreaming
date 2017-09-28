@@ -37,6 +37,7 @@ import se.sics.kompics.Port;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Promise;
 import se.sics.kompics.Start;
+import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.testkit.Direction;
 import se.sics.kompics.testkit.TestContext;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -83,7 +84,7 @@ public class LibTFSMDownloadTest1 {
   private OverlayId torrentId;
 
   @Before
-  public void setup() {
+  public void setup() throws FSMException {
     HDFSHelper.mock = new HDFSHelperMockImpl("");
     torrentIdFactory = LibTFSMHelper.systemSetup("src/test/resources/libtfsm/download1/application.conf");
     tc = LibTFSMHelper.getContext();

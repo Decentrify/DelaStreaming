@@ -29,9 +29,10 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
-import se.sics.ktoolbox.nutil.fsm.MultiFSM;
-import se.sics.ktoolbox.nutil.fsm.api.FSMException;
-import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
+import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.MultiFSM;
+import se.sics.kompics.fsm.OnFSMExceptionAction;
+import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -93,9 +94,9 @@ public class HopsLibraryMngr {
     this.libraryDetails = new LibraryDetails(proxy, library);
 
     try {
+      FSMIdentifierFactory fsmIdFactory = config.getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
       LibTExternal es = new LibTExternal(selfAdr, library, new EndpointIdRegistry(), hopsLibraryConfig.storageType);
-      fsm = LibTFSM.build(es, oexa);
-      fsm.setProxy(proxy);
+      fsm = LibTFSM.multifsm(fsmIdFactory, es, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }

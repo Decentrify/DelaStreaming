@@ -20,12 +20,11 @@ package se.sics.gvod.mngr.util;
 
 import java.util.HashMap;
 import java.util.Map;
-import se.sics.nstream.library.util.TorrentState;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.library.util.TorrentState;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentInfo {

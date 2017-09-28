@@ -22,7 +22,7 @@ import java.util.List;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.PortType;
 import se.sics.kompics.config.Config;
-import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
+import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**

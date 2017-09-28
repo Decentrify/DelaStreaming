@@ -23,17 +23,17 @@ import java.util.List;
 import java.util.Map;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
-import se.sics.nstream.library.restart.LibTFSMEvent;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.nstream.library.restart.LibTFSMEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

@@ -19,18 +19,17 @@
 package se.sics.nstream.hops.libmngr.fsm;
 
 import com.google.common.base.Optional;
-import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.ktoolbox.nutil.fsm.FSMBuilder;
-import se.sics.ktoolbox.nutil.fsm.MultiFSM;
-import se.sics.ktoolbox.nutil.fsm.api.FSMBasicStateNames;
-import se.sics.ktoolbox.nutil.fsm.api.FSMException;
-import se.sics.ktoolbox.nutil.fsm.api.FSMIdExtractor;
-import se.sics.ktoolbox.nutil.fsm.api.FSMInternalStateBuilder;
-import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMDefId;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
+import se.sics.kompics.fsm.BaseIdExtractor;
+import se.sics.kompics.fsm.FSMBuilder;
+import se.sics.kompics.fsm.FSMEvent;
+import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.FSMInternalStateBuilder;
+import se.sics.kompics.fsm.MultiFSM;
+import se.sics.kompics.fsm.OnFSMExceptionAction;
+import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.kompics.id.Identifier;
 import se.sics.nstream.hops.library.HopsTorrentPort;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
@@ -59,10 +58,10 @@ public class LibTFSM {
   private static final Logger LOG = LoggerFactory.getLogger(LibTFSM.class);
   public static final String NAME = "dela-torrent-library-fsm";
 
-  public static MultiFSM build(LibTExternal es, OnFSMExceptionAction oexa) throws FSMException {
+  private static FSMBuilder.StructuralDefinition structuralDef() throws FSMException {
 
-    FSMBuilder.Machine machine = FSMBuilder.machine()
-      .onState(FSMBasicStateNames.START)
+    return FSMBuilder.structuralDef()
+      .onStart()
       .nextStates(LibTStates.PREPARE_MANIFEST_STORAGE, LibTStates.PREPARE_TRANSFER)
       .buildTransition()
       .onState(LibTStates.PREPARE_MANIFEST_STORAGE)
@@ -96,85 +95,75 @@ public class LibTFSM {
       .nextStates(LibTStates.CLEAN_STORAGE)
       .toFinal()
       .buildTransition();
+  }
 
-    FSMBuilder.Handlers handlers = FSMBuilder.events()
+  private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
+    return FSMBuilder.semanticDef()
       .negativePort(TorrentRestartPort.class)
-      .onEvent(TorrentRestart.DwldReq.class)
-      .subscribe(LibTHandlers.initDownloadRestart, FSMBasicStateNames.START)
-      .onEvent(TorrentRestart.UpldReq.class)
-      .subscribe(LibTHandlers.initUploadRestart, FSMBasicStateNames.START)
+      .onBasicEvent(TorrentRestart.DwldReq.class)
+      .subscribeOnStart(LibTHandlers.initDownloadRestart)
+      .onBasicEvent(TorrentRestart.UpldReq.class)
+      .subscribeOnStart(LibTHandlers.initUploadRestart)
       .buildEvents()
       .negativePort(HopsTorrentPort.class)
-      .onEvent(TorrentExtendedStatusEvent.Request.class)
-        .subscribe(LibTHandlers.status, LibTStates.DOWNLOADING)
-      .onEvent(HopsTorrentStopEvent.Request.class)
-      .subscribe(LibTHandlers.stop0, FSMBasicStateNames.START)
+      .onBasicEvent(TorrentExtendedStatusEvent.Request.class)
+      .subscribe(LibTHandlers.status, LibTStates.DOWNLOADING)
+      .onBasicEvent(HopsTorrentStopEvent.Request.class)
+      .subscribeOnStart(LibTHandlers.stop0)
       .subscribe(LibTHandlers.stop1, LibTStates.PREPARE_MANIFEST_STORAGE)
       .subscribe(LibTHandlers.stop2, LibTStates.PREPARE_TRANSFER, LibTStates.DOWNLOAD_MANIFEST,
         LibTStates.EXTENDED_DETAILS, LibTStates.ADVANCE_TRANSFER)
       .subscribe(LibTHandlers.stop3, LibTStates.DOWNLOADING, LibTStates.UPLOADING)
       .subscribe(LibTHandlers.stop4, LibTStates.CLEAN_TRANSFER, LibTStates.CLEAN_STORAGE)
-      .onEvent(HopsTorrentUploadEvent.Request.class)
-      .subscribe(LibTHandlers.initUpload, FSMBasicStateNames.START)
+      .onBasicEvent(HopsTorrentUploadEvent.Request.class)
+      .subscribeOnStart(LibTHandlers.initUpload)
       .fallback(LibTHandlers.fallbackUploadStart)
-      .onEvent(HopsTorrentDownloadEvent.StartRequest.class)
-      .subscribe(LibTHandlers.initDownload, FSMBasicStateNames.START)
+      .onBasicEvent(HopsTorrentDownloadEvent.StartRequest.class)
+      .subscribeOnStart(LibTHandlers.initDownload)
       .fallback(LibTHandlers.fallbackUploadStart)
-      .onEvent(HopsTorrentDownloadEvent.AdvanceRequest.class)
+      .onBasicEvent(HopsTorrentDownloadEvent.AdvanceRequest.class)
       .subscribe(LibTHandlers.extendedDetails, LibTStates.EXTENDED_DETAILS)
       .buildEvents()
       .positivePort(TransferCtrlPort.class)
-      .onEvent(GetRawTorrent.Response.class)
+      .onBasicEvent(GetRawTorrent.Response.class)
       .subscribe(LibTHandlers.downloadManifest, LibTStates.DOWNLOAD_MANIFEST)
-      .onEvent(SetupTransfer.Response.class)
+      .onBasicEvent(SetupTransfer.Response.class)
       .subscribe(LibTHandlers.advanceTransfer, LibTStates.ADVANCE_TRANSFER)
       .buildEvents()
       .positivePort(TorrentStatusPort.class)
-        .onEvent(DownloadSummaryEvent.class)
-          .subscribe(LibTHandlers.downloadCompleted, LibTStates.DOWNLOADING)
-        .onEvent(StatusSummaryEvent.Response.class)
-          .subscribe(LibTHandlers.statusReport, LibTStates.DOWNLOADING)
+      .onBasicEvent(DownloadSummaryEvent.class)
+      .subscribe(LibTHandlers.downloadCompleted, LibTStates.DOWNLOADING)
+      .onBasicEvent(StatusSummaryEvent.Response.class)
+      .subscribe(LibTHandlers.statusReport, LibTStates.DOWNLOADING)
       .buildEvents()
       .positivePort(TorrentMngrPort.class)
-      .onEvent(StartTorrent.Response.class)
+      .onBasicEvent(StartTorrent.Response.class)
       .subscribe(LibTHandlers.prepareTransfer, LibTStates.PREPARE_TRANSFER)
-      .onEvent(StopTorrent.Response.class)
+      .onBasicEvent(StopTorrent.Response.class)
       .subscribe(LibTHandlers.transferCleaning, LibTStates.CLEAN_TRANSFER)
       .buildEvents()
       .positivePort(DEndpointCtrlPort.class)
-      .onEvent(DEndpoint.Success.class)
+      .onBasicEvent(DEndpoint.Success.class)
       .subscribe(LibTHandlers.prepareManifestStorage, LibTStates.PREPARE_MANIFEST_STORAGE)
       .subscribe(LibTHandlers.prepareFilesStorage, LibTStates.PREPARE_FILES_STORAGE)
-      .onEvent(DEndpoint.Disconnected.class)
+      .onBasicEvent(DEndpoint.Disconnected.class)
       .subscribe(LibTHandlers.endpointCleaning, LibTStates.CLEAN_STORAGE)
       .buildEvents();
-
-    FSMInternalStateBuilder isb = new LibTInternal.Builder();
-
-    FSMIdExtractor<LibTFSMEvent> fsmIdExtractor = new FSMIdExtractor<LibTFSMEvent>() {
-      private Set<Class> events;
-      private Set<Class> positiveNetworkMsgs;
-      private Set<Class> negativeNetworkMsgs;
-
-      @Override
-      public void set(Set<Class> events, Set<Class> positiveNetworkMsgs, Set<Class> negativeNetworkMsgs) {
-        this.events = events;
-        this.positiveNetworkMsgs = positiveNetworkMsgs;
-        this.negativeNetworkMsgs = negativeNetworkMsgs;
-      }
-
-      @Override
-      public Optional<FSMId> fromEvent(FSMDefId fsmdId, LibTFSMEvent event) throws FSMException {
-        if (events.contains(event.getClass()) || positiveNetworkMsgs.contains(event.getClass())
-          || negativeNetworkMsgs.contains(event.getClass())) {
-          return Optional.of(fsmdId.getFSMId(event.getLibTFSMId()));
-        }
-
-        return Optional.absent();
-      }
-    };
-
-    MultiFSM fsm = FSMBuilder.multiFSM(NAME, machine, handlers, es, isb, oexa, fsmIdExtractor);
-    return fsm;
   }
+  static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
+
+    @Override
+    public Optional<Identifier> fromEvent(FSMEvent event) throws FSMException {
+      if (event instanceof LibTFSMEvent) {
+        return Optional.of(((LibTFSMEvent) event).getLibTFSMId());
+      }
+      return Optional.absent();
+    }
+  };
+
+  public static MultiFSM multifsm(FSMIdentifierFactory fsmIdFactory, LibTExternal es, OnFSMExceptionAction oexa) throws FSMException {
+    FSMInternalStateBuilder isb = new LibTInternal.Builder();
+    return FSMBuilder.multiFSM(fsmIdFactory, NAME, structuralDef(), semanticDef(), es, isb, oexa, baseIdExtractor);
+  }
+
 }
