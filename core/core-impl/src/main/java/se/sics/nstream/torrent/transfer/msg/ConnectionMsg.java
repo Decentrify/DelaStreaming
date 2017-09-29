@@ -18,12 +18,11 @@
  */
 package se.sics.nstream.torrent.transfer.msg;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.ConnId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface ConnectionMsg extends OverlayEvent {

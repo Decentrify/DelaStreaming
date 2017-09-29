@@ -22,20 +22,30 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.hops.library.LibraryCtrl;
 import se.sics.nstream.hops.library.Torrent;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.mngr.util.ElementSummary;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LibraryHelper {
+
   public static Map<Integer, List<ElementSummary>> getAllSummary(LibraryCtrl library) {
     Map<Integer, List<ElementSummary>> summary = new TreeMap<>();
     Map<OverlayId, Torrent> torrents = library.getTorrents();
     for (Map.Entry<OverlayId, Torrent> e : torrents.entrySet()) {
-      ElementSummary es = new ElementSummary(e.getValue().torrentName, e.getKey(), e.getValue().getTorrentStatus());
+      long speed = (long) e.getValue().getStatus().getDownloadSpeed();
+      double dynamic = e.getValue().getStatus().getPercentageComplete();
+      TorrentState ts = e.getValue().getTorrentStatus();
+      ElementSummary es;
+      if (ts.equals(TorrentState.DOWNLOADING)) {
+        es = new ElementSummary.Download(e.getValue().torrentName, e.getKey(), ts, speed, dynamic);
+      } else {
+        es = new ElementSummary.Upload(e.getValue().torrentName, e.getKey(), ts);
+      }
       List<ElementSummary> projectSummary = summary.get(e.getValue().projectId);
       if (projectSummary == null) {
         projectSummary = new LinkedList<>();
@@ -45,7 +55,7 @@ public class LibraryHelper {
     }
     return summary;
   }
-  
+
   public static Map<Integer, List<ElementSummary>> getSummary(LibraryCtrl library, List<Integer> projectIds) {
     if (projectIds.isEmpty()) {
       return getAllSummary(library);
@@ -58,7 +68,15 @@ public class LibraryHelper {
     for (Map.Entry<OverlayId, Torrent> e : torrents.entrySet()) {
       if (projectIds.contains(e.getValue().projectId)) {
         List<ElementSummary> projectSummary = summary.get(e.getValue().projectId);
-        ElementSummary es = new ElementSummary(e.getValue().torrentName, e.getKey(), e.getValue().getTorrentStatus());
+        long speed = (long) e.getValue().getStatus().getDownloadSpeed();
+        double dynamic = e.getValue().getStatus().getPercentageComplete();
+        TorrentState ts = e.getValue().getTorrentStatus();
+        ElementSummary es;
+        if (ts.equals(TorrentState.DOWNLOADING)) {
+          es = new ElementSummary.Download(e.getValue().torrentName, e.getKey(), ts, speed, dynamic);
+        } else {
+          es = new ElementSummary.Upload(e.getValue().torrentName, e.getKey(), ts);
+        }
         projectSummary.add(es);
       }
     }

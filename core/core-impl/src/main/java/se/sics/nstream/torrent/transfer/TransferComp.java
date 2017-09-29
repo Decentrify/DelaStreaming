@@ -42,12 +42,12 @@ import se.sics.kompics.Killed;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.id.Identifier;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.idextractor.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.idextractor.SourceHostIdExtractor;
@@ -229,7 +229,7 @@ public class TransferComp extends ComponentDefinition {
             if (connMngr.hasConnCandidates()) {
                 trigger(new Seeder.Connect(connMngr.getConnCandidate(), torrentId), connPort);
             } else {
-                answer(req, req.complete(Result.timeout(new NotFoundException("no peers to download manifest def"))));
+                answer(req, req.success(Result.timeout(new NotFoundException("no peers to download manifest def"))));
             }
         }
     };
@@ -264,7 +264,7 @@ public class TransferComp extends ComponentDefinition {
         public void handle(DetailedState.Deliver event) {
             if (!event.manifestDef.isSuccess()) {
                 LOG.warn("{}manifest def - failed", logPrefix);
-                answer(rawTorrentReq, rawTorrentReq.complete(event.manifestDef));
+                answer(rawTorrentReq, rawTorrentReq.success(event.manifestDef));
                 return;
             }
             LOG.info("{}detailed state - success", logPrefix);
@@ -300,7 +300,7 @@ public class TransferComp extends ComponentDefinition {
             initializeTorrent(serveDefState.td, resp.streamsInfo);
             trigger(Start.event, transferTrackingComp.control());
 
-            answer(setupTransferReq, setupTransferReq.complete(Result.success(true)));
+            answer(setupTransferReq, setupTransferReq.success(Result.success(true)));
             trigger(new TorrentTracking.TransferSetUp(torrentId, fileMngr.report()), statusPort);
             scheduleAdvance();
             tryAdvance();
@@ -668,7 +668,7 @@ public class TransferComp extends ComponentDefinition {
 
         private void interpretManifest(Manifest manifest) {
             trigger(new TorrentTracking.DownloadedManifest(torrentId, Result.success(manifest)), statusPort);
-            answer(rawTorrentReq, rawTorrentReq.complete(Result.success(manifest)));
+            answer(rawTorrentReq, rawTorrentReq.success(Result.success(manifest)));
             trigger(new CloseTransfer.Request(connId), connPort);
             killInstance();
         }

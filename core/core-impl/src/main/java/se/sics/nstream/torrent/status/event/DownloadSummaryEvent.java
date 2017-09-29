@@ -18,51 +18,52 @@
  */
 package se.sics.nstream.torrent.status.event;
 
-import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.StreamEvent;
+import se.sics.nstream.library.restart.LibTFSMEvent;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DownloadSummaryEvent implements StreamEvent, OverlayEvent, FSMEvent {
-    public final Identifier eventId;
-    public final OverlayId torrentId;
-    public final long transferSize;
-    public final long transferTime;
+public class DownloadSummaryEvent implements StreamEvent, OverlayEvent, LibTFSMEvent {
 
-    public DownloadSummaryEvent(Identifier eventId, OverlayId torrentId, long transferSize, long transferTime) {
-        this.eventId = eventId;
-        this.transferSize = transferSize;
-        this.transferTime = transferTime;
-        this.torrentId = torrentId;
-    }
-    
-    public DownloadSummaryEvent(OverlayId torrentId, long transferSize, long transferTime) {
-        this(BasicIdentifiers.eventId(), torrentId, transferSize, transferTime);
-    }
-    
-    @Override
-    public Identifier getId() {
-        return eventId;
-    }
-    
-    @Override
-    public OverlayId overlayId() {
-        return torrentId;
-    }
-    
-    @Override
-    public String toString() {
-        return "Download<" + overlayId() + ">SummaryEvent<" + getId() + ">";
-    }
+  public final Identifier eventId;
+  public final OverlayId torrentId;
+  public final long transferSize;
+  public final long transferTime;
+
+  public DownloadSummaryEvent(Identifier eventId, OverlayId torrentId, long transferSize, long transferTime) {
+    this.eventId = eventId;
+    this.transferSize = transferSize;
+    this.transferTime = transferTime;
+    this.torrentId = torrentId;
+  }
+
+  public DownloadSummaryEvent(OverlayId torrentId, long transferSize, long transferTime) {
+    this(BasicIdentifiers.eventId(), torrentId, transferSize, transferTime);
+  }
 
   @Override
-  public Identifier getFSMBaseId() {
+  public Identifier getId() {
+    return eventId;
+  }
+
+  @Override
+  public OverlayId overlayId() {
+    return torrentId;
+  }
+
+  @Override
+  public String toString() {
+    return "Download<" + overlayId() + ">SummaryEvent<" + getId() + ">";
+  }
+
+  @Override
+  public Identifier getLibTFSMId() {
     return torrentId.baseId;
   }
 }

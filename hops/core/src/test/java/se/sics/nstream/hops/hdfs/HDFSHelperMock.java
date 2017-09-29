@@ -16,24 +16,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.gvod.mngr.util;
+package se.sics.nstream.hops.hdfs;
 
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.nstream.library.util.TorrentState;
+import org.apache.hadoop.security.UserGroupInformation;
+import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentExtendedStatus {
-    public final OverlayId torrentId;
-    public final TorrentState torrentStatus;
-    public final double downloadSpeed;
-    public final double percentageComplete;
-    
-    public TorrentExtendedStatus(OverlayId torrentId, TorrentState torrentStatus, double downloadSpeed, double percentageComplete) {
-        this.torrentStatus = torrentStatus;
-        this.torrentId = torrentId;
-        this.downloadSpeed = downloadSpeed;
-        this.percentageComplete = percentageComplete;
-    }
+public interface HDFSHelperMock {
+  public Result<ManifestJSON> readManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource);
+  public Result<Boolean> writeManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, final HDFSResource hdfsResource, final ManifestJSON manifest);
 }

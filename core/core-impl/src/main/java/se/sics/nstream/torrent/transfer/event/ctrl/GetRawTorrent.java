@@ -19,12 +19,13 @@
 package se.sics.nstream.torrent.transfer.event.ctrl;
 
 import se.sics.kompics.Direct;
-import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
+import se.sics.kompics.Promise;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.library.restart.LibTFSMEvent;
 import se.sics.nstream.transfer.MyTorrent;
 
 /**
@@ -32,12 +33,13 @@ import se.sics.nstream.transfer.MyTorrent;
  */
 public class GetRawTorrent {
 
-  public static class Request extends Direct.Request<Response> implements OverlayEvent, FSMEvent {
+  public static class Request extends Promise<Response> implements OverlayEvent, LibTFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
 
     public Request(OverlayId torrentId) {
+      super();
       eventId = BasicIdentifiers.eventId();
       this.torrentId = torrentId;
     }
@@ -47,22 +49,28 @@ public class GetRawTorrent {
       return eventId;
     }
 
-    public Response complete(Result result) {
-      return new Response(this, result);
-    }
-
     @Override
     public OverlayId overlayId() {
       return torrentId;
     }
 
     @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getLibTFSMId() {
       return torrentId.baseId;
+    }
+
+    @Override
+    public Response success(Result result) {
+      return new Response(this, result);
+    }
+
+    @Override
+    public Response fail(Result r) {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
   }
 
-  public static class Response implements Direct.Response, OverlayEvent, FSMEvent {
+  public static class Response implements Direct.Response, OverlayEvent, LibTFSMEvent {
 
     public final Request req;
     public final Result<MyTorrent.Manifest> result;
@@ -83,8 +91,8 @@ public class GetRawTorrent {
     }
 
     @Override
-    public Identifier getFSMBaseId() {
-      return req.getFSMBaseId();
+    public Identifier getLibTFSMId() {
+      return req.getLibTFSMId();
     }
   }
 }

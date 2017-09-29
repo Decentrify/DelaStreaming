@@ -25,7 +25,7 @@ import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
 import se.sics.nstream.storage.durable.util.StreamEndpoint;
@@ -85,12 +85,14 @@ public class KafkaComp extends ComponentDefinition {
         @Override
         public Pair<KafkaComp.Init, Long> initiate(StreamResource resource) {
             KafkaResource kafkaResource = (KafkaResource) resource;
-            throw new UnsupportedOperationException("not yet");
+            KafkaComp.Init init = new KafkaComp.Init(endpoint, kafkaResource);
+            //TODO Alex - any way to find the actual kafka position?
+            return Pair.with(init, 0l);
         }
 
         @Override
         public String getName() {
-            return "hdfs";
+            return endpoint.getEndpointName();
         }
 
         @Override

@@ -18,12 +18,11 @@
  */
 package se.sics.nstream.torrent.util;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class EventTorrentConnIdExtractor extends ChannelIdExtractor<TorrentConnEvent, Identifier>{

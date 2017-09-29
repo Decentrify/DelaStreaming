@@ -38,6 +38,7 @@ import se.sics.ktoolbox.util.idextractor.EventOverlayIdExtractor;
 import se.sics.ktoolbox.util.idextractor.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
+import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nstream.torrent.event.StartTorrent;
@@ -145,7 +146,7 @@ public class TorrentMngrComp extends ComponentDefinition {
         //TODO - what?
         return;
       }
-      answer(req, req.success());
+      answer(req, req.success(Result.success(true)));
     }
   };
 

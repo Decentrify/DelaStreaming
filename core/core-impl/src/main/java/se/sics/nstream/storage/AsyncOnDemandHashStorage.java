@@ -21,7 +21,7 @@ package se.sics.nstream.storage;
 import java.util.HashMap;
 import java.util.Map;
 import org.javatuples.Pair;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;

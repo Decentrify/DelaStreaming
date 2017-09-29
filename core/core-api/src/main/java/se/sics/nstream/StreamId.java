@@ -19,7 +19,7 @@
 package se.sics.nstream;
 
 import java.util.Objects;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

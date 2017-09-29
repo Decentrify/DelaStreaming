@@ -20,17 +20,16 @@ package se.sics.nstream.torrent.conn.event;
 
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
-import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
+import se.sics.kompics.fsm.FSMEvent;
+import se.sics.kompics.id.Identifiable;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.torrent.conn.ConnectionId;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class Seeder {
@@ -64,8 +63,7 @@ public class Seeder {
       return new Suspect(this);
     }
 
-    @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getFSMId() {
       return new ConnectionId(torrentId.baseId, peer.getId());
     }
 

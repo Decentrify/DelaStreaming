@@ -21,8 +21,8 @@ package se.sics.gvod.stream.connection.event;
 import java.util.Map;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.kompics.Direct;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.StreamEvent;
 

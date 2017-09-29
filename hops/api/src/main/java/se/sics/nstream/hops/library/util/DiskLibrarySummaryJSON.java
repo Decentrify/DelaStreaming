@@ -22,16 +22,17 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import org.javatuples.Pair;
-import se.sics.nstream.hops.library.Torrent;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.library.util.TorrentState;
+import se.sics.nstream.hops.library.Torrent;
 import se.sics.nstream.hops.storage.disk.DiskEndpoint;
 import se.sics.nstream.hops.storage.disk.DiskResource;
+import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.transfer.MyTorrent;
+import se.sics.nstream.util.TorrentExtendedStatus;
 
 /**
  *
@@ -149,7 +150,8 @@ public class DiskLibrarySummaryJSON {
     public Pair<OverlayId, Torrent> fromJSON(OverlayIdFactory torrentIdFactory) {
       OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(baseId));
       TorrentState status = TorrentState.valueOf(torrentStatus);
-      Torrent t = new Torrent(projectId, datasetId, torrentName, status);
+      TorrentExtendedStatus extendedStatus = new TorrentExtendedStatus(tId, status, 0, 0);
+      Torrent t = new Torrent(projectId, datasetId, torrentName, extendedStatus);
       
       DiskResource manifestResource = new DiskResource(dirPath, MyTorrent.MANIFEST_NAME);
       MyStream manifestStream = new MyStream(new DiskEndpoint(), manifestResource);

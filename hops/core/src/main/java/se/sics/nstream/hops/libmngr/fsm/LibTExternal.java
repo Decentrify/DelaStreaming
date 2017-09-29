@@ -18,12 +18,12 @@
  */
 package se.sics.nstream.hops.libmngr.fsm;
 
-import se.sics.nstream.hops.library.LibraryCtrl;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Positive;
-import se.sics.ktoolbox.nutil.fsm.api.FSMExternalState;
+import se.sics.kompics.fsm.FSMExternalState;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.hops.library.Details;
+import se.sics.nstream.hops.library.LibraryCtrl;
 import se.sics.nstream.library.endpointmngr.EndpointIdRegistry;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.torrent.TorrentMngrPort;

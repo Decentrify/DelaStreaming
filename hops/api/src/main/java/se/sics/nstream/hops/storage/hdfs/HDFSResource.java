@@ -19,7 +19,6 @@
 package se.sics.nstream.hops.storage.hdfs;
 
 import se.sics.nstream.storage.durable.util.StreamResource;
-import se.sics.nstream.storage.durable.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -42,4 +41,9 @@ public class HDFSResource implements StreamResource {
     public String getSinkName() {
         return "hdfs://" + dirPath + "/" + fileName;
     }
+
+  @Override
+  public String toString() {
+    return "HDFSResource{" + "dirPath=" + dirPath + ", fileName=" + fileName + '}';
+  }
 }

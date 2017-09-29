@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.hops.kafka.avro;
 
-import io.hops.util.dela.HopsProducer;
+import io.hops.util.dela.DelaProducer;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
@@ -29,7 +29,7 @@ import se.sics.nstream.hops.kafka.KafkaResource;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class KafkaProducer implements AvroMsgProducer {
-    private final HopsProducer producer;
+    private final DelaProducer producer;
 
     public KafkaProducer(KafkaEndpoint kafkaEndpoint, KafkaResource kafkaResource) {
         producer = KafkaHelper.getKafkaProducer(kafkaEndpoint, kafkaResource);

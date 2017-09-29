@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.storage;
 
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.storage.cache.KCache;
 import se.sics.nstream.storage.cache.KHint;
@@ -28,7 +28,6 @@ import se.sics.nstream.util.result.ReadCallback;
 import se.sics.nstream.util.result.WriteCallback;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class AsyncCompleteStorage implements AsyncStorage {

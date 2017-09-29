@@ -1,0 +1,1 @@
+{"diskLibrary":{"torrents":[]},"hdfsLibrary":{"torrents":[{"projectId":0,"datasetId":0,"torrentName":"t1","torrentStatus":"DOWNLOADING","baseId":"A86886A5D2978142DA2D8CF378EBC83CF5EA8ADB327F305122C74E759388BA8C","endpoint":{"url":"mock_url","user":"mock_user"},"dirPath":"mock_path","partners":[{"ip":"193.10.67.178","port":10000,"id":1}]}]}}

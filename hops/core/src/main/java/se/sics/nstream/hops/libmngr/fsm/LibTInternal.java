@@ -24,21 +24,24 @@ import java.util.List;
 import java.util.Map;
 import org.javatuples.Pair;
 import se.sics.kompics.Promise;
-import se.sics.ktoolbox.nutil.fsm.api.FSMException;
-import se.sics.ktoolbox.nutil.fsm.api.FSMInternalState;
-import se.sics.ktoolbox.nutil.fsm.api.FSMInternalStateBuilder;
-import se.sics.ktoolbox.nutil.fsm.ids.FSMId;
+import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.FSMInternalState;
+import se.sics.kompics.fsm.FSMInternalStateBuilder;
+import se.sics.kompics.fsm.id.FSMIdentifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.Either;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
+import se.sics.nstream.hops.kafka.KafkaEndpoint;
+import se.sics.nstream.hops.kafka.KafkaResource;
 import se.sics.nstream.hops.libmngr.TorrentBuilder;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
 import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.storage.durable.util.FileExtendedDetails;
 import se.sics.nstream.storage.durable.util.MyStream;
@@ -50,25 +53,29 @@ import se.sics.nstream.transfer.MyTorrent;
  */
 public class LibTInternal implements FSMInternalState {
 
-  public final FSMId fsmId;
+  public final FSMIdentifier fsmId;
   public final String fsmName;
 
+  //intermediary state
   public final ActiveRequest ar;
-  private OverlayId torrentId;
   private TorrentState torrentState;
+  public final AuxState auxState = new AuxState();
+  //final state
+  private OverlayId torrentId;
   public final LibTEndpointRegistry storageRegistry = new LibTEndpointRegistry();
-
   private List<KAddress> partners;
   private MyTorrent torrent;
+  
+  public Optional<TorrentExtendedStatusEvent.Request> statusReq;
 
-  public LibTInternal(FSMId fsmId) {
+  public LibTInternal(FSMIdentifier fsmId) {
     this.fsmId = fsmId;
     this.fsmName = LibTFSM.NAME;
     this.ar = new ActiveRequest();
   }
-  
+
   @Override
-  public FSMId getFSMId() {
+  public FSMIdentifier getFSMId() {
     return fsmId;
   }
 
@@ -95,6 +102,8 @@ public class LibTInternal implements FSMInternalState {
 
   public void setDownloadAdvance(HopsTorrentDownloadEvent.AdvanceRequest req) throws FSMException {
     ar.setActive(req);
+    auxState.setKafkaEndpointName(req.kafkaEndpoint);
+    auxState.setKafkaDetails(req.kafkaDetails);
   }
 
   public void setDownloadRestart(TorrentRestart.DwldReq req) throws FSMException {
@@ -107,7 +116,7 @@ public class LibTInternal implements FSMInternalState {
   public void setStop(HopsTorrentStopEvent.Request req) throws FSMException {
     ar.setActive(req);
   }
-  
+
   public void advanceTransfer() {
     torrentState = ((TSetup) torrentState).finish();
   }
@@ -115,7 +124,7 @@ public class LibTInternal implements FSMInternalState {
   public TSetup getSetupState() {
     return (TSetup) torrentState;
   }
-  
+
   public TComplete getCompleteState() {
     return (TComplete) torrentState;
   }
@@ -205,7 +214,7 @@ public class LibTInternal implements FSMInternalState {
       return torrentBuilder.getFiles();
     }
 
-    public void setExtendedDetails(Map<FileId, FileExtendedDetails> extendedDetails) {
+    public void setDetails(Map<FileId, FileExtendedDetails> extendedDetails) {
       torrentBuilder.setExtendedDetails(extendedDetails);
     }
 
@@ -227,10 +236,34 @@ public class LibTInternal implements FSMInternalState {
     }
   }
 
+  public static class AuxState {
+
+    private String kafkaEndpointName;
+    private Map<String, KafkaResource> kafkaDetails;
+
+    private void setKafkaDetails(Map<String, KafkaResource> kafkaDetails) {
+      this.kafkaDetails = kafkaDetails;
+    }
+
+    public Map<String, KafkaResource> getKafkaDetails() {
+      return kafkaDetails;
+    }
+
+    public String getKafkaEndpointName() {
+      return kafkaEndpointName;
+    }
+
+    private void setKafkaEndpointName(Optional<KafkaEndpoint> kafkaEndpoint) {
+      if (kafkaEndpoint.isPresent()) {
+        this.kafkaEndpointName = kafkaEndpoint.get().getEndpointName();
+      }
+    }
+  }
+
   public static class Builder implements FSMInternalStateBuilder {
 
     @Override
-    public FSMInternalState newState(FSMId fsmId) {
+    public FSMInternalState newState(FSMIdentifier fsmId) {
       return new LibTInternal(fsmId);
     }
   }

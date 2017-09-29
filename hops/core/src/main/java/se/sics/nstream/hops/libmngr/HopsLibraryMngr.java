@@ -24,15 +24,15 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.gvod.hops.library.MysqlLibrary;
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
-import se.sics.ktoolbox.nutil.fsm.MultiFSM;
-import se.sics.ktoolbox.nutil.fsm.api.FSMException;
-import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
+import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.MultiFSM;
+import se.sics.kompics.fsm.OnFSMExceptionAction;
+import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -54,6 +54,7 @@ import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.mngr.util.ElementSummary;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
+import se.sics.nstream.util.TorrentExtendedStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -73,6 +74,7 @@ public class HopsLibraryMngr {
 
   public HopsLibraryMngr(OnFSMExceptionAction oexa, ComponentProxy proxy, Config config, String logPrefix,
     KAddress selfAdr) {
+    LOG.info("{}initing", logPrefix);
     this.logPrefix = logPrefix;
     this.config = config;
     this.selfAdr = selfAdr;
@@ -92,15 +94,17 @@ public class HopsLibraryMngr {
     this.libraryDetails = new LibraryDetails(proxy, library);
 
     try {
+      FSMIdentifierFactory fsmIdFactory = config.getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
       LibTExternal es = new LibTExternal(selfAdr, library, new EndpointIdRegistry(), hopsLibraryConfig.storageType);
-      fsm = LibTFSM.build(es, oexa);
-      fsm.setProxy(proxy);
+      es.setProxy(proxy);
+      fsm = LibTFSM.multifsm(fsmIdFactory, es, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }
   }
 
   public void start() {
+    LOG.info("{}starting", logPrefix);
     //not sure when the provided ports are set, but for sure they are set after Start event. Ports are not set in constructor
     //TODO Alex - might lose some msg between Start and process of Start
     fsm.setupHandlers();
@@ -127,6 +131,7 @@ public class HopsLibraryMngr {
     }
 
     public void setup() {
+      LOG.info("{}restart init", logPrefix);
       restartPort = proxy.getNegative(TorrentRestartPort.class).getPair();
       proxy.subscribe(handleDownloadRestartSuccess, restartPort);
       proxy.subscribe(handleDownloadRestartFail, restartPort);
@@ -135,10 +140,12 @@ public class HopsLibraryMngr {
     }
 
     public void start(LibraryCtrl library) {
+      LOG.info("{}restart start", logPrefix);
       Map<OverlayId, Torrent> torrents = library.start();
 
       for (Map.Entry<OverlayId, Torrent> t : torrents.entrySet()) {
         Torrent torrent = t.getValue();
+        LOG.debug("{}restarting torrent:{}", logPrefix, t.getKey());
         if (t.getValue().getTorrentStatus().equals(TorrentState.UPLOADING)) {
           proxy.trigger(new TorrentRestart.UpldReq(t.getKey(), torrent.torrentName, torrent.projectId,
             torrent.datasetId, torrent.getPartners(), torrent.getManifestStream()), restartPort);
@@ -257,12 +264,17 @@ public class HopsLibraryMngr {
           case DOWNLOADING:
           case UPLOADING:
             proxy.answer(req, req.succes(new TorrentExtendedStatus(req.torrentId, resp.result.torrentStatus,
-              resp.result.downloadSpeed, resp.result.percentageComplete)));
+              resp.result.getDownloadSpeed(), resp.result.getPercentageComplete())));
             break;
           default:
             proxy.answer(req, req.succes(new TorrentExtendedStatus(req.torrentId, ts, 0, 0)));
         }
       }
     };
+  }
+
+  //********************************INTROSPECTION METHODS FOR TESTING***************************************************
+  protected MultiFSM getFSM() {
+    return fsm;
   }
 }

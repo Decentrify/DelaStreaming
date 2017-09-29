@@ -18,53 +18,61 @@
  */
 package se.sics.nstream.library.event.torrent;
 
-import se.sics.gvod.mngr.util.TorrentExtendedStatus;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.library.restart.LibTFSMEvent;
+import se.sics.nstream.util.TorrentExtendedStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentExtendedStatusEvent {
-    public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        
-        public Request(Identifier eventId, OverlayId torrentId) {
-            this.eventId = eventId;
-            this.torrentId = torrentId;
-        }
-        
-        public Request(OverlayId torrentId) {
-            this(BasicIdentifiers.eventId(), torrentId);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        public Response succes(TorrentExtendedStatus value) {
-            return new Response(this, Result.success(value));
-        }
+
+  public static class Request extends Direct.Request<Response> implements VoDMngrEvent, LibTFSMEvent {
+
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+
+    public Request(Identifier eventId, OverlayId torrentId) {
+      this.eventId = eventId;
+      this.torrentId = torrentId;
     }
-    
-    public static class Response implements Direct.Response, VoDMngrEvent {
-        public final Request req;
-        public final Result<TorrentExtendedStatus> result;
-        
-        public Response(Request req, Result<TorrentExtendedStatus> result) {
-            this.req = req;
-            this.result = result;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
+
+    public Request(OverlayId torrentId) {
+      this(BasicIdentifiers.eventId(), torrentId);
     }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    public Response succes(TorrentExtendedStatus value) {
+      return new Response(this, Result.success(value));
+    }
+
+    public Identifier getLibTFSMId() {
+      return torrentId.baseId;
+    }
+  }
+
+  public static class Response implements Direct.Response, VoDMngrEvent {
+
+    public final Request req;
+    public final Result<TorrentExtendedStatus> result;
+
+    public Response(Request req, Result<TorrentExtendedStatus> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+  }
 }

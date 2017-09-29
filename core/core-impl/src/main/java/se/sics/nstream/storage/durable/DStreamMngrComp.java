@@ -31,7 +31,7 @@ import se.sics.kompics.Kill;
 import se.sics.kompics.Killed;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.events.DStreamConnect;
@@ -43,7 +43,7 @@ import se.sics.nstream.storage.durable.events.DStreamDisconnect;
  */
 public class DStreamMngrComp extends ComponentDefinition {
 
-  private static final Logger LOG = LoggerFactory.getLogger(DStorageMngrComp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(DStreamMngrComp.class);
   private final String logPrefix;
 
   private final Negative<DStoragePort> storagePort = provides(DStoragePort.class);

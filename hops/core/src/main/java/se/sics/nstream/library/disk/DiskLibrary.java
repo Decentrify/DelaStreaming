@@ -32,6 +32,7 @@ import se.sics.nstream.hops.library.util.LibrarySummaryHelper;
 import se.sics.nstream.hops.library.util.LibrarySummaryJSON;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.util.TorrentExtendedStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -99,7 +100,8 @@ public class DiskLibrary implements LibraryCtrl {
 
   @Override
   public void prepareUpload(OverlayId torrentId, Integer projectId, Integer datasetId, String torrentName) {
-    Torrent torrent = new Torrent(projectId, datasetId, torrentName, TorrentState.PREPARE_UPLOAD);
+    TorrentExtendedStatus extendedStatus = new TorrentExtendedStatus(torrentId, TorrentState.PREPARE_UPLOAD, 0, 100);
+    Torrent torrent = new Torrent(projectId, datasetId, torrentName, extendedStatus);
     torrents.put(torrentId, torrent);
   }
 
@@ -113,7 +115,8 @@ public class DiskLibrary implements LibraryCtrl {
 
   @Override
   public void prepareDownload(OverlayId torrentId, Integer projectId, Integer datasetId, String torrentName, List<KAddress> partners) {
-    Torrent torrent = new Torrent(projectId, datasetId, torrentName, TorrentState.PREPARE_DOWNLOAD);
+    TorrentExtendedStatus extendedStatus = new TorrentExtendedStatus(torrentId, TorrentState.PREPARE_DOWNLOAD, 0, 0);
+    Torrent torrent = new Torrent(projectId, datasetId, torrentName, extendedStatus);
     torrent.setPartners(partners);
     torrents.put(torrentId, torrent);
   }
@@ -139,5 +142,12 @@ public class DiskLibrary implements LibraryCtrl {
     if (!writeResult.isSuccess()) {
       //TODO - try again next time?
     }
+  }
+
+  @Override
+  public void updateDownload(OverlayId torrentId, long speed, double dynamic) {
+    Torrent torrent = torrents.get(torrentId);
+    torrent.getStatus().setDownloadSpeed(speed);
+    torrent.getStatus().setPercentageComplete(dynamic);
   }
 }

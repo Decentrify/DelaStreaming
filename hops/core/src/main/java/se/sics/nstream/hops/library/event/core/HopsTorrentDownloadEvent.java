@@ -23,24 +23,24 @@ import java.util.List;
 import java.util.Map;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
-import se.sics.ktoolbox.nutil.fsm.api.FSMEvent;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
-import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.nstream.library.restart.LibTFSMEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsTorrentDownloadEvent {
 
-  public static class StartRequest extends Promise<StartResponse> implements StreamEvent, FSMEvent {
+  public static class StartRequest extends Promise<StartResponse> implements StreamEvent, LibTFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -84,7 +84,7 @@ public class HopsTorrentDownloadEvent {
     }
 
     @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getLibTFSMId() {
       return torrentId.baseId;
     }
   }
@@ -140,7 +140,7 @@ public class HopsTorrentDownloadEvent {
     }
   }
 
-  public static class AdvanceRequest extends Promise<AdvanceResponse> implements StreamEvent, FSMEvent {
+  public static class AdvanceRequest extends Promise<AdvanceResponse> implements StreamEvent, LibTFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -183,7 +183,7 @@ public class HopsTorrentDownloadEvent {
     }
 
     @Override
-    public Identifier getFSMBaseId() {
+    public Identifier getLibTFSMId() {
       return torrentId.baseId;
     }
   }

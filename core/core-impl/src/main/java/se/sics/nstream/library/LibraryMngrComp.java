@@ -29,8 +29,8 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.PortType;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.ktoolbox.nutil.fsm.api.FSMException;
-import se.sics.ktoolbox.nutil.fsm.genericsetup.OnFSMExceptionAction;
+import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.event.system.SystemAddressEvent;
 import se.sics.nstream.library.restart.TorrentRestartPort;
@@ -121,5 +121,10 @@ public class LibraryMngrComp extends ComponentDefinition {
             this.selfAddress = selfAddress;
             this.libraryProvider = libraryProvider;
         }
+    }
+    
+    //********************************INTROSPECTION METHODS FOR TESTING*************************************************
+    protected LibraryProvider getLibraryProvider() {
+      return torrentProvider;
     }
 }

@@ -19,9 +19,9 @@
 package se.sics.nstream.storage.durable;
 
 import se.sics.kompics.Direct;
+import se.sics.kompics.id.Identifiable;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
-import se.sics.ktoolbox.util.identifiable.Identifier;
 import se.sics.nstream.storage.durable.util.MyStream;
 
 /**

@@ -18,12 +18,14 @@
  */
 package se.sics.nstream.hops.libmngr.fsm;
 
+import com.google.common.collect.Sets;
+import com.google.common.collect.Sets.SetView;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import org.javatuples.Pair;
-import se.sics.ktoolbox.util.identifiable.Identifier;
+import se.sics.kompics.id.Identifier;
 import se.sics.nstream.storage.durable.util.StreamEndpoint;
 
 /**
@@ -36,6 +38,9 @@ public class LibTEndpointRegistry {
   private final Set<Identifier> connecting = new HashSet<>();
   
   private final Set<Identifier> selfCleaning = new HashSet<>();
+  
+  //*****leaked in component - do not leak outside component or you can get - concurrent modification
+  private final SetView<Identifier> endpointView = Sets.union(endpoints.keySet(), new HashSet<Identifier>());
 
   public void addWaiting(String endpointName, Identifier endpointId, StreamEndpoint endpoint) {
     nameToId.put(endpointName, endpointId);
@@ -59,6 +64,10 @@ public class LibTEndpointRegistry {
     return nameToId.get(endpointName);
   }
   
+  public StreamEndpoint getEndpoint(Identifier endpointId) {
+    return endpoints.get(endpointId);
+  }
+  
   public Set<Identifier> selfCleaning() {
     selfCleaning.addAll(endpoints.keySet());
     selfCleaning.addAll(connecting);
@@ -67,9 +76,16 @@ public class LibTEndpointRegistry {
   
   public void cleaned(Identifier endpointId) {
     selfCleaning.remove(endpointId);
+    StreamEndpoint e = endpoints.remove(endpointId);
+    nameToId.remove(e.getEndpointName());
+    connecting.remove(endpointId);
   }
   
   public boolean cleaningComplete() {
     return selfCleaning.isEmpty();
+  }
+  
+  public SetView<Identifier> endpointView() {
+    return endpointView;
   }
 }

@@ -19,7 +19,7 @@
 package se.sics.nstream;
 
 import se.sics.kompics.KompicsEvent;
-import se.sics.ktoolbox.util.identifiable.Identifiable;
+import se.sics.kompics.id.Identifiable;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

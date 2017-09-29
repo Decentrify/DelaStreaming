@@ -28,8 +28,7 @@ import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.gvod.stream.congestion.PLedbatState;
 import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
 import se.sics.gvod.stream.util.ConnectionStatus;
-import se.sics.ktoolbox.util.identifiable.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.IntId;
+import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
