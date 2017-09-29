@@ -96,6 +96,7 @@ public class HopsLibraryMngr {
     try {
       FSMIdentifierFactory fsmIdFactory = config.getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
       LibTExternal es = new LibTExternal(selfAdr, library, new EndpointIdRegistry(), hopsLibraryConfig.storageType);
+      es.setProxy(proxy);
       fsm = LibTFSM.multifsm(fsmIdFactory, es, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
