@@ -16,33 +16,63 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.status.event;
+package se.sics.silk.supervisor.event;
 
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.id.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
+import se.sics.ktoolbox.util.result.Result;
+import se.sics.nstream.torrent.tracking.event.TorrentTracking;
+import se.sics.nstream.transfer.MyTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentReady implements KompicsEvent, OverlayEvent {
+public class TorrentCtrlEvent {
+
+  public static class DownloadedManifest implements KompicsEvent, OverlayEvent {
+
     public final Identifier eventId;
     public final OverlayId torrentId;
-    
-    public TorrentReady(OverlayId torrentId) {
-        this.eventId = BasicIdentifiers.eventId();
-        this.torrentId = torrentId;
+    public final Result<MyTorrent.Manifest> manifest;
+
+    public DownloadedManifest(TorrentTracking.DownloadedManifest req) {
+      this.eventId = BasicIdentifiers.eventId();
+      this.torrentId = req.torrentId;
+      this.manifest = req.manifest;
     }
 
     @Override
     public Identifier getId() {
-        return eventId;
+      return eventId;
     }
 
     @Override
     public OverlayId overlayId() {
-        return torrentId;
+      return torrentId;
     }
+  }
+  
+  public static class TorrentReady implements KompicsEvent, OverlayEvent {
+
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+
+    public TorrentReady(OverlayId torrentId) {
+      this.eventId = BasicIdentifiers.eventId();
+      this.torrentId = torrentId;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return torrentId;
+    }
+  }
 }

@@ -43,12 +43,11 @@ import se.sics.nstream.storage.durable.events.DEndpoint;
 import se.sics.nstream.torrent.TorrentMngrPort;
 import se.sics.nstream.torrent.event.StartTorrent;
 import se.sics.nstream.torrent.event.StopTorrent;
-import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
-import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
 import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
+import se.sics.silk.supervisor.TorrentInfoPort;
+import se.sics.silk.supervisor.event.TorrentInfoEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -130,10 +129,10 @@ public class LibTFSM {
       .onBasicEvent(SetupTransfer.Response.class)
       .subscribe(LibTHandlers.advanceTransfer, LibTStates.ADVANCE_TRANSFER)
       .buildEvents()
-      .positivePort(TorrentStatusPort.class)
-      .onBasicEvent(DownloadSummaryEvent.class)
+      .positivePort(TorrentInfoPort.class)
+      .onBasicEvent(TorrentInfoEvent.DownloadSummary.class)
       .subscribe(LibTHandlers.downloadCompleted, LibTStates.DOWNLOADING)
-      .onBasicEvent(StatusSummaryEvent.Response.class)
+      .onBasicEvent(TorrentInfoEvent.Response.class)
       .subscribe(LibTHandlers.statusReport, LibTStates.DOWNLOADING)
       .buildEvents()
       .positivePort(TorrentMngrPort.class)

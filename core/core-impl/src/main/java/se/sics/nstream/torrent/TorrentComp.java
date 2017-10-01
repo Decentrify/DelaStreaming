@@ -34,13 +34,14 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.torrent.resourceMngr.ResourceMngrPort;
-import se.sics.nstream.torrent.status.event.TorrentReady;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
 import se.sics.nstream.torrent.tracking.TorrentTrackingPort;
 import se.sics.nstream.torrent.transfer.TransferComp;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
+import se.sics.silk.supervisor.TorrentCtrlPort;
+import se.sics.silk.supervisor.TorrentInfoPort;
+import se.sics.silk.supervisor.event.TorrentCtrlEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -58,7 +59,8 @@ public class TorrentComp extends ComponentDefinition {
     private final Positive<ResourceMngrPort> resourceMngrPort = requires(ResourceMngrPort.class);
     private final Positive<DStoragePort> storagePort = requires(DStoragePort.class);
     private final Negative<TransferCtrlPort> transferCtrlPort = provides(TransferCtrlPort.class);
-    private final Negative<TorrentStatusPort> statusPort = provides(TorrentStatusPort.class);
+    private final Negative<TorrentCtrlPort> torrentCtrlPort = provides(TorrentCtrlPort.class);
+    private final Negative<TorrentInfoPort> torrentInfoPort = provides(TorrentInfoPort.class);
     //**************************************************************************
     private final KAddress selfAdr;
     private final OverlayId torrentId;
@@ -84,7 +86,7 @@ public class TorrentComp extends ComponentDefinition {
             LOG.info("{}starting...", logPrefix);
             connectComp();
             startComp();
-            trigger(new TorrentReady(torrentId), statusPort);
+            trigger(new TorrentCtrlEvent.TorrentReady(torrentId), torrentCtrlPort);
         }
     };
     
@@ -104,7 +106,8 @@ public class TorrentComp extends ComponentDefinition {
         connect(reportComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
         connect(reportComp.getNegative(TorrentTrackingPort.class), transferComp.getPositive(TorrentTrackingPort.class), Channel.TWO_WAY);
 
-        connect(statusPort, reportComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
+        connect(torrentCtrlPort, reportComp.getPositive(TorrentCtrlPort.class), Channel.TWO_WAY);
+        connect(torrentInfoPort, reportComp.getPositive(TorrentInfoPort.class), Channel.TWO_WAY);
     }
 
     private void startComp() {

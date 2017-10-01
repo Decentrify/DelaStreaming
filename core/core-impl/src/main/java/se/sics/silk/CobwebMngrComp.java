@@ -34,9 +34,10 @@ import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nstream.torrent.TorrentMngrComp;
 import se.sics.nstream.torrent.TorrentMngrPort;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.silk.overlord.OverlordComp;
+import se.sics.silk.supervisor.TorrentCtrlPort;
+import se.sics.silk.supervisor.TorrentInfoPort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -54,7 +55,8 @@ public class CobwebMngrComp extends ComponentDefinition {
 
   private final Negative<TorrentMngrPort> torrentMngrPort = provides(TorrentMngrPort.class);
   private final Negative<TransferCtrlPort> transferCtrlPort = provides(TransferCtrlPort.class);
-  private final Negative<TorrentStatusPort> torrentStatusPort = provides(TorrentStatusPort.class);
+  private final Negative<TorrentCtrlPort> torrentCtrlPort = provides(TorrentCtrlPort.class);
+  private final Negative<TorrentInfoPort> torrentInfoPort = provides(TorrentInfoPort.class);
   //********************************************************************************************************************
   private Component torrentMngrComp;
   private Component overlordComp;
@@ -92,8 +94,11 @@ public class CobwebMngrComp extends ComponentDefinition {
 
   private void setupOverlordComp() {
     overlordComp = create(OverlordComp.class, new OverlordComp.Init());
-    connect(torrentStatusPort, overlordComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
-    connect(overlordComp.getNegative(TorrentStatusPort.class), torrentMngrComp.getPositive(TorrentStatusPort.class),
+    connect(torrentCtrlPort, overlordComp.getPositive(TorrentCtrlPort.class), Channel.TWO_WAY);
+    connect(torrentInfoPort, overlordComp.getPositive(TorrentInfoPort.class), Channel.TWO_WAY);
+    connect(overlordComp.getNegative(TorrentCtrlPort.class), torrentMngrComp.getPositive(TorrentCtrlPort.class),
+      Channel.TWO_WAY);
+    connect(overlordComp.getNegative(TorrentInfoPort.class), torrentMngrComp.getPositive(TorrentInfoPort.class),
       Channel.TWO_WAY);
   }
 

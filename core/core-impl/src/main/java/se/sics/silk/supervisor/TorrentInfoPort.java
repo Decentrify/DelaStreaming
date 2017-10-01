@@ -16,25 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.tracking;
+package se.sics.silk.supervisor;
 
 import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
-import se.sics.nstream.torrent.status.event.TorrentReady;
-import se.sics.nstream.torrent.status.event.TorrentStatus;
-import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
+import se.sics.silk.supervisor.event.TorrentInfoEvent;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentStatusPort extends PortType {
-    {
-        indication(TorrentReady.class);
-        indication(TorrentStatus.DownloadedManifest.class);
-        
-        request(StatusSummaryEvent.Request.class);
-        indication(StatusSummaryEvent.Response.class);
-        indication(DownloadSummaryEvent.class);
-    }
+public class TorrentInfoPort extends PortType {
+
+  {
+    request(TorrentInfoEvent.Request.class);
+    indication(TorrentInfoEvent.Response.class);
+    indication(TorrentInfoEvent.DownloadSummary.class);
+  }
 }

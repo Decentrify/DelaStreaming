@@ -27,8 +27,8 @@ import se.sics.nstream.hops.library.LibraryCtrl;
 import se.sics.nstream.library.endpointmngr.EndpointIdRegistry;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.torrent.TorrentMngrPort;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
+import se.sics.silk.supervisor.TorrentInfoPort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -71,7 +71,7 @@ public class LibTExternal implements FSMExternalState {
     return proxy.getNegative(TransferCtrlPort.class).getPair();
   }
 
-  public Positive torrentStatusPort() {
-    return proxy.getNegative(TorrentStatusPort.class).getPair();
+  public Positive torrentInfoPort() {
+    return proxy.getNegative(TorrentInfoPort.class).getPair();
   }
 }

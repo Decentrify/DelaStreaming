@@ -25,12 +25,11 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
-import se.sics.nstream.torrent.status.event.TorrentReady;
-import se.sics.nstream.torrent.status.event.TorrentStatus;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
-import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.silk.CobwebMngrComp;
+import se.sics.silk.supervisor.TorrentCtrlPort;
+import se.sics.silk.supervisor.TorrentInfoPort;
+import se.sics.silk.supervisor.event.TorrentCtrlEvent;
+import se.sics.silk.supervisor.event.TorrentInfoEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -40,17 +39,19 @@ public class OverlordComp extends ComponentDefinition {
   private static final Logger LOG = LoggerFactory.getLogger(CobwebMngrComp.class);
   private String logPrefix;
 
-  private final Negative<TorrentStatusPort> providedPort = provides(TorrentStatusPort.class);
-  private final Positive<TorrentStatusPort> requiredPort = requires(TorrentStatusPort.class);
+  private final Negative<TorrentCtrlPort> providedCtrlPort = provides(TorrentCtrlPort.class);
+  private final Positive<TorrentCtrlPort> requiredCtrlPort = requires(TorrentCtrlPort.class);
+  private final Negative<TorrentInfoPort> providedInfoPort = provides(TorrentInfoPort.class);
+  private final Positive<TorrentInfoPort> requiredInfoPort = requires(TorrentInfoPort.class);
 
   public OverlordComp(Init init) {
 
     subscribe(handleStart, control);
-    subscribe(handleTorrentReady, requiredPort);
-    subscribe(handleManifest, requiredPort);
-    subscribe(handleStatusRequest, providedPort);
-    subscribe(handleStatusResponse, requiredPort);
-    subscribe(handleDownloaded, providedPort);
+    subscribe(handleTorrentReady, requiredCtrlPort);
+    subscribe(handleManifest, requiredCtrlPort);
+    subscribe(handleStatusRequest, providedInfoPort);
+    subscribe(handleStatusResponse, requiredInfoPort);
+    subscribe(handleDownloaded, providedInfoPort);
   }
 
   Handler handleStart = new Handler<Start>() {
@@ -61,38 +62,38 @@ public class OverlordComp extends ComponentDefinition {
     }
   };
 
-  Handler handleTorrentReady = new Handler<TorrentReady>() {
+  Handler handleTorrentReady = new Handler<TorrentCtrlEvent.TorrentReady>() {
     @Override
-    public void handle(TorrentReady event) {
-      trigger(event, providedPort);
+    public void handle(TorrentCtrlEvent.TorrentReady event) {
+      trigger(event, providedCtrlPort);
     }
   };
 
-  Handler handleManifest = new Handler<TorrentStatus.DownloadedManifest>() {
+  Handler handleManifest = new Handler<TorrentCtrlEvent.DownloadedManifest>() {
     @Override
-    public void handle(TorrentStatus.DownloadedManifest event) {
-      trigger(event, providedPort);
+    public void handle(TorrentCtrlEvent.DownloadedManifest event) {
+      trigger(event, providedCtrlPort);
     }
   };
   
-  Handler handleDownloaded = new Handler<DownloadSummaryEvent>() {
+  Handler handleDownloaded = new Handler<TorrentInfoEvent.DownloadSummary>() {
     @Override
-    public void handle(DownloadSummaryEvent event) {
-      trigger(event, providedPort);
+    public void handle(TorrentInfoEvent.DownloadSummary event) {
+      trigger(event, providedInfoPort);
     }
   };
   
-  Handler handleStatusRequest = new Handler<StatusSummaryEvent.Request>() {
+  Handler handleStatusRequest = new Handler<TorrentInfoEvent.Request>() {
     @Override
-    public void handle(StatusSummaryEvent.Request event) {
-      trigger(event, requiredPort);
+    public void handle(TorrentInfoEvent.Request event) {
+      trigger(event, requiredInfoPort);
     }
   };
   
-  Handler handleStatusResponse = new Handler<StatusSummaryEvent.Response>() {
+  Handler handleStatusResponse = new Handler<TorrentInfoEvent.Response>() {
     @Override
-    public void handle(StatusSummaryEvent.Response event) {
-      trigger(event, providedPort);
+    public void handle(TorrentInfoEvent.Response event) {
+      trigger(event, providedInfoPort);
     }
   };
   
