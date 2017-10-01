@@ -36,6 +36,7 @@ import se.sics.nstream.torrent.TorrentMngrComp;
 import se.sics.nstream.torrent.TorrentMngrPort;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
+import se.sics.silk.overlord.OverlordComp;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -56,6 +57,7 @@ public class CobwebMngrComp extends ComponentDefinition {
   private final Negative<TorrentStatusPort> torrentStatusPort = provides(TorrentStatusPort.class);
   //********************************************************************************************************************
   private Component torrentMngrComp;
+  private Component overlordComp;
   //********************************************************************************************************************
   private final KAddress selfAdr;
 
@@ -66,6 +68,7 @@ public class CobwebMngrComp extends ComponentDefinition {
     subscribe(handleStart, control);
 
     setupTorrentMngr();
+    setupOverlordComp();
   }
 
   Handler handleStart = new Handler<Start>() {
@@ -82,10 +85,16 @@ public class CobwebMngrComp extends ComponentDefinition {
     connect(torrentMngrComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
     connect(torrentMngrComp.getNegative(DStreamControlPort.class), streamControlPort, Channel.TWO_WAY);
     connect(torrentMngrComp.getNegative(DStoragePort.class), storagePort, Channel.TWO_WAY);
-    
+
     connect(torrentMngrPort, torrentMngrComp.getPositive(TorrentMngrPort.class), Channel.TWO_WAY);
     connect(transferCtrlPort, torrentMngrComp.getPositive(TransferCtrlPort.class), Channel.TWO_WAY);
-    connect(torrentStatusPort, torrentMngrComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
+  }
+
+  private void setupOverlordComp() {
+    overlordComp = create(OverlordComp.class, new OverlordComp.Init());
+    connect(torrentStatusPort, overlordComp.getPositive(TorrentStatusPort.class), Channel.TWO_WAY);
+    connect(overlordComp.getNegative(TorrentStatusPort.class), torrentMngrComp.getPositive(TorrentStatusPort.class),
+      Channel.TWO_WAY);
   }
 
   public static class Init extends se.sics.kompics.Init<CobwebMngrComp> {
