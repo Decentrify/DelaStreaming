@@ -71,11 +71,10 @@ import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.storage.durable.util.StreamEndpoint;
 import se.sics.nstream.torrent.event.StartTorrent;
 import se.sics.nstream.torrent.event.StopTorrent;
-import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
-import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
 import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
 import se.sics.nstream.transfer.MyTorrent;
+import se.sics.silk.supervisor.event.TorrentInfoEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -174,15 +173,15 @@ public class LibTHandlers {
       public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
         TorrentExtendedStatusEvent.Request event) throws FSMException {
         is.statusReq = Optional.of(event);
-        es.getProxy().trigger(new StatusSummaryEvent.Request(is.getTorrentId()), es.torrentStatusPort());
+        es.getProxy().trigger(new TorrentInfoEvent.Request(is.getTorrentId()), es.torrentInfoPort());
         return state;
       }
     };
 
   static FSMBasicEventHandler statusReport
-    = new FSMBasicEventHandler<LibTExternal, LibTInternal, StatusSummaryEvent.Response>() {
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, TorrentInfoEvent.Response>() {
       @Override
-      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, StatusSummaryEvent.Response event)
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, TorrentInfoEvent.Response event)
       throws FSMException {
         if(is.statusReq.isPresent()) {
           es.getProxy().answer(is.statusReq.get(), is.statusReq.get().succes(event.result));
@@ -407,9 +406,9 @@ public class LibTHandlers {
     };
 
   static FSMBasicEventHandler downloadCompleted
-    = new FSMBasicEventHandler<LibTExternal, LibTInternal, DownloadSummaryEvent>() {
+    = new FSMBasicEventHandler<LibTExternal, LibTInternal, TorrentInfoEvent.DownloadSummary>() {
       @Override
-      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, DownloadSummaryEvent event) {
+      public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is, TorrentInfoEvent.DownloadSummary event) {
         LOG.debug("<{}>torrent:{} - download completed", event.getLibTFSMId(), event.torrentId);
         if (!es.library.containsTorrent(event.torrentId)) {
           throw new RuntimeException("mismatch between library and fsm - critical logical error");

@@ -36,8 +36,9 @@ import se.sics.nstream.library.event.system.SystemAddressEvent;
 import se.sics.nstream.library.restart.TorrentRestartPort;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.torrent.TorrentMngrPort;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
+import se.sics.silk.supervisor.TorrentCtrlPort;
+import se.sics.silk.supervisor.TorrentInfoPort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -52,7 +53,8 @@ public class LibraryMngrComp extends ComponentDefinition {
     Positive<DEndpointCtrlPort> endpointControlPort = requires(DEndpointCtrlPort.class);
     Positive<TorrentMngrPort> torrentMngrPort = requires(TorrentMngrPort.class);
     Positive<TransferCtrlPort> transferCtrl = requires(TransferCtrlPort.class);
-    Positive<TorrentStatusPort> reportPort = requires(TorrentStatusPort.class);
+    Positive<TorrentCtrlPort> torrentCtrlPort = requires(TorrentCtrlPort.class);
+    Positive<TorrentInfoPort> torrentInfolPort = requires(TorrentInfoPort.class);
     Positive<TorrentRestartPort> restartPort1 = requires(TorrentRestartPort.class);
     Negative<TorrentRestartPort> restartPort2 = provides(TorrentRestartPort.class);
     

@@ -16,25 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.tracking;
+package se.sics.silk.supervisor;
 
-import se.sics.kompics.PortType;
-import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
-import se.sics.nstream.torrent.status.event.TorrentReady;
-import se.sics.nstream.torrent.status.event.TorrentStatus;
-import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import se.sics.nstream.FileId;
+import se.sics.nstream.transfer.MyTorrent;
+import se.sics.nstream.util.FileBaseDetails;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentStatusPort extends PortType {
-    {
-        indication(TorrentReady.class);
-        indication(TorrentStatus.DownloadedManifest.class);
-        
-        request(StatusSummaryEvent.Request.class);
-        indication(StatusSummaryEvent.Response.class);
-        indication(DownloadSummaryEvent.class);
+public class FileView {
+
+  private final MyTorrent torrent;
+  private long currentSize = 0;
+  private Map<FileId, Long> ongoing = new HashMap<>();
+  private Set<FileId> completed = new HashSet<>();
+  private Set<FileId> pending = new HashSet<>();
+
+  public FileView(MyTorrent torrent) {
+    this.torrent = torrent;
+    for (Map.Entry<FileId, FileBaseDetails> e : torrent.base.entrySet()) {
+      ongoing.put(e.getKey(), 0l);
     }
+  }
+  
 }

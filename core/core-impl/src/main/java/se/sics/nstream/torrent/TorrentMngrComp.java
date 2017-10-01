@@ -45,9 +45,10 @@ import se.sics.nstream.torrent.event.StartTorrent;
 import se.sics.nstream.torrent.event.StopTorrent;
 import se.sics.nstream.torrent.resourceMngr.ResourceMngrComp;
 import se.sics.nstream.torrent.resourceMngr.ResourceMngrPort;
-import se.sics.nstream.torrent.status.event.TorrentReady;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
+import se.sics.silk.supervisor.TorrentCtrlPort;
+import se.sics.silk.supervisor.TorrentInfoPort;
+import se.sics.silk.supervisor.event.TorrentCtrlEvent;
 
 /**
  *
@@ -65,11 +66,13 @@ public class TorrentMngrComp extends ComponentDefinition {
 
   private final Negative<TorrentMngrPort> torrentMngrPort = provides(TorrentMngrPort.class);
   private final Negative<TransferCtrlPort> transferCtrlPort = provides(TransferCtrlPort.class);
-  private final Negative<TorrentStatusPort> torrentStatusPort = provides(TorrentStatusPort.class);
+  private final Negative<TorrentCtrlPort> torrentCtrlPort = provides(TorrentCtrlPort.class);
+  private final Negative<TorrentInfoPort> torrentInfoPort = provides(TorrentInfoPort.class);
 
   private final One2NChannel networkChannel;
   private final One2NChannel transferCtrlChannel;
-  private final One2NChannel reportChannel;
+  private final One2NChannel torrentCtrlChannel;
+  private final One2NChannel torrentInfoChannel;
   //**************************************************************************
   private final KAddress selfAdr;
   //**************************************************************************
@@ -87,12 +90,13 @@ public class TorrentMngrComp extends ComponentDefinition {
     networkChannel = One2NChannel.getChannel(logPrefix + "torrent", networkPort, new MsgOverlayIdExtractor());
     transferCtrlChannel = One2NChannel.getChannel(logPrefix + "transferCtrl", transferCtrlPort,
       new EventOverlayIdExtractor());
-    reportChannel = One2NChannel.getChannel("hopsTorrentMngrReport", torrentStatusPort, new EventOverlayIdExtractor());
+    torrentCtrlChannel = One2NChannel.getChannel("hopsTorrenCtrlPort", torrentCtrlPort, new EventOverlayIdExtractor());
+    torrentInfoChannel = One2NChannel.getChannel("hopsTorrenInfolPort", torrentInfoPort, new EventOverlayIdExtractor());
 
     subscribe(handleStart, control);
     subscribe(handleTorrentStart, torrentMngrPort);
     //TODO Alex critical - what is this for? seems fishy
-    subscribe(handleTorrentReady, torrentStatusPort.getPair());
+    subscribe(handleTorrentReady, torrentCtrlPort.getPair());
     subscribe(handleTorrentStop, torrentMngrPort);
   }
 
@@ -127,7 +131,8 @@ public class TorrentMngrComp extends ComponentDefinition {
         Channel.TWO_WAY);
       connect(torrentComp.getNegative(DStoragePort.class), storagePort, Channel.TWO_WAY);
       transferCtrlChannel.addChannel(req.torrentId, torrentComp.getPositive(TransferCtrlPort.class));
-      reportChannel.addChannel(req.torrentId, torrentComp.getPositive(TorrentStatusPort.class));
+      torrentCtrlChannel.addChannel(req.torrentId, torrentComp.getPositive(TorrentCtrlPort.class));
+      torrentInfoChannel.addChannel(req.torrentId, torrentComp.getPositive(TorrentInfoPort.class));
 
       torrentComps.put(req.torrentId, torrentComp);
       compIdToTorrentId.put(torrentComp.id(), req.torrentId);
@@ -137,9 +142,9 @@ public class TorrentMngrComp extends ComponentDefinition {
     }
   };
 
-  Handler handleTorrentReady = new Handler<TorrentReady>() {
+  Handler handleTorrentReady = new Handler<TorrentCtrlEvent.TorrentReady>() {
     @Override
-    public void handle(TorrentReady event) {
+    public void handle(TorrentCtrlEvent.TorrentReady event) {
       LOG.info("{}started torrent:{}", logPrefix, event.torrentId);
       StartTorrent.Request req = pendingStarts.remove(event.torrentId);
       if (req == null) {
@@ -162,7 +167,8 @@ public class TorrentMngrComp extends ComponentDefinition {
       disconnect(torrentComp.getNegative(ResourceMngrPort.class), resourceMngrComp.getPositive(ResourceMngrPort.class));
       disconnect(torrentComp.getNegative(DStoragePort.class), storagePort);
       transferCtrlChannel.removeChannel(req.torrentId, torrentComp.getPositive(TransferCtrlPort.class));
-      reportChannel.removeChannel(req.torrentId, torrentComp.getPositive(TorrentStatusPort.class));
+      torrentCtrlChannel.removeChannel(req.torrentId, torrentComp.getPositive(TorrentCtrlPort.class));
+      torrentInfoChannel.removeChannel(req.torrentId, torrentComp.getPositive(TorrentInfoPort.class));
       
       trigger(Kill.event, torrentComp.control());
       answer(req, req.success());

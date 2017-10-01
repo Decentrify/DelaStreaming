@@ -52,9 +52,9 @@ import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.library.restart.TorrentRestartPort;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.mngr.util.ElementSummary;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
-import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.util.TorrentExtendedStatus;
+import se.sics.silk.supervisor.TorrentInfoPort;
+import se.sics.silk.supervisor.event.TorrentInfoEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -193,7 +193,7 @@ public class HopsLibraryMngr {
     private final ComponentProxy proxy;
     private final LibraryCtrl library;
     private Negative<HopsTorrentPort> libraryCtrlPort;
-    private Positive<TorrentStatusPort> torrentStatusPort;
+    private Positive<TorrentInfoPort> torrentInfoPort;
 
     private final Map<OverlayId, TorrentExtendedStatusEvent.Request> pendingTESE = new HashMap<>();
 
@@ -204,10 +204,10 @@ public class HopsLibraryMngr {
 
     public void setup() {
       libraryCtrlPort = proxy.getPositive(HopsTorrentPort.class).getPair();
-      torrentStatusPort = proxy.getNegative(TorrentStatusPort.class).getPair();
+      torrentInfoPort = proxy.getNegative(TorrentInfoPort.class).getPair();
       proxy.subscribe(handleContents, libraryCtrlPort);
       proxy.subscribe(handleTorrentDetails, libraryCtrlPort);
-      proxy.subscribe(handleTorrentStatus, torrentStatusPort);
+      proxy.subscribe(handleTorrentStatus, torrentInfoPort);
     }
 
     Handler handleContents = new Handler<HopsContentsEvent.Request>() {
@@ -240,7 +240,7 @@ public class HopsLibraryMngr {
           case DOWNLOADING:
           case UPLOADING:
             pendingTESE.put(req.torrentId, req);
-            proxy.trigger(new StatusSummaryEvent.Request(req.torrentId), torrentStatusPort);
+            proxy.trigger(new TorrentInfoEvent.Request(req.torrentId), torrentInfoPort);
             break;
           default:
             proxy.answer(req, req.succes(new TorrentExtendedStatus(req.torrentId, ts, 0, 0)));
@@ -248,9 +248,9 @@ public class HopsLibraryMngr {
       }
     };
 
-    Handler handleTorrentStatus = new Handler<StatusSummaryEvent.Response>() {
+    Handler handleTorrentStatus = new Handler<TorrentInfoEvent.Response>() {
       @Override
-      public void handle(StatusSummaryEvent.Response resp) {
+      public void handle(TorrentInfoEvent.Response resp) {
         LOG.trace("{}received:{}", logPrefix, resp);
         TorrentExtendedStatusEvent.Request req = pendingTESE.remove(resp.req.torrentId);
         if (req == null) {

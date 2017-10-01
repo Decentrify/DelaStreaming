@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.tracking;
+package se.sics.silk.supervisor;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -28,7 +28,6 @@ import java.util.TreeMap;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.nstream.util.TorrentExtendedStatus;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -39,27 +38,31 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.FileId;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.torrent.core.DataReport;
-import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
-import se.sics.nstream.torrent.status.event.TorrentStatus;
-import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
+import se.sics.nstream.torrent.tracking.TorrentTrackingConfig;
+import se.sics.nstream.torrent.tracking.TorrentTrackingPort;
 import se.sics.nstream.torrent.tracking.event.TorrentTracking;
 import se.sics.nstream.torrent.transfer.tracking.DownloadReport;
+import se.sics.nstream.util.TorrentExtendedStatus;
+import se.sics.silk.supervisor.event.TorrentCtrlEvent;
+import se.sics.silk.supervisor.event.TorrentInfoEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentTrackingComp extends ComponentDefinition {
+public class TorrentSupervisorComp extends ComponentDefinition {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TorrentTrackingComp.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TorrentSupervisorComp.class);
     private String logPrefix = "";
 
     //**************************************************************************
     Positive<Timer> timerPort = requires(Timer.class);
     Positive<TorrentTrackingPort> trackingPort = requires(TorrentTrackingPort.class);
-    Negative<TorrentStatusPort> statusPort = provides(TorrentStatusPort.class);
-    //**************************************************************************
-
+    Negative<TorrentCtrlPort> torrentCtrlPort = provides(TorrentCtrlPort.class);
+    Negative<TorrentInfoPort> torrentInfoPort = provides(TorrentInfoPort.class);
+    //******************************************************************************************************************
     private final OverlayId torrentId;
+    private Map<>
+    //******************************************************************************************************************
     private final long reportDelay;
     private static final int pieceSize = 1024;
 
@@ -75,7 +78,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     //**************************************************************************
     private TorrentTracking.DownloadedManifest pendingAdvance;
 
-    public TorrentTrackingComp(Init init) {
+    public TorrentSupervisorComp(Init init) {
         torrentId = init.torrentId;
         logPrefix = "<tid:" + torrentId.toString() + ">";
         LOG.info("{}initiating...", logPrefix);
@@ -113,7 +116,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         subscribe(handleDownloadDone, trackingPort);
         subscribe(handleTorrentTrackingIndication, trackingPort);
 
-        subscribe(handleStatusSummaryRequest, statusPort);
+        subscribe(handleStatusSummaryRequest, torrentInfoPort);
     }
 
     Handler handleStart = new Handler<Start>() {
@@ -141,7 +144,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         public void handle(TorrentTracking.DownloadedManifest req) {
             LOG.info("{}download - got manifest", logPrefix);
             pendingAdvance = req;
-            trigger(new TorrentStatus.DownloadedManifest(req), statusPort);
+            trigger(new TorrentCtrlEvent.DownloadedManifest(req), torrentCtrlPort);
         }
     };
 
@@ -163,7 +166,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
             long transferTime = System.currentTimeMillis() - startingTime;
             dataReport = event.dataReport;
             LOG.info("{}download completed in:{} avg dwnl speed:{} B/s", new Object[]{logPrefix, transferTime, (double) dataReport.totalSize.getValue1() / transferTime});
-            trigger(new DownloadSummaryEvent(torrentId, dataReport.totalSize.getValue1(), transferTime), statusPort);
+            trigger(new TorrentInfoEvent.DownloadSummary(torrentId, dataReport.totalSize.getValue1(), transferTime), torrentInfoPort);
             status = TorrentState.UPLOADING;
             fileCounter = 0;
         }
@@ -234,9 +237,9 @@ public class TorrentTrackingComp extends ComponentDefinition {
         }
     }
 
-    Handler handleStatusSummaryRequest = new Handler<StatusSummaryEvent.Request>() {
+    Handler handleStatusSummaryRequest = new Handler<TorrentInfoEvent.Request>() {
         @Override
-        public void handle(StatusSummaryEvent.Request req) {
+        public void handle(TorrentInfoEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
 
             if (downloadReport == null || dataReport == null) {
@@ -248,7 +251,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         }
     };
 
-    public static class Init extends se.sics.kompics.Init<TorrentTrackingComp> {
+    public static class Init extends se.sics.kompics.Init<TorrentSupervisorComp> {
 
         public final OverlayId torrentId;
         public final long reportDelay;
