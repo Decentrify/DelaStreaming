@@ -31,6 +31,26 @@ import se.sics.nstream.util.TorrentExtendedStatus;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentInfoEvent {
+  
+  public static class DownloadStarted implements StreamEvent, OverlayEvent {
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+
+    public DownloadStarted(Identifier eventId, OverlayId torrentId) {
+      this.eventId = eventId;
+      this.torrentId = torrentId;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return torrentId;
+    }
+  }
 
   public static class Request extends Direct.Request<Response> implements StreamEvent, OverlayEvent {
 

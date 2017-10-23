@@ -34,7 +34,7 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.torrent.resourceMngr.ResourceMngrPort;
-import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
+import se.sics.silk.supervisor.TorrentSupervisorComp;
 import se.sics.nstream.torrent.tracking.TorrentTrackingPort;
 import se.sics.nstream.torrent.transfer.TransferComp;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
@@ -102,7 +102,7 @@ public class TorrentComp extends ComponentDefinition {
         connect(transferComp.getNegative(DStoragePort.class), storagePort, Channel.TWO_WAY);
         connect(transferComp.getPositive(TransferCtrlPort.class), transferCtrlPort, Channel.TWO_WAY);
 
-        reportComp = create(TorrentTrackingComp.class, new TorrentTrackingComp.Init(torrentId, REPORT_DELAY));
+        reportComp = create(TorrentSupervisorComp.class, new TorrentSupervisorComp.Init(torrentId, REPORT_DELAY));
         connect(reportComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
         connect(reportComp.getNegative(TorrentTrackingPort.class), transferComp.getPositive(TorrentTrackingPort.class), Channel.TWO_WAY);
 
