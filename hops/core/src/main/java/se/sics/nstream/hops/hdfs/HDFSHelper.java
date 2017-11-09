@@ -18,8 +18,6 @@
  */
 package se.sics.nstream.hops.hdfs;
 
-import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
@@ -36,6 +34,8 @@ import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.manifest.ManifestHelper;
 import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.util.range.KRange;
 
 /**
