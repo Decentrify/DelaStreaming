@@ -28,7 +28,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ledbat.ncore.msg.LedbatMsg;
 
 /**

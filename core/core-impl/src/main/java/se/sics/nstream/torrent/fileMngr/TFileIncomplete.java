@@ -25,7 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import org.javatuples.Pair;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;

@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;

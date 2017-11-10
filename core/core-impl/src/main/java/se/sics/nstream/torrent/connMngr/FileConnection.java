@@ -20,7 +20,7 @@ package se.sics.nstream.torrent.connMngr;
 
 import java.util.Collection;
 import java.util.Set;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.nstream.FileId;
 
 /**

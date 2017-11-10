@@ -31,7 +31,7 @@ import se.sics.kompics.Kill;
 import se.sics.kompics.Killed;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.events.DStreamConnect;

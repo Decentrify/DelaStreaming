@@ -20,7 +20,7 @@
 package se.sics.gvod.common.utility;
 
 import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>

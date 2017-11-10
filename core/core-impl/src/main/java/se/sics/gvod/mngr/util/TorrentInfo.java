@@ -20,7 +20,7 @@ package se.sics.gvod.mngr.util;
 
 import java.util.HashMap;
 import java.util.Map;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.util.TorrentState;
 

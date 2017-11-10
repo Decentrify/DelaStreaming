@@ -20,7 +20,7 @@ package se.sics.nstream;
 
 import com.google.common.primitives.Ints;
 import java.util.Random;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierBuilder;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;

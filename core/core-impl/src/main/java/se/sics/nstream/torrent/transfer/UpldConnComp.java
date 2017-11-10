@@ -35,7 +35,7 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.kompics.id.Identifiable;
+import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;

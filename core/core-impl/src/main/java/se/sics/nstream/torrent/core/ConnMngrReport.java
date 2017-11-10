@@ -19,7 +19,7 @@
 package se.sics.nstream.torrent.core;
 
 import java.util.Map;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ledbat.core.AppCongestionWindow;
 import se.sics.ledbat.core.util.ThroughputHandler;
 

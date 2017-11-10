@@ -21,7 +21,7 @@ package se.sics.nstream.hops.libmngr;
 import java.util.HashMap;
 import java.util.Map;
 import org.javatuples.Pair;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.FileId;

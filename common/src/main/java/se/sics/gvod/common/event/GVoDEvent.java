@@ -19,7 +19,7 @@
 package se.sics.gvod.common.event;
 
 import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.id.Identifiable;
+import se.sics.kompics.util.Identifiable;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

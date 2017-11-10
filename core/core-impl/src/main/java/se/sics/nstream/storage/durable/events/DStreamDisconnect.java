@@ -19,8 +19,8 @@
 package se.sics.nstream.storage.durable.events;
 
 import se.sics.kompics.Direct;
-import se.sics.kompics.id.Identifiable;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifiable;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.nstream.StreamId;
 

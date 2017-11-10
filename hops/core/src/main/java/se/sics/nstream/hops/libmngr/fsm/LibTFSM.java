@@ -29,7 +29,7 @@ import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.nstream.hops.library.HopsTorrentPort;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;

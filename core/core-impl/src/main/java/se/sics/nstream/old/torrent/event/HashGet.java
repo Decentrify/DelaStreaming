@@ -21,7 +21,7 @@ package se.sics.nstream.old.torrent.event;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;

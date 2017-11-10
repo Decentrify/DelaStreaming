@@ -21,7 +21,7 @@ package se.sics.nstream.library.restart;
 import java.util.List;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;

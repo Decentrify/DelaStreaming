@@ -20,8 +20,8 @@ package se.sics.nstream.storage.durable.events;
 
 import org.javatuples.Pair;
 import se.sics.kompics.Direct;
-import se.sics.kompics.id.Identifiable;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifiable;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.util.MyStream;

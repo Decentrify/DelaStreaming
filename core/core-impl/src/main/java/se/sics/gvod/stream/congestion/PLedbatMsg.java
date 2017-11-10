@@ -19,8 +19,8 @@
 package se.sics.gvod.stream.congestion;
 
 import java.util.Set;
-import se.sics.kompics.id.Identifiable;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifiable;
+import se.sics.kompics.util.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

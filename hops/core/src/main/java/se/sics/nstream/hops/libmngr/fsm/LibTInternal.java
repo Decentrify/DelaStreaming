@@ -28,7 +28,7 @@ import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.FSMInternalState;
 import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.id.FSMIdentifier;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;

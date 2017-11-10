@@ -25,7 +25,7 @@ import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Start;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
 import se.sics.nstream.storage.durable.util.StreamEndpoint;

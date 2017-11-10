@@ -21,7 +21,7 @@ package se.sics.nstream.hops.library;
 import java.util.HashMap;
 import java.util.Map;
 import org.javatuples.Pair;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
 import se.sics.nstream.hops.storage.disk.DiskEndpoint;

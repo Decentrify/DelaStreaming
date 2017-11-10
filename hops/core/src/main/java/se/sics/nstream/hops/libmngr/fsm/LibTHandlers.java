@@ -35,7 +35,7 @@ import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;

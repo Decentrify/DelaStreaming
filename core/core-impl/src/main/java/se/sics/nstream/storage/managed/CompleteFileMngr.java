@@ -20,7 +20,7 @@ package se.sics.nstream.storage.managed;
 
 import java.util.HashSet;
 import java.util.Set;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.nstream.storage.AsyncCompleteStorage;
 import se.sics.nstream.storage.AsyncOnDemandHashStorage;
 import se.sics.nstream.storage.cache.KHint;

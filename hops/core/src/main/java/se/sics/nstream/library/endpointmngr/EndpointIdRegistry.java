@@ -23,7 +23,7 @@ import com.google.common.collect.HashBiMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 
 /**

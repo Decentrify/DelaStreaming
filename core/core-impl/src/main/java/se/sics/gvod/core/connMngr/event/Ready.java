@@ -20,7 +20,7 @@
 package se.sics.gvod.core.connMngr.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**

@@ -29,7 +29,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;

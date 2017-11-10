@@ -23,7 +23,7 @@ import org.javatuples.Pair;
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.core.util.FileStatus;
 import se.sics.gvod.core.util.ResponseStatus;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**

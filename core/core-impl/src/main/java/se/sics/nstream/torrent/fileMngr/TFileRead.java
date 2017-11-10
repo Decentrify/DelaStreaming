@@ -19,7 +19,7 @@
 package se.sics.nstream.torrent.fileMngr;
 
 import java.util.Map;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.result.HashReadCallback;

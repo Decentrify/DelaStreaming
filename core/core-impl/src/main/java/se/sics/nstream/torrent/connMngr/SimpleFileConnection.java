@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.nstream.FileId;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
 

@@ -29,7 +29,7 @@ import se.sics.kompics.Promise;
 import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
-import se.sics.kompics.id.Identifier;
+import se.sics.kompics.util.Identifier;
 import se.sics.kompics.testkit.TestContext;
 import se.sics.kompics.testkit.Testkit;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
