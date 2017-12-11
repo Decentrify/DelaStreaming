@@ -18,21 +18,21 @@
  */
 package se.sics.nstream.torrent.tracking;
 
-import com.google.common.base.Optional;
 import se.sics.kompics.config.Config;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentTrackingConfig {
-    public static class Names {
-        public static String REPORT_DIR = "report.dir";
-    }
-    
-    public final String reportDir;
-    
-    public TorrentTrackingConfig(Config config) {
-        Optional<String> rd = config.readValue(Names.REPORT_DIR, String.class);
-        reportDir = rd.isPresent() ? rd.get() : null;
-    }
+
+  public static class Names {
+
+    public static String REPORT_DIR = "report.dir";
+  }
+
+  public final String reportDir;
+
+  public TorrentTrackingConfig(Config config) {
+    reportDir = config.getValue(Names.REPORT_DIR, String.class);
+  }
 }

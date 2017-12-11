@@ -28,7 +28,6 @@ import java.util.TreeMap;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import se.sics.nstream.util.TorrentExtendedStatus;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -44,6 +43,7 @@ import se.sics.nstream.torrent.status.event.TorrentStatus;
 import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.tracking.event.TorrentTracking;
 import se.sics.nstream.torrent.transfer.tracking.DownloadReport;
+import se.sics.nstream.util.TorrentExtendedStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -78,11 +78,12 @@ public class TorrentTrackingComp extends ComponentDefinition {
     public TorrentTrackingComp(Init init) {
         torrentId = init.torrentId;
         logPrefix = "<tid:" + torrentId.toString() + ">";
-        LOG.info("{}initiating...", logPrefix);
+        LOG.debug("{}initiating...", logPrefix);
 
         reportDelay = init.reportDelay;
 
         reportConfig = new TorrentTrackingConfig(config());
+        LOG.info("reporting in:{}", reportConfig.reportDir);
         if (reportConfig.reportDir == null) {
             fileCounter = -1;
         } else {
@@ -119,7 +120,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     Handler handleStart = new Handler<Start>() {
         @Override
         public void handle(Start event) {
-            LOG.info("{}starting...", logPrefix);
+            LOG.debug("{}starting...", logPrefix);
         }
     };
 
@@ -162,7 +163,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
             LOG.info("{}download:{} done", logPrefix, event.overlayId);
             long transferTime = System.currentTimeMillis() - startingTime;
             dataReport = event.dataReport;
-            LOG.info("{}download completed in:{} avg dwnl speed:{} B/s", new Object[]{logPrefix, transferTime, (double) dataReport.totalSize.getValue1() / transferTime});
+            LOG.debug("{}download completed in:{} avg dwnl speed:{} B/s", new Object[]{logPrefix, transferTime, (double) dataReport.totalSize.getValue1() / transferTime});
             trigger(new DownloadSummaryEvent(torrentId, dataReport.totalSize.getValue1(), transferTime), statusPort);
             status = TorrentState.UPLOADING;
             fileCounter = 0;
@@ -172,7 +173,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     Handler handleTorrentTrackingIndication = new Handler<TorrentTracking.Indication>() {
         @Override
         public void handle(TorrentTracking.Indication resp) {
-            LOG.info("{}reporting", logPrefix);
+            LOG.debug("{}reporting", logPrefix);
             dataReport = resp.dataReport;
             downloadReport = resp.downloadReport;
             if (fileCounter > 0) {
