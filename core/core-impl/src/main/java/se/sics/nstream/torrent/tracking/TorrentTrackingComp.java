@@ -83,7 +83,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     reportDelay = init.reportDelay;
 
     reportConfig = new TorrentTrackingConfig(config());
-    LOG.info("reporting in:{}", reportConfig.reportDir);
+    LOG.debug("reporting in:{}", reportConfig.reportDir);
     if (reportConfig.reportDir == null) {
       fileCounter = -1;
     } else {
