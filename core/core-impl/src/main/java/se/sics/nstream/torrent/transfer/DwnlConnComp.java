@@ -33,14 +33,14 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.kompics.util.Identifiable;
-import se.sics.kompics.util.Identifier;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
+import se.sics.kompics.util.Identifiable;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
@@ -194,7 +194,7 @@ public class DwnlConnComp extends ComponentDefinition {
   Handler handleAdvanceDownload = new Handler<TorrentTimeout.AdvanceDownload>() {
     @Override
     public void handle(TorrentTimeout.AdvanceDownload event) {
-      LOG.error("{}advance download", logPrefix);
+      LOG.info("{}advance download", logPrefix);
       long now = System.currentTimeMillis();
       cwnd.adjustState(now, networkQueueLoad.adjustment());
       tryDownload(now);
