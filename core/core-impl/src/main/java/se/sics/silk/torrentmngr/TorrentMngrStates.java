@@ -16,21 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent;
+package se.sics.silk.torrentmngr;
 
-import se.sics.kompics.PortType;
-import se.sics.silk.torrentmngr.event.StartTorrent;
-import se.sics.silk.torrentmngr.event.StopTorrent;
+import se.sics.kompics.fsm.FSMStateName;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentMngrPort extends PortType {
-
-  {
-    request(StartTorrent.Request.class);
-    indication(StartTorrent.Response.class);
-    request(StopTorrent.Request.class);
-    indication(StopTorrent.Response.class);
-  }
+public enum TorrentMngrStates implements FSMStateName {
+  PREPARE_COMP, READY, STOPPING;
 }

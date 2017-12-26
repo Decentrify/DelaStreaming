@@ -16,39 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.status.event;
+package se.sics.silk.torrentmngr;
 
-import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.overlays.OverlayEvent;
-import se.sics.silk.torrentmngr.TorrentMngrFSMEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentReady implements KompicsEvent, OverlayEvent, TorrentMngrFSMEvent {
-    public final Identifier eventId;
-    public final OverlayId torrentId;
-    
-    public TorrentReady(OverlayId torrentId) {
-        this.eventId = BasicIdentifiers.eventId();
-        this.torrentId = torrentId;
-    }
-
-    @Override
-    public Identifier getId() {
-        return eventId;
-    }
-
-    @Override
-    public OverlayId overlayId() {
-        return torrentId;
-    }
-
-  @Override
-  public Identifier getTorrentMngrFSMId() {
-    return torrentId.baseId;
-  }
+public interface TorrentMngrFSMEvent extends FSMEvent {
+  public Identifier getTorrentMngrFSMId();
 }

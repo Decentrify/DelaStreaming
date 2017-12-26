@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.event;
+package se.sics.silk.torrentmngr.event;
 
 import java.util.List;
 import se.sics.kompics.Direct;
@@ -28,13 +28,14 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.library.restart.LibTFSMEvent;
+import se.sics.silk.torrentmngr.TorrentMngrFSMEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class StartTorrent {
 
-  public static class Request extends Promise<Response> implements OverlayEvent, LibTFSMEvent {
+  public static class Request extends Promise<Response> implements OverlayEvent, LibTFSMEvent, TorrentMngrFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -62,17 +63,22 @@ public class StartTorrent {
     }
 
     @Override
-    public Identifier getLibTFSMId() {
+    public Response fail(Result r) {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public Identifier getTorrentMngrFSMId() {
       return torrentId.baseId;
     }
 
     @Override
-    public Response fail(Result r) {
-      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public Identifier getLibTFSMId() {
+      return torrentId.baseId;
     }
   }
 
-  public static class Response implements Direct.Response, OverlayEvent, LibTFSMEvent {
+  public static class Response implements Direct.Response, OverlayEvent, LibTFSMEvent, TorrentMngrFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
@@ -96,6 +102,11 @@ public class StartTorrent {
 
     @Override
     public Identifier getLibTFSMId() {
+      return torrentId.baseId;
+    }
+
+    @Override
+    public Identifier getTorrentMngrFSMId() {
       return torrentId.baseId;
     }
   }
