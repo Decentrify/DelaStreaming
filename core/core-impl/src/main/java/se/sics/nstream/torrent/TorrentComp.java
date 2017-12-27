@@ -89,7 +89,7 @@ public class TorrentComp extends ComponentDefinition {
     };
     
     private void connectComp() {
-        networkRetryComp = create(BestEffortNetworkComp.class, new BestEffortNetworkComp.Init(selfAdr, torrentId, proxy));
+        networkRetryComp = create(BestEffortNetworkComp.class, new BestEffortNetworkComp.Init(selfAdr, torrentId));
         connect(networkRetryComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
         connect(networkRetryComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
 
