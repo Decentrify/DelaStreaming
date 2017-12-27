@@ -47,6 +47,7 @@ import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
+import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
 import se.sics.silk.resourcemngr.ResourceMngrComp;
 import se.sics.silk.resourcemngr.ResourceMngrPort;
 import se.sics.silk.torrent.TorrentComp;
@@ -71,13 +72,14 @@ public class TorrentMngrComp extends ComponentDefinition {
   private final Positive<DStreamControlPort> streamControlPort = requires(DStreamControlPort.class);
   private final Positive<DStoragePort> storagePort = requires(DStoragePort.class);
   //used for listening to some of the forwarded events in this comp
-  private final Positive<TorrentStatusPort> torrentStatusAuxPort = requires(TorrentStatusPort.class); 
+  private final Positive<TorrentStatusPort> torrentStatusAuxPort = requires(TorrentStatusPort.class);
   //********************************************************************************************************************
-  private final One2NChannel networkChannel;
-  private final One2NChannel transferCtrlChannel;
-  private final One2NChannel reportChannel;
+  private One2NChannel networkChannel;
+  private One2NChannel transferCtrlChannel;
+  private One2NChannel reportChannel;
   //**************************************************************************
   private Component resourceMngrComp;
+  private Component wheelNetworkComp;
   //**************************************************************************
   private TorrentMngrExternal es;
   private MultiFSM fsm;
@@ -85,21 +87,16 @@ public class TorrentMngrComp extends ComponentDefinition {
   public TorrentMngrComp(Init init) {
     logPrefix = "<nid:" + init.selfAdr.getId() + ">";
     LOG.info("{}initiating...", logPrefix);
-    
-    networkChannel = One2NChannel.getChannel(logPrefix + "torrent", networkPort, new MsgOverlayIdExtractor());
-    transferCtrlChannel = One2NChannel.getChannel(logPrefix + "transferCtrl", transferCtrlPort,
-      new EventOverlayIdExtractor());
-    reportChannel = One2NChannel.getChannel("hopsTorrentMngrReport", torrentStatusPort, new EventOverlayIdExtractor());
-    
+
     //used for listening to some of the forwarded events in this comp
-    connect((Positive)(torrentStatusPort.getPair()), (Negative)(torrentStatusAuxPort.getPair()), Channel.TWO_WAY);
-    
+    connect((Positive) (torrentStatusPort.getPair()), (Negative) (torrentStatusAuxPort.getPair()), Channel.TWO_WAY);
+
     setupFSM(init);
-    
+
     subscribe(handleStart, control);
     subscribe(handleStopped, control);
   }
-  
+
   private void setupFSM(Init init) {
     es = new TorrentMngrExternal(init.selfAdr, new Connectors());
     es.setProxy(proxy);
@@ -128,6 +125,29 @@ public class TorrentMngrComp extends ComponentDefinition {
     }
   };
 
+  private void baseSetup() {
+    ResourceMngrComp.Init rmInit = new ResourceMngrComp.Init(es.getSelfAdr().getId());
+    resourceMngrComp = create(ResourceMngrComp.class, rmInit);
+    connect(resourceMngrComp.getNegative(DStreamControlPort.class), streamControlPort, Channel.TWO_WAY);
+
+    BestEffortNetworkComp.Init whInit = new BestEffortNetworkComp.Init(es.getSelfAdr(), es.getSelfAdr().getId());
+    wheelNetworkComp = create(BestEffortNetworkComp.class, whInit);
+    connect(wheelNetworkComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
+    connect(wheelNetworkComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
+
+    networkChannel = One2NChannel.getChannel(logPrefix + "torrent", wheelNetworkComp.getPositive(Network.class), 
+      new MsgOverlayIdExtractor());
+    transferCtrlChannel = One2NChannel.getChannel(logPrefix + "transferCtrl", transferCtrlPort,
+      new EventOverlayIdExtractor());
+    reportChannel = One2NChannel.getChannel("hopsTorrentMngrReport", torrentStatusPort, new EventOverlayIdExtractor());
+
+  }
+
+  private void baseStart() {
+    trigger(Start.event, resourceMngrComp.control());
+    trigger(Start.event, wheelNetworkComp.control());
+  }
+
   Handler handleStopped = new Handler<Stopped>() {
     @Override
     public void handle(Stopped event) {
@@ -138,16 +158,8 @@ public class TorrentMngrComp extends ComponentDefinition {
     }
   };
 
-  private void baseSetup() {
-    resourceMngrComp = create(ResourceMngrComp.class, new ResourceMngrComp.Init(es.getSelfAdr().getId()));
-    connect(resourceMngrComp.getNegative(DStreamControlPort.class), streamControlPort, Channel.TWO_WAY);
-  }
-
-  private void baseStart() {
-    trigger(Start.event, resourceMngrComp.control());
-  }
-
   //********************************************************************************************************************
+
   public class Connectors {
 
     public final Function<TorrentMngrInternal, Component> torrentCompConn

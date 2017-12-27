@@ -33,14 +33,13 @@ import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.storage.durable.DStoragePort;
-import se.sics.silk.resourcemngr.ResourceMngrPort;
 import se.sics.nstream.torrent.status.event.TorrentReady;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
 import se.sics.nstream.torrent.tracking.TorrentTrackingPort;
 import se.sics.nstream.torrent.transfer.TransferComp;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
-import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
+import se.sics.silk.resourcemngr.ResourceMngrPort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -64,7 +63,6 @@ public class TorrentComp extends ComponentDefinition {
     private final OverlayId torrentId;
     private final List<KAddress> partners;
     //**************************************************************************
-    private Component networkRetryComp;
     private Component transferComp;
     private Component reportComp;
 
@@ -89,13 +87,9 @@ public class TorrentComp extends ComponentDefinition {
     };
     
     private void connectComp() {
-        networkRetryComp = create(BestEffortNetworkComp.class, new BestEffortNetworkComp.Init(selfAdr, torrentId));
-        connect(networkRetryComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-        connect(networkRetryComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
-
         transferComp = create(TransferComp.class, new TransferComp.Init(selfAdr, torrentId, partners));
         connect(transferComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-        connect(transferComp.getNegative(Network.class), networkRetryComp.getPositive(Network.class), Channel.TWO_WAY);
+        connect(transferComp.getNegative(Network.class), networkPort, Channel.TWO_WAY);
         connect(transferComp.getNegative(ResourceMngrPort.class), resourceMngrPort, Channel.TWO_WAY);
         connect(transferComp.getNegative(DStoragePort.class), storagePort, Channel.TWO_WAY);
         connect(transferComp.getPositive(TransferCtrlPort.class), transferCtrlPort, Channel.TWO_WAY);
@@ -108,7 +102,6 @@ public class TorrentComp extends ComponentDefinition {
     }
 
     private void startComp() {
-        trigger(Start.event, networkRetryComp.control());
         trigger(Start.event, transferComp.control());
         trigger(Start.event, reportComp.control());
     }
