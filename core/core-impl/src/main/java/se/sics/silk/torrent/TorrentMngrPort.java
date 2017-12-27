@@ -16,16 +16,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.resourceMngr;
+package se.sics.silk.torrent;
 
 import se.sics.kompics.PortType;
+import se.sics.silk.torrentmngr.event.StartTorrent;
+import se.sics.silk.torrentmngr.event.StopTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ResourceMngrPort extends PortType {
-    {
-        request(PrepareResources.Request.class);
-        indication(PrepareResources.Success.class);
-    }
+public class TorrentMngrPort extends PortType {
+
+  {
+    request(StartTorrent.Request.class);
+    indication(StartTorrent.Response.class);
+    request(StopTorrent.Request.class);
+    indication(StopTorrent.Response.class);
+  }
 }

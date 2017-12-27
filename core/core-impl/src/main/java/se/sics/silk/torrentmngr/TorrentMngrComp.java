@@ -45,12 +45,12 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
-import se.sics.nstream.torrent.TorrentComp;
-import se.sics.nstream.torrent.TorrentMngrPort;
-import se.sics.nstream.torrent.resourceMngr.ResourceMngrComp;
-import se.sics.nstream.torrent.resourceMngr.ResourceMngrPort;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
+import se.sics.silk.resourcemngr.ResourceMngrComp;
+import se.sics.silk.resourcemngr.ResourceMngrPort;
+import se.sics.silk.torrent.TorrentComp;
+import se.sics.silk.torrent.TorrentMngrPort;
 
 /**
  *
@@ -61,16 +61,18 @@ public class TorrentMngrComp extends ComponentDefinition {
   private static final Logger LOG = LoggerFactory.getLogger(TorrentMngrComp.class);
   private String logPrefix;
 
+  //*********************************************EXTERNAL***************************************************************
   private final Positive<Timer> timerPort = requires(Timer.class);
   private final Positive<Network> networkPort = requires(Network.class);
-  private final Positive<DStreamControlPort> streamControlPort = requires(DStreamControlPort.class);
-  private final Positive<DStoragePort> storagePort = requires(DStoragePort.class);
-
   private final Negative<TorrentMngrPort> torrentMngrPort = provides(TorrentMngrPort.class);
   private final Negative<TransferCtrlPort> transferCtrlPort = provides(TransferCtrlPort.class);
   private final Negative<TorrentStatusPort> torrentStatusPort = provides(TorrentStatusPort.class);
+  //*********************************************INTERNAL***************************************************************
+  private final Positive<DStreamControlPort> streamControlPort = requires(DStreamControlPort.class);
+  private final Positive<DStoragePort> storagePort = requires(DStoragePort.class);
   //used for listening to some of the forwarded events in this comp
   private final Positive<TorrentStatusPort> torrentStatusAuxPort = requires(TorrentStatusPort.class); 
+  //********************************************************************************************************************
   private final One2NChannel networkChannel;
   private final One2NChannel transferCtrlChannel;
   private final One2NChannel reportChannel;

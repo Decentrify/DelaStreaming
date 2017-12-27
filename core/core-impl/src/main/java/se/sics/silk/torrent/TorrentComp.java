@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent;
+package se.sics.silk.torrent;
 
 import java.util.List;
 import org.slf4j.Logger;
@@ -33,7 +33,7 @@ import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.storage.durable.DStoragePort;
-import se.sics.nstream.torrent.resourceMngr.ResourceMngrPort;
+import se.sics.silk.resourcemngr.ResourceMngrPort;
 import se.sics.nstream.torrent.status.event.TorrentReady;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.tracking.TorrentTrackingComp;

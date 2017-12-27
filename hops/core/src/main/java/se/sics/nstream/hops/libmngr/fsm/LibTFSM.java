@@ -40,7 +40,7 @@ import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.library.restart.TorrentRestartPort;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.storage.durable.events.DEndpoint;
-import se.sics.nstream.torrent.TorrentMngrPort;
+import se.sics.silk.torrent.TorrentMngrPort;
 import se.sics.silk.torrentmngr.event.StartTorrent;
 import se.sics.silk.torrentmngr.event.StopTorrent;
 import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;

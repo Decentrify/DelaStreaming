@@ -26,7 +26,7 @@ import se.sics.nstream.hops.library.Details;
 import se.sics.nstream.hops.library.LibraryCtrl;
 import se.sics.nstream.library.endpointmngr.EndpointIdRegistry;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
-import se.sics.nstream.torrent.TorrentMngrPort;
+import se.sics.silk.torrent.TorrentMngrPort;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 

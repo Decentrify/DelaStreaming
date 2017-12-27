@@ -31,7 +31,7 @@ import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.util.Identifier;
-import se.sics.nstream.torrent.TorrentMngrPort;
+import se.sics.silk.torrent.TorrentMngrPort;
 import se.sics.silk.torrentmngr.event.StartTorrent;
 import se.sics.silk.torrentmngr.event.StopTorrent;
 import se.sics.nstream.torrent.status.event.TorrentReady;
