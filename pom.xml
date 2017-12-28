@@ -50,9 +50,9 @@
       <version>${kompics.version}</version>
     </dependency>
     <dependency> 
-      <groupId>kompics-testkit</groupId>
-      <artifactId>kompics-testkit</artifactId>
-      <version>1.0-SNAPSHOT</version>
+      <groupId>se.sics.kompics.testing</groupId>
+      <artifactId>kompics-testing</artifactId>
+      <version>1.0.0-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>se.sics.kompics.fsm</groupId>
