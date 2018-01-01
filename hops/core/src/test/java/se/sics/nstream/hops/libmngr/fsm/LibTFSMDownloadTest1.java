@@ -58,12 +58,12 @@
 //import se.sics.nstream.library.LibraryMngrComp;
 //import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 //import se.sics.nstream.storage.durable.events.DEndpoint;
-//import se.sics.silk.torrent.TorrentMngrPort;
-//import se.sics.silk.torrentmngr.event.StartTorrent;
 //import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 //import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
 //import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
 //import se.sics.nstream.transfer.MyTorrent;
+//import se.sics.silk.torrent.TorrentMngrPort;
+//import se.sics.silk.torrentmngr.event.StartTorrent;
 //
 ///**
 // * Download with Kafka as secondary sink

@@ -41,6 +41,7 @@ import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
+import se.sics.kompics.util.PatternExtractorHelper;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
@@ -66,7 +67,6 @@ import se.sics.nstream.torrent.transfer.tracking.DwnlConnTracker;
 import se.sics.nstream.torrent.transfer.tracking.TransferTrackingPort;
 import se.sics.nstream.torrent.transfer.tracking.event.TrackingConnection;
 import se.sics.nstream.util.BlockDetails;
-import se.sics.nutil.ContentWrapperHelper;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.nutil.tracking.load.NetworkQueueLoadProxy;
 
@@ -225,7 +225,7 @@ public class DwnlConnComp extends ComponentDefinition {
       @Override
       public void handle(BestEffortMsg.Timeout wrappedContent,
         KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout> context) {
-        Identifiable content = ContentWrapperHelper.getBaseContent(wrappedContent, Identifiable.class);
+        Identifiable content = (Identifiable)PatternExtractorHelper.peelAllLayers(wrappedContent);
         if (content instanceof CacheHint.Request) {
           handleCacheTimeout((CacheHint.Request) content);
         } else if (content instanceof DownloadPiece.Request) {
@@ -319,7 +319,7 @@ public class DwnlConnComp extends ComponentDefinition {
       @Override
       public void handle(LedbatMsg.Response content,
         KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Response> context) {
-        Object baseContent = content.getWrappedContent();
+        Object baseContent = content.extractValue();
         if (baseContent instanceof DownloadPiece.Success) {
           handlePiece(content);
         } else if (baseContent instanceof DownloadHash.Success) {
@@ -340,7 +340,7 @@ public class DwnlConnComp extends ComponentDefinition {
 
   private void handlePiece(LedbatMsg.Response<DownloadPiece.Success> content) {
     LOG.trace("{}received:{}", logPrefix, content);
-    DownloadPiece.Success resp = content.getWrappedContent();
+    DownloadPiece.Success resp = content.extractValue();
     long now = System.currentTimeMillis();
     if (pendingMsgs.remove(resp.msgId) != null) {
       workController.piece(resp.piece, resp.val.getRight());
@@ -362,7 +362,7 @@ public class DwnlConnComp extends ComponentDefinition {
 
   private void handleHash(LedbatMsg.Response<DownloadHash.Success> content) {
     LOG.trace("{}received:{}", logPrefix, content);
-    DownloadHash.Success resp = content.getWrappedContent();
+    DownloadHash.Success resp = content.extractValue();
     long now = System.currentTimeMillis();
     if (pendingMsgs.remove(resp.msgId) != null) {
       workController.hashes(resp.hashValues);

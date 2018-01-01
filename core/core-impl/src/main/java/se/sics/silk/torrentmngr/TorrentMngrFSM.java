@@ -18,24 +18,24 @@
  */
 package se.sics.silk.torrentmngr;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.LoopbackPort;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBuilder;
-import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.util.Identifier;
+import se.sics.nstream.torrent.status.event.TorrentReady;
+import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.silk.torrent.TorrentMngrPort;
 import se.sics.silk.torrentmngr.event.StartTorrent;
 import se.sics.silk.torrentmngr.event.StopTorrent;
-import se.sics.nstream.torrent.status.event.TorrentReady;
-import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.silk.torrentmngr.event.StoppedTorrentComp;
 
 /**
@@ -83,11 +83,11 @@ public class TorrentMngrFSM {
   static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
 
     @Override
-    public Optional<Identifier> fromEvent(FSMEvent event) throws FSMException {
+    public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
       if (event instanceof TorrentMngrFSMEvent) {
         return Optional.of(((TorrentMngrFSMEvent) event).getTorrentMngrFSMId());
       }
-      return Optional.absent();
+      return Optional.empty();
     }
   };
 

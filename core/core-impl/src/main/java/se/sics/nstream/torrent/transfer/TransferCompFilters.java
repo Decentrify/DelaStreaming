@@ -21,6 +21,8 @@ package se.sics.nstream.torrent.transfer;
 import java.util.HashSet;
 import java.util.Set;
 import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.PatternExtractor;
+import se.sics.kompics.util.PatternExtractorHelper;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.ports.ChannelFilter;
 import se.sics.nstream.torrent.conn.msg.NetCloseTransfer;
@@ -30,8 +32,6 @@ import se.sics.nstream.torrent.conn.msg.NetOpenTransfer;
 import se.sics.nstream.torrent.transfer.msg.CacheHint;
 import se.sics.nstream.torrent.transfer.msg.DownloadHash;
 import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
-import se.sics.nutil.ContentWrapper;
-import se.sics.nutil.ContentWrapperHelper;
 
 /**
  *
@@ -58,8 +58,8 @@ public class TransferCompFilters {
                 return false;
             }
             Object baseContent = ((KContentMsg)event).getContent();
-            if (baseContent instanceof ContentWrapper) {
-                baseContent = ContentWrapperHelper.getBaseContent((ContentWrapper)baseContent);
+            if (baseContent instanceof PatternExtractor) {
+                baseContent = PatternExtractorHelper.peelAllLayers((PatternExtractor)baseContent);
             }
             return !allowedClasses.contains(baseContent.getClass());
         }
@@ -83,8 +83,8 @@ public class TransferCompFilters {
                 return false;
             }
             Object baseContent = ((KContentMsg)event).getContent();
-            if (baseContent instanceof ContentWrapper) {
-                baseContent = ContentWrapperHelper.getBaseContent((ContentWrapper)baseContent);
+            if (baseContent instanceof PatternExtractor) {
+                baseContent = PatternExtractorHelper.peelAllLayers((PatternExtractor)baseContent);
             }
             return !allowedClasses.contains(baseContent.getClass());
         }

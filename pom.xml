@@ -28,7 +28,7 @@
     <kompics.version>1.0.0-SNAPSHOT</kompics.version>
     <ktoolbox.version>2.0.4-SNAPSHOT</ktoolbox.version>
     <kompicstesting.version>1.0-SNAPSHOT</kompicstesting.version>
-    <kompicsfsm.version>1.0-SNAPSHOT</kompicsfsm.version>
+    <kompicsfsm.version>1.0.0-SNAPSHOT</kompicsfsm.version>
         
     <logger.version>1.7.5</logger.version>
     <config.version>1.2.1</config.version>

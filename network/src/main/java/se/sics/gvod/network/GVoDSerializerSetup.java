@@ -41,6 +41,7 @@ import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.transfer.msg.DownloadPieceSerializer;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockDetailsSerializer;
+import se.sics.silk.r2mngr.msg.ConnSeederMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -48,7 +49,7 @@ import se.sics.nstream.util.BlockDetailsSerializer;
 public class GVoDSerializerSetup {
     //You may add up to max serializers without the need to recompile all the projects that use the serializer space after gvod
     public static int maxSerializers = 25;
-    public static int serializerIds = 18;
+    public static int serializerIds = 25;
     
     public static enum GVoDSerializers {
         FileIdentifier(FileId.class, "nStreamFileIdentifier"),
@@ -68,7 +69,17 @@ public class GVoDSerializerSetup {
         DownloadPieceBadReq(DownloadPiece.BadRequest.class, "nstreamDownloadPieceBadReq"),
         DownloadHashRequest(DownloadHash.Request.class, "nstreamDownloadHashRequest"),
         DownloadHashSuccess(DownloadHash.Success.class, "nstreamDownloadHashSuccess"),
-        DownloadHashBadReq(DownloadHash.BadRequest.class, "nstreamDownloadHashBadReq");
+        DownloadHashBadReq(DownloadHash.BadRequest.class, "nstreamDownloadHashBadReq"),
+        
+        ConnSeederConnect(ConnSeederMsgs.Connect.class, "silkConnectSeederConnect"),
+        ConnSeederConnectAcc(ConnSeederMsgs.ConnectAcc.class, "silkConnectSeederConnectAcc"),
+        ConnSeederConnectReject(ConnSeederMsgs.ConnectReject.class, "silkConnectSeederConnectReject"),
+        ConnSeederDisconnect(ConnSeederMsgs.Disconnect.class, "silkConnectSeederDisconnect"),
+        ConnSeederDisconnectAck(ConnSeederMsgs.DisconnectAck.class, "silkConnectSeederDisconnectAck"),
+        ConnSeederPing(ConnSeederMsgs.Ping.class, "silkConnectSeederPing"),
+        ConnSeederPong(ConnSeederMsgs.Pong.class, "silkConnectSeederPong")
+        ;
+        
         
         public final Class serializedClass;
         public final String serializerName;

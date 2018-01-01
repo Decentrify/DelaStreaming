@@ -18,12 +18,12 @@
  */
 package se.sics.nstream.hops.libmngr.fsm;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBuilder;
-import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.MultiFSM;
@@ -40,15 +40,15 @@ import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.library.restart.TorrentRestartPort;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.storage.durable.events.DEndpoint;
-import se.sics.silk.torrent.TorrentMngrPort;
-import se.sics.silk.torrentmngr.event.StartTorrent;
-import se.sics.silk.torrentmngr.event.StopTorrent;
 import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
 import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
+import se.sics.silk.torrent.TorrentMngrPort;
+import se.sics.silk.torrentmngr.event.StartTorrent;
+import se.sics.silk.torrentmngr.event.StopTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -153,11 +153,11 @@ public class LibTFSM {
   static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
 
     @Override
-    public Optional<Identifier> fromEvent(FSMEvent event) throws FSMException {
+    public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
       if (event instanceof LibTFSMEvent) {
         return Optional.of(((LibTFSMEvent) event).getLibTFSMId());
       }
-      return Optional.absent();
+      return Optional.empty();
     }
   };
 

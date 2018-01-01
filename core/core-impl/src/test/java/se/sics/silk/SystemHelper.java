@@ -16,16 +16,29 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.connMngr;
+package se.sics.silk;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.BasicBuilders;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.basic.BasicAddress;
+import se.sics.ktoolbox.util.network.nat.NatAwareAddressImpl;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface FilePeerConnection {
-    public PeerConnection getPeerConnection();
-    public FileConnection getFileConnection();
-    public void useSlot(int blockNr);
-    public void releaseSlot(int blockNr);
-    public boolean isActive();
-    public void close();
+public class SystemHelper {
+  public static KAddress getAddress(int nodeId) {
+    Identifier nId = BasicIdentifiers.nodeId(new BasicBuilders.IntBuilder(nodeId));
+    KAddress adr;
+    try {
+      adr = NatAwareAddressImpl.open(new BasicAddress(InetAddress.getLocalHost(), 10000, nId));
+    } catch (UnknownHostException ex) {
+      throw new RuntimeException(ex);
+    }
+    return adr;
+  }
 }

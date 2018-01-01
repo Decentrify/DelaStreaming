@@ -16,14 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.connmngr;
+package se.sics.silk.util;
 
-import se.sics.kompics.PortType;
+import se.sics.ktoolbox.util.result.Result;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnMngrPort extends PortType {
-  {
-  }
+public class ResultHelper {
+  public static final Result SUCCESS = Result.success(true);
 }
