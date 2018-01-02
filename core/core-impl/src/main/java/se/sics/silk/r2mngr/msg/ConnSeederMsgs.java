@@ -63,6 +63,10 @@ public class ConnSeederMsgs {
     public ConnectAcc accept() {
       return new ConnectAcc(msgId, srcId, dstId);
     }
+    
+    public ConnectRej reject() {
+      return new ConnectRej(msgId, srcId, dstId);
+    }
   }
 
   public static class ConnectAcc extends Base {
@@ -72,9 +76,9 @@ public class ConnSeederMsgs {
     }
   }
 
-  public static class ConnectReject extends Base {
+  public static class ConnectRej extends Base {
 
-    ConnectReject(Identifier msgId, Identifier srcId, Identifier dstId) {
+    ConnectRej(Identifier msgId, Identifier srcId, Identifier dstId) {
       super(msgId, srcId, dstId);
     }
   }
@@ -107,8 +111,16 @@ public class ConnSeederMsgs {
 
   public static class Ping extends Base {
 
-    public Ping(Identifier msgId, Identifier srcId, Identifier dstId) {
+    Ping(Identifier msgId, Identifier srcId, Identifier dstId) {
       super(msgId, srcId, dstId);
+    }
+    
+    public Ping(Identifier srcId, Identifier dstId) {
+      this(BasicIdentifiers.msgId(), srcId, dstId);
+    }
+    
+    public Pong ack() {
+      return new Pong(msgId, srcId, dstId);
     }
   }
 

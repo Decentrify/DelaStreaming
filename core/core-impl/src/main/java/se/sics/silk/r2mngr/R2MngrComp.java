@@ -90,14 +90,18 @@ public class R2MngrComp extends ComponentDefinition {
   };
 
   //******************************************TESTING HELPERS***********************************************************
+
   FSMInternalState getConnSeederIS(Identifier seederId) {
     return peerSeeders.getFSMInternalState(seederId);
   }
-  
+
   FSMStateName getConnSeederState(Identifier seederId) {
     return peerSeeders.getFSMState(seederId);
   }
 
+  boolean activeSeederFSM(Identifier baseId) {
+    return peerSeeders.activeFSM(baseId);
+  }
   //********************************************************************************************************************
 
   public static class Ports {
@@ -105,7 +109,7 @@ public class R2MngrComp extends ComponentDefinition {
     public final Negative<ConnPort> conn;
     public final Positive<Network> network;
     public final Positive<Timer> timer;
-    
+
     public Ports(ComponentProxy proxy) {
       conn = proxy.provides(ConnPort.class);
       network = proxy.requires(Network.class);

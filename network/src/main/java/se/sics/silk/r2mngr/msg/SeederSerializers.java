@@ -106,7 +106,7 @@ public class SeederSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnSeederMsgs.ConnectReject(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      return new ConnSeederMsgs.ConnectRej(aux.getValue0(), aux.getValue1(), aux.getValue2());
     }
   }
 

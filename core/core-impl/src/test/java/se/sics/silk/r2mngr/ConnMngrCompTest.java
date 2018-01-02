@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import se.sics.kompics.Component;
+import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Port;
 import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.FSMStateName;
@@ -50,7 +51,7 @@ import se.sics.silk.r2mngr.msg.ConnSeederMsgs;
  */
 public class ConnMngrCompTest {
 
-  private TestContext<R2MngrComp> tc;
+  private TestContext<R2MngrWrapperComp> tc;
   private Component connMngrComp;
   private static OverlayIdFactory torrentIdFactory;
 
@@ -58,17 +59,17 @@ public class ConnMngrCompTest {
   public static void setup() throws FSMException {
     torrentIdFactory = SystemSetup.systemSetup("src/test/resources/application.conf");
   }
-  
+
   @Before
   public void testSetup() {
     tc = getContext();
     connMngrComp = tc.getComponentUnderTest();
   }
 
-  private static TestContext<R2MngrComp> getContext() {
+  private static TestContext<R2MngrWrapperComp> getContext() {
     KAddress selfAdr = SystemHelper.getAddress(0);
-    R2MngrComp.Init init = new R2MngrComp.Init(selfAdr);
-    TestContext<R2MngrComp> context = TestContext.newInstance(R2MngrComp.class, init);
+    R2MngrWrapperComp.Init init = new R2MngrWrapperComp.Init(selfAdr);
+    TestContext<R2MngrWrapperComp> context = TestContext.newInstance(R2MngrWrapperComp.class, init);
     return context;
   }
 
@@ -76,57 +77,58 @@ public class ConnMngrCompTest {
   public void clean() {
   }
 
-//  @Test
-//  public void testTimeline1() {
-//    Port<ConnPort> port1 = connMngrComp.getPositive(ConnPort.class);
-//    Port<Network> port2 = connMngrComp.getNegative(Network.class);
-//    OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-//    OverlayId torrent2 = torrentIdFactory.id(new BasicBuilders.IntBuilder(2));
-//    OverlayId torrent3 = torrentIdFactory.id(new BasicBuilders.IntBuilder(3));
-//    OverlayId torrent4 = torrentIdFactory.id(new BasicBuilders.IntBuilder(4));
-//    KAddress seeder = SystemHelper.getAddress(1);
-//
-//    Future<Msg, Msg> connReq1 = connReq();
-//    Future<Msg, Msg> discReq1 = discReq();
-//    Future<Msg, Msg> connReq2 = connReq();
-//    tc.body()
-//      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1)
-//      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING))
-//      .answerRequest(Msg.class, port2, connReq1)
-//      .trigger(new ConnSeederEvents.Connect(torrent2, seeder), port1)
-//      .trigger(new ConnSeederEvents.Disconnect(torrent2, seeder.getId()), port1)
-//      .trigger(new ConnSeederEvents.Connect(torrent3, seeder), port1)
-//      .inspect(connected(seeder.getId(), 0))
-//      .trigger(connReq1, port2)
-//      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED))
-//      .unordered()
-//      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), port1, Direction.OUT)
-//      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent3), port1, Direction.OUT)
-//      .end()
-//      .inspect(connected(seeder.getId(), 2))
-//      .trigger(new ConnSeederEvents.Connect(torrent4, seeder), port1)
-//      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent4), port1, Direction.OUT)
-//      .trigger(new ConnSeederEvents.Disconnect(torrent4, seeder.getId()), port1)
-//      .inspect(connected(seeder.getId(), 2))
-//      .trigger(new ConnSeederEvents.Disconnect(torrent1, seeder.getId()), port1)
-//      .trigger(new ConnSeederEvents.Disconnect(torrent3, seeder.getId()), port1)
-//      .inspect(connected(seeder.getId(), 0))
-//      .inspect(state(seeder.getId(), ConnSeeder.States.DISCONNECTING))
-//      .answerRequest(Msg.class, port2, discReq1)
-//      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1)
-//      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), port1, Direction.OUT)
-//      .trigger(discReq1, port2)
-//      //previous FSM is destroyed and we can create a new one
-//      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1)
-//      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING))
-//      .answerRequest(Msg.class, port2, connReq2)
-//      .trigger(connReq2, port2)
-//      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED))
-//      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), port1, Direction.OUT)
-//      .repeat(1).body().end();
-//
-//    assertTrue(tc.check());
-//  }
+  @Test
+  public void testTimeline1() {
+    Port<ConnPort> port1 = connMngrComp.getPositive(ConnPort.class);
+    Port<Network> port2 = connMngrComp.getNegative(Network.class);
+    OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    OverlayId torrent2 = torrentIdFactory.id(new BasicBuilders.IntBuilder(2));
+    OverlayId torrent3 = torrentIdFactory.id(new BasicBuilders.IntBuilder(3));
+    OverlayId torrent4 = torrentIdFactory.id(new BasicBuilders.IntBuilder(4));
+    KAddress seeder = SystemHelper.getAddress(1);
+
+    Future<Msg, Msg> connAcc1 = connAcc();
+    Future<Msg, Msg> discAck1 = discAck();
+    Future<Msg, Msg> connAcc2 = connAcc();
+    tc.body()
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1) //1 
+      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING)) //2
+      .answerRequest(Msg.class, port2, connAcc1) //3
+      .trigger(new ConnSeederEvents.Connect(torrent2, seeder), port1) //4
+      .trigger(new ConnSeederEvents.Disconnect(torrent2, seeder.getId()), port1) //5
+      .trigger(new ConnSeederEvents.Connect(torrent3, seeder), port1) //6
+      .inspect(connected(seeder.getId(), 0)) //7
+      .trigger(connAcc1, port2) //8
+      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED)) //9
+      .unordered()
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), port1, Direction.OUT) //10
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent3), port1, Direction.OUT) //11
+      .end()
+      .inspect(connected(seeder.getId(), 2)) //12
+      .trigger(new ConnSeederEvents.Connect(torrent4, seeder), port1) //13
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent4), port1, Direction.OUT) //14
+      .trigger(new ConnSeederEvents.Disconnect(torrent4, seeder.getId()), port1) //15
+      .inspect(connected(seeder.getId(), 2)) //16
+      .trigger(new ConnSeederEvents.Disconnect(torrent1, seeder.getId()), port1) //17
+      .trigger(new ConnSeederEvents.Disconnect(torrent3, seeder.getId()), port1) //18
+      .inspect(connected(seeder.getId(), 0)) //19
+      .inspect(state(seeder.getId(), ConnSeeder.States.DISCONNECTING)) //20
+      .answerRequest(Msg.class, port2, discAck1) //21
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1) //22
+      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), port1, Direction.OUT) //23
+      .trigger(discAck1, port2) //24
+      .inspect(inactiveSeederFSM(seeder.getId())) //25
+      //previous FSM is destroyed and we can create a new one
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1) //26
+      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING)) //27
+      .answerRequest(Msg.class, port2, connAcc2) //28
+      .trigger(connAcc2, port2) //29
+      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED)) //30
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), port1, Direction.OUT) //31
+      .repeat(1).body().end();
+
+    assertTrue(tc.check());
+  }
 
   /*
    * network timeout on connect
@@ -138,63 +140,149 @@ public class ConnMngrCompTest {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
 
-    Future<Msg, Msg> timeReq1 = timeReq();
+    Future<Msg, Msg> connTimeout1 = connTout();
     tc.body()
       .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1)
       .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING))
-      .answerRequest(Msg.class, port2, timeReq1)
+      .answerRequest(Msg.class, port2, connTimeout1)
+      .trigger(connTimeout1, port2)
       .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), port1, Direction.OUT)
-//      .inspect(state(seeder.getId(), ConnSeeder.States.DISCONNECTING))
+      .inspect(inactiveSeederFSM(seeder.getId()))
       .repeat(1).body().end();
-    
+
     assertTrue(tc.check());
   }
 
-  Predicate<R2MngrComp> state(Identifier seederId, FSMStateName expectedState) {
-    return (R2MngrComp t) -> {
+  @Test
+  public void testConnRej() {
+    Port<ConnPort> port1 = connMngrComp.getPositive(ConnPort.class);
+    Port<Network> port2 = connMngrComp.getNegative(Network.class);
+    OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
+
+    Future<Msg, Msg> connRej1 = connRej();
+    tc.body()
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1)
+      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING))
+      .answerRequest(Msg.class, port2, connRej1)
+      .trigger(connRej1, port2)
+      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), port1, Direction.OUT)
+      .inspect(inactiveSeederFSM(seeder.getId()))
+      .repeat(1).body().end();
+
+    assertTrue(tc.check());
+  }
+
+  @Test
+  public void testConnPing() {
+    Port<ConnPort> port1 = connMngrComp.getPositive(ConnPort.class);
+    Port<Network> port2 = connMngrComp.getNegative(Network.class);
+    Port<R2MngrWrapperComp.Port> port3 = connMngrComp.getPositive(R2MngrWrapperComp.Port.class);
+    OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
+
+    Future<Msg, Msg> connAcc1 = connAcc();
+    Future<Msg, Msg> connPing1 = connPing();
+    Future<Msg, Msg> connPing2 = connPing();
+    tc.body()
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1)
+      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING))
+      .answerRequest(Msg.class, port2, connAcc1)
+      .trigger(connAcc1, port2)
+      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED))
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), port1, Direction.OUT)
+      //ping timeout
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
+      .answerRequest(Msg.class, port2, connPing1)
+      .trigger(connPing1, port2)
+      //missed one ping timeout
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
+      .answerRequest(Msg.class, port2, connPing())
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
+      .answerRequest(Msg.class, port2, connPing2)
+      .trigger(connPing2, port2)
+      //missed five ping timeouts - on the sixth - conn dead
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
+      .answerRequest(Msg.class, port2, connPing())
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
+      .answerRequest(Msg.class, port2, connPing())
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
+      .answerRequest(Msg.class, port2, connPing())
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
+      .answerRequest(Msg.class, port2, connPing())
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
+      .answerRequest(Msg.class, port2, connPing())
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
+      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), port1, Direction.OUT)
+      .repeat(1).body().end();
+
+    assertTrue(tc.check());
+  }
+
+  Predicate<R2MngrWrapperComp> state(Identifier seederId, FSMStateName expectedState) {
+    return (R2MngrWrapperComp t) -> {
       FSMStateName currentState = t.getConnSeederState(seederId);
       return currentState.equals(expectedState);
     };
   }
 
-  Predicate<R2MngrComp> connected(Identifier seederId, int nrTorrents) {
-    return (R2MngrComp t) -> {
+  Predicate<R2MngrWrapperComp> connected(Identifier seederId, int nrTorrents) {
+    return (R2MngrWrapperComp t) -> {
       ConnSeeder.IS is = (ConnSeeder.IS) t.getConnSeederIS(seederId);
       return is.connected.size() == nrTorrents;
     };
   }
-  
+
+  Predicate<R2MngrWrapperComp> inactiveSeederFSM(Identifier seederId) {
+    return (R2MngrWrapperComp t) -> {
+      return !t.activeSeederFSM(seederId);
+    };
+  }
+
   Predicate<ConnSeederEvents.ConnectSuccess> connSucc(OverlayId torrentId) {
-    return (ConnSeederEvents.ConnectSuccess t) -> t.torrentId.equals(torrentId);
+    return (ConnSeederEvents.ConnectSuccess t) -> {
+      return t.torrentId.equals(torrentId);
+    };
   }
 
   Predicate<ConnSeederEvents.ConnectFail> connFail(OverlayId torrentId) {
-    return (ConnSeederEvents.ConnectFail t) -> t.torrentId.equals(torrentId);
+    return (ConnSeederEvents.ConnectFail t) -> {
+      return t.torrentId.equals(torrentId);
+    };
   }
 
-  Future<Msg, Msg> connReq() {
-    return new Future<Msg, Msg>() {
-      private BasicContentMsg msg;
-      private ConnSeederMsgs.Connect content;
+  public static abstract class BestEffortFuture<C extends KompicsEvent> extends Future<Msg, Msg> {
 
-      @Override
-      public boolean set(Msg r) {
-        if (!(r instanceof BasicContentMsg)) {
-          return false;
-        }
-        this.msg = (BasicContentMsg) r;
-        if (!(msg.getContent() instanceof BestEffortMsg.Request)) {
-          return false;
-        }
-        BestEffortMsg.Request aux = (BestEffortMsg.Request) msg.getContent();
-        if (!(aux.extractValue()instanceof ConnSeederMsgs.Connect)) {
-          return false;
-        }
-        this.msg = msg;
-        this.content = (ConnSeederMsgs.Connect) aux.extractValue();
-        return true;
+    private Class<C> contentType;
+    protected BasicContentMsg msg;
+    protected BestEffortMsg.Request wrap;
+    protected C content;
+
+    BestEffortFuture(Class<C> contentType) {
+      this.contentType = contentType;
+    }
+
+    @Override
+    public boolean set(Msg r) {
+      if (!(r instanceof BasicContentMsg)) {
+        return false;
       }
+      this.msg = (BasicContentMsg) r;
+      if (!(msg.getContent() instanceof BestEffortMsg.Request)) {
+        return false;
+      }
+      wrap = (BestEffortMsg.Request) msg.getContent();
+      if (!(contentType.isAssignableFrom(wrap.extractValue().getClass()))) {
+        return false;
+      }
+      this.content = (C) wrap.extractValue();
+      return true;
+    }
 
+  }
+
+  Future<Msg, Msg> connAcc() {
+    return new BestEffortFuture<ConnSeederMsgs.Connect>(ConnSeederMsgs.Connect.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.accept());
@@ -202,63 +290,38 @@ public class ConnMngrCompTest {
     };
   }
 
-  Future<Msg, Msg> discReq() {
-    return new Future<Msg, Msg>() {
-      private BasicContentMsg msg;
-      private ConnSeederMsgs.Disconnect content;
-
-      @Override
-      public boolean set(Msg r) {
-        if (!(r instanceof BasicContentMsg)) {
-          return false;
-        }
-        this.msg = (BasicContentMsg) r;
-        if (!(msg.getContent() instanceof BestEffortMsg.Request)) {
-          return false;
-        }
-        BestEffortMsg.Request aux = (BestEffortMsg.Request) msg.getContent();
-        if (!(aux.extractValue()instanceof ConnSeederMsgs.Disconnect)) {
-          return false;
-        }
-        this.msg = msg;
-        this.content = (ConnSeederMsgs.Disconnect) aux.extractValue();
-        return true;
-      }
-
+  Future<Msg, Msg> discAck() {
+    return new BestEffortFuture<ConnSeederMsgs.Disconnect>(ConnSeederMsgs.Disconnect.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.ack());
       }
     };
   }
-  
-  Future<Msg, Msg> timeReq() {
-    return new Future<Msg, Msg>() {
-      private BasicContentMsg msg;
-      private BestEffortMsg.Request wrap;
-      private ConnSeederMsgs.Connect content;
 
-      @Override
-      public boolean set(Msg r) {
-        if (!(r instanceof BasicContentMsg)) {
-          return false;
-        }
-        this.msg = (BasicContentMsg) r;
-        if (!(msg.getContent() instanceof BestEffortMsg.Request)) {
-          return false;
-        }
-        wrap = (BestEffortMsg.Request) msg.getContent();
-        if (!(wrap.extractValue()instanceof ConnSeederMsgs.Disconnect)) {
-          return false;
-        }
-        this.msg = msg;
-        this.content = (ConnSeederMsgs.Connect) wrap.extractValue();
-        return true;
-      }
-
+  Future<Msg, Msg> connTout() {
+    return new BestEffortFuture<ConnSeederMsgs.Connect>(ConnSeederMsgs.Connect.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(wrap.timeout());
+      }
+    };
+  }
+
+  Future<Msg, Msg> connRej() {
+    return new BestEffortFuture<ConnSeederMsgs.Connect>(ConnSeederMsgs.Connect.class) {
+      @Override
+      public BasicContentMsg get() {
+        return msg.answer(content.reject());
+      }
+    };
+  }
+
+  Future<Msg, Msg> connPing() {
+    return new BestEffortFuture<ConnSeederMsgs.Ping>(ConnSeederMsgs.Ping.class) {
+      @Override
+      public BasicContentMsg get() {
+        return msg.answer(content.ack());
       }
     };
   }

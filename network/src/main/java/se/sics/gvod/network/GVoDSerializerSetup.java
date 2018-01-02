@@ -73,7 +73,7 @@ public class GVoDSerializerSetup {
         
         ConnSeederConnect(ConnSeederMsgs.Connect.class, "silkConnectSeederConnect"),
         ConnSeederConnectAcc(ConnSeederMsgs.ConnectAcc.class, "silkConnectSeederConnectAcc"),
-        ConnSeederConnectReject(ConnSeederMsgs.ConnectReject.class, "silkConnectSeederConnectReject"),
+        ConnSeederConnectReject(ConnSeederMsgs.ConnectRej.class, "silkConnectSeederConnectReject"),
         ConnSeederDisconnect(ConnSeederMsgs.Disconnect.class, "silkConnectSeederDisconnect"),
         ConnSeederDisconnectAck(ConnSeederMsgs.DisconnectAck.class, "silkConnectSeederDisconnectAck"),
         ConnSeederPing(ConnSeederMsgs.Ping.class, "silkConnectSeederPing"),
