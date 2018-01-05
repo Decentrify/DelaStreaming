@@ -31,7 +31,6 @@ import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.event.FSMWrongState;
 import se.sics.kompics.network.Msg;
 import se.sics.kompics.network.Network;
-import se.sics.kompics.network.Transport;
 import se.sics.kompics.testing.Direction;
 import se.sics.kompics.testing.TestContext;
 import se.sics.kompics.util.Identifier;
@@ -40,8 +39,8 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
-import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import static se.sics.silk.MsgHelper.incNetP;
+import static se.sics.silk.MsgHelper.msg;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.r2mngr.event.ConnLeecherEvents;
@@ -86,6 +85,21 @@ public class ConnLeecherTest {
   }
 
   @Test
+  public void testBadStateAtStart() {
+    OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress leecher = SystemHelper.getAddress(1);
+
+    tc = tc.body();
+    tc = connWrongEventAtStart(tc, localConnReq(torrent1, leecher));
+    tc = connWrongEventAtStart(tc, localDisc(torrent1, leecher));
+    tc = netWrongMsgAtStart(tc, msg(leecher, selfAdr, netDisc()));
+    tc = netWrongMsgAtStart(tc, msg(leecher, selfAdr, netPing()));
+    tc.repeat(1).body().end();
+
+    assertTrue(tc.check());
+  }
+  
+  @Test
   public void testTimeline1() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     OverlayId torrent2 = torrentIdFactory.id(new BasicBuilders.IntBuilder(2));
@@ -104,25 +118,10 @@ public class ConnLeecherTest {
     assertTrue(tc.check());
   }
 
-  @Test
-  public void testBadState1() {
-    OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-    KAddress leecher = SystemHelper.getAddress(1);
-
-    tc = tc.body();
-    tc = connWrongEventAtStart(tc, localConnReq(torrent1, leecher));
-    tc = connWrongEventAtStart(tc, localDisc(torrent1, leecher));
-    tc = netWrongMsgAtStart(tc, msg(leecher, selfAdr, netDisc(leecher)));
-    tc = netWrongMsgAtStart(tc, msg(leecher, selfAdr, netPing(leecher)));
-    tc.repeat(1).body().end();
-
-    assertTrue(tc.check());
-  }
-
   private TestContext<R2MngrWrapperComp> netConnAcc(TestContext<R2MngrWrapperComp> tc, KAddress leecher) {
     return tc
-      .inspect(inactiveLeecherFSM(leecher.getId()))
-      .trigger(msg(leecher, selfAdr, netConnReq(leecher)), networkP)
+      .inspect(inactiveFSM(leecher.getId()))
+      .trigger(msg(leecher, selfAdr, netConnReq()), networkP)
       .expect(Msg.class, incNetP(leecher, ConnMsgs.ConnectAcc.class), networkP, Direction.OUT)
       .inspect(state(leecher.getId(), ConnLeecher.States.CONNECTED));
   }
@@ -130,7 +129,7 @@ public class ConnLeecherTest {
   private TestContext<R2MngrWrapperComp> netPing(TestContext<R2MngrWrapperComp> tc, KAddress leecher) {
     return tc
       .inspect(state(leecher.getId(), ConnLeecher.States.CONNECTED))
-      .trigger(msg(leecher, selfAdr, netPing(leecher)), networkP)
+      .trigger(msg(leecher, selfAdr, netPing()), networkP)
       .expect(Msg.class, incNetP(leecher, ConnMsgs.Pong.class), networkP, Direction.OUT)
       .inspect(state(leecher.getId(), ConnLeecher.States.CONNECTED));
   }
@@ -138,9 +137,9 @@ public class ConnLeecherTest {
   private TestContext<R2MngrWrapperComp> netDisc(TestContext<R2MngrWrapperComp> tc, KAddress leecher) {
     return tc
       .inspect(state(leecher.getId(), ConnLeecher.States.CONNECTED))
-      .trigger(msg(leecher, selfAdr, netDisc(leecher)), networkP)
+      .trigger(msg(leecher, selfAdr, netDisc()), networkP)
       .expect(Msg.class, incNetP(leecher, ConnMsgs.DisconnectAck.class), networkP, Direction.OUT)
-      .inspect(inactiveLeecherFSM(leecher.getId()));
+      .inspect(inactiveFSM(leecher.getId()));
   }
 
   private TestContext<R2MngrWrapperComp> netDisc(TestContext<R2MngrWrapperComp> tc, KAddress leecher,
@@ -150,10 +149,10 @@ public class ConnLeecherTest {
     }
     tc = tc
       .inspect(state(leecher.getId(), ConnLeecher.States.CONNECTED))
-      .trigger(msg(leecher, selfAdr, netDisc(leecher)), networkP)
+      .trigger(msg(leecher, selfAdr, netDisc()), networkP)
       .expect(Msg.class, incNetP(leecher, ConnMsgs.DisconnectAck.class), networkP, Direction.OUT);
     tc = unorderedDisc(tc, leecher, torrentIds);
-    return tc.inspect(inactiveLeecherFSM(leecher.getId()));
+    return tc.inspect(inactiveFSM(leecher.getId()));
   }
 
   private TestContext<R2MngrWrapperComp> unorderedDisc(TestContext<R2MngrWrapperComp> tc, KAddress leecher,
@@ -196,16 +195,16 @@ public class ConnLeecherTest {
     };
   }
 
-  private ConnMsgs.ConnectReq netConnReq(KAddress leecher) {
-    return new ConnMsgs.ConnectReq(leecher.getId(), selfAdr.getId());
+  private ConnMsgs.ConnectReq netConnReq() {
+    return new ConnMsgs.ConnectReq();
   }
 
-  private ConnMsgs.Disconnect netDisc(KAddress leecher) {
-    return new ConnMsgs.Disconnect(leecher.getId(), selfAdr.getId());
+  private ConnMsgs.Disconnect netDisc() {
+    return new ConnMsgs.Disconnect();
   }
 
-  private ConnMsgs.Ping netPing(KAddress leecher) {
-    return new ConnMsgs.Ping(leecher.getId(), selfAdr.getId());
+  private ConnMsgs.Ping netPing() {
+    return new ConnMsgs.Ping();
   }
 
   private ConnLeecherEvents.ConnectReq localConnReq(OverlayId torrent, KAddress leecher) {
@@ -218,21 +217,21 @@ public class ConnLeecherTest {
 
   private TestContext<R2MngrWrapperComp> netWrongMsgAtStart(TestContext<R2MngrWrapperComp> tc, BasicContentMsg msg) {
     return tc
-      .inspect(inactiveLeecherFSM(msg.getSource().getId()))
+      .inspect(inactiveFSM(msg.getSource().getId()))
       .trigger(msg, networkP)
-      .inspect(inactiveLeecherFSM(msg.getSource().getId()));
+      .inspect(inactiveFSM(msg.getSource().getId()));
   }
 
   private TestContext<R2MngrWrapperComp> connWrongEventAtStart(TestContext<R2MngrWrapperComp> tc,
     ConnLeecher.Event event) {
     return tc
-      .inspect(inactiveLeecherFSM(event.getConnLeecherFSMId()))
+      .inspect(inactiveFSM(event.getConnLeecherFSMId()))
       .trigger(event, connP)
       .expect(FSMWrongState.class, connP, Direction.OUT)
-      .inspect(inactiveLeecherFSM(event.getConnLeecherFSMId()));
+      .inspect(inactiveFSM(event.getConnLeecherFSMId()));
   }
 
-  Predicate<R2MngrWrapperComp> inactiveLeecherFSM(Identifier leecherId) {
+  Predicate<R2MngrWrapperComp> inactiveFSM(Identifier leecherId) {
     return (R2MngrWrapperComp t) -> {
       return !t.activeLeecherFSM(leecherId);
     };
@@ -243,11 +242,5 @@ public class ConnLeecherTest {
       FSMStateName currentState = t.getConnLeecherState(seederId);
       return currentState.equals(expectedState);
     };
-  }
-
-  private <C extends Object> BasicContentMsg msg(KAddress src, KAddress dst, C content) {
-    BasicHeader header = new BasicHeader(src, dst, Transport.UDP);
-    BasicContentMsg msg = new BasicContentMsg(header, content);
-    return msg;
   }
 }

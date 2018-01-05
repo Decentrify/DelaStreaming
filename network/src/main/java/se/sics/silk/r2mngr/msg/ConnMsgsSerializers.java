@@ -20,7 +20,6 @@ package se.sics.silk.r2mngr.msg;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
-import org.javatuples.Triplet;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.kompics.util.Identifier;
@@ -44,15 +43,11 @@ public class ConnMsgsSerializers {
     public void toBin(Object o, ByteBuf buf) {
       ConnMsgs.Base obj = (ConnMsgs.Base)o;
       Serializers.toBinary(obj.msgId, buf);
-      Serializers.toBinary(obj.srcId, buf);
-      Serializers.toBinary(obj.dstId, buf);
     }
 
-    public Triplet<Identifier, Identifier, Identifier> fromBin(ByteBuf buf, Optional<Object> hint) {
-      Identifier eventId = (Identifier)Serializers.fromBinary(buf, hint);
-      Identifier srcId = (Identifier)Serializers.fromBinary(buf, hint);
-      Identifier dstId = (Identifier)Serializers.fromBinary(buf, hint);
-      return Triplet.with(eventId, srcId, dstId);
+    public Identifier fromBin(ByteBuf buf, Optional<Object> hint) {
+      Identifier msgId = (Identifier)Serializers.fromBinary(buf, hint);
+      return msgId;
     }
   }
   
@@ -69,8 +64,8 @@ public class ConnMsgsSerializers {
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-      Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnMsgs.ConnectReq(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      Identifier aux = fromBin(buf, hint);
+      return new ConnMsgs.ConnectReq(aux);
     }
   }
 
@@ -87,8 +82,8 @@ public class ConnMsgsSerializers {
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-      Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnMsgs.ConnectAcc(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      Identifier aux = fromBin(buf, hint);
+      return new ConnMsgs.ConnectAcc(aux);
     }
   }
 
@@ -105,8 +100,8 @@ public class ConnMsgsSerializers {
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-      Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnMsgs.ConnectRej(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      Identifier aux = fromBin(buf, hint);
+      return new ConnMsgs.ConnectRej(aux);
     }
   }
 
@@ -123,8 +118,8 @@ public class ConnMsgsSerializers {
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-      Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnMsgs.Disconnect(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      Identifier aux = fromBin(buf, hint);
+      return new ConnMsgs.Disconnect(aux);
     }
   }
 
@@ -141,8 +136,8 @@ public class ConnMsgsSerializers {
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-      Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnMsgs.DisconnectAck(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      Identifier aux = fromBin(buf, hint);
+      return new ConnMsgs.DisconnectAck(aux);
     }
   }
 
@@ -159,8 +154,8 @@ public class ConnMsgsSerializers {
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-      Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnMsgs.Ping(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      Identifier aux = fromBin(buf, hint);
+      return new ConnMsgs.Ping(aux);
     }
   }
 
@@ -177,8 +172,8 @@ public class ConnMsgsSerializers {
 
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-      Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnMsgs.Pong(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      Identifier aux = fromBin(buf, hint);
+      return new ConnMsgs.Pong(aux);
     }
   }
 }

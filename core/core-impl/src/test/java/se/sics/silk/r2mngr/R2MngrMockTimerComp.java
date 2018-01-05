@@ -49,7 +49,6 @@ public class R2MngrMockTimerComp extends ComponentDefinition {
   Handler handleCancelPeriodicSchedule = new Handler<CancelPeriodicTimeout>() {
     @Override
     public void handle(CancelPeriodicTimeout timeout) {
-      timeoutEvent = null;
     }
   };
 

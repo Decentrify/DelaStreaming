@@ -20,8 +20,10 @@ package se.sics.silk;
 
 import com.google.common.base.Predicate;
 import se.sics.kompics.network.Msg;
+import se.sics.kompics.network.Transport;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicHeader;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -38,5 +40,11 @@ public class MsgHelper {
       }
       return msg.getDestination().equals(leecher);
     };
+  }
+  
+  public static <C extends Object> BasicContentMsg msg(KAddress src, KAddress dst, C content) {
+    BasicHeader header = new BasicHeader(src, dst, Transport.UDP);
+    BasicContentMsg msg = new BasicContentMsg(header, content);
+    return msg;
   }
 }

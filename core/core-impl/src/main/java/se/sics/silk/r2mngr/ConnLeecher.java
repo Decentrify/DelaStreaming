@@ -66,10 +66,10 @@ public class ConnLeecher {
     CONNECTED
   }
 
-  public interface Msg extends FSMEvent {
+  public interface Msg extends FSMEvent, Identifiable {
   }
   
-  public interface Event extends FSMEvent {
+  public interface Event extends FSMEvent, Identifiable {
 
     public Identifier getConnLeecherFSMId();
   }

@@ -27,7 +27,7 @@ import se.sics.silk.r2mngr.event.ConnSeederEvents;
  */
 public class ConnSeederPort extends PortType {
   {
-    request(ConnSeederEvents.Connect.class);
+    request(ConnSeederEvents.ConnectReq.class);
     indication(ConnSeederEvents.ConnectFail.class);
     indication(ConnSeederEvents.ConnectSuccess.class);
     request(ConnSeederEvents.Disconnect.class);

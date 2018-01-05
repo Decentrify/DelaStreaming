@@ -28,16 +28,12 @@ import se.sics.silk.r2mngr.ConnSeeder;
  */
 public class ConnMsgs {
 
-  public static abstract class Base implements ConnSeeder.Event, ConnLeecher.Msg {
+  public static abstract class Base implements ConnSeeder.Msg, ConnLeecher.Msg {
 
     public final Identifier msgId;
-    public final Identifier srcId;
-    public final Identifier dstId;
 
-    Base(Identifier msgId, Identifier srcId, Identifier dstId) {
+    Base(Identifier msgId) {
       this.msgId = msgId;
-      this.srcId = srcId;
-      this.dstId = dstId;
     }
 
     @Override
@@ -47,117 +43,82 @@ public class ConnMsgs {
   }
 
   public static class ConnectReq extends Base {
-    ConnectReq(Identifier msgId, Identifier srcId, Identifier dstId) {
-      super(msgId, srcId, dstId);
+    ConnectReq(Identifier msgId) {
+      super(msgId);
     }
 
-    public ConnectReq(Identifier srcId, Identifier dstId) {
-      this(BasicIdentifiers.msgId(), srcId, dstId);
+    public ConnectReq() {
+      this(BasicIdentifiers.msgId());
     }
     
-    @Override
-    public Identifier getConnSeederFSMId() {
-      return dstId;
-    }
-
     public ConnectAcc accept() {
-      return new ConnectAcc(msgId, srcId, dstId);
+      return new ConnectAcc(msgId);
     }
     
     public ConnectRej reject() {
-      return new ConnectRej(msgId, srcId, dstId);
+      return new ConnectRej(msgId);
     }
   }
 
   public static class ConnectAcc extends Base {
 
-    ConnectAcc(Identifier msgId, Identifier srcId, Identifier dstId) {
-      super(msgId, srcId, dstId);
-    }
-    
-    @Override
-    public Identifier getConnSeederFSMId() {
-      return srcId;
+    ConnectAcc(Identifier msgId) {
+      super(msgId);
     }
   }
 
   public static class ConnectRej extends Base {
 
-    ConnectRej(Identifier msgId, Identifier srcId, Identifier dstId) {
-      super(msgId, srcId, dstId);
-    }
-    
-    @Override
-    public Identifier getConnSeederFSMId() {
-      return srcId;
+    ConnectRej(Identifier msgId) {
+      super(msgId);
     }
   }
 
   public static class Disconnect extends Base {
 
-    Disconnect(Identifier msgId, Identifier srcId, Identifier dstId) {
-      super(msgId, srcId, dstId);
+    Disconnect(Identifier msgId) {
+      super(msgId);
     }
 
-    public Disconnect(Identifier srcId, Identifier dstId) {
-      this(BasicIdentifiers.msgId(), srcId, dstId);
+    public Disconnect() {
+      this(BasicIdentifiers.msgId());
     }
     
     public DisconnectAck ack() {
       return new DisconnectAck(this);
     }
-    
-    @Override
-    public Identifier getConnSeederFSMId() {
-      return dstId;
-    }
   }
 
   public static class DisconnectAck extends Base {
 
-    DisconnectAck(Identifier msgId, Identifier srcId, Identifier dstId) {
-      super(msgId, srcId, dstId);
+    DisconnectAck(Identifier msgId) {
+      super(msgId);
     }
     
     private DisconnectAck(Disconnect req) {
-      this(req.msgId, req.srcId, req.dstId);
-    }
-    
-    @Override
-    public Identifier getConnSeederFSMId() {
-      return srcId;
+      this(req.msgId);
     }
   }
 
   public static class Ping extends Base {
 
-    Ping(Identifier msgId, Identifier srcId, Identifier dstId) {
-      super(msgId, srcId, dstId);
+    Ping(Identifier msgId) {
+      super(msgId);
     }
     
-    public Ping(Identifier srcId, Identifier dstId) {
-      this(BasicIdentifiers.msgId(), srcId, dstId);
+    public Ping() {
+      this(BasicIdentifiers.msgId());
     }
     
     public Pong ack() {
-      return new Pong(msgId, srcId, dstId);
-    }
-    
-    @Override
-    public Identifier getConnSeederFSMId() {
-      return dstId;
+      return new Pong(msgId);
     }
   }
 
   public static class Pong extends Base {
 
-    public Pong(Identifier msgId, Identifier srcId, Identifier dstId) {
-      super(msgId, srcId, dstId);
-    }
-    
-    @Override
-    public Identifier getConnSeederFSMId() {
-      return srcId;
+    public Pong(Identifier msgId) {
+      super(msgId);
     }
   }
 }

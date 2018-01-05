@@ -38,6 +38,7 @@ import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
+import se.sics.kompics.fsm.event.FSMWrongState;
 import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
 import se.sics.kompics.fsm.handler.FSMPatternEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
@@ -46,10 +47,10 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.kompics.util.PatternExtractorHelper;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
@@ -57,7 +58,6 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
-import se.sics.kompics.fsm.event.FSMWrongState;
 import se.sics.silk.r2mngr.event.ConnPingTimeout;
 import se.sics.silk.r2mngr.event.ConnSeederEvents;
 import se.sics.silk.r2mngr.msg.ConnMsgs;
@@ -77,6 +77,9 @@ public class ConnSeeder {
     DISCONNECTING
   }
 
+  public interface Msg extends FSMEvent, Identifiable {
+  }
+
   public interface Event extends FSMEvent, Identifiable {
 
     public Identifier getConnSeederFSMId();
@@ -89,6 +92,29 @@ public class ConnSeeder {
       return new IS(fsmId);
     }
   }
+  
+  static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
+
+      @Override
+      public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
+        if (event instanceof Event) {
+          return Optional.of(((Event) event).getConnSeederFSMId());
+        } else if (event instanceof BasicContentMsg) {
+          BasicContentMsg msg = (BasicContentMsg) event;
+
+          Object content = msg.getContent();
+          if (content instanceof Msg) {
+            return Optional.of(msg.getSource().getId());
+          } else if(content instanceof BestEffortMsg.Timeout) {
+            Object wrappedContent = ((BestEffortMsg.Timeout) content).content;
+            if(wrappedContent instanceof Msg) {
+              return Optional.of(msg.getSource().getId());
+            }
+          }
+        }
+        return Optional.empty();
+      }
+    };
 
   public static class FSM {
 
@@ -112,9 +138,9 @@ public class ConnSeeder {
 
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       return FSMBuilder.semanticDef()
-        .defaultFallback(ConnLeecher.Handlers.basicDefault(), ConnLeecher.Handlers.patternDefault())
+        .defaultFallback(ConnSeeder.Handlers.basicDefault(), ConnSeeder.Handlers.patternDefault())
         .negativePort(ConnSeederPort.class)
-        .basicEvent(ConnSeederEvents.Connect.class)
+        .basicEvent(ConnSeederEvents.ConnectReq.class)
         .subscribeOnStart(Handlers.conn0)
         .subscribe(Handlers.conn1, States.CONNECTING)
         .subscribe(Handlers.conn2, States.CONNECTED)
@@ -141,29 +167,6 @@ public class ConnSeeder {
         .subscribe(Handlers.connPing, States.CONNECTED)
         .buildEvents();
     }
-
-    static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
-
-      @Override
-      public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
-        if (event instanceof Event) {
-          return Optional.of(((Event) event).getConnSeederFSMId());
-        } else if (event instanceof PatternExtractor) {
-          PatternExtractor aux = (PatternExtractor) event;
-          //try to find a first correct pattern layer
-          Optional<PatternExtractor> aux2 = PatternExtractorHelper.peelToLayer(aux, Event.class);
-          if (aux2.isPresent()) {
-            return Optional.of(((Event) aux2.get()).getConnSeederFSMId());
-          }
-          //test the wrapped content
-          Object aux3 = PatternExtractorHelper.peelAllLayers(aux);
-          if (aux3 instanceof Event) {
-            return Optional.of(((Event) aux3).getConnSeederFSMId());
-          }
-        }
-        return Optional.empty();
-      }
-    };
 
     public static MultiFSM multifsm(FSMIdentifierFactory fsmIdFactory, ES es, OnFSMExceptionAction oexa)
       throws FSMException {
@@ -210,8 +213,8 @@ public class ConnSeeder {
 
     private final FSMIdentifier fsmId;
     private KAddress seederAdr;
-    private final Map<OverlayId, ConnSeederEvents.Connect> connecting = new HashMap<>();
-    Map<OverlayId, ConnSeederEvents.Connect> connected = new HashMap<>();
+    private final Map<OverlayId, ConnSeederEvents.ConnectReq> connecting = new HashMap<>();
+    Map<OverlayId, ConnSeederEvents.ConnectReq> connected = new HashMap<>();
     private final PingTracker pingTracker = new PingTracker();
     private UUID connPingTimer;
 
@@ -232,11 +235,11 @@ public class ConnSeeder {
       this.seederAdr = seederAdr;
     }
 
-    public Map<OverlayId, ConnSeederEvents.Connect> getConnected() {
+    public Map<OverlayId, ConnSeederEvents.ConnectReq> getConnected() {
       return connected;
     }
 
-    public void setConnected(Map<OverlayId, ConnSeederEvents.Connect> connected) {
+    public void setConnected(Map<OverlayId, ConnSeederEvents.ConnectReq> connected) {
       this.connected = connected;
     }
 
@@ -272,8 +275,8 @@ public class ConnSeeder {
       return new FSMBasicEventHandler<ES, IS, KompicsEvent>() {
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, KompicsEvent req) {
-          if (!(req instanceof FSMWrongState)) {
-            es.getProxy().trigger(new FSMWrongState(req), es.ports.leechers);
+          if (!(req instanceof FSMWrongState) && !(req instanceof Timeout)) {
+            es.getProxy().trigger(new FSMWrongState(req), es.ports.seeders);
           }
           if (FSMBasicStateNames.START.equals(state)) {
             return FSMBasicStateNames.FINAL;
@@ -297,38 +300,38 @@ public class ConnSeeder {
         }
       };
     }
-    
-    static FSMBasicEventHandler conn0 = new FSMBasicEventHandler<ES, IS, ConnSeederEvents.Connect>() {
+
+    static FSMBasicEventHandler conn0 = new FSMBasicEventHandler<ES, IS, ConnSeederEvents.ConnectReq>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnSeederEvents.Connect req) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnSeederEvents.ConnectReq req) {
         is.connecting.put(req.torrentId, req);
         is.setSeederAdr(req.seederAdr);
-        ConnMsgs.ConnectReq r = new ConnMsgs.ConnectReq(es.selfAdr.getId(), req.seederAdr.getId());
+        ConnMsgs.ConnectReq r = new ConnMsgs.ConnectReq();
         bestEffortMsg(es, is, r);
         return States.CONNECTING;
       }
     };
 
-    static FSMBasicEventHandler conn1 = new FSMBasicEventHandler<ES, IS, ConnSeederEvents.Connect>() {
+    static FSMBasicEventHandler conn1 = new FSMBasicEventHandler<ES, IS, ConnSeederEvents.ConnectReq>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnSeederEvents.Connect req) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnSeederEvents.ConnectReq req) {
         is.connecting.put(req.torrentId, req);
         return States.CONNECTING;
       }
     };
 
-    static FSMBasicEventHandler conn2 = new FSMBasicEventHandler<ES, IS, ConnSeederEvents.Connect>() {
+    static FSMBasicEventHandler conn2 = new FSMBasicEventHandler<ES, IS, ConnSeederEvents.ConnectReq>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnSeederEvents.Connect req) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnSeederEvents.ConnectReq req) {
         is.connected.put(req.torrentId, req);
         es.getProxy().trigger(req.success(), es.ports.seeders);
         return States.CONNECTED;
       }
     };
 
-    static FSMBasicEventHandler conn3 = new FSMBasicEventHandler<ES, IS, ConnSeederEvents.Connect>() {
+    static FSMBasicEventHandler conn3 = new FSMBasicEventHandler<ES, IS, ConnSeederEvents.ConnectReq>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnSeederEvents.Connect req) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnSeederEvents.ConnectReq req) {
         es.getProxy().trigger(req.fail(), es.ports.seeders);
         cancelConnPing(es, is);
         return States.DISCONNECTING;
@@ -349,7 +352,7 @@ public class ConnSeeder {
         is.connected.remove(req.torrentId);
         if (is.connected.isEmpty()) {
           ConnMsgs.Disconnect msg
-            = new ConnMsgs.Disconnect(es.selfAdr.getId(), is.getSeederAdr().getId());
+            = new ConnMsgs.Disconnect();
           bestEffortMsg(es, is, msg);
           cancelConnPing(es, is);
           return States.DISCONNECTING;
@@ -365,7 +368,7 @@ public class ConnSeeder {
           connectedFail(es, is);
           return FSMBasicStateNames.FINAL;
         }
-        ConnMsgs.Ping ping = new ConnMsgs.Ping(es.selfAdr.getId(), is.seederAdr.getId());
+        ConnMsgs.Ping ping = new ConnMsgs.Ping();
         bestEffortMsg(es, is, ping);
         is.pingTracker.ping();
         return States.CONNECTED;
@@ -389,12 +392,12 @@ public class ConnSeeder {
         PatternExtractor<Class, ConnMsgs.ConnectAcc> container) throws FSMException {
         if (is.connecting.isEmpty()) {
           ConnMsgs.Disconnect msg
-            = new ConnMsgs.Disconnect(es.selfAdr.getId(), is.getSeederAdr().getId());
+            = new ConnMsgs.Disconnect();
           bestEffortMsg(es, is, msg);
           return States.DISCONNECTING;
         }
         scheduleConnPing(es, is);
-        for (ConnSeederEvents.Connect req : is.connecting.values()) {
+        for (ConnSeederEvents.ConnectReq req : is.connecting.values()) {
           es.getProxy().trigger(req.success(), es.ports.seeders);
           is.connected.put(req.torrentId, req);
         }
@@ -443,7 +446,7 @@ public class ConnSeeder {
         if (payload.content instanceof ConnMsgs.Ping) {
           //we ignore ConnMsgs.Ping be timeouts - handled by the ping mechanism itself
         } else {
-          throw new RuntimeException("unexpecte msg:" + container);
+          throw new RuntimeException("unexpected msg:" + container);
         }
         return state;
       }
@@ -457,14 +460,14 @@ public class ConnSeeder {
     }
 
     private static void connectingFail(ES es, IS is) {
-      for (ConnSeederEvents.Connect req : is.connecting.values()) {
+      for (ConnSeederEvents.ConnectReq req : is.connecting.values()) {
         es.getProxy().trigger(req.fail(), es.ports.seeders);
       }
       is.connecting.clear();
     }
 
     private static void connectedFail(ES es, IS is) {
-      for (ConnSeederEvents.Connect req : is.connected.values()) {
+      for (ConnSeederEvents.ConnectReq req : is.connected.values()) {
         es.getProxy().trigger(req.fail(), es.ports.seeders);
       }
       is.connected.clear();

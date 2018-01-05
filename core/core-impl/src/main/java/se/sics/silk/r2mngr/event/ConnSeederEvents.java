@@ -56,10 +56,10 @@ public class ConnSeederEvents {
     }
   }
   
-  public static class Connect extends Base {
+  public static class ConnectReq extends Base {
     public final KAddress seederAdr;
     
-    public Connect(OverlayId torrentId, KAddress seederAdr) {
+    public ConnectReq(OverlayId torrentId, KAddress seederAdr) {
       super(BasicIdentifiers.eventId(), torrentId, seederAdr.getId());
       this.seederAdr = seederAdr;
     }
@@ -74,13 +74,13 @@ public class ConnSeederEvents {
   }
 
   public static class ConnectSuccess extends Base {
-    public ConnectSuccess(Connect req) {
+    public ConnectSuccess(ConnectReq req) {
       super(req.eventId, req.torrentId, req.seederAdr.getId());
     }
   }
   
   public static class ConnectFail extends Base {
-    public ConnectFail(Connect req) {
+    public ConnectFail(ConnectReq req) {
       super(req.eventId, req.torrentId, req.seederAdr.getId());
     }
   }
