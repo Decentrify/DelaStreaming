@@ -91,16 +91,24 @@ public class R2MngrComp extends ComponentDefinition {
 
   //******************************************TESTING HELPERS***********************************************************
 
-  FSMInternalState getConnSeederIS(Identifier seederId) {
-    return peerSeeders.getFSMInternalState(seederId);
+  FSMInternalState getConnSeederIS(Identifier baseId) {
+    return peerSeeders.getFSMInternalState(baseId);
   }
 
-  FSMStateName getConnSeederState(Identifier seederId) {
-    return peerSeeders.getFSMState(seederId);
+  FSMStateName getConnSeederState(Identifier baseId) {
+    return peerSeeders.getFSMState(baseId);
   }
 
   boolean activeSeederFSM(Identifier baseId) {
     return peerSeeders.activeFSM(baseId);
+  }
+  
+  FSMStateName getConnLeecherState(Identifier baseId) {
+    return peerLeechers.getFSMState(baseId);
+  }
+  
+  boolean activeLeecherFSM(Identifier baseId) {
+    return peerLeechers.activeFSM(baseId);
   }
   //********************************************************************************************************************
 

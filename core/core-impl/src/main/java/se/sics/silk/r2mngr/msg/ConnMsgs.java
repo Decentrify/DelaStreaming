@@ -20,6 +20,7 @@ package se.sics.silk.r2mngr.msg;
 
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.silk.r2mngr.ConnLeecher;
 import se.sics.silk.r2mngr.ConnSeeder;
 
 /**
@@ -27,13 +28,13 @@ import se.sics.silk.r2mngr.ConnSeeder;
  */
 public class ConnMsgs {
 
-  public static class Base implements ConnSeeder.Event {
+  public static abstract class Base implements ConnSeeder.Event, ConnLeecher.Msg {
 
     public final Identifier msgId;
     public final Identifier srcId;
     public final Identifier dstId;
 
-    public Base(Identifier msgId, Identifier srcId, Identifier dstId) {
+    Base(Identifier msgId, Identifier srcId, Identifier dstId) {
       this.msgId = msgId;
       this.srcId = srcId;
       this.dstId = dstId;
@@ -42,11 +43,6 @@ public class ConnMsgs {
     @Override
     public Identifier getId() {
       return msgId;
-    }
-
-    @Override
-    public Identifier getConnSeederFSMId() {
-      return dstId;
     }
   }
 
@@ -57,6 +53,11 @@ public class ConnMsgs {
 
     public ConnectReq(Identifier srcId, Identifier dstId) {
       this(BasicIdentifiers.msgId(), srcId, dstId);
+    }
+    
+    @Override
+    public Identifier getConnSeederFSMId() {
+      return dstId;
     }
 
     public ConnectAcc accept() {
@@ -73,12 +74,22 @@ public class ConnMsgs {
     ConnectAcc(Identifier msgId, Identifier srcId, Identifier dstId) {
       super(msgId, srcId, dstId);
     }
+    
+    @Override
+    public Identifier getConnSeederFSMId() {
+      return srcId;
+    }
   }
 
   public static class ConnectRej extends Base {
 
     ConnectRej(Identifier msgId, Identifier srcId, Identifier dstId) {
       super(msgId, srcId, dstId);
+    }
+    
+    @Override
+    public Identifier getConnSeederFSMId() {
+      return srcId;
     }
   }
 
@@ -95,6 +106,11 @@ public class ConnMsgs {
     public DisconnectAck ack() {
       return new DisconnectAck(this);
     }
+    
+    @Override
+    public Identifier getConnSeederFSMId() {
+      return dstId;
+    }
   }
 
   public static class DisconnectAck extends Base {
@@ -105,6 +121,11 @@ public class ConnMsgs {
     
     private DisconnectAck(Disconnect req) {
       this(req.msgId, req.srcId, req.dstId);
+    }
+    
+    @Override
+    public Identifier getConnSeederFSMId() {
+      return srcId;
     }
   }
 
@@ -121,12 +142,22 @@ public class ConnMsgs {
     public Pong ack() {
       return new Pong(msgId, srcId, dstId);
     }
+    
+    @Override
+    public Identifier getConnSeederFSMId() {
+      return dstId;
+    }
   }
 
   public static class Pong extends Base {
 
     public Pong(Identifier msgId, Identifier srcId, Identifier dstId) {
       super(msgId, srcId, dstId);
+    }
+    
+    @Override
+    public Identifier getConnSeederFSMId() {
+      return srcId;
     }
   }
 }

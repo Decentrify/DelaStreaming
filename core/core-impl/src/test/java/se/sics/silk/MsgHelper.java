@@ -16,35 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.event;
+package se.sics.silk;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.PatternExtractor;
-import se.sics.kompics.util.Identifiable;
-import se.sics.kompics.util.Identifier;
+import com.google.common.base.Predicate;
+import se.sics.kompics.network.Msg;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class FSMWrongState<C extends KompicsEvent & Identifiable> implements PatternExtractor, Identifiable {
-  public final C req;
-  
-  public FSMWrongState(C req) {
-    this.req = req;
-  }
-  
-  @Override
-  public Identifier getId() {
-    return req.getId();
-  }
-
-  @Override
-  public Object extractPattern() {
-    return req.getClass();
-  }
-
-  @Override
-  public Object extractValue() {
-    return req;
+public class MsgHelper {
+  public static <C extends Object> Predicate<Msg> incNetP(KAddress leecher, Class<C> contentType) {
+    return (Msg m) -> {
+      if (!(m instanceof BasicContentMsg)) {
+        return false;
+      }
+      BasicContentMsg msg = (BasicContentMsg) m;
+      if(!(contentType.isAssignableFrom(msg.getContent().getClass()))) {
+        return false;
+      }
+      return msg.getDestination().equals(leecher);
+    };
   }
 }

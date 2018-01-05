@@ -19,6 +19,7 @@
 package se.sics.silk.r2mngr;
 
 import se.sics.kompics.PortType;
+import se.sics.kompics.fsm.event.FSMWrongState;
 import se.sics.silk.r2mngr.event.ConnLeecherEvents;
 
 /**
@@ -31,5 +32,6 @@ public class ConnLeecherPort extends PortType {
     indication(ConnLeecherEvents.ConnectRej.class);
     request(ConnLeecherEvents.Disconnect.class);
     indication(ConnLeecherEvents.Disconnect.class);
+    indication(FSMWrongState.class);
   }
 }

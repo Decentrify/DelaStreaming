@@ -19,6 +19,7 @@
 package se.sics.silk.r2mngr;
 
 import se.sics.kompics.PortType;
+import se.sics.kompics.fsm.event.FSMWrongState;
 import se.sics.silk.r2mngr.event.ConnSeederEvents;
 
 /**
@@ -30,5 +31,6 @@ public class ConnSeederPort extends PortType {
     indication(ConnSeederEvents.ConnectFail.class);
     indication(ConnSeederEvents.ConnectSuccess.class);
     request(ConnSeederEvents.Disconnect.class);
+    indication(FSMWrongState.class);
   }
 }

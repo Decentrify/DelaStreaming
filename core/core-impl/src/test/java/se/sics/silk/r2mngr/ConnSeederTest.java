@@ -93,7 +93,7 @@ public class ConnSeederTest {
 
     Future<Msg, Msg> connAcc1 = connAcc();
     Future<Msg, Msg> discAck1 = discAck();
-    TestContext<R2MngrWrapperComp> aux = tc.body()
+    tc = tc.body()
       .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP) //1 
       .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING)) //2
       .answerRequest(Msg.class, networkP, connAcc1) //3
@@ -122,10 +122,10 @@ public class ConnSeederTest {
       .trigger(discAck1, networkP) //24
       .inspect(inactiveSeederFSM(seeder.getId())); //25
       //previous FSM is destroyed and we can create a new one
-    aux = aux
+    tc = tc
       .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP); //26
-    aux = connectAcc(aux, seeder.getId()); //27-30
-    aux
+    tc = connectAcc(tc, seeder.getId()); //27-30
+    tc
       .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), connP, Direction.OUT) //31
       .repeat(1).body().end();
 
@@ -141,10 +141,10 @@ public class ConnSeederTest {
     KAddress seeder = SystemHelper.getAddress(1);
 
     Future<Msg, Msg> connTimeout1 = connTout();
-    TestContext<R2MngrWrapperComp> aux = tc.body()
+    tc = tc.body()
       .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP);
-    aux = connectTout(aux, seeder.getId());
-    aux
+    tc = connectTout(tc, seeder.getId());
+    tc
       .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), connP, Direction.OUT)
       .inspect(inactiveSeederFSM(seeder.getId()))
       .repeat(1).body().end();
@@ -157,10 +157,10 @@ public class ConnSeederTest {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
 
-    TestContext<R2MngrWrapperComp> aux = tc.body()
+    tc = tc.body()
       .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP);
-    aux = connectRej(aux, seeder.getId());
-    aux
+    tc = connectRej(tc, seeder.getId());
+    tc
       .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), connP, Direction.OUT)
       .inspect(inactiveSeederFSM(seeder.getId()))
       .repeat(1).body().end();
@@ -173,18 +173,18 @@ public class ConnSeederTest {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
 
-    TestContext<R2MngrWrapperComp> aux = tc.body()
+    tc = tc.body()
       .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP);
-    aux = connectAcc(aux, seeder.getId());
-    aux = aux
+    tc = connectAcc(tc, seeder.getId());
+    tc = tc
       .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), connP, Direction.OUT);
-    aux = pingSuccess(aux, seeder.getId());
-    aux = pingMissed(aux);
-    aux = pingSuccess(aux, seeder.getId());
+    tc = pingSuccess(tc, seeder.getId());
+    tc = pingMissed(tc);
+    tc = pingSuccess(tc, seeder.getId());
     //missed five ping timeouts
-    aux = pingMissed(aux.repeat(5).body()).end();
+    tc = pingMissed(tc.repeat(5).body()).end();
     //kill ping
-    aux
+    tc
       .trigger(new R2MngrWrapperComp.TriggerTimeout(), auxP)
       .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), connP, Direction.OUT)
       .repeat(1).body().end();
@@ -247,21 +247,15 @@ public class ConnSeederTest {
   }
 
   Predicate<R2MngrWrapperComp> inactiveSeederFSM(Identifier seederId) {
-    return (R2MngrWrapperComp t) -> {
-      return !t.activeSeederFSM(seederId);
-    };
+    return (R2MngrWrapperComp t) ->  !t.activeSeederFSM(seederId);
   }
 
   Predicate<ConnSeederEvents.ConnectSuccess> connSucc(OverlayId torrentId) {
-    return (ConnSeederEvents.ConnectSuccess t) -> {
-      return t.torrentId.equals(torrentId);
-    };
+    return (ConnSeederEvents.ConnectSuccess t) -> t.torrentId.equals(torrentId);
   }
 
   Predicate<ConnSeederEvents.ConnectFail> connFail(OverlayId torrentId) {
-    return (ConnSeederEvents.ConnectFail t) -> {
-      return t.torrentId.equals(torrentId);
-    };
+    return (ConnSeederEvents.ConnectFail t) ->  t.torrentId.equals(torrentId);
   }
 
   public static abstract class BestEffortFuture<C extends KompicsEvent> extends Future<Msg, Msg> {

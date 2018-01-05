@@ -57,7 +57,7 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
-import se.sics.silk.event.FSMWrongState;
+import se.sics.kompics.fsm.event.FSMWrongState;
 import se.sics.silk.r2mngr.event.ConnPingTimeout;
 import se.sics.silk.r2mngr.event.ConnSeederEvents;
 import se.sics.silk.r2mngr.msg.ConnMsgs;

@@ -21,7 +21,6 @@ package se.sics.silk.r2mngr.event;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.silk.r2mngr.ConnLeecher;
 
@@ -57,10 +56,8 @@ public class ConnLeecherEvents {
   }
   
   public static class ConnectReq extends Base {
-    public final KAddress leecherAdr;
-    public ConnectReq(OverlayId torrentId, KAddress leecherAdr) {
-      super(BasicIdentifiers.eventId(), torrentId, leecherAdr.getId());
-      this.leecherAdr = leecherAdr;
+    public ConnectReq(OverlayId torrentId, Identifier leecherId) {
+      super(BasicIdentifiers.eventId(), torrentId, leecherId);
     }
     
     public ConnectAcc accept() {
