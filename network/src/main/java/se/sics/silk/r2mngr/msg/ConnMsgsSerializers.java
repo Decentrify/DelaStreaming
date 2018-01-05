@@ -28,7 +28,7 @@ import se.sics.kompics.util.Identifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class SeederSerializers {
+public class ConnMsgsSerializers {
   public static abstract class Base implements Serializer {
     private final int id;
     
@@ -42,7 +42,7 @@ public class SeederSerializers {
     }
 
     public void toBin(Object o, ByteBuf buf) {
-      ConnSeederMsgs.Base obj = (ConnSeederMsgs.Base)o;
+      ConnMsgs.Base obj = (ConnMsgs.Base)o;
       Serializers.toBinary(obj.msgId, buf);
       Serializers.toBinary(obj.srcId, buf);
       Serializers.toBinary(obj.dstId, buf);
@@ -56,9 +56,9 @@ public class SeederSerializers {
     }
   }
   
-  public static class Connect extends Base {
+  public static class ConnectReq extends Base {
 
-    public Connect(int id) {
+    public ConnectReq(int id) {
       super(id);
     }
 
@@ -70,7 +70,7 @@ public class SeederSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnSeederMsgs.Connect(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      return new ConnMsgs.ConnectReq(aux.getValue0(), aux.getValue1(), aux.getValue2());
     }
   }
 
@@ -88,13 +88,13 @@ public class SeederSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnSeederMsgs.ConnectAcc(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      return new ConnMsgs.ConnectAcc(aux.getValue0(), aux.getValue1(), aux.getValue2());
     }
   }
 
-  public static class ConnectReject extends Base {
+  public static class ConnectRej extends Base {
 
-    public ConnectReject(int id) {
+    public ConnectRej(int id) {
       super(id);
     }
 
@@ -106,7 +106,7 @@ public class SeederSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnSeederMsgs.ConnectRej(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      return new ConnMsgs.ConnectRej(aux.getValue0(), aux.getValue1(), aux.getValue2());
     }
   }
 
@@ -124,7 +124,7 @@ public class SeederSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnSeederMsgs.Disconnect(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      return new ConnMsgs.Disconnect(aux.getValue0(), aux.getValue1(), aux.getValue2());
     }
   }
 
@@ -142,7 +142,7 @@ public class SeederSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnSeederMsgs.DisconnectAck(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      return new ConnMsgs.DisconnectAck(aux.getValue0(), aux.getValue1(), aux.getValue2());
     }
   }
 
@@ -160,7 +160,7 @@ public class SeederSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnSeederMsgs.Ping(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      return new ConnMsgs.Ping(aux.getValue0(), aux.getValue1(), aux.getValue2());
     }
   }
 
@@ -178,7 +178,7 @@ public class SeederSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Triplet<Identifier, Identifier, Identifier> aux = fromBin(buf, hint);
-      return new ConnSeederMsgs.Pong(aux.getValue0(), aux.getValue1(), aux.getValue2());
+      return new ConnMsgs.Pong(aux.getValue0(), aux.getValue1(), aux.getValue2());
     }
   }
 }

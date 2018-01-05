@@ -18,12 +18,17 @@
  */
 package se.sics.silk.r2mngr;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.PatternExtractor;
 import se.sics.kompics.fsm.BaseIdExtractor;
+import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
 import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.fsm.FSMException;
@@ -33,9 +38,24 @@ import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
+import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
+import se.sics.kompics.fsm.handler.FSMPatternEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.kompics.network.Network;
+import se.sics.kompics.network.Transport;
+import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
+import se.sics.kompics.util.PatternExtractorHelper;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.KHeader;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.silk.event.FSMWrongState;
+import se.sics.silk.r2mngr.event.ConnLeecherEvents;
+import se.sics.silk.r2mngr.msg.ConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -47,7 +67,7 @@ public class ConnLeecher {
 
   public static enum States implements FSMStateName {
 
-    OPENING
+    CONNECTED
   }
 
   public interface Event extends FSMEvent {
@@ -58,6 +78,10 @@ public class ConnLeecher {
   public static class IS implements FSMInternalState {
 
     private final FSMIdentifier fsmId;
+    private KAddress leecherAdr;
+    private ConnMsgs.ConnectReq req;
+    public final TorrentMngr torrentMngr = new TorrentMngr();
+    
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -66,6 +90,77 @@ public class ConnLeecher {
     @Override
     public FSMIdentifier getFSMId() {
       return fsmId;
+    }
+
+    public KAddress getLeecherAdr() {
+      return leecherAdr;
+    }
+
+    public void setLeecherAdr(KAddress leecherAdr) {
+      this.leecherAdr = leecherAdr;
+    }
+
+    public ConnMsgs.ConnectReq getReq() {
+      return req;
+    }
+
+    public void setReq(ConnMsgs.ConnectReq req) {
+      this.req = req;
+    }
+  }
+
+  public static class PingTracker {
+
+    private int missedPings = 0;
+
+    public void ping() {
+      missedPings = 0;
+    }
+
+    public void expectedPing() {
+      missedPings++;
+    }
+
+    public boolean healthy() {
+      return missedPings < 5;
+    }
+  }
+  
+  public static class TorrentMngr {
+
+    private static final int MAX_TORRENTS_PER_LEECHER = 10;
+    private final Map<OverlayId, Torrent> torrents = new HashMap<>();
+
+    public ConnLeecherEvents.ConnectInd request(ConnLeecherEvents.ConnectReq req) {
+      if (torrents.size() <= MAX_TORRENTS_PER_LEECHER) {
+        torrents.put(req.torrentId, new Torrent(req));
+        return req.accept();
+      } else {
+        return req.reject();
+      }
+    }
+    
+    public void disconnect(OverlayId torrentId) {
+      torrents.remove(torrentId);
+    }
+    
+    public void disconnectAll(Consumer disc) {
+      for(Torrent t: torrents.values()) {
+        t.disconnect(disc);
+      }
+    }
+  }
+
+  public static class Torrent {
+
+    public final ConnLeecherEvents.ConnectReq req;
+
+    public Torrent(ConnLeecherEvents.ConnectReq req) {
+      this.req = req;
+    }
+    
+    public void disconnect(Consumer disc) {
+      disc.accept(req.disconnect());
     }
   }
 
@@ -80,6 +175,13 @@ public class ConnLeecher {
   public static class ES implements FSMExternalState {
 
     private ComponentProxy proxy;
+    public final R2MngrComp.Ports ports;
+    public final KAddress selfAdr;
+
+    public ES(R2MngrComp.Ports ports, KAddress selfAdr) {
+      this.ports = ports;
+      this.selfAdr = selfAdr;
+    }
 
     @Override
     public void setProxy(ComponentProxy proxy) {
@@ -97,12 +199,32 @@ public class ConnLeecher {
     private static FSMBuilder.StructuralDefinition structuralDef() throws FSMException {
       return FSMBuilder.structuralDef()
         .onStart()
+        .nextStates(States.CONNECTED)
+        .toFinal()
+        .buildTransition()
+        .onState(States.CONNECTED)
+        .toFinal()
         .buildTransition();
     }
 
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       return FSMBuilder.semanticDef()
-        ;
+        .defaultFallback(Handlers.basicDefault(), Handlers.patternDefault())
+        .negativePort(ConnLeecherPort.class)
+        .basicEvent(ConnLeecherEvents.ConnectReq.class)
+        .subscribe(Handlers.locConnReq, States.CONNECTED)
+        .basicEvent(ConnLeecherEvents.Disconnect.class)
+        .subscribe(Handlers.locDisc, States.CONNECTED)
+        .buildEvents()
+        .positivePort(Network.class)
+        .patternEvent(ConnMsgs.ConnectReq.class, BasicContentMsg.class)
+        .subscribeOnStart(Handlers.netConnReq1)
+        .subscribe(Handlers.netConnReq2, States.CONNECTED)
+        .patternEvent(ConnMsgs.Disconnect.class, BasicContentMsg.class)
+        .subscribe(Handlers.netDiscReq, States.CONNECTED)
+        .patternEvent(ConnMsgs.Ping.class, BasicContentMsg.class)
+        .subscribe(Handlers.netPingReq, States.CONNECTED)
+        .buildEvents();
     }
 
     static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
@@ -111,6 +233,18 @@ public class ConnLeecher {
       public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
         if (event instanceof Event) {
           return Optional.of(((Event) event).getConnLeecherFSMId());
+        } else if (event instanceof PatternExtractor) {
+          PatternExtractor aux = (PatternExtractor) event;
+          //try to find a first correct pattern layer
+          Optional<PatternExtractor> aux2 = PatternExtractorHelper.peelToLayer(aux, Event.class);
+          if (aux2.isPresent()) {
+            return Optional.of(((Event) aux2.get()).getConnLeecherFSMId());
+          }
+          //test the wrapped content
+          Object aux3 = PatternExtractorHelper.peelAllLayers(aux);
+          if (aux3 instanceof Event) {
+            return Optional.of(((Event) aux3).getConnLeecherFSMId());
+          }
         }
         return Optional.empty();
       }
@@ -122,7 +256,113 @@ public class ConnLeecher {
       return FSMBuilder.multiFSM(fsmIdFactory, NAME, structuralDef(), semanticDef(), es, isb, oexa, baseIdExtractor);
     }
   }
-  
+
   public static class Handlers {
+
+    static FSMBasicEventHandler basicDefault() {
+      return new FSMBasicEventHandler<ES, IS, Event>() {
+        @Override
+        public FSMStateName handle(FSMStateName state, ES es, IS is, Event req) {
+          if (!(req instanceof FSMWrongState)) {
+            es.getProxy().trigger(new FSMWrongState(req), es.ports.leechers);
+          }
+          if (FSMBasicStateNames.START.equals(state)) {
+            return FSMBasicStateNames.FINAL;
+          } else {
+            return state;
+          }
+        }
+      };
+    }
+
+    static FSMPatternEventHandler patternDefault() {
+      return new FSMPatternEventHandler<ES, IS, KompicsEvent>() {
+        @Override
+        public FSMStateName handle(FSMStateName state, ES es, IS is, KompicsEvent req,
+          PatternExtractor<Class, KompicsEvent> container) {
+          if (FSMBasicStateNames.START.equals(state)) {
+            return FSMBasicStateNames.FINAL;
+          } else {
+            return state;
+          }
+        }
+      };
+    }
+
+    static FSMPatternEventHandler netConnReq1 = new FSMPatternEventHandler<ES, IS, ConnMsgs.ConnectReq>() {
+
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnMsgs.ConnectReq payload,
+        PatternExtractor<Class, ConnMsgs.ConnectReq> container) throws FSMException {
+        BasicContentMsg msg = (BasicContentMsg) container;
+        KAddress leecherAdr = msg.getSource();
+        is.setLeecherAdr(leecherAdr);
+        is.setReq(payload);
+        answerNet(es, is, payload.accept());
+        return States.CONNECTED;
+      }
+    };
+
+    static FSMPatternEventHandler netConnReq2 = new FSMPatternEventHandler<ES, IS, ConnMsgs.ConnectReq>() {
+
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnMsgs.ConnectReq payload,
+        PatternExtractor<Class, ConnMsgs.ConnectReq> container) throws FSMException {
+        answerNet(es, is, payload.accept());
+        return States.CONNECTED;
+      }
+    };
+
+    static FSMPatternEventHandler netDiscReq = new FSMPatternEventHandler<ES, IS, ConnMsgs.Disconnect>() {
+
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnMsgs.Disconnect payload,
+        PatternExtractor<Class, ConnMsgs.Disconnect> container) throws FSMException {
+        answerNet(es, is, payload.ack());
+        is.torrentMngr.disconnectAll(answerConnConsumer(es));
+        return FSMBasicStateNames.FINAL;
+      }
+    };
+    
+    static FSMPatternEventHandler netPingReq = new FSMPatternEventHandler<ES, IS, ConnMsgs.Ping>() {
+
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnMsgs.Ping payload,
+        PatternExtractor<Class, ConnMsgs.Ping> container) throws FSMException {
+        answerNet(es, is, payload.ack());
+        return States.CONNECTED;
+      }
+    };
+
+    static FSMBasicEventHandler locConnReq = new FSMBasicEventHandler<ES, IS, ConnLeecherEvents.ConnectReq>() {
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnLeecherEvents.ConnectReq req) {
+        ConnLeecherEvents.ConnectInd resp = is.torrentMngr.request(req);
+        answerConn(es, resp);
+        return States.CONNECTED;
+      }
+    };
+    
+    static FSMBasicEventHandler locDisc = new FSMBasicEventHandler<ES, IS, ConnLeecherEvents.Disconnect>() {
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnLeecherEvents.Disconnect req) {
+        is.torrentMngr.disconnect(req.torrentId);
+        return States.CONNECTED;
+      }
+    };
+
+    private static void answerConn(ES es, KompicsEvent content) {
+      es.getProxy().trigger(content, es.ports.leechers);
+    }
+
+    private static <C extends KompicsEvent & Identifiable> void answerNet(ES es, IS is, C content) {
+      KHeader header = new BasicHeader(es.selfAdr, is.getLeecherAdr(), Transport.UDP);
+      KContentMsg msg = new BasicContentMsg(header, content);
+      es.getProxy().trigger(msg, es.ports.network);
+    }
+    
+    private static Consumer<KompicsEvent> answerConnConsumer(ES es) {
+      return (KompicsEvent e) -> answerConn(es, e);
+    };
   }
 }

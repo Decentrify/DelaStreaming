@@ -47,7 +47,7 @@ public class R2MngrComp extends ComponentDefinition {
 
   private Ports ports;
   private MultiFSM peerSeeders;
-//  private MultiFSM peerLeechers;
+  private MultiFSM peerLeechers;
   private ConnSeeder.ES peerSeederES;
   private ConnLeecher.ES peerLeecherES;
 
@@ -60,7 +60,7 @@ public class R2MngrComp extends ComponentDefinition {
 
   private void setupFSM(Init init) {
     peerSeederES = new ConnSeeder.ES(ports, init.selfAdr, init.retries, init.retryInterval);
-    peerLeecherES = new ConnLeecher.ES();
+    peerLeecherES = new ConnLeecher.ES(ports, init.selfAdr);
 
     peerSeederES.setProxy(proxy);
     peerLeecherES.setProxy(proxy);
@@ -73,7 +73,7 @@ public class R2MngrComp extends ComponentDefinition {
       };
       FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
       peerSeeders = ConnSeeder.FSM.multifsm(fsmIdFactory, peerSeederES, oexa);
-//      peerLeechers = ConnLeecher.FSM.multifsm(fsmIdFactory, peerLeecherES, oexa);
+      peerLeechers = ConnLeecher.FSM.multifsm(fsmIdFactory, peerLeecherES, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }
@@ -85,7 +85,7 @@ public class R2MngrComp extends ComponentDefinition {
     public void handle(Start event) {
       LOG.info("{}starting", logPrefix);
       peerSeeders.setupHandlers();
-//      peerLeechers.setupHandlers();
+      peerLeechers.setupHandlers();
     }
   };
 
@@ -106,14 +106,16 @@ public class R2MngrComp extends ComponentDefinition {
 
   public static class Ports {
 
-    public final Negative<ConnPort> conn;
     public final Positive<Network> network;
     public final Positive<Timer> timer;
+    public final Negative<ConnSeederPort> seeders;
+    public final Negative<ConnLeecherPort> leechers;
 
     public Ports(ComponentProxy proxy) {
-      conn = proxy.provides(ConnPort.class);
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
+      seeders = proxy.provides(ConnSeederPort.class);
+      leechers = proxy.provides(ConnLeecherPort.class);
     }
   }
 

@@ -65,17 +65,17 @@ public class TorrentMngrFSM {
   private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
     return FSMBuilder.semanticDef()
       .negativePort(TorrentMngrPort.class)
-        .onBasicEvent(StartTorrent.Request.class)
+        .basicEvent(StartTorrent.Request.class)
           .subscribeOnStart(TorrentMngrHandlers.startTorrent)
-        .onBasicEvent(StopTorrent.Request.class)
+        .basicEvent(StopTorrent.Request.class)
           .subscribe(TorrentMngrHandlers.stopTorrent, TorrentMngrStates.PREPARE_COMP, TorrentMngrStates.READY)
         .buildEvents()
       .positivePort(TorrentStatusPort.class)
-        .onBasicEvent(TorrentReady.class)
+        .basicEvent(TorrentReady.class)
           .subscribe(TorrentMngrHandlers.torrentReady, TorrentMngrStates.PREPARE_COMP)
         .buildEvents()
       .negativePort(LoopbackPort.class)
-        .onBasicEvent(StoppedTorrentComp.class)
+        .basicEvent(StoppedTorrentComp.class)
           .subscribe(TorrentMngrHandlers.stoppedTorrentComp, TorrentMngrStates.STOPPING)
         .buildEvents();
   }

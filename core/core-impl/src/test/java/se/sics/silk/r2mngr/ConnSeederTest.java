@@ -44,15 +44,18 @@ import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.r2mngr.event.ConnSeederEvents;
-import se.sics.silk.r2mngr.msg.ConnSeederMsgs;
+import se.sics.silk.r2mngr.msg.ConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnMngrCompTest {
+public class ConnSeederTest {
 
   private TestContext<R2MngrWrapperComp> tc;
-  private Component connMngrComp;
+  private Component r2MngrComp;
+  private Port<ConnSeederPort> connP;
+  private Port<Network> networkP;
+  private Port<R2MngrWrapperComp.Port> auxP;
   private static OverlayIdFactory torrentIdFactory;
 
   @BeforeClass
@@ -63,7 +66,10 @@ public class ConnMngrCompTest {
   @Before
   public void testSetup() {
     tc = getContext();
-    connMngrComp = tc.getComponentUnderTest();
+    r2MngrComp = tc.getComponentUnderTest();
+    connP = r2MngrComp.getPositive(ConnSeederPort.class);
+    networkP = r2MngrComp.getNegative(Network.class);
+    auxP = r2MngrComp.getPositive(R2MngrWrapperComp.Port.class);
   }
 
   private static TestContext<R2MngrWrapperComp> getContext() {
@@ -79,8 +85,6 @@ public class ConnMngrCompTest {
 
   @Test
   public void testTimeline1() {
-    Port<ConnPort> port1 = connMngrComp.getPositive(ConnPort.class);
-    Port<Network> port2 = connMngrComp.getNegative(Network.class);
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     OverlayId torrent2 = torrentIdFactory.id(new BasicBuilders.IntBuilder(2));
     OverlayId torrent3 = torrentIdFactory.id(new BasicBuilders.IntBuilder(3));
@@ -89,64 +93,59 @@ public class ConnMngrCompTest {
 
     Future<Msg, Msg> connAcc1 = connAcc();
     Future<Msg, Msg> discAck1 = discAck();
-    Future<Msg, Msg> connAcc2 = connAcc();
-    tc.body()
-      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1) //1 
+    TestContext<R2MngrWrapperComp> aux = tc.body()
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP) //1 
       .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING)) //2
-      .answerRequest(Msg.class, port2, connAcc1) //3
-      .trigger(new ConnSeederEvents.Connect(torrent2, seeder), port1) //4
-      .trigger(new ConnSeederEvents.Disconnect(torrent2, seeder.getId()), port1) //5
-      .trigger(new ConnSeederEvents.Connect(torrent3, seeder), port1) //6
+      .answerRequest(Msg.class, networkP, connAcc1) //3
+      .trigger(new ConnSeederEvents.Connect(torrent2, seeder), connP) //4
+      .trigger(new ConnSeederEvents.Disconnect(torrent2, seeder.getId()), connP) //5
+      .trigger(new ConnSeederEvents.Connect(torrent3, seeder), connP) //6
       .inspect(connected(seeder.getId(), 0)) //7
-      .trigger(connAcc1, port2) //8
+      .trigger(connAcc1, networkP) //8
       .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED)) //9
       .unordered()
-      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), port1, Direction.OUT) //10
-      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent3), port1, Direction.OUT) //11
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), connP, Direction.OUT) //10
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent3), connP, Direction.OUT) //11
       .end()
       .inspect(connected(seeder.getId(), 2)) //12
-      .trigger(new ConnSeederEvents.Connect(torrent4, seeder), port1) //13
-      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent4), port1, Direction.OUT) //14
-      .trigger(new ConnSeederEvents.Disconnect(torrent4, seeder.getId()), port1) //15
+      .trigger(new ConnSeederEvents.Connect(torrent4, seeder), connP) //13
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent4), connP, Direction.OUT) //14
+      .trigger(new ConnSeederEvents.Disconnect(torrent4, seeder.getId()), connP) //15
       .inspect(connected(seeder.getId(), 2)) //16
-      .trigger(new ConnSeederEvents.Disconnect(torrent1, seeder.getId()), port1) //17
-      .trigger(new ConnSeederEvents.Disconnect(torrent3, seeder.getId()), port1) //18
+      .trigger(new ConnSeederEvents.Disconnect(torrent1, seeder.getId()), connP) //17
+      .trigger(new ConnSeederEvents.Disconnect(torrent3, seeder.getId()), connP) //18
       .inspect(connected(seeder.getId(), 0)) //19
       .inspect(state(seeder.getId(), ConnSeeder.States.DISCONNECTING)) //20
-      .answerRequest(Msg.class, port2, discAck1) //21
-      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1) //22
-      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), port1, Direction.OUT) //23
-      .trigger(discAck1, port2) //24
-      .inspect(inactiveSeederFSM(seeder.getId())) //25
+      .answerRequest(Msg.class, networkP, discAck1) //21
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP) //22
+      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), connP, Direction.OUT) //23
+      .trigger(discAck1, networkP) //24
+      .inspect(inactiveSeederFSM(seeder.getId())); //25
       //previous FSM is destroyed and we can create a new one
-      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1) //26
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING)) //27
-      .answerRequest(Msg.class, port2, connAcc2) //28
-      .trigger(connAcc2, port2) //29
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED)) //30
-      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), port1, Direction.OUT) //31
+    aux = aux
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP); //26
+    aux = connectAcc(aux, seeder.getId()); //27-30
+    aux
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), connP, Direction.OUT) //31
       .repeat(1).body().end();
 
     assertTrue(tc.check());
   }
 
   /*
-   * network timeout on connect
+   * networkP timeout on connect
    */
   @Test
   public void testTimeline2() {
-    Port<ConnPort> port1 = connMngrComp.getPositive(ConnPort.class);
-    Port<Network> port2 = connMngrComp.getNegative(Network.class);
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
 
     Future<Msg, Msg> connTimeout1 = connTout();
-    tc.body()
-      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1)
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING))
-      .answerRequest(Msg.class, port2, connTimeout1)
-      .trigger(connTimeout1, port2)
-      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), port1, Direction.OUT)
+    TestContext<R2MngrWrapperComp> aux = tc.body()
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP);
+    aux = connectTout(aux, seeder.getId());
+    aux
+      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), connP, Direction.OUT)
       .inspect(inactiveSeederFSM(seeder.getId()))
       .repeat(1).body().end();
 
@@ -155,18 +154,14 @@ public class ConnMngrCompTest {
 
   @Test
   public void testConnRej() {
-    Port<ConnPort> port1 = connMngrComp.getPositive(ConnPort.class);
-    Port<Network> port2 = connMngrComp.getNegative(Network.class);
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
 
-    Future<Msg, Msg> connRej1 = connRej();
-    tc.body()
-      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1)
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING))
-      .answerRequest(Msg.class, port2, connRej1)
-      .trigger(connRej1, port2)
-      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), port1, Direction.OUT)
+    TestContext<R2MngrWrapperComp> aux = tc.body()
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP);
+    aux = connectRej(aux, seeder.getId());
+    aux
+      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), connP, Direction.OUT)
       .inspect(inactiveSeederFSM(seeder.getId()))
       .repeat(1).body().end();
 
@@ -175,48 +170,66 @@ public class ConnMngrCompTest {
 
   @Test
   public void testConnPing() {
-    Port<ConnPort> port1 = connMngrComp.getPositive(ConnPort.class);
-    Port<Network> port2 = connMngrComp.getNegative(Network.class);
-    Port<R2MngrWrapperComp.Port> port3 = connMngrComp.getPositive(R2MngrWrapperComp.Port.class);
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
 
-    Future<Msg, Msg> connAcc1 = connAcc();
-    Future<Msg, Msg> connPing1 = connPing();
-    Future<Msg, Msg> connPing2 = connPing();
-    tc.body()
-      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), port1)
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING))
-      .answerRequest(Msg.class, port2, connAcc1)
-      .trigger(connAcc1, port2)
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED))
-      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), port1, Direction.OUT)
-      //ping timeout
-      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
-      .answerRequest(Msg.class, port2, connPing1)
-      .trigger(connPing1, port2)
-      //missed one ping timeout
-      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
-      .answerRequest(Msg.class, port2, connPing())
-      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
-      .answerRequest(Msg.class, port2, connPing2)
-      .trigger(connPing2, port2)
-      //missed five ping timeouts - on the sixth - conn dead
-      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
-      .answerRequest(Msg.class, port2, connPing())
-      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
-      .answerRequest(Msg.class, port2, connPing())
-      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
-      .answerRequest(Msg.class, port2, connPing())
-      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
-      .answerRequest(Msg.class, port2, connPing())
-      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
-      .answerRequest(Msg.class, port2, connPing())
-      .trigger(new R2MngrWrapperComp.TriggerTimeout(), port3)
-      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), port1, Direction.OUT)
+    TestContext<R2MngrWrapperComp> aux = tc.body()
+      .trigger(new ConnSeederEvents.Connect(torrent1, seeder), connP);
+    aux = connectAcc(aux, seeder.getId());
+    aux = aux
+      .expect(ConnSeederEvents.ConnectSuccess.class, connSucc(torrent1), connP, Direction.OUT);
+    aux = pingSuccess(aux, seeder.getId());
+    aux = pingMissed(aux);
+    aux = pingSuccess(aux, seeder.getId());
+    //missed five ping timeouts
+    aux = pingMissed(aux.repeat(5).body()).end();
+    //kill ping
+    aux
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), auxP)
+      .expect(ConnSeederEvents.ConnectFail.class, connFail(torrent1), connP, Direction.OUT)
       .repeat(1).body().end();
 
     assertTrue(tc.check());
+  }
+
+  private TestContext<R2MngrWrapperComp> connectAcc(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+    Future<Msg, Msg> connAcc = connAcc();
+    return tc
+      .inspect(state(seederId, ConnSeeder.States.CONNECTING))
+      .answerRequest(Msg.class, networkP, connAcc)
+      .trigger(connAcc, networkP)
+      .inspect(state(seederId, ConnSeeder.States.CONNECTED));
+  }
+
+  private TestContext<R2MngrWrapperComp> connectRej(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+    Future<Msg, Msg> connRej = connRej();
+    return tc
+      .inspect(state(seederId, ConnSeeder.States.CONNECTING))
+      .answerRequest(Msg.class, networkP, connRej)
+      .trigger(connRej, networkP);
+  }
+
+  private TestContext<R2MngrWrapperComp> connectTout(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+    Future<Msg, Msg> connTout = connTout();
+    return tc
+      .inspect(state(seederId, ConnSeeder.States.CONNECTING))
+      .answerRequest(Msg.class, networkP, connTout)
+      .trigger(connTout, networkP);
+  }
+
+  private TestContext<R2MngrWrapperComp> pingMissed(TestContext<R2MngrWrapperComp> tc) {
+    return tc.trigger(new R2MngrWrapperComp.TriggerTimeout(), auxP)
+      .answerRequest(Msg.class, networkP, connPing());
+  }
+
+  private TestContext<R2MngrWrapperComp> pingSuccess(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+    Future<Msg, Msg> connPing = connPing();
+    return tc
+      .inspect(state(seederId, ConnSeeder.States.CONNECTED))
+      .trigger(new R2MngrWrapperComp.TriggerTimeout(), auxP)
+      .answerRequest(Msg.class, networkP, connPing)
+      .trigger(connPing, networkP)
+      .inspect(state(seederId, ConnSeeder.States.CONNECTED));
   }
 
   Predicate<R2MngrWrapperComp> state(Identifier seederId, FSMStateName expectedState) {
@@ -282,7 +295,7 @@ public class ConnMngrCompTest {
   }
 
   Future<Msg, Msg> connAcc() {
-    return new BestEffortFuture<ConnSeederMsgs.Connect>(ConnSeederMsgs.Connect.class) {
+    return new BestEffortFuture<ConnMsgs.ConnectReq>(ConnMsgs.ConnectReq.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.accept());
@@ -291,7 +304,7 @@ public class ConnMngrCompTest {
   }
 
   Future<Msg, Msg> discAck() {
-    return new BestEffortFuture<ConnSeederMsgs.Disconnect>(ConnSeederMsgs.Disconnect.class) {
+    return new BestEffortFuture<ConnMsgs.Disconnect>(ConnMsgs.Disconnect.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.ack());
@@ -300,7 +313,7 @@ public class ConnMngrCompTest {
   }
 
   Future<Msg, Msg> connTout() {
-    return new BestEffortFuture<ConnSeederMsgs.Connect>(ConnSeederMsgs.Connect.class) {
+    return new BestEffortFuture<ConnMsgs.ConnectReq>(ConnMsgs.ConnectReq.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(wrap.timeout());
@@ -309,7 +322,7 @@ public class ConnMngrCompTest {
   }
 
   Future<Msg, Msg> connRej() {
-    return new BestEffortFuture<ConnSeederMsgs.Connect>(ConnSeederMsgs.Connect.class) {
+    return new BestEffortFuture<ConnMsgs.ConnectReq>(ConnMsgs.ConnectReq.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.reject());
@@ -318,7 +331,7 @@ public class ConnMngrCompTest {
   }
 
   Future<Msg, Msg> connPing() {
-    return new BestEffortFuture<ConnSeederMsgs.Ping>(ConnSeederMsgs.Ping.class) {
+    return new BestEffortFuture<ConnMsgs.Ping>(ConnMsgs.Ping.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.ack());

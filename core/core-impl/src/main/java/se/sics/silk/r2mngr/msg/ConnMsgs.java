@@ -25,7 +25,7 @@ import se.sics.silk.r2mngr.ConnSeeder;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnSeederMsgs {
+public class ConnMsgs {
 
   public static class Base implements ConnSeeder.Event {
 
@@ -50,13 +50,12 @@ public class ConnSeederMsgs {
     }
   }
 
-  public static class Connect extends Base {
-
-    Connect(Identifier msgId, Identifier srcId, Identifier dstId) {
+  public static class ConnectReq extends Base {
+    ConnectReq(Identifier msgId, Identifier srcId, Identifier dstId) {
       super(msgId, srcId, dstId);
     }
 
-    public Connect(Identifier srcId, Identifier dstId) {
+    public ConnectReq(Identifier srcId, Identifier dstId) {
       this(BasicIdentifiers.msgId(), srcId, dstId);
     }
 

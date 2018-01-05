@@ -39,7 +39,7 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public class R2MngrWrapperComp extends ComponentDefinition {
 
-  Negative<ConnPort> conn = provides(ConnPort.class);
+  Negative<ConnSeederPort> conn = provides(ConnSeederPort.class);
   Positive<Network> network = requires(Network.class);
   Negative<Port> timerTrigger = provides(Port.class);
 
@@ -59,7 +59,7 @@ public class R2MngrWrapperComp extends ComponentDefinition {
       R2MngrComp.Init init = new R2MngrComp.Init(selfAdr);
       r2MngrComp = create(R2MngrComp.class, init);
       timerComp = create(R2MngrMockTimerComp.class, Init.NONE);
-      connect(r2MngrComp.getPositive(ConnPort.class), conn, Channel.TWO_WAY);
+      connect(r2MngrComp.getPositive(ConnSeederPort.class), conn, Channel.TWO_WAY);
       connect(r2MngrComp.getNegative(Network.class), network, Channel.TWO_WAY);
       connect(r2MngrComp.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
       trigger(Start.event, r2MngrComp.control());

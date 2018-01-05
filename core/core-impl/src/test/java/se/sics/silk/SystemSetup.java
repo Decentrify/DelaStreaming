@@ -31,6 +31,7 @@ import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.nstream.TorrentIds;
+import se.sics.silk.r2mngr.ConnLeecher;
 import se.sics.silk.r2mngr.ConnSeeder;
 import se.sics.silk.torrentmngr.TorrentMngrFSM;
 
@@ -62,6 +63,7 @@ public class SystemSetup {
     FSMIdentifierFactory fsmIdFactory = FSMIdentifierFactory.DEFAULT;
     fsmIdFactory.registerFSMDefId(TorrentMngrFSM.NAME);
     fsmIdFactory.registerFSMDefId(ConnSeeder.NAME);
+    fsmIdFactory.registerFSMDefId(ConnLeecher.NAME);
     
     Config.Impl config = (Config.Impl) Kompics.getConfig();
     Config.Builder builder = Kompics.getConfig().modify(UUID.randomUUID());
