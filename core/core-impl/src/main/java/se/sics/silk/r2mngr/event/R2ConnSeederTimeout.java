@@ -27,10 +27,10 @@ import se.sics.silk.r2mngr.R2ConnSeeder;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2ConnPingTimeout extends Timeout implements R2ConnSeeder.Event {
+public class R2ConnSeederTimeout extends Timeout implements R2ConnSeeder.Event {
   private final Identifier eventId;
   private final Identifier seederId;
-  public R2ConnPingTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
+  public R2ConnSeederTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
     super(spt);
     this.eventId = BasicIdentifiers.eventId();
     this.seederId = seederId;

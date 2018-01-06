@@ -58,8 +58,8 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
-import se.sics.silk.r2mngr.event.R2ConnPingTimeout;
 import se.sics.silk.r2mngr.event.R2ConnSeederEvents;
+import se.sics.silk.r2mngr.event.R2ConnSeederTimeout;
 import se.sics.silk.r2mngr.msg.R2ConnMsgs;
 
 /**
@@ -163,7 +163,7 @@ public class R2ConnSeeder {
         .subscribe(Handlers.discAck, States.DISCONNECTING)
         .buildEvents()
         .positivePort(Timer.class)
-        .basicEvent(R2ConnPingTimeout.class)
+        .basicEvent(R2ConnSeederTimeout.class)
         .subscribe(Handlers.connPing, States.CONNECTED)
         .buildEvents();
     }
@@ -217,6 +217,7 @@ public class R2ConnSeeder {
     Map<OverlayId, R2ConnSeederEvents.ConnectReq> connected = new HashMap<>();
     private final PingTracker pingTracker = new PingTracker();
     private UUID connPingTimer;
+    public final long pingTimerPeriod = 1000;
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -361,9 +362,9 @@ public class R2ConnSeeder {
       }
     };
 
-    static FSMBasicEventHandler connPing = new FSMBasicEventHandler<ES, IS, R2ConnPingTimeout>() {
+    static FSMBasicEventHandler connPing = new FSMBasicEventHandler<ES, IS, R2ConnSeederTimeout>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnPingTimeout req) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnSeederTimeout req) {
         if (!is.pingTracker.healthy()) {
           connectedFail(es, is);
           return FSMBasicStateNames.FINAL;
@@ -474,8 +475,8 @@ public class R2ConnSeeder {
     }
 
     private static void scheduleConnPing(ES es, IS is) {
-      SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(1000, 1000);
-      R2ConnPingTimeout rt = new R2ConnPingTimeout(spt, is.seederAdr.getId());
+      SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(is.pingTimerPeriod, is.pingTimerPeriod);
+      R2ConnSeederTimeout rt = new R2ConnSeederTimeout(spt, is.seederAdr.getId());
       is.setConnPingTimer(rt.getTimeoutId());
       spt.setTimeoutEvent(rt);
       es.getProxy().trigger(spt, es.ports.timer);

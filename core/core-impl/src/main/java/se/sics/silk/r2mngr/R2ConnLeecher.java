@@ -21,6 +21,7 @@ package se.sics.silk.r2mngr;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,10 @@ import se.sics.kompics.fsm.handler.FSMPatternEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.network.Network;
+import se.sics.kompics.timer.CancelPeriodicTimeout;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.Timeout;
+import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -51,6 +56,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.silk.r2mngr.event.R2ConnLeecherEvents;
+import se.sics.silk.r2mngr.event.R2ConnLeecherTimeout;
 import se.sics.silk.r2mngr.msg.R2ConnMsgs;
 
 /**
@@ -97,7 +103,9 @@ public class R2ConnLeecher {
     private KAddress leecherAdr;
     private R2ConnMsgs.ConnectReq req;
     public final TorrentMngr torrentMngr = new TorrentMngr();
-    
+    public final PingTracker pingTracker = new PingTracker();
+    public long pingTimerPeriod = 1000;
+    private UUID connPingTimer;
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -123,6 +131,22 @@ public class R2ConnLeecher {
     public void setReq(R2ConnMsgs.ConnectReq req) {
       this.req = req;
     }
+
+    public long getPingTimerPeriod() {
+      return pingTimerPeriod;
+    }
+
+    public void setPingTimerPeriod(long pingTimerPeriod) {
+      this.pingTimerPeriod = pingTimerPeriod;
+    }
+
+    public UUID getConnPingTimer() {
+      return connPingTimer;
+    }
+
+    public void setConnPingTimer(UUID connPingTimer) {
+      this.connPingTimer = connPingTimer;
+    }
   }
 
   public static class PingTracker {
@@ -133,7 +157,7 @@ public class R2ConnLeecher {
       missedPings = 0;
     }
 
-    public void expectedPing() {
+    public void timerPing() {
       missedPings++;
     }
 
@@ -164,6 +188,7 @@ public class R2ConnLeecher {
       for(Torrent t: torrents.values()) {
         t.disconnect(disc);
       }
+      torrents.clear();
     }
   }
 
@@ -241,6 +266,10 @@ public class R2ConnLeecher {
         .subscribe(Handlers.netDiscReq, States.CONNECTED)
         .patternEvent(R2ConnMsgs.Ping.class, BasicContentMsg.class)
         .subscribe(Handlers.netPingReq, States.CONNECTED)
+        .buildEvents()
+        .positivePort(Timer.class)
+        .basicEvent(R2ConnLeecherTimeout.class)
+        .subscribe(Handlers.timerPing, States.CONNECTED)
         .buildEvents();
     }
 
@@ -257,7 +286,7 @@ public class R2ConnLeecher {
       return new FSMBasicEventHandler<ES, IS, Event>() {
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, Event req) {
-          if (!(req instanceof FSMWrongState)) {
+          if (!(req instanceof FSMWrongState) && !(req instanceof Timeout)) {
             es.getProxy().trigger(new FSMWrongState(req), es.ports.leechers);
           }
           if (FSMBasicStateNames.START.equals(state)) {
@@ -292,6 +321,7 @@ public class R2ConnLeecher {
         KAddress leecherAdr = msg.getSource();
         is.setLeecherAdr(leecherAdr);
         is.setReq(payload);
+        scheduleConnPing(es, is);
         answerNet(es, container, payload.accept());
         return States.CONNECTED;
       }
@@ -314,6 +344,7 @@ public class R2ConnLeecher {
         PatternExtractor<Class, R2ConnMsgs.Disconnect> container) throws FSMException {
         answerNet(es, container, payload.ack());
         is.torrentMngr.disconnectAll(answerConnConsumer(es));
+        cancelConnPing(es, is);
         return FSMBasicStateNames.FINAL;
       }
     };
@@ -323,7 +354,21 @@ public class R2ConnLeecher {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnMsgs.Ping payload,
         PatternExtractor<Class, R2ConnMsgs.Ping> container) throws FSMException {
+        is.pingTracker.ping();
         answerNet(es, container, payload.ack());
+        return States.CONNECTED;
+      }
+    };
+    
+    static FSMBasicEventHandler timerPing = new FSMBasicEventHandler<ES, IS, R2ConnLeecherTimeout>() {
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnLeecherTimeout req) {
+        if(!is.pingTracker.healthy()) {
+          is.torrentMngr.disconnectAll(answerConnConsumer(es));
+          cancelConnPing(es, is);
+          return FSMBasicStateNames.FINAL;
+        }
+        is.pingTracker.timerPing();
         return States.CONNECTED;
       }
     };
@@ -358,5 +403,21 @@ public class R2ConnLeecher {
     private static Consumer<KompicsEvent> answerConnConsumer(ES es) {
       return (KompicsEvent e) -> answerConn(es, e);
     };
+    
+    private static void scheduleConnPing(ES es, IS is) {
+      SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(is.pingTimerPeriod, is.pingTimerPeriod);
+      R2ConnLeecherTimeout rt = new R2ConnLeecherTimeout(spt, is.leecherAdr.getId());
+      is.setConnPingTimer(rt.getTimeoutId());
+      spt.setTimeoutEvent(rt);
+      es.getProxy().trigger(spt, es.ports.timer);
+    }
+
+    private static void cancelConnPing(ES es, IS is) {
+      if (is.getConnPingTimer() != null) {
+        CancelPeriodicTimeout cpt = new CancelPeriodicTimeout(is.getConnPingTimer());
+        es.getProxy().trigger(cpt, es.ports.timer);
+        is.setConnPingTimer(null);
+      }
+    }
   }
 }
