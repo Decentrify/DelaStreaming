@@ -31,9 +31,9 @@ import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.nstream.TorrentIds;
-import se.sics.silk.r2mngr.R2ConnLeecher;
-import se.sics.silk.r2mngr.R2ConnSeeder;
-import se.sics.silk.r2mngr.R2Torrent;
+import se.sics.silk.r2conn.R2ConnLeecher;
+import se.sics.silk.r2conn.R2ConnSeeder;
+import se.sics.silk.r2torrent.R2Torrent;
 import se.sics.silk.torrentmngr.TorrentMngrFSM;
 
 /**

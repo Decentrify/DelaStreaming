@@ -16,33 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr.event;
-
-import se.sics.kompics.timer.SchedulePeriodicTimeout;
-import se.sics.kompics.timer.Timeout;
-import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.silk.r2mngr.R2ConnSeeder;
+package se.sics.silk.r2torrent.util;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2ConnSeederTimeout extends Timeout implements R2ConnSeeder.Event {
-  private final Identifier eventId;
-  private final Identifier seederId;
-  public R2ConnSeederTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
-    super(spt);
-    this.eventId = BasicIdentifiers.eventId();
-    this.seederId = seederId;
-  }
-
-  @Override
-  public Identifier getId() {
-    return eventId;
-  }
-  
-  @Override
-  public Identifier getConnSeederFSMId() {
-    return seederId;
-  }
+public enum R2TorrentStatus {
+  GET_META, HASH, DOWNLOADING, UPLOADING, ERROR
 }

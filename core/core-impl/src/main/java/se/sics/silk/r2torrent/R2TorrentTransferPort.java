@@ -16,33 +16,28 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr.event;
+package se.sics.silk.r2torrent;
 
-import se.sics.kompics.timer.SchedulePeriodicTimeout;
-import se.sics.kompics.timer.Timeout;
-import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.silk.r2mngr.R2ConnLeecher;
+import se.sics.kompics.PortType;
+import se.sics.kompics.fsm.event.FSMWrongState;
+import se.sics.silk.r2torrent.event.R2TorrentTransferEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2ConnLeecherTimeout extends Timeout implements R2ConnLeecher.Event {
-  private final Identifier eventId;
-  private final Identifier leecherId;
-  public R2ConnLeecherTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
-    super(spt);
-    this.eventId = BasicIdentifiers.eventId();
-    this.leecherId = seederId;
-  }
-
-  @Override
-  public Identifier getId() {
-    return eventId;
-  }
-  
-  @Override
-  public Identifier getConnLeecherFSMId() {
-    return leecherId;
+public class R2TorrentTransferPort extends PortType {
+  {
+    request(R2TorrentTransferEvents.MetaGetReq.class);
+    indication(R2TorrentTransferEvents.MetaGetSucc.class);
+    indication(R2TorrentTransferEvents.MetaGetFail.class);
+    request(R2TorrentTransferEvents.MetaStop.class);
+    indication(R2TorrentTransferEvents.MetaStopAck.class);
+    request(R2TorrentTransferEvents.HashReq.class);
+    indication(R2TorrentTransferEvents.HashSucc.class);
+    indication(R2TorrentTransferEvents.HashFail.class);
+    request(R2TorrentTransferEvents.HashStop.class);
+    indication(R2TorrentTransferEvents.HashStopAck.class);
+    request(FSMWrongState.class);
+    indication(FSMWrongState.class);
   }
 }

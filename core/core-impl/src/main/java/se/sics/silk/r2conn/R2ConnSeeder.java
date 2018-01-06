@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr;
+package se.sics.silk.r2conn;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -58,9 +58,9 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
-import se.sics.silk.r2mngr.event.R2ConnSeederEvents;
-import se.sics.silk.r2mngr.event.R2ConnSeederTimeout;
-import se.sics.silk.r2mngr.msg.R2ConnMsgs;
+import se.sics.silk.r2conn.event.R2ConnSeederEvents;
+import se.sics.silk.r2conn.event.R2ConnSeederTimeout;
+import se.sics.silk.r2conn.msg.R2ConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -77,10 +77,10 @@ public class R2ConnSeeder {
     DISCONNECTING
   }
 
-  public interface Msg extends FSMEvent, Identifiable {
+  public static interface Msg extends FSMEvent, Identifiable {
   }
 
-  public interface Event extends FSMEvent, Identifiable {
+  public static interface Event extends FSMEvent, Identifiable {
 
     public Identifier getConnSeederFSMId();
   }
@@ -178,12 +178,12 @@ public class R2ConnSeeder {
   public static class ES implements FSMExternalState {
 
     private ComponentProxy proxy;
-    public final R2MngrComp.Ports ports;
+    public final R2ConnComp.Ports ports;
     public final KAddress selfAdr;
     private final int retries;
     private final long retryInterval;
 
-    public ES(R2MngrComp.Ports ports, KAddress selfAdr, int retries, long retryInterval) {
+    public ES(R2ConnComp.Ports ports, KAddress selfAdr, int retries, long retryInterval) {
       this.ports = ports;
       this.selfAdr = selfAdr;
       this.retries = retries;

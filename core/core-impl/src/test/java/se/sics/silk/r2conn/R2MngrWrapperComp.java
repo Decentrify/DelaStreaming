@@ -16,15 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr;
+package se.sics.silk.r2conn;
 
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
-import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Negative;
-import se.sics.kompics.PortType;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.fsm.FSMInternalState;
@@ -33,6 +31,7 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.mocktimer.MockTimerComp;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -40,10 +39,9 @@ import se.sics.ktoolbox.util.network.KAddress;
 public class R2MngrWrapperComp extends ComponentDefinition {
 
   Positive<Network> network = requires(Network.class);
-  Negative<Port> timerTrigger = provides(Port.class);
+  Negative<MockTimerComp.Port> timerTrigger = provides(MockTimerComp.Port.class);
   Negative<R2ConnSeederPort> seeders = provides(R2ConnSeederPort.class);
   Negative<R2ConnLeecherPort> leechers = provides(R2ConnLeecherPort.class);
-  Negative<R2TorrentPort> torrent = provides(R2TorrentPort.class);
 
   Component r2MngrComp;
   Component timerComp;
@@ -58,55 +56,46 @@ public class R2MngrWrapperComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      R2MngrComp.Init init = new R2MngrComp.Init(selfAdr);
-      r2MngrComp = create(R2MngrComp.class, init);
-      timerComp = create(R2MngrMockTimerComp.class, Init.NONE);
+      R2ConnComp.Init init = new R2ConnComp.Init(selfAdr);
+      r2MngrComp = create(R2ConnComp.class, init);
+      timerComp = create(MockTimerComp.class, Init.NONE);
       connect(r2MngrComp.getNegative(Network.class), network, Channel.TWO_WAY);
       connect(r2MngrComp.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
       connect(r2MngrComp.getPositive(R2ConnSeederPort.class), seeders, Channel.TWO_WAY);
       connect(r2MngrComp.getPositive(R2ConnLeecherPort.class), leechers, Channel.TWO_WAY);
-      connect(r2MngrComp.getPositive(R2TorrentPort.class), torrent, Channel.TWO_WAY);
       trigger(Start.event, r2MngrComp.control());
       trigger(Start.event, timerComp.control());
     }
   };
   
-  Handler handleTrigger = new Handler<R2MngrWrapperComp.TriggerTimeout>() {
+  Handler handleTrigger = new Handler<MockTimerComp.TriggerTimeout>() {
     @Override
-    public void handle(R2MngrWrapperComp.TriggerTimeout event) {
-      trigger(event, timerComp.getPositive(Port.class));
+    public void handle(MockTimerComp.TriggerTimeout event) {
+      trigger(event, timerComp.getPositive(MockTimerComp.Port.class));
     }
   };
 
   //******************************************TESTING HELPERS***********************************************************
-  FSMInternalState getConnSeederIS(Identifier seederId) {
-    return ((R2MngrComp) r2MngrComp.getComponent()).getConnSeederIS(seederId);
+  public FSMInternalState getConnSeederIS(Identifier seederId) {
+    return ((R2ConnComp) r2MngrComp.getComponent()).getConnSeederIS(seederId);
   }
 
-  FSMStateName getConnSeederState(Identifier seederId) {
-    return ((R2MngrComp) r2MngrComp.getComponent()).getConnSeederState(seederId);
+  public FSMStateName getConnSeederState(Identifier seederId) {
+    return ((R2ConnComp) r2MngrComp.getComponent()).getConnSeederState(seederId);
   }
 
   public boolean activeSeederFSM(Identifier baseId) {
-    return ((R2MngrComp) r2MngrComp.getComponent()).activeSeederFSM(baseId);
+    return ((R2ConnComp) r2MngrComp.getComponent()).activeSeederFSM(baseId);
   }
   
-  FSMStateName getConnLeecherState(Identifier seederId) {
-    return ((R2MngrComp) r2MngrComp.getComponent()).getConnLeecherState(seederId);
+  public FSMStateName getConnLeecherState(Identifier seederId) {
+    return ((R2ConnComp) r2MngrComp.getComponent()).getConnLeecherState(seederId);
   }
   
   public boolean activeLeecherFSM(Identifier baseId) {
-    return ((R2MngrComp) r2MngrComp.getComponent()).activeLeecherFSM(baseId);
+    return ((R2ConnComp) r2MngrComp.getComponent()).activeLeecherFSM(baseId);
   }
   
-  FSMStateName getTorrentState(Identifier seederId) {
-    return ((R2MngrComp) r2MngrComp.getComponent()).getTorrentState(seederId);
-  }
-  
-  public boolean activeTorrentFSM(Identifier baseId) {
-    return ((R2MngrComp) r2MngrComp.getComponent()).activeTorrentFSM(baseId);
-  }
-
   public static class Init extends se.sics.kompics.Init<R2MngrWrapperComp> {
 
     public final KAddress selfAdr;
@@ -114,14 +103,5 @@ public class R2MngrWrapperComp extends ComponentDefinition {
     public Init(KAddress selfAdr) {
       this.selfAdr = selfAdr;
     }
-  }
-  
-  public static class Port extends PortType {
-    {
-      request(TriggerTimeout.class);
-    }
-  }
-  
-  public static class TriggerTimeout implements KompicsEvent {
   }
 }

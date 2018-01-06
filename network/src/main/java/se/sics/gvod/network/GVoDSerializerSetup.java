@@ -41,8 +41,8 @@ import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.transfer.msg.DownloadPieceSerializer;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockDetailsSerializer;
-import se.sics.silk.r2mngr.msg.R2ConnMsgs;
-import se.sics.silk.r2mngr.msg.ConnMsgsSerializers;
+import se.sics.silk.r2conn.msg.R2ConnMsgs;
+import se.sics.silk.r2conn.msg.ConnMsgsSerializers;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr;
+package se.sics.silk.r2conn;
 
 import com.google.common.base.Predicate;
 import org.junit.After;
@@ -43,8 +43,9 @@ import static se.sics.silk.MsgHelper.incNetP;
 import static se.sics.silk.MsgHelper.msg;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
-import se.sics.silk.r2mngr.event.R2ConnLeecherEvents;
-import se.sics.silk.r2mngr.msg.R2ConnMsgs;
+import se.sics.silk.mocktimer.MockTimerComp;
+import se.sics.silk.r2conn.event.R2ConnLeecherEvents;
+import se.sics.silk.r2conn.msg.R2ConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -55,7 +56,7 @@ public class R2ConnLeecherTest {
   private Component r2MngrComp;
   private Port<R2ConnLeecherPort> connP;
   private Port<Network> networkP;
-  private Port<R2MngrWrapperComp.Port> auxP;
+  private Port<MockTimerComp.Port> mockTimer;
   private static OverlayIdFactory torrentIdFactory;
   private KAddress selfAdr;
 
@@ -70,7 +71,7 @@ public class R2ConnLeecherTest {
     r2MngrComp = tc.getComponentUnderTest();
     connP = r2MngrComp.getPositive(R2ConnLeecherPort.class);
     networkP = r2MngrComp.getNegative(Network.class);
-    auxP = r2MngrComp.getPositive(R2MngrWrapperComp.Port.class);
+    mockTimer = r2MngrComp.getPositive(MockTimerComp.Port.class);
   }
 
   private TestContext<R2MngrWrapperComp> getContext() {
@@ -151,7 +152,7 @@ public class R2ConnLeecherTest {
   private TestContext<R2MngrWrapperComp> timerWrongAtStart(TestContext<R2MngrWrapperComp> tc, Identifier leecherId) {
     return tc
       .inspect(inactiveFSM(leecherId))
-      .trigger(timerAux(), auxP)
+      .trigger(timerAux(), mockTimer)
       .inspect(inactiveFSM(leecherId));
   }
 
@@ -162,7 +163,7 @@ public class R2ConnLeecherTest {
   private TestContext<R2MngrWrapperComp> timerOk(TestContext<R2MngrWrapperComp> tc, Identifier leecherId) {
     return tc
       .inspect(state(leecherId, R2ConnLeecher.States.CONNECTED))
-      .trigger(timerAux(), auxP)
+      .trigger(timerAux(), mockTimer)
       .inspect(state(leecherId, R2ConnLeecher.States.CONNECTED));
   }
   
@@ -170,7 +171,7 @@ public class R2ConnLeecherTest {
     OverlayId[] torrents) {
     tc = tc
       .inspect(state(leecherId, R2ConnLeecher.States.CONNECTED))
-      .trigger(timerAux(), auxP);
+      .trigger(timerAux(), mockTimer);
     tc = localUnorderedDisc(tc, leecherId, torrents);
     tc = tc.inspect(inactiveFSM(leecherId));
     return tc;
@@ -273,8 +274,8 @@ public class R2ConnLeecherTest {
     return new R2ConnLeecherEvents.Disconnect(torrent, leecher.getId());
   }
 
-  private R2MngrWrapperComp.TriggerTimeout timerAux() {
-    return new R2MngrWrapperComp.TriggerTimeout();
+  private MockTimerComp.TriggerTimeout timerAux() {
+    return new MockTimerComp.TriggerTimeout();
   }
 
   private TestContext<R2MngrWrapperComp> netWrongMsgAtStart(TestContext<R2MngrWrapperComp> tc, BasicContentMsg msg) {

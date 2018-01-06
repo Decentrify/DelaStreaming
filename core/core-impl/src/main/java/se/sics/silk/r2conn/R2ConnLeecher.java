@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr;
+package se.sics.silk.r2conn;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,9 +55,9 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
-import se.sics.silk.r2mngr.event.R2ConnLeecherEvents;
-import se.sics.silk.r2mngr.event.R2ConnLeecherTimeout;
-import se.sics.silk.r2mngr.msg.R2ConnMsgs;
+import se.sics.silk.r2conn.event.R2ConnLeecherEvents;
+import se.sics.silk.r2conn.event.R2ConnLeecherTimeout;
+import se.sics.silk.r2conn.msg.R2ConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -72,10 +72,10 @@ public class R2ConnLeecher {
     CONNECTED
   }
 
-  public interface Msg extends FSMEvent, Identifiable {
+  public static interface Msg extends FSMEvent, Identifiable {
   }
   
-  public interface Event extends FSMEvent, Identifiable {
+  public static interface Event extends FSMEvent, Identifiable {
 
     public Identifier getConnLeecherFSMId();
   }
@@ -216,10 +216,10 @@ public class R2ConnLeecher {
   public static class ES implements FSMExternalState {
 
     private ComponentProxy proxy;
-    public final R2MngrComp.Ports ports;
+    public final R2ConnComp.Ports ports;
     public final KAddress selfAdr;
 
-    public ES(R2MngrComp.Ports ports, KAddress selfAdr) {
+    public ES(R2ConnComp.Ports ports, KAddress selfAdr) {
       this.ports = ports;
       this.selfAdr = selfAdr;
     }

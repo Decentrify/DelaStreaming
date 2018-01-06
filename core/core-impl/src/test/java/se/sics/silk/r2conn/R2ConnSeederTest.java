@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr;
+package se.sics.silk.r2conn;
 
 import com.google.common.base.Predicate;
 import java.util.Arrays;
@@ -46,8 +46,12 @@ import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import static se.sics.silk.MsgHelper.msg;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
-import se.sics.silk.r2mngr.event.R2ConnSeederEvents;
-import se.sics.silk.r2mngr.msg.R2ConnMsgs;
+import se.sics.silk.mocktimer.MockTimerComp;
+import se.sics.silk.r2conn.R2ConnSeeder;
+import se.sics.silk.r2conn.R2ConnSeederPort;
+import se.sics.silk.r2conn.R2MngrWrapperComp;
+import se.sics.silk.r2conn.event.R2ConnSeederEvents;
+import se.sics.silk.r2conn.msg.R2ConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -58,7 +62,7 @@ public class R2ConnSeederTest {
   private Component r2MngrComp;
   private Port<R2ConnSeederPort> connP;
   private Port<Network> networkP;
-  private Port<R2MngrWrapperComp.Port> auxP;
+  private Port<MockTimerComp.Port> auxP;
   private static OverlayIdFactory torrentIdFactory;
   private KAddress selfAdr;
 
@@ -73,7 +77,7 @@ public class R2ConnSeederTest {
     r2MngrComp = tc.getComponentUnderTest();
     connP = r2MngrComp.getPositive(R2ConnSeederPort.class);
     networkP = r2MngrComp.getNegative(Network.class);
-    auxP = r2MngrComp.getPositive(R2MngrWrapperComp.Port.class);
+    auxP = r2MngrComp.getPositive(MockTimerComp.Port.class);
   }
 
   private TestContext<R2MngrWrapperComp> getContext() {
@@ -522,7 +526,7 @@ public class R2ConnSeederTest {
     return new R2ConnSeederEvents.Disconnect(torrent, seeder.getId());
   }
 
-  private R2MngrWrapperComp.TriggerTimeout timerAux() {
-    return new R2MngrWrapperComp.TriggerTimeout();
+  private MockTimerComp.TriggerTimeout timerAux() {
+    return new MockTimerComp.TriggerTimeout();
   }
 }

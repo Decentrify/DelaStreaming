@@ -16,27 +16,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr;
+package se.sics.silk.r2conn.event;
 
-import se.sics.kompics.PortType;
-import se.sics.kompics.fsm.event.FSMWrongState;
-import se.sics.silk.r2mngr.event.R2TorrentEvents;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.Timeout;
+import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.silk.r2conn.R2ConnSeeder;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2TorrentPort extends PortType {
-  {
-    request(R2TorrentEvents.GetMeta.class);
-    request(R2TorrentEvents.ServeMeta.class);
-    request(R2TorrentEvents.Hashing.class);
-    request(R2TorrentEvents.Download.class);
-    request(R2TorrentEvents.DownloadSlotReq.class);
-    indication(R2TorrentEvents.DownloadSlotResp.class);
-    request(R2TorrentEvents.Upload.class);
-    request(R2TorrentEvents.UploadSlotReq.class);
-    indication(R2TorrentEvents.UploadSlotResp.class);
-    request(R2TorrentEvents.Stop.class);
-    indication(FSMWrongState.class);
+public class R2ConnSeederTimeout extends Timeout implements R2ConnSeeder.Event {
+  private final Identifier eventId;
+  private final Identifier seederId;
+  public R2ConnSeederTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
+    super(spt);
+    this.eventId = BasicIdentifiers.eventId();
+    this.seederId = seederId;
+  }
+
+  @Override
+  public Identifier getId() {
+    return eventId;
+  }
+  
+  @Override
+  public Identifier getConnSeederFSMId() {
+    return seederId;
   }
 }

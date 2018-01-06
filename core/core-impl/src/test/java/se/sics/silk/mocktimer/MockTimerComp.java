@@ -16,11 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr;
+package se.sics.silk.mocktimer;
 
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
+import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Negative;
+import se.sics.kompics.PortType;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
@@ -29,12 +31,12 @@ import se.sics.kompics.timer.Timer;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2MngrMockTimerComp extends ComponentDefinition {
+public class MockTimerComp extends ComponentDefinition {
   Negative<Timer> timer = provides(Timer.class);
-  Negative<R2MngrWrapperComp.Port> timerTrigger = provides(R2MngrWrapperComp.Port.class);
+  Negative<Port> timerTrigger = provides(Port.class);
   Timeout timeoutEvent;
   
-  public R2MngrMockTimerComp() {
+  public MockTimerComp() {
     subscribe(handlePeriodicSchedule, timer);
     subscribe(handleCancelPeriodicSchedule, timer);
     subscribe(handleTrigger, timerTrigger);
@@ -52,10 +54,19 @@ public class R2MngrMockTimerComp extends ComponentDefinition {
     }
   };
 
-  Handler handleTrigger = new Handler<R2MngrWrapperComp.TriggerTimeout>() {
+  Handler handleTrigger = new Handler<TriggerTimeout>() {
     @Override
-    public void handle(R2MngrWrapperComp.TriggerTimeout event) {
+    public void handle(TriggerTimeout event) {
       trigger(timeoutEvent, timer);
     }
   };
+  
+  public static class Port extends PortType {
+    {
+      request(TriggerTimeout.class);
+    }
+  }
+  
+  public static class TriggerTimeout implements KompicsEvent {
+  }
 }

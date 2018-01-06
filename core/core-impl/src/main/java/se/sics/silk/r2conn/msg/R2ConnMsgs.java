@@ -16,12 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr.msg;
+package se.sics.silk.r2conn.msg;
 
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.silk.r2mngr.R2ConnLeecher;
-import se.sics.silk.r2mngr.R2ConnSeeder;
+import se.sics.silk.r2conn.R2ConnLeecher;
+import se.sics.silk.r2conn.R2ConnSeeder;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

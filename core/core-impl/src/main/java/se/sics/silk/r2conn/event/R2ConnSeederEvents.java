@@ -16,14 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2mngr.event;
+package se.sics.silk.r2conn.event;
 
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
-import se.sics.silk.r2mngr.R2ConnSeeder;
+import se.sics.silk.r2conn.R2ConnSeeder;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
