@@ -138,7 +138,7 @@ public class R2ConnSeeder {
 
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       return FSMBuilder.semanticDef()
-        .defaultFallback(R2ConnSeeder.Handlers.basicDefault(), R2ConnSeeder.Handlers.patternDefault())
+        .defaultFallback(Handlers.basicDefault(), Handlers.patternDefault())
         .negativePort(R2ConnSeederPort.class)
         .basicEvent(R2ConnSeederEvents.ConnectReq.class)
         .subscribeOnStart(Handlers.conn0)

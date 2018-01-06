@@ -39,10 +39,11 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public class R2MngrWrapperComp extends ComponentDefinition {
 
-  Negative<R2ConnSeederPort> seeders = provides(R2ConnSeederPort.class);
-  Negative<R2ConnLeecherPort> leechers = provides(R2ConnLeecherPort.class);
   Positive<Network> network = requires(Network.class);
   Negative<Port> timerTrigger = provides(Port.class);
+  Negative<R2ConnSeederPort> seeders = provides(R2ConnSeederPort.class);
+  Negative<R2ConnLeecherPort> leechers = provides(R2ConnLeecherPort.class);
+  Negative<R2TorrentPort> torrent = provides(R2TorrentPort.class);
 
   Component r2MngrComp;
   Component timerComp;
@@ -64,6 +65,7 @@ public class R2MngrWrapperComp extends ComponentDefinition {
       connect(r2MngrComp.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
       connect(r2MngrComp.getPositive(R2ConnSeederPort.class), seeders, Channel.TWO_WAY);
       connect(r2MngrComp.getPositive(R2ConnLeecherPort.class), leechers, Channel.TWO_WAY);
+      connect(r2MngrComp.getPositive(R2TorrentPort.class), torrent, Channel.TWO_WAY);
       trigger(Start.event, r2MngrComp.control());
       trigger(Start.event, timerComp.control());
     }
@@ -95,6 +97,14 @@ public class R2MngrWrapperComp extends ComponentDefinition {
   
   public boolean activeLeecherFSM(Identifier baseId) {
     return ((R2MngrComp) r2MngrComp.getComponent()).activeLeecherFSM(baseId);
+  }
+  
+  FSMStateName getTorrentState(Identifier seederId) {
+    return ((R2MngrComp) r2MngrComp.getComponent()).getTorrentState(seederId);
+  }
+  
+  public boolean activeTorrentFSM(Identifier baseId) {
+    return ((R2MngrComp) r2MngrComp.getComponent()).activeTorrentFSM(baseId);
   }
 
   public static class Init extends se.sics.kompics.Init<R2MngrWrapperComp> {

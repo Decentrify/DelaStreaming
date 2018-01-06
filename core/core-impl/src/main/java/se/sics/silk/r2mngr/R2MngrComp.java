@@ -48,8 +48,10 @@ public class R2MngrComp extends ComponentDefinition {
   private Ports ports;
   private MultiFSM peerSeeders;
   private MultiFSM peerLeechers;
+  private MultiFSM torrents;
   private R2ConnSeeder.ES peerSeederES;
   private R2ConnLeecher.ES peerLeecherES;
+  private R2Torrent.ES torrentES;
 
   public R2MngrComp(Init init) {
     logPrefix = "<" + init.selfAdr.getId() + ">";
@@ -61,9 +63,11 @@ public class R2MngrComp extends ComponentDefinition {
   private void setupFSM(Init init) {
     peerSeederES = new R2ConnSeeder.ES(ports, init.selfAdr, init.retries, init.retryInterval);
     peerLeecherES = new R2ConnLeecher.ES(ports, init.selfAdr);
+    torrentES = new R2Torrent.ES(ports);
 
     peerSeederES.setProxy(proxy);
     peerLeecherES.setProxy(proxy);
+    torrentES.setProxy(proxy);
     try {
       OnFSMExceptionAction oexa = new OnFSMExceptionAction() {
         @Override
@@ -74,6 +78,7 @@ public class R2MngrComp extends ComponentDefinition {
       FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
       peerSeeders = R2ConnSeeder.FSM.multifsm(fsmIdFactory, peerSeederES, oexa);
       peerLeechers = R2ConnLeecher.FSM.multifsm(fsmIdFactory, peerLeecherES, oexa);
+      torrents = R2Torrent.FSM.multifsm(fsmIdFactory, torrentES, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }
@@ -86,6 +91,7 @@ public class R2MngrComp extends ComponentDefinition {
       LOG.info("{}starting", logPrefix);
       peerSeeders.setupHandlers();
       peerLeechers.setupHandlers();
+      torrents.setupHandlers();
     }
   };
 
@@ -110,6 +116,14 @@ public class R2MngrComp extends ComponentDefinition {
   boolean activeLeecherFSM(Identifier baseId) {
     return peerLeechers.activeFSM(baseId);
   }
+  
+  FSMStateName getTorrentState(Identifier baseId) {
+    return torrents.getFSMState(baseId);
+  }
+  
+  boolean activeTorrentFSM(Identifier baseId) {
+    return torrents.activeFSM(baseId);
+  }
   //********************************************************************************************************************
 
   public static class Ports {
@@ -118,12 +132,14 @@ public class R2MngrComp extends ComponentDefinition {
     public final Positive<Timer> timer;
     public final Negative<R2ConnSeederPort> seeders;
     public final Negative<R2ConnLeecherPort> leechers;
+    public final Negative<R2TorrentPort> torrent;
 
     public Ports(ComponentProxy proxy) {
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
       seeders = proxy.provides(R2ConnSeederPort.class);
       leechers = proxy.provides(R2ConnLeecherPort.class);
+      torrent = proxy.provides(R2TorrentPort.class);
     }
   }
 
