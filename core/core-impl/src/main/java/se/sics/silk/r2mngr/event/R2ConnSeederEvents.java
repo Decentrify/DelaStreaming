@@ -23,13 +23,13 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
-import se.sics.silk.r2mngr.ConnSeeder;
+import se.sics.silk.r2mngr.R2ConnSeeder;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnSeederEvents {
-  public static abstract class Base implements ConnSeeder.Event, OverlayEvent {
+public class R2ConnSeederEvents {
+  public static abstract class Base implements R2ConnSeeder.Event, OverlayEvent {
     public final Identifier eventId;
     public final OverlayId torrentId;
     public final Identifier seederId;

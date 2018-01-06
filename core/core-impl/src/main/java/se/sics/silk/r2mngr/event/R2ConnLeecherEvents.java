@@ -22,13 +22,13 @@ import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
-import se.sics.silk.r2mngr.ConnLeecher;
+import se.sics.silk.r2mngr.R2ConnLeecher;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnLeecherEvents {
-  public static abstract class Base implements ConnLeecher.Event, OverlayEvent {
+public class R2ConnLeecherEvents {
+  public static abstract class Base implements R2ConnLeecher.Event, OverlayEvent {
     public final Identifier eventId;
     public final OverlayId torrentId;
     public final Identifier leecherId;

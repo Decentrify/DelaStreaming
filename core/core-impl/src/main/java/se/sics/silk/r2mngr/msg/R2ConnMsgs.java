@@ -20,15 +20,15 @@ package se.sics.silk.r2mngr.msg;
 
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.silk.r2mngr.ConnLeecher;
-import se.sics.silk.r2mngr.ConnSeeder;
+import se.sics.silk.r2mngr.R2ConnLeecher;
+import se.sics.silk.r2mngr.R2ConnSeeder;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnMsgs {
+public class R2ConnMsgs {
 
-  public static abstract class Base implements ConnSeeder.Msg, ConnLeecher.Msg {
+  public static abstract class Base implements R2ConnSeeder.Msg, R2ConnLeecher.Msg {
 
     public final Identifier msgId;
 

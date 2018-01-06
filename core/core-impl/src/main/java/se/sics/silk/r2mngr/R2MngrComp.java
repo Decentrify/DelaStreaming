@@ -48,8 +48,8 @@ public class R2MngrComp extends ComponentDefinition {
   private Ports ports;
   private MultiFSM peerSeeders;
   private MultiFSM peerLeechers;
-  private ConnSeeder.ES peerSeederES;
-  private ConnLeecher.ES peerLeecherES;
+  private R2ConnSeeder.ES peerSeederES;
+  private R2ConnLeecher.ES peerLeecherES;
 
   public R2MngrComp(Init init) {
     logPrefix = "<" + init.selfAdr.getId() + ">";
@@ -59,8 +59,8 @@ public class R2MngrComp extends ComponentDefinition {
   }
 
   private void setupFSM(Init init) {
-    peerSeederES = new ConnSeeder.ES(ports, init.selfAdr, init.retries, init.retryInterval);
-    peerLeecherES = new ConnLeecher.ES(ports, init.selfAdr);
+    peerSeederES = new R2ConnSeeder.ES(ports, init.selfAdr, init.retries, init.retryInterval);
+    peerLeecherES = new R2ConnLeecher.ES(ports, init.selfAdr);
 
     peerSeederES.setProxy(proxy);
     peerLeecherES.setProxy(proxy);
@@ -72,8 +72,8 @@ public class R2MngrComp extends ComponentDefinition {
         }
       };
       FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
-      peerSeeders = ConnSeeder.FSM.multifsm(fsmIdFactory, peerSeederES, oexa);
-      peerLeechers = ConnLeecher.FSM.multifsm(fsmIdFactory, peerLeecherES, oexa);
+      peerSeeders = R2ConnSeeder.FSM.multifsm(fsmIdFactory, peerSeederES, oexa);
+      peerLeechers = R2ConnLeecher.FSM.multifsm(fsmIdFactory, peerLeecherES, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }
@@ -116,14 +116,14 @@ public class R2MngrComp extends ComponentDefinition {
 
     public final Positive<Network> network;
     public final Positive<Timer> timer;
-    public final Negative<ConnSeederPort> seeders;
-    public final Negative<ConnLeecherPort> leechers;
+    public final Negative<R2ConnSeederPort> seeders;
+    public final Negative<R2ConnLeecherPort> leechers;
 
     public Ports(ComponentProxy proxy) {
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
-      seeders = proxy.provides(ConnSeederPort.class);
-      leechers = proxy.provides(ConnLeecherPort.class);
+      seeders = proxy.provides(R2ConnSeederPort.class);
+      leechers = proxy.provides(R2ConnLeecherPort.class);
     }
   }
 

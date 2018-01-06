@@ -46,17 +46,17 @@ import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import static se.sics.silk.MsgHelper.msg;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
-import se.sics.silk.r2mngr.event.ConnSeederEvents;
-import se.sics.silk.r2mngr.msg.ConnMsgs;
+import se.sics.silk.r2mngr.event.R2ConnSeederEvents;
+import se.sics.silk.r2mngr.msg.R2ConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnSeederTest {
+public class R2ConnSeederTest {
 
   private TestContext<R2MngrWrapperComp> tc;
   private Component r2MngrComp;
-  private Port<ConnSeederPort> connP;
+  private Port<R2ConnSeederPort> connP;
   private Port<Network> networkP;
   private Port<R2MngrWrapperComp.Port> auxP;
   private static OverlayIdFactory torrentIdFactory;
@@ -71,7 +71,7 @@ public class ConnSeederTest {
   public void testSetup() {
     tc = getContext();
     r2MngrComp = tc.getComponentUnderTest();
-    connP = r2MngrComp.getPositive(ConnSeederPort.class);
+    connP = r2MngrComp.getPositive(R2ConnSeederPort.class);
     networkP = r2MngrComp.getNegative(Network.class);
     auxP = r2MngrComp.getPositive(R2MngrWrapperComp.Port.class);
   }
@@ -168,7 +168,7 @@ public class ConnSeederTest {
   private TestContext<R2MngrWrapperComp> connectRej(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> connRej = connRejF();
     return tc
-      .inspect(state(seederId, ConnSeeder.States.CONNECTING))
+      .inspect(state(seederId, R2ConnSeeder.States.CONNECTING))
       .answerRequest(Msg.class, networkP, connRej)
       .trigger(connRej, networkP);
   }
@@ -176,7 +176,7 @@ public class ConnSeederTest {
   private TestContext<R2MngrWrapperComp> connectTout(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> connTout = connToutF();
     return tc
-      .inspect(state(seederId, ConnSeeder.States.CONNECTING))
+      .inspect(state(seederId, R2ConnSeeder.States.CONNECTING))
       .answerRequest(Msg.class, networkP, connTout)
       .trigger(connTout, networkP);
   }
@@ -195,7 +195,7 @@ public class ConnSeederTest {
       .trigger(localConnReq(seeder, torrentId), connP);
     tc = netConnSucc(tc, seeder.getId());
     tc = tc
-      .expect(ConnSeederEvents.ConnectSuccess.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT);
+      .expect(R2ConnSeederEvents.ConnectSuccess.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT);
     return tc;
   }
   
@@ -206,7 +206,7 @@ public class ConnSeederTest {
     tc = tc
       .inspect(inactiveFSM(seeder.getId()))
       .trigger(localConnReq(seeder, torrents[0]), connP)
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTING))
+      .inspect(state(seeder.getId(), R2ConnSeeder.States.CONNECTING))
       .answerRequest(Msg.class, networkP, connAcc);
     for(int i = 1; i < torrents.length; i++ ) {
       tc = tc.trigger(localConnReq(seeder, torrents[i]), connP);
@@ -214,7 +214,7 @@ public class ConnSeederTest {
     tc
       .trigger(localDiscP(seeder, torrents[0]), connP)
       .trigger(connAcc, networkP)
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED));
+      .inspect(state(seeder.getId(), R2ConnSeeder.States.CONNECTED));
     OverlayId[] expectedT = Arrays.copyOfRange(torrents, 1, torrents.length);
     tc = localUnnorderedConnSucc(tc, seeder, expectedT);
     tc = tc.inspect(connected(seeder.getId(), torrents.length-1));
@@ -228,7 +228,7 @@ public class ConnSeederTest {
       .trigger(localConnReq(seeder, torrentId), connP);
     tc = connectRej(tc, seeder.getId());
     tc = tc
-      .expect(ConnSeederEvents.ConnectFail.class, connFailP(seeder.getId(), torrentId), connP, Direction.OUT)
+      .expect(R2ConnSeederEvents.ConnectFail.class, connFailP(seeder.getId(), torrentId), connP, Direction.OUT)
       .inspect(inactiveFSM(seeder.getId()));
     return tc;
   }
@@ -240,7 +240,7 @@ public class ConnSeederTest {
       .trigger(localConnReq(seeder, torrentId), connP);
     tc = connectTout(tc, seeder.getId());
     tc = tc
-      .expect(ConnSeederEvents.ConnectFail.class, connFailP(seeder.getId(), torrentId), connP, Direction.OUT)
+      .expect(R2ConnSeederEvents.ConnectFail.class, connFailP(seeder.getId(), torrentId), connP, Direction.OUT)
       .inspect(inactiveFSM(seeder.getId()));
     return tc;
   }
@@ -249,10 +249,10 @@ public class ConnSeederTest {
     KAddress seeder, OverlayId torrentId) {
     Future<Msg, Msg> discAck = discAckF();
     return tc
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED))
+      .inspect(state(seeder.getId(), R2ConnSeeder.States.CONNECTED))
       .trigger(localDiscP(seeder, torrentId), connP)
       .answerRequest(Msg.class, networkP, discAck)
-      .inspect(state(seeder.getId(), ConnSeeder.States.DISCONNECTING))
+      .inspect(state(seeder.getId(), R2ConnSeeder.States.DISCONNECTING))
       .trigger(discAck, networkP)
       .inspect(inactiveFSM(seeder.getId()));
   }
@@ -260,10 +260,10 @@ public class ConnSeederTest {
   private TestContext<R2MngrWrapperComp> localConnSucc(TestContext<R2MngrWrapperComp> tc,
     KAddress seeder, OverlayId torrentId) {
     tc
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED))
+      .inspect(state(seeder.getId(), R2ConnSeeder.States.CONNECTED))
       .trigger(localConnReq(seeder, torrentId), connP)
-      .expect(ConnSeederEvents.ConnectSuccess.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT)
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED));
+      .expect(R2ConnSeederEvents.ConnectSuccess.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT)
+      .inspect(state(seeder.getId(), R2ConnSeeder.States.CONNECTED));
     return tc;
   }
 
@@ -271,7 +271,7 @@ public class ConnSeederTest {
     KAddress seeder, OverlayId[] torrentIds) {
     tc = tc.unordered();
     for(OverlayId torrentId : torrentIds) {
-      tc = tc.expect(ConnSeederEvents.ConnectSuccess.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT);
+      tc = tc.expect(R2ConnSeederEvents.ConnectSuccess.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT);
     }
     tc = tc.end();
     return tc;
@@ -281,7 +281,7 @@ public class ConnSeederTest {
     KAddress seeder, OverlayId torrentId) {
 
     return tc
-      .inspect(state(seeder.getId(), ConnSeeder.States.CONNECTED))
+      .inspect(state(seeder.getId(), R2ConnSeeder.States.CONNECTED))
       .trigger(localDiscP(seeder, torrentId), connP);
   }
   
@@ -297,7 +297,7 @@ public class ConnSeederTest {
     KAddress seeder, OverlayId[] torrentIds) {
     tc = tc.unordered();
     for(OverlayId torrentId : torrentIds) {
-      tc = tc.expect(ConnSeederEvents.ConnectFail.class, connFailP(seeder.getId(), torrentId), connP, Direction.OUT);
+      tc = tc.expect(R2ConnSeederEvents.ConnectFail.class, connFailP(seeder.getId(), torrentId), connP, Direction.OUT);
     }
     tc = tc.end();
     return tc;
@@ -306,17 +306,17 @@ public class ConnSeederTest {
   private TestContext<R2MngrWrapperComp> netConnSucc(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> connAcc = connAccF();
     return tc
-      .inspect(state(seederId, ConnSeeder.States.CONNECTING))
+      .inspect(state(seederId, R2ConnSeeder.States.CONNECTING))
       .answerRequest(Msg.class, networkP, connAcc)
       .trigger(connAcc, networkP)
-      .inspect(state(seederId, ConnSeeder.States.CONNECTED));
+      .inspect(state(seederId, R2ConnSeeder.States.CONNECTED));
   }
   
   
   private TestContext<R2MngrWrapperComp> netDiskAck(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> discAck = discAckF();
     return tc
-      .inspect(state(seederId, ConnSeeder.States.DISCONNECTING))
+      .inspect(state(seederId, R2ConnSeeder.States.DISCONNECTING))
       .answerRequest(Msg.class, networkP, discAck)
       .trigger(discAck, networkP)
       .inspect(inactiveFSM(seederId));
@@ -327,9 +327,9 @@ public class ConnSeederTest {
     Future<Msg, Msg> discAck = discAckF();
     return tc
       .answerRequest(Msg.class, networkP, discAck)
-      .inspect(state(seeder.getId(), ConnSeeder.States.DISCONNECTING))
+      .inspect(state(seeder.getId(), R2ConnSeeder.States.DISCONNECTING))
       .trigger(localConnReq(seeder, torrentId), connP)
-      .expect(ConnSeederEvents.ConnectFail.class, connFailP(seeder.getId(), torrentId), connP, Direction.OUT)
+      .expect(R2ConnSeederEvents.ConnectFail.class, connFailP(seeder.getId(), torrentId), connP, Direction.OUT)
       .trigger(discAck, networkP)
       .inspect(inactiveFSM(seeder.getId()));
   }
@@ -353,11 +353,11 @@ public class ConnSeederTest {
   private TestContext<R2MngrWrapperComp> netPingSuccess(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> connPing = connPingF();
     return tc
-      .inspect(state(seederId, ConnSeeder.States.CONNECTED))
+      .inspect(state(seederId, R2ConnSeeder.States.CONNECTED))
       .trigger(timerAux(), auxP)
       .answerRequest(Msg.class, networkP, connPing)
       .trigger(connPing, networkP)
-      .inspect(state(seederId, ConnSeeder.States.CONNECTED));
+      .inspect(state(seederId, R2ConnSeeder.States.CONNECTED));
   }
 
   private TestContext<R2MngrWrapperComp> timerWrongAtStart(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
@@ -375,7 +375,7 @@ public class ConnSeederTest {
   }
 
   private TestContext<R2MngrWrapperComp> connWrongEventAtStart(TestContext<R2MngrWrapperComp> tc,
-    ConnSeeder.Event event) {
+    R2ConnSeeder.Event event) {
     return tc
       .inspect(inactiveFSM(event.getConnSeederFSMId()))
       .trigger(event, connP)
@@ -414,7 +414,7 @@ public class ConnSeederTest {
   }
 
   Future<Msg, Msg> connAccF() {
-    return new BestEffortFuture<ConnMsgs.ConnectReq>(ConnMsgs.ConnectReq.class) {
+    return new BestEffortFuture<R2ConnMsgs.ConnectReq>(R2ConnMsgs.ConnectReq.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.accept());
@@ -423,7 +423,7 @@ public class ConnSeederTest {
   }
 
   Future<Msg, Msg> discAckF() {
-    return new BestEffortFuture<ConnMsgs.Disconnect>(ConnMsgs.Disconnect.class) {
+    return new BestEffortFuture<R2ConnMsgs.Disconnect>(R2ConnMsgs.Disconnect.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.ack());
@@ -432,7 +432,7 @@ public class ConnSeederTest {
   }
 
   Future<Msg, Msg> connToutF() {
-    return new BestEffortFuture<ConnMsgs.ConnectReq>(ConnMsgs.ConnectReq.class) {
+    return new BestEffortFuture<R2ConnMsgs.ConnectReq>(R2ConnMsgs.ConnectReq.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(wrap.timeout());
@@ -441,7 +441,7 @@ public class ConnSeederTest {
   }
 
   Future<Msg, Msg> connRejF() {
-    return new BestEffortFuture<ConnMsgs.ConnectReq>(ConnMsgs.ConnectReq.class) {
+    return new BestEffortFuture<R2ConnMsgs.ConnectReq>(R2ConnMsgs.ConnectReq.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.reject());
@@ -450,7 +450,7 @@ public class ConnSeederTest {
   }
 
   Future<Msg, Msg> connPingF() {
-    return new BestEffortFuture<ConnMsgs.Ping>(ConnMsgs.Ping.class) {
+    return new BestEffortFuture<R2ConnMsgs.Ping>(R2ConnMsgs.Ping.class) {
       @Override
       public BasicContentMsg get() {
         return msg.answer(content.ack());
@@ -458,14 +458,14 @@ public class ConnSeederTest {
     };
   }
 
-  Predicate<ConnSeederEvents.ConnectSuccess> connSuccP(Identifier seederId, OverlayId torrentId) {
-    return (ConnSeederEvents.ConnectSuccess t) -> {
+  Predicate<R2ConnSeederEvents.ConnectSuccess> connSuccP(Identifier seederId, OverlayId torrentId) {
+    return (R2ConnSeederEvents.ConnectSuccess t) -> {
       return t.seederId.equals(seederId) && t.torrentId.equals(torrentId);
     };
   }
 
-  Predicate<ConnSeederEvents.ConnectFail> connFailP(Identifier seederId, OverlayId torrentId) {
-    return (ConnSeederEvents.ConnectFail t) -> {
+  Predicate<R2ConnSeederEvents.ConnectFail> connFailP(Identifier seederId, OverlayId torrentId) {
+    return (R2ConnSeederEvents.ConnectFail t) -> {
       return t.seederId.equals(seederId) && t.torrentId.equals(torrentId);
     };
   }
@@ -479,7 +479,7 @@ public class ConnSeederTest {
 
   Predicate<R2MngrWrapperComp> connected(Identifier seederId, int nrTorrents) {
     return (R2MngrWrapperComp t) -> {
-      ConnSeeder.IS is = (ConnSeeder.IS) t.getConnSeederIS(seederId);
+      R2ConnSeeder.IS is = (R2ConnSeeder.IS) t.getConnSeederIS(seederId);
       return is.connected.size() == nrTorrents;
     };
   }
@@ -489,37 +489,37 @@ public class ConnSeederTest {
   }
   
   private BestEffortMsg.Timeout netBETimeout() {
-    ConnMsgs.Ping content = new ConnMsgs.Ping();
+    R2ConnMsgs.Ping content = new R2ConnMsgs.Ping();
     BestEffortMsg.Request be = new BestEffortMsg.Request(content, 1, 1);
     return be.timeout();
   }
 
-  private ConnMsgs.ConnectAcc netConnAcc() {
-    ConnMsgs.ConnectReq req = new ConnMsgs.ConnectReq();
+  private R2ConnMsgs.ConnectAcc netConnAcc() {
+    R2ConnMsgs.ConnectReq req = new R2ConnMsgs.ConnectReq();
     return req.accept();
   }
 
-  private ConnMsgs.ConnectRej netConnRej() {
-    ConnMsgs.ConnectReq req = new ConnMsgs.ConnectReq();
+  private R2ConnMsgs.ConnectRej netConnRej() {
+    R2ConnMsgs.ConnectReq req = new R2ConnMsgs.ConnectReq();
     return req.reject();
   }
 
-  private ConnMsgs.Pong netPong() {
-    ConnMsgs.Ping req = new ConnMsgs.Ping();
+  private R2ConnMsgs.Pong netPong() {
+    R2ConnMsgs.Ping req = new R2ConnMsgs.Ping();
     return req.ack();
   }
 
-  private ConnMsgs.DisconnectAck netDiscAck() {
-    ConnMsgs.Disconnect req = new ConnMsgs.Disconnect();
+  private R2ConnMsgs.DisconnectAck netDiscAck() {
+    R2ConnMsgs.Disconnect req = new R2ConnMsgs.Disconnect();
     return req.ack();
   }
 
-  private ConnSeederEvents.ConnectReq localConnReq(KAddress seeder, OverlayId torrent) {
-    return new ConnSeederEvents.ConnectReq(torrent, seeder);
+  private R2ConnSeederEvents.ConnectReq localConnReq(KAddress seeder, OverlayId torrent) {
+    return new R2ConnSeederEvents.ConnectReq(torrent, seeder);
   }
 
-  private ConnSeederEvents.Disconnect localDiscP(KAddress seeder, OverlayId torrent) {
-    return new ConnSeederEvents.Disconnect(torrent, seeder.getId());
+  private R2ConnSeederEvents.Disconnect localDiscP(KAddress seeder, OverlayId torrent) {
+    return new R2ConnSeederEvents.Disconnect(torrent, seeder.getId());
   }
 
   private R2MngrWrapperComp.TriggerTimeout timerAux() {

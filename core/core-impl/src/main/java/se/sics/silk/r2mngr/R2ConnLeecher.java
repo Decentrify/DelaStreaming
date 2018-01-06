@@ -50,16 +50,16 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
-import se.sics.silk.r2mngr.event.ConnLeecherEvents;
-import se.sics.silk.r2mngr.msg.ConnMsgs;
+import se.sics.silk.r2mngr.event.R2ConnLeecherEvents;
+import se.sics.silk.r2mngr.msg.R2ConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnLeecher {
+public class R2ConnLeecher {
 
-  private static final Logger LOG = LoggerFactory.getLogger(ConnLeecher.class);
-  public static final String NAME = "dela-conn-leecher-fsm";
+  private static final Logger LOG = LoggerFactory.getLogger(R2ConnLeecher.class);
+  public static final String NAME = "dela-rs-conn-leecher-fsm";
 
   public static enum States implements FSMStateName {
 
@@ -95,7 +95,7 @@ public class ConnLeecher {
 
     private final FSMIdentifier fsmId;
     private KAddress leecherAdr;
-    private ConnMsgs.ConnectReq req;
+    private R2ConnMsgs.ConnectReq req;
     public final TorrentMngr torrentMngr = new TorrentMngr();
     
 
@@ -116,11 +116,11 @@ public class ConnLeecher {
       this.leecherAdr = leecherAdr;
     }
 
-    public ConnMsgs.ConnectReq getReq() {
+    public R2ConnMsgs.ConnectReq getReq() {
       return req;
     }
 
-    public void setReq(ConnMsgs.ConnectReq req) {
+    public void setReq(R2ConnMsgs.ConnectReq req) {
       this.req = req;
     }
   }
@@ -147,7 +147,7 @@ public class ConnLeecher {
     private static final int MAX_TORRENTS_PER_LEECHER = 10;
     private final Map<OverlayId, Torrent> torrents = new HashMap<>();
 
-    public ConnLeecherEvents.ConnectInd request(ConnLeecherEvents.ConnectReq req) {
+    public R2ConnLeecherEvents.ConnectInd request(R2ConnLeecherEvents.ConnectReq req) {
       if (torrents.size() <= MAX_TORRENTS_PER_LEECHER) {
         torrents.put(req.torrentId, new Torrent(req));
         return req.accept();
@@ -169,9 +169,9 @@ public class ConnLeecher {
 
   public static class Torrent {
 
-    public final ConnLeecherEvents.ConnectReq req;
+    public final R2ConnLeecherEvents.ConnectReq req;
 
-    public Torrent(ConnLeecherEvents.ConnectReq req) {
+    public Torrent(R2ConnLeecherEvents.ConnectReq req) {
       this.req = req;
     }
     
@@ -227,19 +227,19 @@ public class ConnLeecher {
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       return FSMBuilder.semanticDef()
         .defaultFallback(Handlers.basicDefault(), Handlers.patternDefault())
-        .negativePort(ConnLeecherPort.class)
-        .basicEvent(ConnLeecherEvents.ConnectReq.class)
+        .negativePort(R2ConnLeecherPort.class)
+        .basicEvent(R2ConnLeecherEvents.ConnectReq.class)
         .subscribe(Handlers.locConnReq, States.CONNECTED)
-        .basicEvent(ConnLeecherEvents.Disconnect.class)
+        .basicEvent(R2ConnLeecherEvents.Disconnect.class)
         .subscribe(Handlers.locDisc, States.CONNECTED)
         .buildEvents()
         .positivePort(Network.class)
-        .patternEvent(ConnMsgs.ConnectReq.class, BasicContentMsg.class)
+        .patternEvent(R2ConnMsgs.ConnectReq.class, BasicContentMsg.class)
         .subscribeOnStart(Handlers.netConnReq1)
         .subscribe(Handlers.netConnReq2, States.CONNECTED)
-        .patternEvent(ConnMsgs.Disconnect.class, BasicContentMsg.class)
+        .patternEvent(R2ConnMsgs.Disconnect.class, BasicContentMsg.class)
         .subscribe(Handlers.netDiscReq, States.CONNECTED)
-        .patternEvent(ConnMsgs.Ping.class, BasicContentMsg.class)
+        .patternEvent(R2ConnMsgs.Ping.class, BasicContentMsg.class)
         .subscribe(Handlers.netPingReq, States.CONNECTED)
         .buildEvents();
     }
@@ -283,11 +283,11 @@ public class ConnLeecher {
       };
     }
 
-    static FSMPatternEventHandler netConnReq1 = new FSMPatternEventHandler<ES, IS, ConnMsgs.ConnectReq>() {
+    static FSMPatternEventHandler netConnReq1 = new FSMPatternEventHandler<ES, IS, R2ConnMsgs.ConnectReq>() {
 
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnMsgs.ConnectReq payload,
-        PatternExtractor<Class, ConnMsgs.ConnectReq> container) throws FSMException {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnMsgs.ConnectReq payload,
+        PatternExtractor<Class, R2ConnMsgs.ConnectReq> container) throws FSMException {
         BasicContentMsg msg = (BasicContentMsg) container;
         KAddress leecherAdr = msg.getSource();
         is.setLeecherAdr(leecherAdr);
@@ -297,49 +297,49 @@ public class ConnLeecher {
       }
     };
 
-    static FSMPatternEventHandler netConnReq2 = new FSMPatternEventHandler<ES, IS, ConnMsgs.ConnectReq>() {
+    static FSMPatternEventHandler netConnReq2 = new FSMPatternEventHandler<ES, IS, R2ConnMsgs.ConnectReq>() {
 
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnMsgs.ConnectReq payload,
-        PatternExtractor<Class, ConnMsgs.ConnectReq> container) throws FSMException {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnMsgs.ConnectReq payload,
+        PatternExtractor<Class, R2ConnMsgs.ConnectReq> container) throws FSMException {
         answerNet(es, container, payload.accept());
         return States.CONNECTED;
       }
     };
 
-    static FSMPatternEventHandler netDiscReq = new FSMPatternEventHandler<ES, IS, ConnMsgs.Disconnect>() {
+    static FSMPatternEventHandler netDiscReq = new FSMPatternEventHandler<ES, IS, R2ConnMsgs.Disconnect>() {
 
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnMsgs.Disconnect payload,
-        PatternExtractor<Class, ConnMsgs.Disconnect> container) throws FSMException {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnMsgs.Disconnect payload,
+        PatternExtractor<Class, R2ConnMsgs.Disconnect> container) throws FSMException {
         answerNet(es, container, payload.ack());
         is.torrentMngr.disconnectAll(answerConnConsumer(es));
         return FSMBasicStateNames.FINAL;
       }
     };
     
-    static FSMPatternEventHandler netPingReq = new FSMPatternEventHandler<ES, IS, ConnMsgs.Ping>() {
+    static FSMPatternEventHandler netPingReq = new FSMPatternEventHandler<ES, IS, R2ConnMsgs.Ping>() {
 
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnMsgs.Ping payload,
-        PatternExtractor<Class, ConnMsgs.Ping> container) throws FSMException {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnMsgs.Ping payload,
+        PatternExtractor<Class, R2ConnMsgs.Ping> container) throws FSMException {
         answerNet(es, container, payload.ack());
         return States.CONNECTED;
       }
     };
 
-    static FSMBasicEventHandler locConnReq = new FSMBasicEventHandler<ES, IS, ConnLeecherEvents.ConnectReq>() {
+    static FSMBasicEventHandler locConnReq = new FSMBasicEventHandler<ES, IS, R2ConnLeecherEvents.ConnectReq>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnLeecherEvents.ConnectReq req) {
-        ConnLeecherEvents.ConnectInd resp = is.torrentMngr.request(req);
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnLeecherEvents.ConnectReq req) {
+        R2ConnLeecherEvents.ConnectInd resp = is.torrentMngr.request(req);
         answerConn(es, resp);
         return States.CONNECTED;
       }
     };
     
-    static FSMBasicEventHandler locDisc = new FSMBasicEventHandler<ES, IS, ConnLeecherEvents.Disconnect>() {
+    static FSMBasicEventHandler locDisc = new FSMBasicEventHandler<ES, IS, R2ConnLeecherEvents.Disconnect>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, ConnLeecherEvents.Disconnect req) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnLeecherEvents.Disconnect req) {
         is.torrentMngr.disconnect(req.torrentId);
         return States.CONNECTED;
       }

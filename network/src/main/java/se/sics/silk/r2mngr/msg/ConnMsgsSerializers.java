@@ -41,7 +41,7 @@ public class ConnMsgsSerializers {
     }
 
     public void toBin(Object o, ByteBuf buf) {
-      ConnMsgs.Base obj = (ConnMsgs.Base)o;
+      R2ConnMsgs.Base obj = (R2ConnMsgs.Base)o;
       Serializers.toBinary(obj.msgId, buf);
     }
 
@@ -65,7 +65,7 @@ public class ConnMsgsSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier aux = fromBin(buf, hint);
-      return new ConnMsgs.ConnectReq(aux);
+      return new R2ConnMsgs.ConnectReq(aux);
     }
   }
 
@@ -83,7 +83,7 @@ public class ConnMsgsSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier aux = fromBin(buf, hint);
-      return new ConnMsgs.ConnectAcc(aux);
+      return new R2ConnMsgs.ConnectAcc(aux);
     }
   }
 
@@ -101,7 +101,7 @@ public class ConnMsgsSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier aux = fromBin(buf, hint);
-      return new ConnMsgs.ConnectRej(aux);
+      return new R2ConnMsgs.ConnectRej(aux);
     }
   }
 
@@ -119,7 +119,7 @@ public class ConnMsgsSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier aux = fromBin(buf, hint);
-      return new ConnMsgs.Disconnect(aux);
+      return new R2ConnMsgs.Disconnect(aux);
     }
   }
 
@@ -137,7 +137,7 @@ public class ConnMsgsSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier aux = fromBin(buf, hint);
-      return new ConnMsgs.DisconnectAck(aux);
+      return new R2ConnMsgs.DisconnectAck(aux);
     }
   }
 
@@ -155,7 +155,7 @@ public class ConnMsgsSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier aux = fromBin(buf, hint);
-      return new ConnMsgs.Ping(aux);
+      return new R2ConnMsgs.Ping(aux);
     }
   }
 
@@ -173,7 +173,7 @@ public class ConnMsgsSerializers {
     @Override
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier aux = fromBin(buf, hint);
-      return new ConnMsgs.Pong(aux);
+      return new R2ConnMsgs.Pong(aux);
     }
   }
 }

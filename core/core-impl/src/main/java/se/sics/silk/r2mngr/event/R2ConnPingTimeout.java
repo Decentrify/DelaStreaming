@@ -22,15 +22,15 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.silk.r2mngr.ConnSeeder;
+import se.sics.silk.r2mngr.R2ConnSeeder;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnPingTimeout extends Timeout implements ConnSeeder.Event {
+public class R2ConnPingTimeout extends Timeout implements R2ConnSeeder.Event {
   private final Identifier eventId;
   private final Identifier seederId;
-  public ConnPingTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
+  public R2ConnPingTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
     super(spt);
     this.eventId = BasicIdentifiers.eventId();
     this.seederId = seederId;

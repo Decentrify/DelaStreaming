@@ -39,8 +39,8 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public class R2MngrWrapperComp extends ComponentDefinition {
 
-  Negative<ConnSeederPort> seeders = provides(ConnSeederPort.class);
-  Negative<ConnLeecherPort> leechers = provides(ConnLeecherPort.class);
+  Negative<R2ConnSeederPort> seeders = provides(R2ConnSeederPort.class);
+  Negative<R2ConnLeecherPort> leechers = provides(R2ConnLeecherPort.class);
   Positive<Network> network = requires(Network.class);
   Negative<Port> timerTrigger = provides(Port.class);
 
@@ -62,8 +62,8 @@ public class R2MngrWrapperComp extends ComponentDefinition {
       timerComp = create(R2MngrMockTimerComp.class, Init.NONE);
       connect(r2MngrComp.getNegative(Network.class), network, Channel.TWO_WAY);
       connect(r2MngrComp.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
-      connect(r2MngrComp.getPositive(ConnSeederPort.class), seeders, Channel.TWO_WAY);
-      connect(r2MngrComp.getPositive(ConnLeecherPort.class), leechers, Channel.TWO_WAY);
+      connect(r2MngrComp.getPositive(R2ConnSeederPort.class), seeders, Channel.TWO_WAY);
+      connect(r2MngrComp.getPositive(R2ConnLeecherPort.class), leechers, Channel.TWO_WAY);
       trigger(Start.event, r2MngrComp.control());
       trigger(Start.event, timerComp.control());
     }

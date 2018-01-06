@@ -20,18 +20,17 @@ package se.sics.silk.r2mngr;
 
 import se.sics.kompics.PortType;
 import se.sics.kompics.fsm.event.FSMWrongState;
-import se.sics.silk.r2mngr.event.ConnLeecherEvents;
+import se.sics.silk.r2mngr.event.R2ConnSeederEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ConnLeecherPort extends PortType {
+public class R2ConnSeederPort extends PortType {
   {
-    request(ConnLeecherEvents.ConnectReq.class);
-    indication(ConnLeecherEvents.ConnectAcc.class);
-    indication(ConnLeecherEvents.ConnectRej.class);
-    request(ConnLeecherEvents.Disconnect.class);
-    indication(ConnLeecherEvents.Disconnect.class);
+    request(R2ConnSeederEvents.ConnectReq.class);
+    indication(R2ConnSeederEvents.ConnectFail.class);
+    indication(R2ConnSeederEvents.ConnectSuccess.class);
+    request(R2ConnSeederEvents.Disconnect.class);
     indication(FSMWrongState.class);
   }
 }
