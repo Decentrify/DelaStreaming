@@ -36,7 +36,7 @@ import se.sics.silk.mocktimer.MockTimerComp;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2MngrWrapperComp extends ComponentDefinition {
+public class R2ConnWrapperComp extends ComponentDefinition {
 
   Positive<Network> network = requires(Network.class);
   Negative<MockTimerComp.Port> timerTrigger = provides(MockTimerComp.Port.class);
@@ -47,7 +47,7 @@ public class R2MngrWrapperComp extends ComponentDefinition {
   Component timerComp;
   KAddress selfAdr;
 
-  public R2MngrWrapperComp(Init init) {
+  public R2ConnWrapperComp(Init init) {
     this.selfAdr = init.selfAdr;
     subscribe(handleStart, control);
     subscribe(handleTrigger, timerTrigger);
@@ -96,7 +96,7 @@ public class R2MngrWrapperComp extends ComponentDefinition {
     return ((R2ConnComp) r2MngrComp.getComponent()).activeLeecherFSM(baseId);
   }
   
-  public static class Init extends se.sics.kompics.Init<R2MngrWrapperComp> {
+  public static class Init extends se.sics.kompics.Init<R2ConnWrapperComp> {
 
     public final KAddress selfAdr;
 

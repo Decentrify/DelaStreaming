@@ -16,27 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent;
+package se.sics.silk.r2mngr;
 
-import se.sics.kompics.PortType;
-import se.sics.kompics.fsm.event.FSMWrongState;
-import se.sics.silk.r2torrent.event.R2TorrentCtrlEvents;
+import se.sics.kompics.KompicsEvent;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2TorrentCtrlPort extends PortType {
-  {
-    request(R2TorrentCtrlEvents.MetaGetReq.class);
-    indication(R2TorrentCtrlEvents.MetaGetSucc.class);
-    indication(R2TorrentCtrlEvents.MetaGetFail.class);
-    request(R2TorrentCtrlEvents.Download.class);
-    request(R2TorrentCtrlEvents.Upload.class);
-    request(R2TorrentCtrlEvents.TorrentBaseInfoReq.class);
-    indication(R2TorrentCtrlEvents.TorrentBaseInfo.class);
-    request(R2TorrentCtrlEvents.Stop.class);
-    indication(R2TorrentCtrlEvents.StopAck.class);
-    request(FSMWrongState.class);
-    indication(FSMWrongState.class);
+public class MockTorrentCtrlEvent implements KompicsEvent {
+  public final KAddress adr;
+  public final KompicsEvent event;
+  
+  public MockTorrentCtrlEvent(KAddress adr, KompicsEvent event) {
+    this.adr = adr;
+    this.event = event;
   }
 }

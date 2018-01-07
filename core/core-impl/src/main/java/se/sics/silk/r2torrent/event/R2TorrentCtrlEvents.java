@@ -80,9 +80,9 @@ public class R2TorrentCtrlEvents {
     }
   }
 
-  public static class DataStorage extends Base {
+  public static class Download extends Base {
 
-    public DataStorage(OverlayId torrentId) {
+    public Download(OverlayId torrentId) {
       super(BasicIdentifiers.eventId(), torrentId);
     }
   }

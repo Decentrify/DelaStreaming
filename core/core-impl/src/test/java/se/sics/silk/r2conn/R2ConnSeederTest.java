@@ -48,6 +48,7 @@ import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.mocktimer.MockTimerComp;
 import se.sics.silk.r2conn.event.R2ConnSeederEvents;
+import se.sics.silk.r2conn.event.R2ConnSeederTimeout;
 import se.sics.silk.r2conn.msg.R2ConnMsgs;
 
 /**
@@ -55,7 +56,7 @@ import se.sics.silk.r2conn.msg.R2ConnMsgs;
  */
 public class R2ConnSeederTest {
 
-  private TestContext<R2MngrWrapperComp> tc;
+  private TestContext<R2ConnWrapperComp> tc;
   private Component r2MngrComp;
   private Port<R2ConnSeederPort> connP;
   private Port<Network> networkP;
@@ -77,10 +78,10 @@ public class R2ConnSeederTest {
     auxP = r2MngrComp.getPositive(MockTimerComp.Port.class);
   }
 
-  private TestContext<R2MngrWrapperComp> getContext() {
+  private TestContext<R2ConnWrapperComp> getContext() {
     selfAdr = SystemHelper.getAddress(0);
-    R2MngrWrapperComp.Init init = new R2MngrWrapperComp.Init(selfAdr);
-    TestContext<R2MngrWrapperComp> context = TestContext.newInstance(R2MngrWrapperComp.class, init);
+    R2ConnWrapperComp.Init init = new R2ConnWrapperComp.Init(selfAdr);
+    TestContext<R2ConnWrapperComp> context = TestContext.newInstance(R2ConnWrapperComp.class, init);
     return context;
   }
 
@@ -166,7 +167,7 @@ public class R2ConnSeederTest {
     assertTrue(tc.check());
   }
 
-  private TestContext<R2MngrWrapperComp> connectRej(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+  private TestContext<R2ConnWrapperComp> connectRej(TestContext<R2ConnWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> connRej = connRejF();
     return tc
       .inspect(state(seederId, R2ConnSeeder.States.CONNECTING))
@@ -174,7 +175,7 @@ public class R2ConnSeederTest {
       .trigger(connRej, networkP);
   }
 
-  private TestContext<R2MngrWrapperComp> connectTout(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+  private TestContext<R2ConnWrapperComp> connectTout(TestContext<R2ConnWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> connTout = connToutF();
     return tc
       .inspect(state(seederId, R2ConnSeeder.States.CONNECTING))
@@ -182,14 +183,14 @@ public class R2ConnSeederTest {
       .trigger(connTout, networkP);
   }
 
-  private TestContext<R2MngrWrapperComp> prepareAuxTimer(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> prepareAuxTimer(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId torrentId) {
     tc = compConnSucc(tc, seeder, torrentId); //required to setup the timer
     tc = compDiscSucc(tc, seeder, torrentId); //destroying the created fsm - the aux component maintains the timer to emulate a late timeout
     return tc;
   }
 
-  private TestContext<R2MngrWrapperComp> compConnSucc(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> compConnSucc(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId torrentId) {
     tc = tc
       .inspect(inactiveFSM(seeder.getId()))
@@ -200,7 +201,7 @@ public class R2ConnSeederTest {
     return tc;
   }
   
-  private TestContext<R2MngrWrapperComp> compConnSuccAux1(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> compConnSuccAux1(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId[] torrents) {
     assertTrue(torrents.length > 0);
     Future<Msg, Msg> connAcc = connAccF();
@@ -222,7 +223,7 @@ public class R2ConnSeederTest {
     return tc;
   }
   
-  private TestContext<R2MngrWrapperComp> compConnFail(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> compConnFail(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId torrentId) {
     tc = tc
       .inspect(inactiveFSM(seeder.getId()))
@@ -234,7 +235,7 @@ public class R2ConnSeederTest {
     return tc;
   }
   
-  private TestContext<R2MngrWrapperComp> compConnTimeout(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> compConnTimeout(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId torrentId) {
     tc = tc
       .inspect(inactiveFSM(seeder.getId()))
@@ -246,7 +247,7 @@ public class R2ConnSeederTest {
     return tc;
   }
   
-  private TestContext<R2MngrWrapperComp> compDiscSucc(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> compDiscSucc(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId torrentId) {
     Future<Msg, Msg> discAck = discAckF();
     return tc
@@ -258,7 +259,7 @@ public class R2ConnSeederTest {
       .inspect(inactiveFSM(seeder.getId()));
   }
   
-  private TestContext<R2MngrWrapperComp> localConnSucc(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> localConnSucc(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId torrentId) {
     tc
       .inspect(state(seeder.getId(), R2ConnSeeder.States.CONNECTED))
@@ -268,7 +269,7 @@ public class R2ConnSeederTest {
     return tc;
   }
 
-  private TestContext<R2MngrWrapperComp> localUnnorderedConnSucc(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> localUnnorderedConnSucc(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId[] torrentIds) {
     tc = tc.unordered();
     for(OverlayId torrentId : torrentIds) {
@@ -278,7 +279,7 @@ public class R2ConnSeederTest {
     return tc;
   }
   
-  private TestContext<R2MngrWrapperComp> localDisc(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> localDisc(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId torrentId) {
 
     return tc
@@ -286,7 +287,7 @@ public class R2ConnSeederTest {
       .trigger(localDiscP(seeder, torrentId), connP);
   }
   
-  private TestContext<R2MngrWrapperComp> localDisc(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> localDisc(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId[] torrentIds) {
     for(OverlayId torrentId : torrentIds) {
       tc = localDisc(tc, seeder, torrentId);
@@ -294,7 +295,7 @@ public class R2ConnSeederTest {
     return tc;
   }
   
-  private TestContext<R2MngrWrapperComp> localUnnorderedDisc(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> localUnnorderedDisc(TestContext<R2ConnWrapperComp> tc,
     KAddress seeder, OverlayId[] torrentIds) {
     tc = tc.unordered();
     for(OverlayId torrentId : torrentIds) {
@@ -304,7 +305,7 @@ public class R2ConnSeederTest {
     return tc;
   }
 
-  private TestContext<R2MngrWrapperComp> netConnSucc(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+  private TestContext<R2ConnWrapperComp> netConnSucc(TestContext<R2ConnWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> connAcc = connAccF();
     return tc
       .inspect(state(seederId, R2ConnSeeder.States.CONNECTING))
@@ -314,7 +315,7 @@ public class R2ConnSeederTest {
   }
   
   
-  private TestContext<R2MngrWrapperComp> netDiskAck(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+  private TestContext<R2ConnWrapperComp> netDiskAck(TestContext<R2ConnWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> discAck = discAckF();
     return tc
       .inspect(state(seederId, R2ConnSeeder.States.DISCONNECTING))
@@ -323,7 +324,7 @@ public class R2ConnSeederTest {
       .inspect(inactiveFSM(seederId));
   }
   
-  private TestContext<R2MngrWrapperComp> netDiskAckAux1(TestContext<R2MngrWrapperComp> tc, 
+  private TestContext<R2ConnWrapperComp> netDiskAckAux1(TestContext<R2ConnWrapperComp> tc, 
     KAddress seeder, OverlayId torrentId) {
     Future<Msg, Msg> discAck = discAckF();
     return tc
@@ -335,23 +336,23 @@ public class R2ConnSeederTest {
       .inspect(inactiveFSM(seeder.getId()));
   }
   
-  private TestContext<R2MngrWrapperComp> netPingMissed(TestContext<R2MngrWrapperComp> tc, int missedPings) {
+  private TestContext<R2ConnWrapperComp> netPingMissed(TestContext<R2ConnWrapperComp> tc, int missedPings) {
     return netPingMissed(tc.repeat(missedPings).body()).end();
   }
 
-  private TestContext<R2MngrWrapperComp> netPingMissed(TestContext<R2MngrWrapperComp> tc) {
+  private TestContext<R2ConnWrapperComp> netPingMissed(TestContext<R2ConnWrapperComp> tc) {
     return tc.trigger(timerAux(), auxP)
       .answerRequest(Msg.class, networkP, connPingF());
   }
 
-  private TestContext<R2MngrWrapperComp> netPingDisc(TestContext<R2MngrWrapperComp> tc, 
+  private TestContext<R2ConnWrapperComp> netPingDisc(TestContext<R2ConnWrapperComp> tc, 
     KAddress seeder, OverlayId[] torrentIds) {
     tc = tc.trigger(timerAux(), auxP);
     tc = localUnnorderedDisc(tc, seeder, torrentIds);
     return tc;
   }
 
-  private TestContext<R2MngrWrapperComp> netPingSuccess(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+  private TestContext<R2ConnWrapperComp> netPingSuccess(TestContext<R2ConnWrapperComp> tc, Identifier seederId) {
     Future<Msg, Msg> connPing = connPingF();
     return tc
       .inspect(state(seederId, R2ConnSeeder.States.CONNECTED))
@@ -361,21 +362,21 @@ public class R2ConnSeederTest {
       .inspect(state(seederId, R2ConnSeeder.States.CONNECTED));
   }
 
-  private TestContext<R2MngrWrapperComp> timerWrongAtStart(TestContext<R2MngrWrapperComp> tc, Identifier seederId) {
+  private TestContext<R2ConnWrapperComp> timerWrongAtStart(TestContext<R2ConnWrapperComp> tc, Identifier seederId) {
     return tc
       .inspect(inactiveFSM(seederId))
       .trigger(timerAux(), auxP)
       .inspect(inactiveFSM(seederId));
   }
 
-  private TestContext<R2MngrWrapperComp> netWrongMsgAtStart(TestContext<R2MngrWrapperComp> tc, BasicContentMsg msg) {
+  private TestContext<R2ConnWrapperComp> netWrongMsgAtStart(TestContext<R2ConnWrapperComp> tc, BasicContentMsg msg) {
     return tc
       .inspect(inactiveFSM(msg.getSource().getId()))
       .trigger(msg, networkP)
       .inspect(inactiveFSM(msg.getSource().getId()));
   }
 
-  private TestContext<R2MngrWrapperComp> connWrongEventAtStart(TestContext<R2MngrWrapperComp> tc,
+  private TestContext<R2ConnWrapperComp> connWrongEventAtStart(TestContext<R2ConnWrapperComp> tc,
     R2ConnSeeder.Event event) {
     return tc
       .inspect(inactiveFSM(event.getConnSeederFSMId()))
@@ -471,22 +472,22 @@ public class R2ConnSeederTest {
     };
   }
   
-  Predicate<R2MngrWrapperComp> state(Identifier seederId, FSMStateName expectedState) {
-    return (R2MngrWrapperComp t) -> {
+  Predicate<R2ConnWrapperComp> state(Identifier seederId, FSMStateName expectedState) {
+    return (R2ConnWrapperComp t) -> {
       FSMStateName currentState = t.getConnSeederState(seederId);
       return currentState.equals(expectedState);
     };
   }
 
-  Predicate<R2MngrWrapperComp> connected(Identifier seederId, int nrTorrents) {
-    return (R2MngrWrapperComp t) -> {
+  Predicate<R2ConnWrapperComp> connected(Identifier seederId, int nrTorrents) {
+    return (R2ConnWrapperComp t) -> {
       R2ConnSeeder.IS is = (R2ConnSeeder.IS) t.getConnSeederIS(seederId);
       return is.connected.size() == nrTorrents;
     };
   }
 
-  Predicate<R2MngrWrapperComp> inactiveFSM(Identifier seederId) {
-    return (R2MngrWrapperComp t) -> !t.activeSeederFSM(seederId);
+  Predicate<R2ConnWrapperComp> inactiveFSM(Identifier seederId) {
+    return (R2ConnWrapperComp t) -> !t.activeSeederFSM(seederId);
   }
   
   private BestEffortMsg.Timeout netBETimeout() {
@@ -524,6 +525,6 @@ public class R2ConnSeederTest {
   }
 
   private MockTimerComp.TriggerTimeout timerAux() {
-    return new MockTimerComp.TriggerTimeout();
+    return new MockTimerComp.TriggerTimeout(selfAdr, R2ConnSeederTimeout.class);
   }
 }

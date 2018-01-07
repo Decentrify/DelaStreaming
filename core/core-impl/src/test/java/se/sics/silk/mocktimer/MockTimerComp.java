@@ -18,6 +18,9 @@
  */
 package se.sics.silk.mocktimer;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.KompicsEvent;
@@ -27,6 +30,7 @@ import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -34,7 +38,7 @@ import se.sics.kompics.timer.Timer;
 public class MockTimerComp extends ComponentDefinition {
   Negative<Timer> timer = provides(Timer.class);
   Negative<Port> timerTrigger = provides(Port.class);
-  Timeout timeoutEvent;
+  Map<UUID, Timeout> timers = new HashMap<>();
   
   public MockTimerComp() {
     subscribe(handlePeriodicSchedule, timer);
@@ -44,7 +48,7 @@ public class MockTimerComp extends ComponentDefinition {
   Handler handlePeriodicSchedule = new Handler<SchedulePeriodicTimeout>() {
     @Override
     public void handle(SchedulePeriodicTimeout timeout) {
-      timeoutEvent = timeout.getTimeoutEvent();
+      timers.put(timeout.getTimeoutEvent().getTimeoutId(), timeout.getTimeoutEvent());
     }
   };
   
@@ -56,8 +60,12 @@ public class MockTimerComp extends ComponentDefinition {
 
   Handler handleTrigger = new Handler<TriggerTimeout>() {
     @Override
-    public void handle(TriggerTimeout event) {
-      trigger(timeoutEvent, timer);
+    public void handle(TriggerTimeout req) {
+      for(Timeout t : timers.values()) {
+        if(req.timeoutType.isAssignableFrom(t.getClass())) {
+          trigger(t, timer);
+        }
+      }
     }
   };
   
@@ -68,5 +76,11 @@ public class MockTimerComp extends ComponentDefinition {
   }
   
   public static class TriggerTimeout implements KompicsEvent {
+    public Class timeoutType;
+    public KAddress adr;
+    public TriggerTimeout(KAddress adr, Class timeoutType) {
+      this.adr = adr;
+      this.timeoutType = timeoutType;
+    }
   }
 }

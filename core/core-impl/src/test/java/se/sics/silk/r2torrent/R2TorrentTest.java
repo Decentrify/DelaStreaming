@@ -79,43 +79,67 @@ public class R2TorrentTest {
   }
 
   @Test
-  public void testDownload1() {
+  public void testDownload() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
 
     tc = tc.body();
-    tc = compMetaGetSucc(tc, torrent1); //1-7
-    tc = ctrlDataStorage(tc, torrent1); //8-10
-    tc = transferHashSucc(tc, torrent1); //11-14
-    tc = tc.inspect(state(torrent1.baseId, States.TRANSFER)); //15
-    tc = compStop2(tc, torrent1); //16-26
+    tc = tc.inspect(inactiveFSM(torrent1)); //1
+    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = transferMetaGetSucc(tc, torrent1); //3-7
+    tc = ctrlDownload(tc, torrent1); //8-10
+    tc = transferHashSucc(tc, torrent1); //11-13
+    tc = tc.inspect(state(torrent1.baseId, States.TRANSFER)); //14
+    tc = compStop2(tc, torrent1); //15-25
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
+  @Test
+  public void testUpload() {
+    OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+
+    tc = tc.body();
+    tc = tc.inspect(inactiveFSM(torrent1)); //1
+    tc = tc.trigger(ctrlUpload(torrent1), ctrlP); //2
+    tc = transferMetaServeSucc(tc, torrent1); //3-7
+    tc = tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, ctrlP, Direction.OUT);//8
+    tc = transferHashSucc(tc, torrent1); //9-11
+    tc = tc.inspect(state(torrent1.baseId, States.UPLOAD)); //12
+    tc = compStop2(tc, torrent1); //13-23
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+  }
+
   @Test
   public void testFailMeta() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
 
     tc = tc.body();
-    tc = compMetaGetSucc(tc, torrent1); //1-7
+    tc = tc.inspect(inactiveFSM(torrent1)); //1
+    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = transferMetaGetFail(tc, torrent1); //3-6
+    tc = tc.expect(R2TorrentCtrlEvents.MetaGetFail.class, ctrlP, Direction.OUT);//7
+    tc = tc.inspect(inactiveFSM(torrent1)); //8
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
   @Test
   public void testFailHash() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
 
     tc = tc.body();
-    tc = compMetaGetSucc(tc, torrent1); //1-7
-    tc = ctrlDataStorage(tc, torrent1); //8-10
+    tc = tc.inspect(inactiveFSM(torrent1)); //1
+    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = transferMetaGetSucc(tc, torrent1); //3-7
+    tc = ctrlDownload(tc, torrent1); //8-10
     tc = transferHashFail(tc, torrent1); //11-15
     tc = transferMetaClean(tc, torrent1); //16-19
     tc = tc.inspect(inactiveFSM(torrent1)); //20
-    tc.repeat(1).body().end(); 
+    tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
   @Test
   public void testStopMeta() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
@@ -125,26 +149,31 @@ public class R2TorrentTest {
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
   @Test
   public void testStopInDataStorage() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
 
     tc = tc.body();
-    tc = compMetaGetSucc(tc, torrent1); //1-7
+    tc = tc.inspect(inactiveFSM(torrent1)); //1
+    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = transferMetaGetSucc(tc, torrent1); //3-7
+    tc = tc.expect(R2TorrentCtrlEvents.MetaGetSucc.class, ctrlP, Direction.OUT);//8
     tc = tc.inspect(state(torrent1.baseId, States.DATA_STORAGE));
     tc = compStop2(tc, torrent1);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
   @Test
   public void testStopInHash() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
 
     tc = tc.body();
-    tc = compMetaGetSucc(tc, torrent1); //1-7
-    tc = ctrlDataStorage(tc, torrent1); //8-10
+    tc = tc.inspect(inactiveFSM(torrent1)); //1
+    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = transferMetaGetSucc(tc, torrent1); //3-7
+    tc = ctrlDownload(tc, torrent1); //8-10
     tc = tc
       .inspect(state(torrent1.baseId, States.HASH))
       .expect(R2TorrentTransferEvents.HashReq.class, transferP, Direction.OUT);
@@ -152,29 +181,32 @@ public class R2TorrentTest {
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
   @Test
   public void testStopInTransfer() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
 
     tc = tc.body();
-    tc = compMetaGetSucc(tc, torrent1); //1-7
-    tc = ctrlDataStorage(tc, torrent1); //8-10
-    tc = transferHashSucc(tc, torrent1); //11-15
+    tc = tc.inspect(inactiveFSM(torrent1)); //1
+    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = transferMetaGetSucc(tc, torrent1); //3-7
+    tc = ctrlDownload(tc, torrent1); //8-10
+    tc = transferHashSucc(tc, torrent1); //11-14
+    
     tc = compStop2(tc, torrent1);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
   @Test
   public void testSimple() {
     tc = tc.body();
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
   private TestContext compStop2(TestContext tc, OverlayId torrentId) {
-    tc =  tc
+    tc = tc
       .trigger(controlStop(torrentId), ctrlP); //1
     tc = transferHashClean(tc, torrentId); //2-5
     tc = transferMetaClean(tc, torrentId); //6-9
@@ -183,10 +215,10 @@ public class R2TorrentTest {
       .inspect(inactiveFSM(torrentId.baseId)); //11
     return tc;
   }
-  
+
   private TestContext compMetaStop(TestContext tc, OverlayId torrentId) {
-    tc =  tc
-      .inspect(inactiveFSM(torrentId.baseId)) 
+    tc = tc
+      .inspect(inactiveFSM(torrentId.baseId))
       .trigger(ctrlMetaGetReq(torrentId), ctrlP)
       .inspect(state(torrentId.baseId, States.META_GET))
       .expect(R2TorrentTransferEvents.MetaGetReq.class, transferP, Direction.OUT)
@@ -196,51 +228,52 @@ public class R2TorrentTest {
       .inspect(inactiveFSM(torrentId.baseId));
     return tc;
   }
-  
-  private TestContext compMetaGetSucc(TestContext tc, OverlayId torrentId) {
-    Future f = transferMetaGetSucc(torrentId);
+
+  private TestContext transferMetaGetFail(TestContext tc, OverlayId torrentId) {
+    Future f = transferMetaGetFail();
     return tc
-      .inspect(inactiveFSM(torrentId.baseId)) 
-      .trigger(ctrlMetaGetReq(torrentId), ctrlP)
-      .inspect(state(torrentId.baseId, States.META_GET))
       .answerRequest(R2TorrentTransferEvents.MetaGetReq.class, transferP, f)
+      .inspect(state(torrentId.baseId, States.META_GET))
+      .trigger(f, transferP);
+  }
+  
+  private TestContext transferMetaGetSucc(TestContext tc, OverlayId torrentId) {
+    Future f = transferMetaGetSucc();
+    return tc
+      .answerRequest(R2TorrentTransferEvents.MetaGetReq.class, transferP, f)
+      .inspect(state(torrentId.baseId, States.META_GET))
       .trigger(f, transferP)
-      .expect(R2TorrentCtrlEvents.MetaGetSucc.class, ctrlP, Direction.OUT)
       .inspect(state(torrentId.baseId, States.DATA_STORAGE));
   }
   
-  private TestContext compMetaGetFail(TestContext tc, OverlayId torrentId) {
-    Future f = transferMetaGetFail(torrentId);
+  private TestContext transferMetaServeSucc(TestContext tc, OverlayId torrentId) {
+    Future f = transferMetaServeSucc();
     return tc
-      .inspect(inactiveFSM(torrentId.baseId)) 
-      .trigger(ctrlMetaGetReq(torrentId), ctrlP)
-      .inspect(state(torrentId.baseId, States.META_GET))
-      .answerRequest(R2TorrentTransferEvents.MetaGetReq.class, transferP, f)
+      .answerRequest(R2TorrentTransferEvents.MetaServeReq.class, transferP, f)
+      .inspect(state(torrentId.baseId, States.META_SERVE))
       .trigger(f, transferP)
-      .expect(R2TorrentCtrlEvents.MetaGetFail.class, ctrlP, Direction.OUT)
-      .inspect(inactiveFSM(torrentId.baseId));
+      .inspect(state(torrentId.baseId, States.HASH));
   }
-
+  
   private TestContext transferMetaClean(TestContext tc, OverlayId torrentId) {
-    Future f = transferMetaStop(torrentId);
+    Future f = transferMetaStop();
     return tc
       .inspect(state(torrentId.baseId, States.CLEAN_META))
       .answerRequest(R2TorrentTransferEvents.MetaStop.class, transferP, f)
       .trigger(f, transferP)
       .inspect(inactiveFSM(torrentId.baseId));
   }
-  
+
   private TestContext transferHashSucc(TestContext tc, OverlayId torrentId) {
-    Future f = transferHashSucc(torrentId);
+    Future f = transferHashSucc();
     return tc
       .inspect(state(torrentId.baseId, States.HASH))
       .answerRequest(R2TorrentTransferEvents.HashReq.class, transferP, f)
-      .trigger(f, transferP)
-      .inspect(state(torrentId.baseId, States.TRANSFER));
+      .trigger(f, transferP);
   }
-  
+
   private TestContext transferHashFail(TestContext tc, OverlayId torrentId) {
-    Future f = transferHashFail(torrentId);
+    Future f = transferHashFail();
     return tc
       .inspect(state(torrentId.baseId, States.HASH))
       .answerRequest(R2TorrentTransferEvents.HashReq.class, transferP, f)
@@ -248,23 +281,24 @@ public class R2TorrentTest {
       .inspect(state(torrentId.baseId, States.CLEAN_META))
       .expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, ctrlP, Direction.OUT);
   }
-  
+
   private TestContext transferHashClean(TestContext tc, OverlayId torrentId) {
-    Future f = transferHashClean(torrentId);
+    Future f = transferHashClean();
     return tc
       .inspect(state(torrentId.baseId, States.CLEAN_HASH))
       .answerRequest(R2TorrentTransferEvents.HashStop.class, transferP, f)
       .trigger(f, transferP)
       .inspect(state(torrentId.baseId, States.CLEAN_META));
   }
-  
-  private TestContext ctrlDataStorage(TestContext tc, OverlayId torrentId) {
+
+  private TestContext ctrlDownload(TestContext tc, OverlayId torrentId) {
     return tc
+      .expect(R2TorrentCtrlEvents.MetaGetSucc.class, ctrlP, Direction.OUT)
       .inspect(state(torrentId.baseId, States.DATA_STORAGE))
-      .trigger(ctrlDataStorage(torrentId), ctrlP)
+      .trigger(ctrlDownload(torrentId), ctrlP)
       .inspect(state(torrentId.baseId, States.HASH));
   }
-  
+
   private TestContext ctrlTo(TestContext tc, R2Torrent.CtrlEvent event, FSMStateName to) {
     return tc
       .trigger(event, ctrlP)
@@ -281,141 +315,92 @@ public class R2TorrentTest {
       return currentState.equals(expectedState);
     };
   }
-  
-  Future<R2TorrentTransferEvents.MetaGetReq, R2TorrentTransferEvents.MetaGetSucc> transferMetaGetSucc(
-    OverlayId torrentId) {
-    return new Future<R2TorrentTransferEvents.MetaGetReq, R2TorrentTransferEvents.MetaGetSucc>() {
-      R2TorrentTransferEvents.MetaGetReq request;
 
-      @Override
-      public boolean set(R2TorrentTransferEvents.MetaGetReq request) {
-        if (request.torrentId.equals(torrentId)) {
-          this.request = request;
-          return true;
-        }
-        return false;
-      }
-
+  Future<R2TorrentTransferEvents.MetaGetReq, R2TorrentTransferEvents.MetaGetSucc> transferMetaGetSucc() {
+    return new MyFuture<R2TorrentTransferEvents.MetaGetReq, R2TorrentTransferEvents.MetaGetSucc>() {
       @Override
       public R2TorrentTransferEvents.MetaGetSucc get() {
-        return request.success();
+        return req.success();
       }
     };
   }
-  
-  Future<R2TorrentTransferEvents.MetaGetReq, R2TorrentTransferEvents.MetaGetFail> transferMetaGetFail(
-    OverlayId torrentId) {
-    return new Future<R2TorrentTransferEvents.MetaGetReq, R2TorrentTransferEvents.MetaGetFail>() {
-      R2TorrentTransferEvents.MetaGetReq request;
 
-      @Override
-      public boolean set(R2TorrentTransferEvents.MetaGetReq request) {
-        if (request.torrentId.equals(torrentId)) {
-          this.request = request;
-          return true;
-        }
-        return false;
-      }
-
+  Future<R2TorrentTransferEvents.MetaGetReq, R2TorrentTransferEvents.MetaGetFail> transferMetaGetFail() {
+    return new MyFuture<R2TorrentTransferEvents.MetaGetReq, R2TorrentTransferEvents.MetaGetFail>() {
       @Override
       public R2TorrentTransferEvents.MetaGetFail get() {
-        return request.fail();
+        return req.fail();
+      }
+    };
+  }
+
+  Future<R2TorrentTransferEvents.MetaServeReq, R2TorrentTransferEvents.MetaServeSucc> transferMetaServeSucc() {
+    return new MyFuture<R2TorrentTransferEvents.MetaServeReq, R2TorrentTransferEvents.MetaServeSucc>() {
+      @Override
+      public R2TorrentTransferEvents.MetaServeSucc get() {
+        return req.success();
       }
     };
   }
   
-  Future<R2TorrentTransferEvents.MetaStop, R2TorrentTransferEvents.MetaStopAck> transferMetaStop(
-    OverlayId torrentId) {
-    return new Future<R2TorrentTransferEvents.MetaStop, R2TorrentTransferEvents.MetaStopAck>() {
-      R2TorrentTransferEvents.MetaStop request;
-
-      @Override
-      public boolean set(R2TorrentTransferEvents.MetaStop request) {
-        if (request.torrentId.equals(torrentId)) {
-          this.request = request;
-          return true;
-        }
-        return false;
-      }
-
+  Future<R2TorrentTransferEvents.MetaStop, R2TorrentTransferEvents.MetaStopAck> transferMetaStop() {
+    return new MyFuture<R2TorrentTransferEvents.MetaStop, R2TorrentTransferEvents.MetaStopAck>() {
       @Override
       public R2TorrentTransferEvents.MetaStopAck get() {
-        return request.ack();
+        return req.ack();
       }
     };
   }
-  
-  Future<R2TorrentTransferEvents.HashReq, R2TorrentTransferEvents.HashSucc> transferHashSucc(
-    OverlayId torrentId) {
-    return new Future<R2TorrentTransferEvents.HashReq, R2TorrentTransferEvents.HashSucc>() {
-      R2TorrentTransferEvents.HashReq request;
 
-      @Override
-      public boolean set(R2TorrentTransferEvents.HashReq request) {
-        if (request.torrentId.equals(torrentId)) {
-          this.request = request;
-          return true;
-        }
-        return false;
-      }
-
+  Future<R2TorrentTransferEvents.HashReq, R2TorrentTransferEvents.HashSucc> transferHashSucc() {
+    return new MyFuture<R2TorrentTransferEvents.HashReq, R2TorrentTransferEvents.HashSucc>() {
       @Override
       public R2TorrentTransferEvents.HashSucc get() {
-        return request.success();
+        return req.success();
       }
     };
   }
-  
-  Future<R2TorrentTransferEvents.HashReq, R2TorrentTransferEvents.HashFail> transferHashFail(
-    OverlayId torrentId) {
-    return new Future<R2TorrentTransferEvents.HashReq, R2TorrentTransferEvents.HashFail>() {
-      R2TorrentTransferEvents.HashReq request;
 
-      @Override
-      public boolean set(R2TorrentTransferEvents.HashReq request) {
-        if (request.torrentId.equals(torrentId)) {
-          this.request = request;
-          return true;
-        }
-        return false;
-      }
-
+  Future<R2TorrentTransferEvents.HashReq, R2TorrentTransferEvents.HashFail> transferHashFail() {
+    return new MyFuture<R2TorrentTransferEvents.HashReq, R2TorrentTransferEvents.HashFail>() {
       @Override
       public R2TorrentTransferEvents.HashFail get() {
-        return request.fail();
+        return req.fail();
       }
     };
   }
-  
-  Future<R2TorrentTransferEvents.HashStop, R2TorrentTransferEvents.HashStopAck> transferHashClean(
-    OverlayId torrentId) {
-    return new Future<R2TorrentTransferEvents.HashStop, R2TorrentTransferEvents.HashStopAck>() {
-      R2TorrentTransferEvents.HashStop request;
 
-      @Override
-      public boolean set(R2TorrentTransferEvents.HashStop request) {
-        if (request.torrentId.equals(torrentId)) {
-          this.request = request;
-          return true;
-        }
-        return false;
-      }
+  Future<R2TorrentTransferEvents.HashStop, R2TorrentTransferEvents.HashStopAck> transferHashClean() {
+    return new MyFuture<R2TorrentTransferEvents.HashStop, R2TorrentTransferEvents.HashStopAck>() {
 
       @Override
       public R2TorrentTransferEvents.HashStopAck get() {
-        return request.ack();
+        return req.ack();
       }
     };
   }
   
+  public static abstract class MyFuture<I extends R2TorrentTransferEvents.Base1, O extends R2TorrentTransferEvents.Base1> extends Future<I, O> {
+    I req;
+    @Override
+    public boolean set(I req) {
+      this.req = req;
+      return true;
+    }
+  }
+
   private R2TorrentCtrlEvents.MetaGetReq ctrlMetaGetReq(OverlayId torrentId) {
     return new R2TorrentCtrlEvents.MetaGetReq(torrentId);
   }
-  
-  private R2TorrentCtrlEvents.DataStorage ctrlDataStorage(OverlayId torrentId) {
-    return new R2TorrentCtrlEvents.DataStorage(torrentId);
+
+  private R2TorrentCtrlEvents.Download ctrlDownload(OverlayId torrentId) {
+    return new R2TorrentCtrlEvents.Download(torrentId);
   }
-  
+
+  private R2TorrentCtrlEvents.Upload ctrlUpload(OverlayId torrentId) {
+    return new R2TorrentCtrlEvents.Upload(torrentId);
+  }
+
   private R2TorrentCtrlEvents.Stop controlStop(OverlayId torrentId) {
     return new R2TorrentCtrlEvents.Stop(torrentId);
   }

@@ -18,6 +18,7 @@
  */
 package se.sics.silk.r2torrent.event;
 
+import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
@@ -31,7 +32,7 @@ import se.sics.silk.r2transfer.R1Metadata;
  */
 public class R2TorrentTransferEvents {
 
-  public static abstract class Base1 implements Identifiable {
+  public static abstract class Base1 implements KompicsEvent, Identifiable {
 
     public final Identifier eventId;
     public final OverlayId torrentId;

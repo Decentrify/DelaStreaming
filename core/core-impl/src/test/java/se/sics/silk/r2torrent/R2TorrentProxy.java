@@ -18,25 +18,18 @@
  */
 package se.sics.silk.r2torrent;
 
-import se.sics.kompics.PortType;
-import se.sics.kompics.fsm.event.FSMWrongState;
-import se.sics.silk.r2torrent.event.R2TorrentCtrlEvents;
+import se.sics.kompics.fsm.FSMStateName;
+import se.sics.kompics.util.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2TorrentCtrlPort extends PortType {
-  {
-    request(R2TorrentCtrlEvents.MetaGetReq.class);
-    indication(R2TorrentCtrlEvents.MetaGetSucc.class);
-    indication(R2TorrentCtrlEvents.MetaGetFail.class);
-    request(R2TorrentCtrlEvents.Download.class);
-    request(R2TorrentCtrlEvents.Upload.class);
-    request(R2TorrentCtrlEvents.TorrentBaseInfoReq.class);
-    indication(R2TorrentCtrlEvents.TorrentBaseInfo.class);
-    request(R2TorrentCtrlEvents.Stop.class);
-    indication(R2TorrentCtrlEvents.StopAck.class);
-    request(FSMWrongState.class);
-    indication(FSMWrongState.class);
+public class R2TorrentProxy {
+  public static boolean inactive(R2TorrentComp comp, Identifier fsmBaseId) {
+    return !comp.activeTorrentFSM(fsmBaseId);
+  }
+  
+  public static FSMStateName state(R2TorrentComp comp, Identifier fsmBaseId) {
+    return comp.getTorrentState(fsmBaseId);
   }
 }

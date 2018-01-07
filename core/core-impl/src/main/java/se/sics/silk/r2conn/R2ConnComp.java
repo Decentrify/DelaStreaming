@@ -36,7 +36,6 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.silk.r2torrent.R2TorrentTransferPort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -120,14 +119,12 @@ public class R2ConnComp extends ComponentDefinition {
     public final Positive<Timer> timer;
     public final Negative<R2ConnSeederPort> seeders;
     public final Negative<R2ConnLeecherPort> leechers;
-    public final Negative<R2TorrentTransferPort> torrentTransfer;
 
     public Ports(ComponentProxy proxy) {
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
       seeders = proxy.provides(R2ConnSeederPort.class);
       leechers = proxy.provides(R2ConnLeecherPort.class);
-      torrentTransfer = proxy.provides(R2TorrentTransferPort.class);
     }
   }
 
