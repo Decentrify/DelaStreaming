@@ -16,35 +16,31 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.torrentmngr.event;
+package se.sics.silkold.torrentmngr.event;
 
-import java.util.List;
 import se.sics.kompics.Direct;
-import se.sics.kompics.Promise;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.library.restart.LibTFSMEvent;
-import se.sics.silk.torrentmngr.TorrentMngrFSMEvent;
+import se.sics.silkold.torrentmngr.TorrentMngrFSMEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class StartTorrent {
+public class StopTorrent {
 
-  public static class Request extends Promise<Response> implements OverlayEvent, LibTFSMEvent, TorrentMngrFSMEvent {
+  public static class Request extends Direct.Request<Response>
+    implements OverlayEvent, LibTFSMEvent, TorrentMngrFSMEvent {
 
     public final Identifier eventId;
     public final OverlayId torrentId;
-    public final List<KAddress> partners;
 
-    public Request(OverlayId torrentId, List<KAddress> partners) {
+    public Request(OverlayId torrentId) {
       this.eventId = BasicIdentifiers.eventId();
       this.torrentId = torrentId;
-      this.partners = partners;
     }
 
     @Override
@@ -57,23 +53,17 @@ public class StartTorrent {
       return torrentId;
     }
 
-    @Override
-    public Response success(Result r) {
-      return new Response(this, r);
-    }
-
-    @Override
-    public Response fail(Result r) {
-      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    @Override
-    public Identifier getTorrentMngrFSMId() {
-      return torrentId.baseId;
+    public Response success() {
+      return new Response(this, Result.success(true));
     }
 
     @Override
     public Identifier getLibTFSMId() {
+      return torrentId.baseId;
+    }
+
+    @Override
+    public Identifier getTorrentMngrFSMId() {
       return torrentId.baseId;
     }
   }

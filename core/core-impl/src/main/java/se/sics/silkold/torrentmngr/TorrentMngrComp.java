@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.torrentmngr;
+package se.sics.silkold.torrentmngr;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -48,10 +48,10 @@ import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nstream.torrent.tracking.TorrentStatusPort;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
-import se.sics.silk.resourcemngr.ResourceMngrComp;
-import se.sics.silk.resourcemngr.ResourceMngrPort;
-import se.sics.silk.torrent.TorrentComp;
-import se.sics.silk.torrent.TorrentMngrPort;
+import se.sics.silkold.resourcemngr.ResourceMngrComp;
+import se.sics.silkold.resourcemngr.ResourceMngrPort;
+import se.sics.silkold.torrent.TorrentComp;
+import se.sics.silkold.torrent.TorrentMngrPort;
 
 /**
  *

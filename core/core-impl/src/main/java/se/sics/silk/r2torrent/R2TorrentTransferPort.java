@@ -30,6 +30,8 @@ public class R2TorrentTransferPort extends PortType {
     request(R2TorrentTransferEvents.MetaGetReq.class);
     indication(R2TorrentTransferEvents.MetaGetSucc.class);
     indication(R2TorrentTransferEvents.MetaGetFail.class);
+    request(R2TorrentTransferEvents.MetaServeReq.class);
+    indication(R2TorrentTransferEvents.MetaServeSucc.class);
     request(R2TorrentTransferEvents.MetaStop.class);
     indication(R2TorrentTransferEvents.MetaStopAck.class);
     request(R2TorrentTransferEvents.HashReq.class);

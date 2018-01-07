@@ -34,7 +34,9 @@ import se.sics.nstream.TorrentIds;
 import se.sics.silk.r2conn.R2ConnLeecher;
 import se.sics.silk.r2conn.R2ConnSeeder;
 import se.sics.silk.r2torrent.R2Torrent;
-import se.sics.silk.torrentmngr.TorrentMngrFSM;
+import se.sics.silk.r2transfer.R1Hash;
+import se.sics.silk.r2transfer.R1Metadata;
+import se.sics.silkold.torrentmngr.TorrentMngrFSM;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -51,6 +53,7 @@ public class SystemSetup {
   }
   
   private static OverlayIdFactory overlaysSetup() {
+    OverlayRegistry.reset();
     OverlayRegistry.initiate(new SystemOverlays.TypeFactory(), new SystemOverlays.Comparator());
 
     byte torrentOwnerId = 1;
@@ -62,10 +65,13 @@ public class SystemSetup {
 
   private static void fsmSetup() throws FSMException {
     FSMIdentifierFactory fsmIdFactory = FSMIdentifierFactory.DEFAULT;
+    fsmIdFactory.reset();
     fsmIdFactory.registerFSMDefId(TorrentMngrFSM.NAME);
     fsmIdFactory.registerFSMDefId(R2ConnSeeder.NAME);
     fsmIdFactory.registerFSMDefId(R2ConnLeecher.NAME);
     fsmIdFactory.registerFSMDefId(R2Torrent.NAME);
+    fsmIdFactory.registerFSMDefId(R1Metadata.NAME);
+    fsmIdFactory.registerFSMDefId(R1Hash.NAME);
     
     Config.Impl config = (Config.Impl) Kompics.getConfig();
     Config.Builder builder = Kompics.getConfig().modify(UUID.randomUUID());

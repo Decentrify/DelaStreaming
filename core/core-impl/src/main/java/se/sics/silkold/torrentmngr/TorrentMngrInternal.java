@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.torrentmngr;
+package se.sics.silkold.torrentmngr;
 
 import java.util.List;
 import se.sics.kompics.Component;
@@ -25,8 +25,8 @@ import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.silk.torrentmngr.event.StartTorrent;
-import se.sics.silk.torrentmngr.event.StopTorrent;
+import se.sics.silkold.torrentmngr.event.StartTorrent;
+import se.sics.silkold.torrentmngr.event.StopTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

@@ -46,9 +46,9 @@ import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 import se.sics.nstream.torrent.transfer.event.ctrl.GetRawTorrent;
 import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
-import se.sics.silk.torrent.TorrentMngrPort;
-import se.sics.silk.torrentmngr.event.StartTorrent;
-import se.sics.silk.torrentmngr.event.StopTorrent;
+import se.sics.silkold.torrent.TorrentMngrPort;
+import se.sics.silkold.torrentmngr.event.StartTorrent;
+import se.sics.silkold.torrentmngr.event.StopTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

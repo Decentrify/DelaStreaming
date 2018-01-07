@@ -16,21 +16,29 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.torrent;
+package se.sics.silkold.torrentmngr.event;
 
-import se.sics.kompics.PortType;
-import se.sics.silk.torrentmngr.event.StartTorrent;
-import se.sics.silk.torrentmngr.event.StopTorrent;
+import java.util.UUID;
+import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.silkold.torrentmngr.TorrentMngrFSMEvent;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentMngrPort extends PortType {
+public class StoppedTorrentComp implements TorrentMngrFSMEvent {
 
-  {
-    request(StartTorrent.Request.class);
-    indication(StartTorrent.Response.class);
-    request(StopTorrent.Request.class);
-    indication(StopTorrent.Response.class);
+  public final OverlayId torrentId;
+  public final UUID compId;
+
+  public StoppedTorrentComp(OverlayId torrentId, UUID compId) {
+    this.torrentId = torrentId;
+    this.compId = compId;
+  }
+
+  @Override
+  public Identifier getTorrentMngrFSMId() {
+    return torrentId.baseId;
   }
 }

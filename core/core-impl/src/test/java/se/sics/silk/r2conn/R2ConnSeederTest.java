@@ -47,9 +47,6 @@ import static se.sics.silk.MsgHelper.msg;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.mocktimer.MockTimerComp;
-import se.sics.silk.r2conn.R2ConnSeeder;
-import se.sics.silk.r2conn.R2ConnSeederPort;
-import se.sics.silk.r2conn.R2MngrWrapperComp;
 import se.sics.silk.r2conn.event.R2ConnSeederEvents;
 import se.sics.silk.r2conn.msg.R2ConnMsgs;
 

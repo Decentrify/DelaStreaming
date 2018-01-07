@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.torrentmngr;
+package se.sics.silkold.torrentmngr;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +27,7 @@ import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.fsm.FSMExternalState;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.silk.torrentmngr.event.StoppedTorrentComp;
+import se.sics.silkold.torrentmngr.event.StoppedTorrentComp;
 
 /**
  *

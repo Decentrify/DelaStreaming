@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.torrentmngr;
+package se.sics.silkold.torrentmngr;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,10 +29,10 @@ import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.silk.torrentmngr.event.StartTorrent;
-import se.sics.silk.torrentmngr.event.StopTorrent;
+import se.sics.silkold.torrentmngr.event.StartTorrent;
+import se.sics.silkold.torrentmngr.event.StopTorrent;
 import se.sics.nstream.torrent.status.event.TorrentReady;
-import se.sics.silk.torrentmngr.event.StoppedTorrentComp;
+import se.sics.silkold.torrentmngr.event.StoppedTorrentComp;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

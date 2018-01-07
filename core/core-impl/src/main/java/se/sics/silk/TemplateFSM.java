@@ -50,7 +50,7 @@ public class TemplateFSM {
     OPENING
   }
 
-  public interface Event extends FSMEvent {
+  public static interface Event extends FSMEvent {
 
     public Identifier getTemplateFSMId();
   }

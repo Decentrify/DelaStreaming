@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.torrent;
+package se.sics.silkold.torrent;
 
 import java.util.List;
 import org.slf4j.Logger;
@@ -39,7 +39,7 @@ import se.sics.nstream.torrent.tracking.TorrentTrackingComp;
 import se.sics.nstream.torrent.tracking.TorrentTrackingPort;
 import se.sics.nstream.torrent.transfer.TransferComp;
 import se.sics.nstream.torrent.transfer.TransferCtrlPort;
-import se.sics.silk.resourcemngr.ResourceMngrPort;
+import se.sics.silkold.resourcemngr.ResourceMngrPort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
