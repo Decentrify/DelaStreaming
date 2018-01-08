@@ -18,11 +18,13 @@
  */
 package se.sics.silk.r2torrent.event;
 
+import java.util.List;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.r2torrent.R2Torrent;
 import se.sics.silk.r2transfer.R1Hash;
 import se.sics.silk.r2transfer.R1Metadata;
@@ -66,9 +68,10 @@ public class R2TorrentTransferEvents {
   }
 
   public static class MetaGetReq extends Base2 {
-
-    public MetaGetReq(OverlayId torrentId) {
+    public final List<KAddress> partners;
+    public MetaGetReq(OverlayId torrentId, List<KAddress> partners) {
       super(BasicIdentifiers.eventId(), torrentId);
+      this.partners = partners;
     }
 
     public MetaGetSucc success() {

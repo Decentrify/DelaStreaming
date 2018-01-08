@@ -19,6 +19,8 @@
 package se.sics.silk.r2torrent;
 
 import com.google.common.base.Predicate;
+import java.util.LinkedList;
+import java.util.List;
 import org.junit.After;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
@@ -81,10 +83,10 @@ public class R2TorrentTest {
   @Test
   public void testDownload() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-
+    KAddress seeder = SystemHelper.getAddress(1);
     tc = tc.body();
     tc = tc.inspect(inactiveFSM(torrent1)); //1
-    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = tc.trigger(ctrlMetaGetReq(seeder, torrent1), ctrlP); //2
     tc = transferMetaGetSucc(tc, torrent1); //3-7
     tc = ctrlDownload(tc, torrent1); //8-10
     tc = transferHashSucc(tc, torrent1); //11-13
@@ -115,10 +117,11 @@ public class R2TorrentTest {
   @Test
   public void testFailMeta() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-
+    KAddress seeder = SystemHelper.getAddress(1);
+    
     tc = tc.body();
     tc = tc.inspect(inactiveFSM(torrent1)); //1
-    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = tc.trigger(ctrlMetaGetReq(seeder, torrent1), ctrlP); //2
     tc = transferMetaGetFail(tc, torrent1); //3-6
     tc = tc.expect(R2TorrentCtrlEvents.MetaGetFail.class, ctrlP, Direction.OUT);//7
     tc = tc.inspect(inactiveFSM(torrent1)); //8
@@ -129,10 +132,11 @@ public class R2TorrentTest {
   @Test
   public void testFailHash() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-
+    KAddress seeder = SystemHelper.getAddress(1);
+    
     tc = tc.body();
     tc = tc.inspect(inactiveFSM(torrent1)); //1
-    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = tc.trigger(ctrlMetaGetReq(seeder, torrent1), ctrlP); //2
     tc = transferMetaGetSucc(tc, torrent1); //3-7
     tc = ctrlDownload(tc, torrent1); //8-10
     tc = transferHashFail(tc, torrent1); //11-15
@@ -145,9 +149,10 @@ public class R2TorrentTest {
   @Test
   public void testStopMeta() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-
+    KAddress seeder = SystemHelper.getAddress(1);
+    
     tc = tc.body();
-    tc = compMetaStop(tc, torrent1); //1-11
+    tc = compMetaStop(tc, seeder, torrent1); //1-11
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
@@ -155,10 +160,11 @@ public class R2TorrentTest {
   @Test
   public void testStopInDataStorage() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-
+    KAddress seeder = SystemHelper.getAddress(1);
+    
     tc = tc.body();
     tc = tc.inspect(inactiveFSM(torrent1)); //1
-    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = tc.trigger(ctrlMetaGetReq(seeder, torrent1), ctrlP); //2
     tc = transferMetaGetSucc(tc, torrent1); //3-7
     tc = tc.expect(R2TorrentCtrlEvents.MetaGetSucc.class, ctrlP, Direction.OUT);//8
     tc = tc.inspect(state(torrent1.baseId, States.DATA_STORAGE));
@@ -170,10 +176,11 @@ public class R2TorrentTest {
   @Test
   public void testStopInHash() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-
+    KAddress seeder = SystemHelper.getAddress(1);
+    
     tc = tc.body();
     tc = tc.inspect(inactiveFSM(torrent1)); //1
-    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = tc.trigger(ctrlMetaGetReq(seeder, torrent1), ctrlP); //2
     tc = transferMetaGetSucc(tc, torrent1); //3-7
     tc = ctrlDownload(tc, torrent1); //8-10
     tc = tc
@@ -187,10 +194,11 @@ public class R2TorrentTest {
   @Test
   public void testStopInTransfer() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-
+    KAddress seeder = SystemHelper.getAddress(1);
+    
     tc = tc.body();
     tc = tc.inspect(inactiveFSM(torrent1)); //1
-    tc = tc.trigger(ctrlMetaGetReq(torrent1), ctrlP); //2
+    tc = tc.trigger(ctrlMetaGetReq(seeder, torrent1), ctrlP); //2
     tc = transferMetaGetSucc(tc, torrent1); //3-7
     tc = ctrlDownload(tc, torrent1); //8-10
     tc = transferHashSucc(tc, torrent1); //11-14
@@ -218,10 +226,10 @@ public class R2TorrentTest {
     return tc;
   }
 
-  private TestContext compMetaStop(TestContext tc, OverlayId torrentId) {
+  private TestContext compMetaStop(TestContext tc, KAddress seeder, OverlayId torrentId) {
     tc = tc
       .inspect(inactiveFSM(torrentId.baseId))
-      .trigger(ctrlMetaGetReq(torrentId), ctrlP)
+      .trigger(ctrlMetaGetReq(seeder, torrentId), ctrlP)
       .inspect(state(torrentId.baseId, States.META_GET))
       .expect(R2TorrentTransferEvents.MetaGetReq.class, transferP, Direction.OUT)
       .trigger(controlStop(torrentId), ctrlP);
@@ -391,8 +399,10 @@ public class R2TorrentTest {
     }
   }
 
-  private R2TorrentCtrlEvents.MetaGetReq ctrlMetaGetReq(OverlayId torrentId) {
-    return new R2TorrentCtrlEvents.MetaGetReq(torrentId);
+  private R2TorrentCtrlEvents.MetaGetReq ctrlMetaGetReq(KAddress partner, OverlayId torrentId) {
+    List<KAddress> partners = new LinkedList<>();
+    partners.add(partner);
+    return new R2TorrentCtrlEvents.MetaGetReq(torrentId, partners);
   }
 
   private R2TorrentCtrlEvents.Download ctrlDownload(OverlayId torrentId) {
@@ -405,9 +415,5 @@ public class R2TorrentTest {
 
   private R2TorrentCtrlEvents.Stop controlStop(OverlayId torrentId) {
     return new R2TorrentCtrlEvents.Stop(torrentId);
-  }
-
-  private R2TorrentTransferEvents.MetaGetReq transferMetaGetReq(OverlayId torrentId) {
-    return new R2TorrentTransferEvents.MetaGetReq(torrentId);
   }
 }

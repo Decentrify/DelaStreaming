@@ -19,6 +19,8 @@
 package se.sics.silk.r2mngr;
 
 import com.google.common.base.Predicate;
+import java.util.LinkedList;
+import java.util.List;
 import org.junit.After;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
@@ -113,7 +115,7 @@ public class UpldDwnlTest {
   
   private TestContext downloadTorrent2(TestContext tc, OverlayId torrentId) {
     return tc
-      .trigger(metadataGet(adr2, torrentId), inTorrentP)
+      .trigger(metadataGet(adr2, adr1, torrentId), inTorrentP)
       .expect(R2TorrentCtrlEvents.MetaGetSucc.class, outTorrentP, Direction.OUT)
       .inspect(state2(torrentId, States.DATA_STORAGE))
       .trigger(downloadTorrent(adr2, torrentId), inTorrentP)
@@ -125,8 +127,10 @@ public class UpldDwnlTest {
     return new MockTorrentCtrlEvent(adr, new R2TorrentCtrlEvents.Upload(torrentId));
   }
   
-  public MockTorrentCtrlEvent metadataGet(KAddress adr, OverlayId torrentId) {
-    return new MockTorrentCtrlEvent(adr, new R2TorrentCtrlEvents.MetaGetReq(torrentId));
+  public MockTorrentCtrlEvent metadataGet(KAddress triggerAt, KAddress partner, OverlayId torrentId) {
+    List<KAddress> partners = new LinkedList<>();
+    partners.add(partner);
+    return new MockTorrentCtrlEvent(triggerAt, new R2TorrentCtrlEvents.MetaGetReq(torrentId, partners));
   }
   
   public MockTorrentCtrlEvent downloadTorrent(KAddress adr, OverlayId torrentId) {

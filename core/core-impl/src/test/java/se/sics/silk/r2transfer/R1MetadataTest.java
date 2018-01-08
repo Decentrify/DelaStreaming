@@ -19,6 +19,8 @@
 package se.sics.silk.r2transfer;
 
 import com.google.common.base.Predicate;
+import java.util.LinkedList;
+import java.util.List;
 import org.junit.After;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
@@ -92,10 +94,11 @@ public class R1MetadataTest {
   @Test
   public void testGet() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
     
     tc = tc.body();
     tc = tc.inspect(inactiveFSM(torrent1.baseId)); // 1
-    tc = transferGetSucc(tc, torrent1); // 3-5
+    tc = transferGetSucc(tc, seeder, torrent1); // 3-5
     tc = transferStop(tc, torrent1); // 5-7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -136,10 +139,10 @@ public class R1MetadataTest {
     assertTrue(tc.check());
   }
   
-  private TestContext transferGetSucc(TestContext tc, OverlayId torrentId) {
+  private TestContext transferGetSucc(TestContext tc, KAddress seeder, OverlayId torrentId) {
 
     return tc
-      .trigger(transferGet(torrentId), transferP)
+      .trigger(transferGet(torrentId, seeder), transferP)
       .expect(R2TorrentTransferEvents.MetaGetSucc.class, transferP, Direction.OUT)
       .inspect(state(torrentId.baseId, States.SERVE));
   }
@@ -173,8 +176,10 @@ public class R1MetadataTest {
     };
   }
   
-  private R2TorrentTransferEvents.MetaGetReq transferGet(OverlayId torrent) {
-    return new R2TorrentTransferEvents.MetaGetReq(torrent);
+  private R2TorrentTransferEvents.MetaGetReq transferGet(OverlayId torrent, KAddress partner) {
+    List<KAddress> partners = new LinkedList<>();
+    partners.add(partner);
+    return new R2TorrentTransferEvents.MetaGetReq(torrent, partners);
   }
   
   private R2TorrentTransferEvents.MetaServeReq transferServe(OverlayId torrent) {
