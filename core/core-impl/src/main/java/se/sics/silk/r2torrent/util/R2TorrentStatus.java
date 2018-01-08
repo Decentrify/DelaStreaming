@@ -22,5 +22,5 @@ package se.sics.silk.r2torrent.util;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public enum R2TorrentStatus {
-  GET_META, HASH, DOWNLOADING, UPLOADING, ERROR
+  GET_META, HASH, TRANSFER, UPLOAD, ERROR
 }

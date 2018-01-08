@@ -21,10 +21,8 @@ package se.sics.silk.r2mngr;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
-import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
-import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -53,8 +51,6 @@ public class R2MngrComp extends ComponentDefinition {
   R2TransferComp transferMngr;
   //********************************************************************************************************************
   public R2MngrComp(Init init) {
-    subscribe(handleStart, control);
-    
     connMngrComp = create(R2ConnComp.class, new R2ConnComp.Init(init.selfAdr));
     connect(connMngrComp.getNegative(Network.class), network, Channel.TWO_WAY);
     connect(connMngrComp.getNegative(Timer.class), timer, Channel.TWO_WAY);
@@ -67,12 +63,6 @@ public class R2MngrComp extends ComponentDefinition {
     torrentMngr = (R2TorrentComp)torrentMngrComp.getComponent();
     transferMngr = (R2TransferComp)transferMngrComp.getComponent();
   }
-
-  Handler handleStart = new Handler<Start>() {
-    @Override
-    public void handle(Start event) {
-    }
-  };
 
   public static class Init extends se.sics.kompics.Init<R2MngrComp> {
 

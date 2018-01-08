@@ -88,8 +88,9 @@ public class R2TorrentTest {
     tc = transferMetaGetSucc(tc, torrent1); //3-7
     tc = ctrlDownload(tc, torrent1); //8-10
     tc = transferHashSucc(tc, torrent1); //11-13
-    tc = tc.inspect(state(torrent1.baseId, States.TRANSFER)); //14
-    tc = compStop2(tc, torrent1); //15-25
+    tc = tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, ctrlP, Direction.OUT);//14
+    tc = tc.inspect(state(torrent1.baseId, States.TRANSFER)); //15
+    tc = compStop2(tc, torrent1); //16-26
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
@@ -104,8 +105,9 @@ public class R2TorrentTest {
     tc = transferMetaServeSucc(tc, torrent1); //3-7
     tc = tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, ctrlP, Direction.OUT);//8
     tc = transferHashSucc(tc, torrent1); //9-11
-    tc = tc.inspect(state(torrent1.baseId, States.UPLOAD)); //12
-    tc = compStop2(tc, torrent1); //13-23
+    tc = tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, ctrlP, Direction.OUT); //12
+    tc = tc.inspect(state(torrent1.baseId, States.UPLOAD)); //13
+    tc = compStop2(tc, torrent1); //14-24
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
@@ -192,7 +194,7 @@ public class R2TorrentTest {
     tc = transferMetaGetSucc(tc, torrent1); //3-7
     tc = ctrlDownload(tc, torrent1); //8-10
     tc = transferHashSucc(tc, torrent1); //11-14
-    
+    tc = tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, ctrlP, Direction.OUT); //15
     tc = compStop2(tc, torrent1);
     tc.repeat(1).body().end();
     assertTrue(tc.check());

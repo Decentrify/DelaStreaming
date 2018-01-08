@@ -22,12 +22,14 @@ import com.google.common.base.Predicate;
 import org.junit.After;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.sics.kompics.Component;
 import se.sics.kompics.Port;
 import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.FSMStateName;
+import se.sics.kompics.testing.Direction;
 import se.sics.kompics.testing.TestContext;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -36,6 +38,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.mocktimer.MockTimerComp;
+import se.sics.silk.r2torrent.R2Torrent.States;
 import se.sics.silk.r2torrent.R2TorrentCtrlPort;
 import se.sics.silk.r2torrent.R2TorrentProxy;
 import se.sics.silk.r2torrent.event.R2TorrentCtrlEvents;
@@ -44,23 +47,21 @@ import se.sics.silk.r2torrent.event.R2TorrentCtrlEvents;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class UpldDwnlTest {
+  private static final Logger LOG = LoggerFactory.getLogger(UpldDwnlTest.class);
+  
   private TestContext<R2MngrWrapperComp> tc;
   private Component testComp;
   private R2MngrWrapperComp auxComp;
   private Port<MockTorrentCtrlPort> inTorrentP;
   private Port<R2TorrentCtrlPort> outTorrentP;
   private Port<MockTimerComp.Port> mockTimer;
-  private static OverlayIdFactory torrentIdFactory;
+  private OverlayIdFactory torrentIdFactory;
   private KAddress adr1;
   private KAddress adr2;
 
-  @BeforeClass
-  public static void setup() throws FSMException {
-    torrentIdFactory = SystemSetup.systemSetup("src/test/resources/application.conf");
-  }
-
   @Before
-  public void testSetup() {
+  public void testSetup() throws FSMException {
+    torrentIdFactory = SystemSetup.systemSetup("src/test/resources/application.conf");
     tc = getContext();
     testComp = tc.getComponentUnderTest();
     auxComp = (R2MngrWrapperComp)testComp.getComponent();
@@ -81,7 +82,7 @@ public class UpldDwnlTest {
   public void clean() {
   }
 
-  @Test
+//  @Test
   public void testEmpty() {
     tc = tc.body();
     tc.repeat(1).body().end();
@@ -95,17 +96,41 @@ public class UpldDwnlTest {
     tc = tc
       .inspect(inactiveFSM1(torrent1))  //1
       .inspect(inactiveFSM2(torrent1)); //2
+    tc = uploadTorrent1(tc, torrent1); //3-6
+    tc = downloadTorrent2(tc, torrent1); //7-12
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
   
-  private TestContext uploadTorrent(TestContext tc, KAddress adr, OverlayId torrentId) {
+  private TestContext uploadTorrent1(TestContext tc, OverlayId torrentId) {
     return tc
-      .trigger(uploadTorrent(adr, torrentId), inTorrentP);
+      .trigger(uploadTorrent(adr1, torrentId), inTorrentP)
+      .expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, outTorrentP, Direction.OUT)
+//      .inspect(state1(torrentId, States.HASH))
+      .expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, outTorrentP, Direction.OUT)
+      .inspect(state1(torrentId, States.UPLOAD));
+  }
+  
+  private TestContext downloadTorrent2(TestContext tc, OverlayId torrentId) {
+    return tc
+      .trigger(metadataGet(adr2, torrentId), inTorrentP)
+      .expect(R2TorrentCtrlEvents.MetaGetSucc.class, outTorrentP, Direction.OUT)
+      .inspect(state2(torrentId, States.DATA_STORAGE))
+      .trigger(downloadTorrent(adr2, torrentId), inTorrentP)
+      .expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, outTorrentP, Direction.OUT)
+      .inspect(state2(torrentId, States.TRANSFER));
   }
   
   public MockTorrentCtrlEvent uploadTorrent(KAddress adr, OverlayId torrentId) {
     return new MockTorrentCtrlEvent(adr, new R2TorrentCtrlEvents.Upload(torrentId));
+  }
+  
+  public MockTorrentCtrlEvent metadataGet(KAddress adr, OverlayId torrentId) {
+    return new MockTorrentCtrlEvent(adr, new R2TorrentCtrlEvents.MetaGetReq(torrentId));
+  }
+  
+  public MockTorrentCtrlEvent downloadTorrent(KAddress adr, OverlayId torrentId) {
+    return new MockTorrentCtrlEvent(adr, new R2TorrentCtrlEvents.Download(torrentId));
   }
   
   Predicate<R2MngrWrapperComp> inactiveFSM1(OverlayId torrentId) {
@@ -123,6 +148,7 @@ public class UpldDwnlTest {
   Predicate<R2MngrWrapperComp> state1(OverlayId torrentId, FSMStateName expectedState) {
     return (R2MngrWrapperComp t) -> {
       FSMStateName currentState = R2TorrentProxy.state(auxComp.mngrComp1.torrentMngr, torrentId.baseId);
+      LOG.info("N1:{}", currentState);
       return currentState.equals(expectedState);
     };
   }

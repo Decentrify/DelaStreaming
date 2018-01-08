@@ -350,9 +350,11 @@ public class R2Torrent {
       = new FSMBasicEventHandler<ES, IS, R2TorrentTransferEvents.MetaServeSucc>() {
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, R2TorrentTransferEvents.MetaServeSucc resp) {
+          LOG.info("META-SERVE success - processing");
           sendCtrl(es, is.ctrl.uploadReq.success(R2TorrentStatus.HASH));
           R2TorrentTransferEvents.HashReq r = new R2TorrentTransferEvents.HashReq(is.getTorrentId());
           sendTransfer(es, r);
+          LOG.info("META-SERVE success - processed");
           return States.HASH;
         }
       };
@@ -361,8 +363,14 @@ public class R2Torrent {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2TorrentTransferEvents.HashSucc resp) {
         if (is.ctrl.uploadReq != null) {
+          R2TorrentCtrlEvents.TorrentBaseInfo ind = new R2TorrentCtrlEvents.TorrentBaseInfo(is.getTorrentId(),
+          R2TorrentStatus.UPLOAD);
+          sendCtrl(es, ind);
           return States.UPLOAD;
         } else {
+          R2TorrentCtrlEvents.TorrentBaseInfo ind = new R2TorrentCtrlEvents.TorrentBaseInfo(is.getTorrentId(),
+          R2TorrentStatus.TRANSFER);
+          sendCtrl(es, ind);
           return States.TRANSFER;
         }
       }
