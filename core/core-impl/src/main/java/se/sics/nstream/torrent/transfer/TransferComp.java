@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
-import javassist.NotFoundException;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,8 +76,6 @@ import se.sics.nstream.torrent.fileMngr.TFileRead;
 import se.sics.nstream.torrent.fileMngr.TFileWrite;
 import se.sics.nstream.torrent.fileMngr.TorrentFileMngr;
 import se.sics.nstream.torrent.old.TorrentConfig;
-import se.sics.silkold.resourcemngr.PrepareResources;
-import se.sics.silkold.resourcemngr.ResourceMngrPort;
 import se.sics.nstream.torrent.tracking.TorrentTrackingPort;
 import se.sics.nstream.torrent.tracking.event.TorrentTracking;
 import se.sics.nstream.torrent.transfer.dwnl.event.CompletedBlocks;
@@ -100,6 +97,8 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
 import se.sics.nstream.util.result.HashReadCallback;
 import se.sics.nstream.util.result.ReadCallback;
 import se.sics.nutil.tracking.load.QueueLoadConfig;
+import se.sics.silkold.resourcemngr.PrepareResources;
+import se.sics.silkold.resourcemngr.ResourceMngrPort;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -229,7 +228,7 @@ public class TransferComp extends ComponentDefinition {
             if (connMngr.hasConnCandidates()) {
                 trigger(new Seeder.Connect(connMngr.getConnCandidate(), torrentId), connPort);
             } else {
-                answer(req, req.success(Result.timeout(new NotFoundException("no peers to download manifest def"))));
+                answer(req, req.success(Result.timeout(new IllegalArgumentException("no peers to download manifest def"))));
             }
         }
     };

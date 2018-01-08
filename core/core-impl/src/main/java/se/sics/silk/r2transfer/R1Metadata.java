@@ -18,6 +18,7 @@
  */
 package se.sics.silk.r2transfer;
 
+import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +42,8 @@ import se.sics.kompics.fsm.handler.FSMPatternEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.r2torrent.R2TorrentTransferPort;
 import se.sics.silk.r2torrent.event.R2TorrentTransferEvents;
 
@@ -53,9 +56,11 @@ public class R1Metadata {
   public static final String NAME = "dela-r1-metadata-fsm";
 
   public static enum States implements FSMStateName {
-
+    CONNECT,
     GET,
+    DISCONNECT,
     SERVE
+    
   }
 
   public static interface Event extends FSMEvent {
@@ -68,7 +73,10 @@ public class R1Metadata {
 
   public static class IS implements FSMInternalState {
 
-    private final FSMIdentifier fsmId;
+    FSMIdentifier fsmId;
+    OverlayId torrentId;
+    final ISSelfLeecher selfLeecher =  new ISSelfLeecher();
+    final ISEvents events = new ISEvents();
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -78,6 +86,20 @@ public class R1Metadata {
     public FSMIdentifier getFSMId() {
       return fsmId;
     }
+    
+    public void setMetaGetReq(R2TorrentTransferEvents.MetaGetReq req) {
+      torrentId = req.torrentId;
+      selfLeecher.partners = req.partners;
+      events.metaGetReq = req;
+    }
+  }
+  
+  public static class ISSelfLeecher {
+    List<KAddress> partners;
+  }
+  
+  public static class ISEvents {
+    R2TorrentTransferEvents.MetaGetReq metaGetReq;
   }
 
   public static class ISBuilder implements FSMInternalStateBuilder {

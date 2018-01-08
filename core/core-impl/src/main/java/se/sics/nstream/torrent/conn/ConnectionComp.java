@@ -22,7 +22,6 @@ import com.google.common.base.Optional;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import javassist.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ClassMatchedHandler;
@@ -394,7 +393,7 @@ public class ConnectionComp extends ComponentDefinition {
         public void detailedState() {
             if (connected.isEmpty()) {
                 LOG.info("{}detailed state - no connection", logPrefix);
-                trigger(new DetailedState.Deliver(Result.timeout(new NotFoundException("manifest def not found"))), connPort);
+                trigger(new DetailedState.Deliver(Result.timeout(new IllegalArgumentException("manifest def not found"))), connPort);
                 return;
             }
             KAddress peer = connected.firstEntry().getValue();
