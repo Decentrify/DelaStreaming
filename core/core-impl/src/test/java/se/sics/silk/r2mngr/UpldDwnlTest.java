@@ -84,7 +84,7 @@ public class UpldDwnlTest {
   public void clean() {
   }
 
-//  @Test
+  @Test
   public void testEmpty() {
     tc = tc.body();
     tc.repeat(1).body().end();

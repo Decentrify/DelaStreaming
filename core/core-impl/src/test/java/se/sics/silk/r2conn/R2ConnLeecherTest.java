@@ -230,7 +230,7 @@ public class R2ConnLeecherTest {
     return tc
       .inspect(state(leecher.getId(), R2ConnLeecher.States.CONNECTED))
       .trigger(localConnReq(leecher, torrentId), connP)
-      .expect(R2ConnLeecherEvents.ConnectAcc.class, localConnAccP(torrentId, leecher.getId()), connP, Direction.OUT)
+      .expect(R2ConnLeecherEvents.ConnectSucc.class, localConnAccP(torrentId, leecher.getId()), connP, Direction.OUT)
       .inspect(state(leecher.getId(), R2ConnLeecher.States.CONNECTED));
   }
 
@@ -243,8 +243,8 @@ public class R2ConnLeecherTest {
       .inspect(state(leecher.getId(), R2ConnLeecher.States.CONNECTED));
   }
 
-  Predicate<R2ConnLeecherEvents.ConnectAcc> localConnAccP(OverlayId torrentId, Identifier leecherId) {
-    return (R2ConnLeecherEvents.ConnectAcc m) -> {
+  Predicate<R2ConnLeecherEvents.ConnectSucc> localConnAccP(OverlayId torrentId, Identifier leecherId) {
+    return (R2ConnLeecherEvents.ConnectSucc m) -> {
       return m.torrentId.equals(torrentId) && m.leecherId.equals(leecherId);
     };
   }

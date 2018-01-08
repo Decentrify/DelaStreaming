@@ -24,6 +24,7 @@ import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
+import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.FSMStateName;
@@ -32,6 +33,8 @@ import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.r2conn.R2ConnLeecherPort;
+import se.sics.silk.r2conn.R2ConnSeederPort;
 import se.sics.silk.r2torrent.R2TorrentTransferPort;
 
 /**
@@ -107,9 +110,13 @@ public class R2TransferComp extends ComponentDefinition {
   public static class Ports {
 
     public final Negative<R2TorrentTransferPort> transfer;
+    public final Positive<R2ConnLeecherPort> leecher;
+    public final Positive<R2ConnSeederPort> seeder;
 
     public Ports(ComponentProxy proxy) {
       transfer = proxy.provides(R2TorrentTransferPort.class);
+      leecher = proxy.requires(R2ConnLeecherPort.class);
+      seeder = proxy.requires(R2ConnSeederPort.class);
     }
   }
 

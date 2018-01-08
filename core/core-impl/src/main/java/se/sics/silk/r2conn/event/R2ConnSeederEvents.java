@@ -64,8 +64,8 @@ public class R2ConnSeederEvents {
       this.seederAdr = seederAdr;
     }
 
-    public ConnectSuccess success() {
-      return new ConnectSuccess(this);
+    public ConnectSucc success() {
+      return new ConnectSucc(this);
     }
 
     public ConnectFail fail() {
@@ -73,8 +73,8 @@ public class R2ConnSeederEvents {
     }
   }
 
-  public static class ConnectSuccess extends Base {
-    public ConnectSuccess(ConnectReq req) {
+  public static class ConnectSucc extends Base {
+    public ConnectSucc(ConnectReq req) {
       super(req.eventId, req.torrentId, req.seederAdr.getId());
     }
   }

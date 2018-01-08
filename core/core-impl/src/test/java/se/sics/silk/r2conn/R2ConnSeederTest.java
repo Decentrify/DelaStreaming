@@ -197,7 +197,7 @@ public class R2ConnSeederTest {
       .trigger(localConnReq(seeder, torrentId), connP);
     tc = netConnSucc(tc, seeder.getId());
     tc = tc
-      .expect(R2ConnSeederEvents.ConnectSuccess.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT);
+      .expect(R2ConnSeederEvents.ConnectSucc.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT);
     return tc;
   }
   
@@ -264,7 +264,7 @@ public class R2ConnSeederTest {
     tc
       .inspect(state(seeder.getId(), R2ConnSeeder.States.CONNECTED))
       .trigger(localConnReq(seeder, torrentId), connP)
-      .expect(R2ConnSeederEvents.ConnectSuccess.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT)
+      .expect(R2ConnSeederEvents.ConnectSucc.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT)
       .inspect(state(seeder.getId(), R2ConnSeeder.States.CONNECTED));
     return tc;
   }
@@ -273,7 +273,7 @@ public class R2ConnSeederTest {
     KAddress seeder, OverlayId[] torrentIds) {
     tc = tc.unordered();
     for(OverlayId torrentId : torrentIds) {
-      tc = tc.expect(R2ConnSeederEvents.ConnectSuccess.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT);
+      tc = tc.expect(R2ConnSeederEvents.ConnectSucc.class, connSuccP(seeder.getId(), torrentId), connP, Direction.OUT);
     }
     tc = tc.end();
     return tc;
@@ -460,8 +460,8 @@ public class R2ConnSeederTest {
     };
   }
 
-  Predicate<R2ConnSeederEvents.ConnectSuccess> connSuccP(Identifier seederId, OverlayId torrentId) {
-    return (R2ConnSeederEvents.ConnectSuccess t) -> {
+  Predicate<R2ConnSeederEvents.ConnectSucc> connSuccP(Identifier seederId, OverlayId torrentId) {
+    return (R2ConnSeederEvents.ConnectSucc t) -> {
       return t.seederId.equals(seederId) && t.torrentId.equals(torrentId);
     };
   }

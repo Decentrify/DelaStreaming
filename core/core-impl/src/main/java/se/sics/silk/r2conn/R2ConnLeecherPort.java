@@ -28,8 +28,8 @@ import se.sics.silk.r2conn.event.R2ConnLeecherEvents;
 public class R2ConnLeecherPort extends PortType {
   {
     request(R2ConnLeecherEvents.ConnectReq.class);
-    indication(R2ConnLeecherEvents.ConnectAcc.class);
-    indication(R2ConnLeecherEvents.ConnectRej.class);
+    indication(R2ConnLeecherEvents.ConnectSucc.class);
+    indication(R2ConnLeecherEvents.ConnectFail.class);
     request(R2ConnLeecherEvents.Disconnect.class);
     indication(R2ConnLeecherEvents.Disconnect.class);
     indication(FSMWrongState.class);

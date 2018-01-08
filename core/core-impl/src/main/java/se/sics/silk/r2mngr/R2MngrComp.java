@@ -27,6 +27,8 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.r2conn.R2ConnComp;
+import se.sics.silk.r2conn.R2ConnLeecherPort;
+import se.sics.silk.r2conn.R2ConnSeederPort;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentCtrlPort;
 import se.sics.silk.r2torrent.R2TorrentTransferPort;
@@ -58,7 +60,8 @@ public class R2MngrComp extends ComponentDefinition {
     connect(torrentCtrl, torrentMngrComp.getPositive(R2TorrentCtrlPort.class), Channel.TWO_WAY);
     transferMngrComp = create(R2TransferComp.class, new R2TransferComp.Init(init.selfAdr));
     connect(torrentMngrComp.getNegative(R2TorrentTransferPort.class), transferMngrComp.getPositive(R2TorrentTransferPort.class), Channel.TWO_WAY);
-  
+    connect(connMngrComp.getPositive(R2ConnLeecherPort.class), transferMngrComp.getNegative(R2ConnLeecherPort.class), Channel.TWO_WAY);  
+    connect(connMngrComp.getPositive(R2ConnSeederPort.class), transferMngrComp.getNegative(R2ConnSeederPort.class), Channel.TWO_WAY);
     connMngr = (R2ConnComp)connMngrComp.getComponent();
     torrentMngr = (R2TorrentComp)torrentMngrComp.getComponent();
     transferMngr = (R2TransferComp)transferMngrComp.getComponent();

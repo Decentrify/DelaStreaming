@@ -28,8 +28,8 @@ import se.sics.silk.r2conn.event.R2ConnSeederEvents;
 public class R2ConnSeederPort extends PortType {
   {
     request(R2ConnSeederEvents.ConnectReq.class);
+    indication(R2ConnSeederEvents.ConnectSucc.class);
     indication(R2ConnSeederEvents.ConnectFail.class);
-    indication(R2ConnSeederEvents.ConnectSuccess.class);
     request(R2ConnSeederEvents.Disconnect.class);
     indication(FSMWrongState.class);
   }

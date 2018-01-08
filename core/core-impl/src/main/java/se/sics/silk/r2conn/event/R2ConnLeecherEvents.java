@@ -60,12 +60,12 @@ public class R2ConnLeecherEvents {
       super(BasicIdentifiers.eventId(), torrentId, leecherId);
     }
     
-    public ConnectAcc accept() {
-      return new ConnectAcc(eventId, torrentId, leecherId);
+    public ConnectSucc accept() {
+      return new ConnectSucc(eventId, torrentId, leecherId);
     }
     
-    public ConnectRej reject() {
-      return new ConnectRej(eventId, torrentId, leecherId);
+    public ConnectFail reject() {
+      return new ConnectFail(eventId, torrentId, leecherId);
     }
     
     public Disconnect disconnect() {
@@ -79,14 +79,14 @@ public class R2ConnLeecherEvents {
     }
   }
   
-  public static class ConnectAcc extends ConnectInd {
-    ConnectAcc(Identifier eventId, OverlayId torrentId, Identifier leecherId) {
+  public static class ConnectSucc extends ConnectInd {
+    ConnectSucc(Identifier eventId, OverlayId torrentId, Identifier leecherId) {
       super(eventId, torrentId, leecherId);
     }
   }
   
-  public static class ConnectRej extends ConnectInd {
-    ConnectRej(Identifier eventId, OverlayId torrentId, Identifier leecherId) {
+  public static class ConnectFail extends ConnectInd {
+    ConnectFail(Identifier eventId, OverlayId torrentId, Identifier leecherId) {
       super(eventId, torrentId, leecherId);
     }
   }
