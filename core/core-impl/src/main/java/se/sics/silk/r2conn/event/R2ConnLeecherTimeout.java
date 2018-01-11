@@ -22,12 +22,12 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.silk.r2conn.R2ConnLeecher;
+import se.sics.silk.r2torrent.R2NodeLeecher;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2ConnLeecherTimeout extends Timeout implements R2ConnLeecher.Event {
+public class R2ConnLeecherTimeout extends Timeout implements R2NodeLeecher.Event {
   private final Identifier eventId;
   private final Identifier leecherId;
   public R2ConnLeecherTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
