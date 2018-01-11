@@ -16,25 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2conn.event;
-
-import se.sics.kompics.timer.SchedulePeriodicTimeout;
-import se.sics.kompics.timer.Timeout;
-import se.sics.kompics.util.Identifier;
-import se.sics.silk.r2torrent.conn.R2NodeSeeder;
+package se.sics.silk.r2torrent.conn;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2ConnSeederTimeout extends Timeout implements R2NodeSeeder.Timeout {
-  private final Identifier seederId;
-  public R2ConnSeederTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
-    super(spt);
-    this.seederId = seederId;
-  }
-
-  @Override
-  public Identifier nodeId() {
-    throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-  }
+public class R2NodeConnHelper {
+  
 }

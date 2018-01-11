@@ -54,8 +54,8 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.silk.r2conn.event.R2ConnLeecherTimeout;
-import se.sics.silk.r2torrent.event.R2NodeLeecherEvents;
 import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
+import se.sics.silk.r2torrent.event.R2NodeLeecherEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -337,7 +337,6 @@ public class R2NodeLeecher {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.Disconnect payload,
         PatternExtractor<Class, R2NodeConnMsgs.Disconnect> container) throws FSMException {
-        answerNet(es, container, payload.ack());
         is.torrentMngr.disconnectAll(answerConnConsumer(es));
         cancelConnPing(es, is);
         return FSMBasicStateNames.FINAL;

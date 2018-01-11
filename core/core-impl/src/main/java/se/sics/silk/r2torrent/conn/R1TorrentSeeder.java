@@ -77,7 +77,7 @@ public class R1TorrentSeeder {
     final FSMIdentifier fsmId;
     KAddress seeder;
     OverlayId torrentId;
-    ISConnect reqs = new ISConnect();
+    ReqTracker reqTracker = new ReqTracker();
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -89,7 +89,7 @@ public class R1TorrentSeeder {
     }
   }
 
-  public static class ISConnect {
+  public static class ReqTracker {
 
     Map<Identifier, R1TorrentSeederEvents.ConnectReq> reqs = new HashMap<>();
 
@@ -207,7 +207,7 @@ public class R1TorrentSeeder {
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TorrentSeederEvents.ConnectReq req) {
         is.seeder = req.seeder;
         is.torrentId = req.torrentId;
-        is.reqs.connect(req);
+        is.reqTracker.connect(req);
         R2NodeSeederEvents.Req r = new R2NodeSeederEvents.ConnectReq(is.torrentId, is.seeder);
         sendR2(es, r);
         return States.CONNECT;
@@ -217,7 +217,7 @@ public class R1TorrentSeeder {
     static FSMBasicEventHandler connect1 = new FSMBasicEventHandler<ES, IS, R1TorrentSeederEvents.ConnectReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TorrentSeederEvents.ConnectReq req) {
-        is.reqs.connect(req);
+        is.reqTracker.connect(req);
         return States.CONNECT;
       }
     };
@@ -225,7 +225,7 @@ public class R1TorrentSeeder {
     static FSMBasicEventHandler connect2 = new FSMBasicEventHandler<ES, IS, R1TorrentSeederEvents.ConnectReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TorrentSeederEvents.ConnectReq req) {
-        is.reqs.connect(req);
+        is.reqTracker.connect(req);
         sendR0(es, req.success());
         return States.CONNECTED;
       }
@@ -234,8 +234,8 @@ public class R1TorrentSeeder {
     static FSMBasicEventHandler disconnect = new FSMBasicEventHandler<ES, IS, R1TorrentSeederEvents.Disconnect>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TorrentSeederEvents.Disconnect req) {
-        is.reqs.disconnect(req);
-        if (is.reqs.empty()) {
+        is.reqTracker.disconnect(req);
+        if (is.reqTracker.empty()) {
           R2NodeSeederEvents.Disconnect r = new R2NodeSeederEvents.Disconnect(is.torrentId, is.seeder.getId());
           sendR2(es, r);
           return FSMBasicStateNames.FINAL;
@@ -247,7 +247,7 @@ public class R1TorrentSeeder {
     static FSMBasicEventHandler connected = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.ConnectSucc>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.ConnectSucc resp) {
-        is.reqs.connected(sendR0(es));
+        is.reqTracker.connected(sendR0(es));
         return States.CONNECTED;
       }
     };
@@ -255,7 +255,7 @@ public class R1TorrentSeeder {
     static FSMBasicEventHandler failed = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.ConnectFail>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.ConnectFail resp) {
-        is.reqs.failed(sendR0(es));
+        is.reqTracker.failed(sendR0(es));
         return FSMBasicStateNames.FINAL;
       }
     };
@@ -265,6 +265,10 @@ public class R1TorrentSeeder {
     es.getProxy().trigger(event, es.ports.loopbackSend);
   }
 
+  private static void sendR0(ES es, R1TorrentSeederEvents.Ind event) {
+    es.getProxy().trigger(event, es.ports.loopbackSend);
+  }
+  
   private static Consumer<R1TorrentSeederEvents.Ind> sendR0(ES es) {
     return new Consumer<R1TorrentSeederEvents.Ind>() {
       @Override
@@ -272,9 +276,5 @@ public class R1TorrentSeeder {
         sendR0(es, ind);
       }
     };
-  }
-
-  private static void sendR0(ES es, R1TorrentSeederEvents.Ind event) {
-    es.getProxy().trigger(event, es.ports.loopbackSend);
   }
 }

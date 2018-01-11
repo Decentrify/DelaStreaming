@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
@@ -58,7 +59,7 @@ import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2conn.event.R2ConnSeederTimeout;
+import se.sics.silk.r2torrent.conn.event.R2NodeSeederTimeout;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
@@ -70,15 +71,18 @@ import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
 public class R2NodeSeeder {
 
   private static final Logger LOG = LoggerFactory.getLogger(R2NodeSeeder.class);
-  public static final String NAME = "dela-r2-peer-seeder-fsm";
+  public static final String NAME = "dela-r2-node-seeder-fsm";
 
   public static enum States implements FSMStateName {
 
     CONNECT,
-    CONNECTED,
-    DISCONNECT
+    CONNECTED
   }
-
+  
+  public static class HardCodedConfig {
+    public static final long pingTimerPeriod = 1000;
+    public static final int deadPings = 5;
+  }
   
   public static interface Msg extends FSMEvent, Identifiable {
   }
@@ -130,14 +134,11 @@ public class R2NodeSeeder {
         .nextStates(States.CONNECT)
         .buildTransition()
         .onState(States.CONNECT)
-        .nextStates(States.CONNECT, States.CONNECTED, States.DISCONNECT)
+        .nextStates(States.CONNECT, States.CONNECTED)
         .toFinal()
         .buildTransition()
         .onState(States.CONNECTED)
-        .nextStates(States.CONNECTED, States.DISCONNECT)
-        .buildTransition()
-        .onState(States.DISCONNECT)
-        .nextStates(States.DISCONNECT)
+        .nextStates(States.CONNECTED)
         .toFinal()
         .buildTransition();
     }
@@ -150,27 +151,27 @@ public class R2NodeSeeder {
         .subscribeOnStart(Handlers.conn0)
         .subscribe(Handlers.conn1, States.CONNECT)
         .subscribe(Handlers.conn2, States.CONNECTED)
-        .subscribe(Handlers.conn3, States.DISCONNECT)
         .basicEvent(R2NodeSeederEvents.Disconnect.class)
-        .subscribe(Handlers.disc1, States.CONNECT)
-        .subscribe(Handlers.disc2, States.CONNECTED)
+        .subscribe(Handlers.localDisc1, States.CONNECT)
+        .subscribe(Handlers.localDisc2, States.CONNECTED)
         .buildEvents()
         .positivePort(Network.class)
         .patternEvent(BestEffortMsg.Timeout.class, BasicContentMsg.class)
         .subscribe(Handlers.beTout1, States.CONNECT)
         .subscribe(Handlers.beTout2, States.CONNECTED)
         .patternEvent(R2NodeConnMsgs.ConnectAcc.class, BasicContentMsg.class)
-        .subscribe(Handlers.connAcc, States.CONNECT)
+        .subscribe(Handlers.netConnAcc, States.CONNECT)
         .patternEvent(R2NodeConnMsgs.ConnectRej.class, BasicContentMsg.class)
-        .subscribe(Handlers.connRej, States.CONNECT)
+        .subscribe(Handlers.netConnRej, States.CONNECT)
         .patternEvent(R2NodeConnMsgs.Pong.class, BasicContentMsg.class)
-        .subscribe(Handlers.connPong, States.CONNECTED)
-        .patternEvent(R2NodeConnMsgs.DisconnectAck.class, BasicContentMsg.class)
-        .subscribe(Handlers.discAck, States.DISCONNECT)
+        .subscribe(Handlers.netConnPong, States.CONNECTED)
+        .patternEvent(R2NodeConnMsgs.Disconnect.class, BasicContentMsg.class)
+        .subscribe(Handlers.netDisc1, States.CONNECT)
+        .subscribe(Handlers.netDisc2, States.CONNECTED)
         .buildEvents()
         .positivePort(Timer.class)
-        .basicEvent(R2ConnSeederTimeout.class)
-        .subscribe(Handlers.connPing, States.CONNECTED)
+        .basicEvent(R2NodeSeederTimeout.class)
+        .subscribe(Handlers.timerConnPing, States.CONNECTED)
         .buildEvents();
     }
 
@@ -218,12 +219,10 @@ public class R2NodeSeeder {
   public static class IS implements FSMInternalState {
 
     private final FSMIdentifier fsmId;
-    private KAddress seederAdr;
-    private final Map<OverlayId, R2NodeSeederEvents.ConnectReq> connecting = new HashMap<>();
-    Map<OverlayId, R2NodeSeederEvents.ConnectReq> connected = new HashMap<>();
-    private final PingTracker pingTracker = new PingTracker();
-    private UUID connPingTimer;
-    public final long pingTimerPeriod = 1000;
+    KAddress seederAdr;
+    final ReqTracker reqTracker = new ReqTracker();
+    final PingTracker pingTracker = new PingTracker();
+    UUID connPingTimer;
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -233,31 +232,37 @@ public class R2NodeSeeder {
     public FSMIdentifier getFSMId() {
       return fsmId;
     }
+  }
+  
+  public static class ReqTracker {
 
-    public KAddress getSeederAdr() {
-      return seederAdr;
+    Map<OverlayId, R2NodeSeederEvents.ConnectReq> reqs = new HashMap<>();
+
+    void connect(R2NodeSeederEvents.ConnectReq req) {
+      reqs.put(req.torrentId, req);
     }
 
-    public void setSeederAdr(KAddress seederAdr) {
-      this.seederAdr = seederAdr;
+    void connected(Consumer<R2NodeSeederEvents.Ind> answerR0) {
+      reqs.values().stream().forEach((req) -> {
+        answerR0.accept(req.success());
+      });
     }
 
-    public Map<OverlayId, R2NodeSeederEvents.ConnectReq> getConnected() {
-      return connected;
+    void failed(Consumer<R2NodeSeederEvents.Ind> answerR0) {
+      reqs.values().stream().forEach((req) -> {
+        answerR0.accept(req.fail());
+      });
     }
 
-    public void setConnected(Map<OverlayId, R2NodeSeederEvents.ConnectReq> connected) {
-      this.connected = connected;
+    void disconnect(R2NodeSeederEvents.Disconnect req) {
+      reqs.remove(req.torrentId);
     }
 
-    public UUID getConnPingTimer() {
-      return connPingTimer;
-    }
-
-    public void setConnPingTimer(UUID connPingTimer) {
-      this.connPingTimer = connPingTimer;
+    boolean empty() {
+      return reqs.isEmpty();
     }
   }
+
 
   public static class PingTracker {
 
@@ -272,7 +277,7 @@ public class R2NodeSeeder {
     }
 
     public boolean healthy() {
-      return missedPings < 5;
+      return missedPings < HardCodedConfig.deadPings;
     }
   }
 
@@ -281,8 +286,8 @@ public class R2NodeSeeder {
     static FSMBasicEventHandler conn0 = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.ConnectReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.ConnectReq req) {
-        is.connecting.put(req.torrentId, req);
-        is.setSeederAdr(req.seederAdr);
+        is.seederAdr = req.seederAdr;
+        is.reqTracker.connect(req);
         R2NodeConnMsgs.ConnectReq r = new R2NodeConnMsgs.ConnectReq();
         bestEffortMsg(es, is, r);
         return States.CONNECT;
@@ -292,7 +297,7 @@ public class R2NodeSeeder {
     static FSMBasicEventHandler conn1 = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.ConnectReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.ConnectReq req) {
-        is.connecting.put(req.torrentId, req);
+        is.reqTracker.connect(req);
         return States.CONNECT;
       }
     };
@@ -300,49 +305,46 @@ public class R2NodeSeeder {
     static FSMBasicEventHandler conn2 = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.ConnectReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.ConnectReq req) {
-        is.connected.put(req.torrentId, req);
+        is.reqTracker.connect(req);
         sendR1(es, req.success());
         return States.CONNECTED;
       }
     };
 
-    static FSMBasicEventHandler conn3 = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.ConnectReq>() {
-      @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.ConnectReq req) {
-        sendR1(es, req.fail());
-        cancelConnPing(es, is);
-        return States.DISCONNECT;
-      }
-    };
-
-    static FSMBasicEventHandler disc1 = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.Disconnect>() {
+    static FSMBasicEventHandler localDisc1 = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.Disconnect>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.Disconnect req) {
-        is.connecting.remove(req.torrentId);
+        is.reqTracker.disconnect(req);
+        if (is.reqTracker.empty()) {
+          R2NodeConnMsgs.Disconnect msg = new R2NodeConnMsgs.Disconnect();
+          bestEffortMsg(es, is, msg);
+          //ping not initiated yet
+          return FSMBasicStateNames.FINAL;
+        }
         return States.CONNECT;
       }
     };
 
-    static FSMBasicEventHandler disc2 = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.Disconnect>() {
+    static FSMBasicEventHandler localDisc2 = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.Disconnect>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.Disconnect req) {
-        is.connected.remove(req.torrentId);
-        if (is.connected.isEmpty()) {
-          R2NodeConnMsgs.Disconnect msg
-            = new R2NodeConnMsgs.Disconnect();
+        is.reqTracker.disconnect(req);
+        if (is.reqTracker.empty()) {
+          R2NodeConnMsgs.Disconnect msg = new R2NodeConnMsgs.Disconnect();
           bestEffortMsg(es, is, msg);
           cancelConnPing(es, is);
-          return States.DISCONNECT;
+          return FSMBasicStateNames.FINAL;
         }
         return state;
       }
     };
 
-    static FSMBasicEventHandler connPing = new FSMBasicEventHandler<ES, IS, R2ConnSeederTimeout>() {
+    static FSMBasicEventHandler timerConnPing = new FSMBasicEventHandler<ES, IS, R2NodeSeederTimeout>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R2ConnSeederTimeout req) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederTimeout req) {
         if (!is.pingTracker.healthy()) {
-          connectedFail(es, is);
+          cancelConnPing(es, is);
+          is.reqTracker.failed(sendR1(es));
           return FSMBasicStateNames.FINAL;
         }
         R2NodeConnMsgs.Ping ping = new R2NodeConnMsgs.Ping();
@@ -352,7 +354,7 @@ public class R2NodeSeeder {
       }
     };
 
-    static FSMPatternEventHandler connPong = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Pong>() {
+    static FSMPatternEventHandler netConnPong = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Pong>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.Pong payload,
@@ -362,53 +364,55 @@ public class R2NodeSeeder {
       }
     };
 
-    static FSMPatternEventHandler connAcc = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectAcc>() {
+    static FSMPatternEventHandler netConnAcc = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectAcc>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.ConnectAcc payload,
         PatternExtractor<Class, R2NodeConnMsgs.ConnectAcc> container) throws FSMException {
-        if (is.connecting.isEmpty()) {
-          R2NodeConnMsgs.Disconnect msg
-            = new R2NodeConnMsgs.Disconnect();
-          bestEffortMsg(es, is, msg);
-          return States.DISCONNECT;
-        }
         scheduleConnPing(es, is);
-        for (R2NodeSeederEvents.ConnectReq req : is.connecting.values()) {
-          sendR1(es, req.success());
-          is.connected.put(req.torrentId, req);
-        }
-        is.connecting.clear();
+        is.reqTracker.connected(sendR1(es));
         return States.CONNECTED;
       }
     };
 
-    static FSMPatternEventHandler connRej = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectRej>() {
+    static FSMPatternEventHandler netConnRej = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectRej>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.ConnectRej payload,
         PatternExtractor<Class, R2NodeConnMsgs.ConnectRej> container) throws FSMException {
-        connectingFail(es, is);
+        is.reqTracker.failed(sendR1(es));
         return FSMBasicStateNames.FINAL;
       }
     };
 
-    static FSMPatternEventHandler discAck = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.DisconnectAck>() {
+    static FSMPatternEventHandler netDisc1 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Disconnect>() {
 
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.DisconnectAck payload,
-        PatternExtractor<Class, R2NodeConnMsgs.DisconnectAck> container) throws FSMException {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.Disconnect payload,
+        PatternExtractor<Class, R2NodeConnMsgs.Disconnect> container) throws FSMException {
+        is.reqTracker.failed(sendR1(es));
         return FSMBasicStateNames.FINAL;
       }
     };
+    
+    static FSMPatternEventHandler netDisc2 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Disconnect>() {
 
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.Disconnect payload,
+        PatternExtractor<Class, R2NodeConnMsgs.Disconnect> container) throws FSMException {
+        cancelConnPing(es, is);
+        is.reqTracker.failed(sendR1(es));
+        return FSMBasicStateNames.FINAL;
+      }
+    };
+    
     static FSMPatternEventHandler beTout1 = new FSMPatternEventHandler<ES, IS, BestEffortMsg.Timeout>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, BestEffortMsg.Timeout payload,
         PatternExtractor<Class, BestEffortMsg.Timeout> container) throws FSMException {
         if (payload.content instanceof R2NodeConnMsgs.ConnectReq) {
-          connectingFail(es, is);
+          is.reqTracker.failed(sendR1(es));
           return FSMBasicStateNames.FINAL;
         }
         return state;
@@ -430,43 +434,43 @@ public class R2NodeSeeder {
     };
 
     private static <C extends KompicsEvent & Identifiable> void bestEffortMsg(ES es, IS is, C content) {
-      KHeader header = new BasicHeader(es.selfAdr, is.getSeederAdr(), Transport.UDP);
+      KHeader header = new BasicHeader(es.selfAdr, is.seederAdr, Transport.UDP);
       BestEffortMsg.Request wrap = new BestEffortMsg.Request(content, es.getRetries(), es.getRetryInterval());
       KContentMsg msg = new BasicContentMsg(header, wrap);
       es.getProxy().trigger(msg, es.ports.network);
     }
-
-    private static void connectingFail(ES es, IS is) {
-      for (R2NodeSeederEvents.ConnectReq req : is.connecting.values()) {
-        sendR1(es, req.fail());
-      }
-      is.connecting.clear();
-    }
-
-    private static void connectedFail(ES es, IS is) {
-      for (R2NodeSeederEvents.ConnectReq req : is.connected.values()) {
-        sendR1(es, req.fail());
-      }
-      is.connected.clear();
+    
+    private static <C extends KompicsEvent & Identifiable> void answerMsg(ES es, BasicContentMsg msg, C content) {
+      KContentMsg resp = msg.answer(content);
+      es.getProxy().trigger(resp, es.ports.network);
     }
 
     private static void sendR1(ES es, R2NodeSeederEvents.Ind event) {
       es.getProxy().trigger(event, es.ports.loopbackSend);
     }
     
+    private static Consumer<R2NodeSeederEvents.Ind> sendR1(ES es) {
+    return new Consumer<R2NodeSeederEvents.Ind>() {
+      @Override
+      public void accept(R2NodeSeederEvents.Ind ind) {
+        sendR1(es, ind);
+      }
+    };
+  }
+    
     private static void scheduleConnPing(ES es, IS is) {
-      SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(is.pingTimerPeriod, is.pingTimerPeriod);
-      R2ConnSeederTimeout rt = new R2ConnSeederTimeout(spt, is.seederAdr.getId());
-      is.setConnPingTimer(rt.getTimeoutId());
+      SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(HardCodedConfig.pingTimerPeriod, HardCodedConfig.pingTimerPeriod);
+      R2NodeSeederTimeout rt = new R2NodeSeederTimeout(spt, is.seederAdr.getId());
+      is.connPingTimer = rt.getTimeoutId();
       spt.setTimeoutEvent(rt);
       es.getProxy().trigger(spt, es.ports.timer);
     }
 
     private static void cancelConnPing(ES es, IS is) {
-      if (is.getConnPingTimer() != null) {
-        CancelPeriodicTimeout cpt = new CancelPeriodicTimeout(is.getConnPingTimer());
+      if (is.connPingTimer != null) {
+        CancelPeriodicTimeout cpt = new CancelPeriodicTimeout(is.connPingTimer);
         es.getProxy().trigger(cpt, es.ports.timer);
-        is.setConnPingTimer(null);
+        is.connPingTimer = null;
       }
     }
   }

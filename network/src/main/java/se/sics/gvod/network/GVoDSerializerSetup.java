@@ -41,8 +41,8 @@ import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.transfer.msg.DownloadPieceSerializer;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockDetailsSerializer;
-import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
 import se.sics.silk.r2torrent.conn.msg.ConnMsgsSerializers;
+import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -50,7 +50,7 @@ import se.sics.silk.r2torrent.conn.msg.ConnMsgsSerializers;
 public class GVoDSerializerSetup {
     //You may add up to max serializers without the need to recompile all the projects that use the serializer space after gvod
     public static int maxSerializers = 25;
-    public static int serializerIds = 25;
+    public static int serializerIds = 24;
     
     public static enum GVoDSerializers {
         FileIdentifier(FileId.class, "nStreamFileIdentifier"),
@@ -76,7 +76,6 @@ public class GVoDSerializerSetup {
         ConnMsgsConnectAcc(R2NodeConnMsgs.ConnectAcc.class, "silkConnMsgsConnectAcc"),
         ConnMsgsConnectRej(R2NodeConnMsgs.ConnectRej.class, "silkConnMsgsConnectRej"),
         ConnMsgsDisconnect(R2NodeConnMsgs.Disconnect.class, "silkConnMsgsDisconnect"),
-        ConnMsgsDisconnectAck(R2NodeConnMsgs.DisconnectAck.class, "silkConnMsgsDisconnectAck"),
         ConnMsgsPing(R2NodeConnMsgs.Ping.class, "silkConnMsgsPing"),
         ConnMsgsPong(R2NodeConnMsgs.Pong.class, "silkConnMsgsPong")
         ;
@@ -193,10 +192,6 @@ public class GVoDSerializerSetup {
         ConnMsgsSerializers.Disconnect connMsgsDiscSerializer = new ConnMsgsSerializers.Disconnect(currentId++);
         Serializers.register(connMsgsDiscSerializer, GVoDSerializers.ConnMsgsDisconnect.serializerName);
         Serializers.register(GVoDSerializers.ConnMsgsDisconnect.serializedClass, GVoDSerializers.ConnMsgsDisconnect.serializerName);
-        
-        ConnMsgsSerializers.DisconnectAck connMsgsDiscAckSerializer = new ConnMsgsSerializers.DisconnectAck(currentId++);
-        Serializers.register(connMsgsDiscAckSerializer, GVoDSerializers.ConnMsgsDisconnectAck.serializerName);
-        Serializers.register(GVoDSerializers.ConnMsgsDisconnectAck.serializedClass, GVoDSerializers.ConnMsgsDisconnectAck.serializerName);
         
         ConnMsgsSerializers.Ping connMsgsPingSerializer = new ConnMsgsSerializers.Ping(currentId++);
         Serializers.register(connMsgsPingSerializer, GVoDSerializers.ConnMsgsPing.serializerName);

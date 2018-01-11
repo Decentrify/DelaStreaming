@@ -16,20 +16,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk;
+package se.sics.silk.r2torrent.conn.event;
 
-import se.sics.kompics.network.Transport;
-import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
-import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.Timeout;
+import se.sics.kompics.util.Identifier;
+import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class MsgHelper {
-  public static <C extends Object> BasicContentMsg msg(KAddress src, KAddress dst, C content) {
-    BasicHeader header = new BasicHeader(src, dst, Transport.UDP);
-    BasicContentMsg msg = new BasicContentMsg(header, content);
-    return msg;
+public class R2NodeSeederTimeout extends Timeout implements R2NodeSeeder.Timeout {
+  private final Identifier seederId;
+  public R2NodeSeederTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
+    super(spt);
+    this.seederId = seederId;
+  }
+
+  @Override
+  public Identifier nodeId() {
+    return seederId;
   }
 }

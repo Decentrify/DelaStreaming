@@ -18,7 +18,6 @@
  */
 package se.sics.silk.r2torrent.conn.msg;
 
-import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import se.sics.kompics.network.netty.serialization.Serializer;
@@ -121,24 +120,6 @@ public class ConnMsgsSerializers {
     public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier aux = fromBin(buf, hint);
       return new R2NodeConnMsgs.Disconnect(aux);
-    }
-  }
-
-  public static class DisconnectAck extends Base {
-
-    public DisconnectAck(int id) {
-      super(id);
-    }
-
-    @Override
-    public void toBinary(Object o, ByteBuf buf) {
-      toBin(o, buf);
-    }
-
-    @Override
-    public Object fromBinary(ByteBuf buf, Optional<Object> hint) {
-      Identifier aux = fromBin(buf, hint);
-      return new R2NodeConnMsgs.DisconnectAck(aux);
     }
   }
 

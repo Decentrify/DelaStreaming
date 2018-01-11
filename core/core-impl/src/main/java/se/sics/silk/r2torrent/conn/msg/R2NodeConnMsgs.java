@@ -83,21 +83,6 @@ public class R2NodeConnMsgs {
     public Disconnect() {
       this(BasicIdentifiers.msgId());
     }
-    
-    public DisconnectAck ack() {
-      return new DisconnectAck(this);
-    }
-  }
-
-  public static class DisconnectAck extends Base {
-
-    DisconnectAck(Identifier msgId) {
-      super(msgId);
-    }
-    
-    private DisconnectAck(Disconnect req) {
-      this(req.msgId);
-    }
   }
 
   public static class Ping extends Base {

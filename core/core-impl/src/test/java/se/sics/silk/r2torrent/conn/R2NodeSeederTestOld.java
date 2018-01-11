@@ -18,7 +18,6 @@
 // */
 //package se.sics.silk.r2conn;
 //
-//import se.sics.silk.r2torrent.R2ConnSeeder;
 //import com.google.common.base.Predicate;
 //import java.util.Arrays;
 //import org.junit.After;
@@ -50,6 +49,7 @@
 //import se.sics.silk.mocktimer.MockTimerComp;
 //import se.sics.silk.r2conn.event.R2ConnSeederEvents;
 //import se.sics.silk.r2conn.event.R2ConnSeederTimeout;
+//import se.sics.silk.r2torrent.R2ConnSeeder;
 //import se.sics.silk.r2torrent.msg.R2ConnMsgs;
 //
 ///**

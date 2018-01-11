@@ -41,17 +41,17 @@ import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederCon
 import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederConnReq;
 import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederConnSucc;
 import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederDisconnect;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnFail;
+import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnFailLoc;
 import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnReq;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnSucc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederDisconnect;
+import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnSuccLoc;
+import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederDisconnectLoc;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1TorrentSeederTest {
   private TestContext<R1TorrentSeederAuxComp> tc;
-  private Component r2TransferComp;
+  private Component comp;
   private Port<R2TorrentPort> triggerP;
   private Port<R2TorrentPort> expectP;
   private static OverlayIdFactory torrentIdFactory;
@@ -66,9 +66,9 @@ public class R1TorrentSeederTest {
   @Before
   public void testSetup() {
     tc = getContext();
-    r2TransferComp = tc.getComponentUnderTest();
-    triggerP = r2TransferComp.getNegative(R2TorrentPort.class);
-    expectP = r2TransferComp.getPositive(R2TorrentPort.class);
+    comp = tc.getComponentUnderTest();
+    triggerP = comp.getNegative(R2TorrentPort.class);
+    expectP = comp.getPositive(R2TorrentPort.class);
     intIdFactory = new IntIdFactory(new Random());
   }
 
@@ -98,7 +98,7 @@ public class R1TorrentSeederTest {
     
     tc = tc.body();
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file1, seeder));
-    tc = nodeSeederConnSucc(tc, expectP, triggerP);
+    tc = nodeSeederConnSuccLoc(tc, expectP, triggerP);
     tc = torrentSeederConnSucc(tc, expectP);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -117,7 +117,7 @@ public class R1TorrentSeederTest {
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file2, seeder)); //2
     tc = torrentSeederDisconnect(tc, triggerP, torrentSeederDisconnect(torrent1, file2, seeder.getId())); //3
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file3, seeder));//4
-    tc = nodeSeederConnSucc(tc, expectP, triggerP); //5-6
+    tc = nodeSeederConnSuccLoc(tc, expectP, triggerP); //5-6
     tc = tc.repeat(2).body();
     tc = torrentSeederConnSucc(tc, expectP); //7-8
     tc = tc.end();
@@ -135,7 +135,7 @@ public class R1TorrentSeederTest {
     
     tc = tc.body();
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file1, seeder));
-    tc = nodeSeederConnFail(tc, expectP, triggerP);
+    tc = nodeSeederConnFailLoc(tc, expectP, triggerP);
     tc = torrentSeederConnFail(tc, expectP);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -151,7 +151,7 @@ public class R1TorrentSeederTest {
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file1, seeder));
     tc = nodeSeederConnReq(tc, expectP);
     tc = torrentSeederDisconnect(tc, triggerP, torrentSeederDisconnect(torrent1, file1, seeder.getId()));
-    tc = nodeSeederDisconnect(tc, expectP);
+    tc = nodeSeederDisconnectLoc(tc, expectP);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
@@ -169,7 +169,7 @@ public class R1TorrentSeederTest {
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file2, seeder));
     tc = torrentSeederDisconnect(tc, triggerP, torrentSeederDisconnect(torrent1, file1, seeder.getId()));
     tc = torrentSeederDisconnect(tc, triggerP, torrentSeederDisconnect(torrent1, file2, seeder.getId()));
-    tc = nodeSeederDisconnect(tc, expectP);
+    tc = nodeSeederDisconnectLoc(tc, expectP);
     tc.repeat(1).body().end();
 
     assertTrue(tc.check());
@@ -184,11 +184,11 @@ public class R1TorrentSeederTest {
     
     tc = tc.body();
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file1, seeder)); //1
-    tc = nodeSeederConnSucc(tc, expectP, triggerP); //2-3
+    tc = nodeSeederConnSuccLoc(tc, expectP, triggerP); //2-3
     tc = torrentSeederConnSucc(tc, expectP);//4
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file2, seeder));//5
     tc = torrentSeederConnSucc(tc, expectP);//6
-    tc = nodeSeederConnFail(tc, triggerP, nodeSeederConnFail(torrent1, seeder.getId()));//7
+    tc = nodeSeederConnFailLoc(tc, triggerP, nodeSeederConnFailLoc(torrent1, seeder.getId()));//7
     tc = tc.repeat(2).body();
     tc = torrentSeederConnFail(tc, expectP);//8-9
     tc = tc.end();
