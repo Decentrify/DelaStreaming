@@ -44,8 +44,12 @@ import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
 public class R2NodeSeederHelper {
 
   //*****************************************************LOCAL**********************************************************
-  public static TestContext nodeSeederConnReq(TestContext tc, Port expectP) {
+  public static TestContext nodeSeederConnReqLoc(TestContext tc, Port expectP) {
     return tc.expect(R2NodeSeederEvents.ConnectReq.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext nodeSeederConnReqLoc(TestContext tc, Port expectP, Future f) {
+    return tc.answerRequest(R2NodeSeederEvents.ConnectReq.class, expectP, f);
   }
   
   public static TestContext nodeSeederConnReqLoc(TestContext tc, Port triggerP, R2NodeSeederEvents.ConnectReq req) {
@@ -54,6 +58,10 @@ public class R2NodeSeederHelper {
   
   public static TestContext nodeSeederConnSuccLoc(TestContext tc, Port expectP) {
     return tc.expect(R2NodeSeederEvents.ConnectSucc.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext nodeSeederConnSuccLoc(TestContext tc, Port triggerP, Future f) {
+    return tc.trigger(f, triggerP);
   }
   
   public static TestContext nodeSeederConnSuccLoc(TestContext tc, Port expectP, Port triggerP) {
@@ -77,6 +85,10 @@ public class R2NodeSeederHelper {
   
   public static TestContext nodeSeederConnFailLoc(TestContext tc, Port triggerP, R2NodeSeederEvents.ConnectFail ind) {
     return tc.trigger(ind, triggerP);
+  }
+  
+  public static TestContext nodeSeederConnFailLoc(TestContext tc, Port triggerP, Future f) {
+    return tc.trigger(f, triggerP);
   }
   
   public static TestContext nodeSeederDisconnectLoc(TestContext tc, Port expectP) {

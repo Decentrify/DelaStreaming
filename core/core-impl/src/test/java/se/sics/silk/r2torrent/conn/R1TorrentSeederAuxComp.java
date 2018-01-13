@@ -24,9 +24,12 @@ import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Start;
 import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.r2torrent.R2TorrentComp;
 
@@ -39,8 +42,8 @@ public class R1TorrentSeederAuxComp extends ComponentDefinition {
   private String logPrefix;
 
   private R2TorrentComp.Ports ports;
-  private MultiFSM torrentSeeders;
-  private R1TorrentSeeder.ES torrentSeedersES;
+  private MultiFSM fsm;
+  private R1TorrentSeeder.ES fsmEs;
 
   public R1TorrentSeederAuxComp(Init init) {
     logPrefix = "<" + init.selfAdr.getId() + ">";
@@ -50,9 +53,9 @@ public class R1TorrentSeederAuxComp extends ComponentDefinition {
   }
 
   private void setupFSM(Init init) {
-    torrentSeedersES = new R1TorrentSeeder.ES(ports);
+    fsmEs = new R1TorrentSeeder.ES(ports);
 
-    torrentSeedersES.setProxy(proxy);
+    fsmEs.setProxy(proxy);
     try {
       OnFSMExceptionAction oexa = new OnFSMExceptionAction() {
         @Override
@@ -61,7 +64,7 @@ public class R1TorrentSeederAuxComp extends ComponentDefinition {
         }
       };
       FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
-      torrentSeeders = R1TorrentSeeder.FSM.multifsm(fsmIdFactory, torrentSeedersES, oexa);
+      fsm = R1TorrentSeeder.FSM.multifsm(fsmIdFactory, fsmEs, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }
@@ -72,12 +75,20 @@ public class R1TorrentSeederAuxComp extends ComponentDefinition {
     @Override
     public void handle(Start event) {
       LOG.info("{}starting", logPrefix);
-      torrentSeeders.setupHandlers();
+      fsm.setupHandlers();
     }
   };
 
   //******************************************TESTING HELPERS***********************************************************
+  public boolean activeSeederFSM(OverlayId torrentId, KAddress seeder) {
+    Identifier fsmBaseId = R1TorrentSeeder.fsmBaseId(torrentId, seeder.getId());
+    return fsm.activeFSM(fsmBaseId);
+  }
   
+  public FSMStateName seederState(OverlayId torrentId, KAddress seeder) {
+    Identifier fsmBaseId = R1TorrentSeeder.fsmBaseId(torrentId, seeder.getId());
+    return fsm.getFSMState(fsmBaseId);
+  }
   //********************************************************************************************************************
 
   public static class Init extends se.sics.kompics.Init<R1TorrentSeederAuxComp> {

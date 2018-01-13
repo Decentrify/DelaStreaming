@@ -66,6 +66,10 @@ public class R1TorrentSeeder {
     CONNECTED
   }
 
+  public static Identifier fsmBaseId(OverlayId torrentId, Identifier seederId) {
+    return new PairIdentifier(torrentId, seederId);
+  }
+  
   public static interface Event1 extends FSMEvent, Identifiable, SilkEvent.TorrentEvent, SilkEvent.NodeEvent {
   }
 
