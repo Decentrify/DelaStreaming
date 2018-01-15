@@ -40,18 +40,18 @@ import se.sics.silk.SystemSetup;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import static se.sics.silk.r2torrent.conn.R2NodeLeecher.HardCodedConfig.MAX_TORRENTS_PER_LEECHER;
 import se.sics.silk.r2torrent.conn.R2NodeLeecher.States;
-import se.sics.silk.r2torrent.conn.R2NodeLeecherAuxComp;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherHelper.nodeLeecherConnReqNet;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherHelper.nodeLeecherConnSuccNet;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherHelper.nodeLeecherDisconnectNet;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherHelper.nodeLeecherPing;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherHelper.nodeLeecherPong;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherHelper.torrentLeecherConnFail;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherHelper.torrentLeecherConnReq;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherHelper.torrentLeecherConnSucc;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherHelper.torrentLeecherDisc;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherTimeoutHelper.nodeLeecherCancelTimer;
-import static se.sics.silk.r2torrent.conn.R2NodeLeecherTimeoutHelper.nodeLeecherSetTimer;
+import se.sics.silk.r2torrent.conn.helper.R2NodeLeecherAuxComp;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherHelper.nodeLeecherConnFailLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherHelper.nodeLeecherConnReqLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherHelper.nodeLeecherConnReqNet;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherHelper.nodeLeecherConnSuccLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherHelper.nodeLeecherConnSuccNet;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherHelper.nodeLeecherDisc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherHelper.nodeLeecherDisconnectNet;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherHelper.nodeLeecherPing;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherHelper.nodeLeecherPong;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherTimeoutHelper.nodeLeecherCancelTimer;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeLeecherTimeoutHelper.nodeLeecherSetTimer;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -107,9 +107,9 @@ public class R2NodeLeecherTest {
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
     tc = inactiveFSM(tc, leecher); //1
-    tc = torrentLeecherConnReq(tc, triggerP, torrent, leecher);
+    tc = nodeLeecherConnReqLoc(tc, triggerP, torrent, leecher);
     tc = inactiveFSM(tc, leecher); 
-    tc = torrentLeecherDisc(tc, triggerP, torrent, leecher);
+    tc = nodeLeecherDisc(tc, triggerP, torrent, leecher);
     tc = inactiveFSM(tc, leecher); 
     tc = nodeLeecherPing(tc, networkP, self, leecher);
     tc = inactiveFSM(tc, leecher);
@@ -180,8 +180,8 @@ public class R2NodeLeecherTest {
     tc = tc.body();
     tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
-    tc = torrentLeecherConnReq(tc, triggerP, torrent, leecher); //5
-    tc = torrentLeecherConnSucc(tc, expectP); //6
+    tc = nodeLeecherConnReqLoc(tc, triggerP, torrent, leecher); //5
+    tc = nodeLeecherConnSuccLoc(tc, expectP); //6
     tc = state(tc, leecher, States.CONNECTED); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -195,8 +195,8 @@ public class R2NodeLeecherTest {
     tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = torrentConnect(tc, leecher, 0, MAX_TORRENTS_PER_LEECHER);//5-24
-    tc = torrentLeecherConnReq(tc, triggerP, t, leecher); //25
-    tc = torrentLeecherConnFail(tc, expectP); //26
+    tc = nodeLeecherConnReqLoc(tc, triggerP, t, leecher); //25
+    tc = nodeLeecherConnFailLoc(tc, expectP); //26
     tc = state(tc, leecher, States.CONNECTED); //27
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -209,9 +209,9 @@ public class R2NodeLeecherTest {
     tc = tc.body();
     tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
-    tc = torrentLeecherConnReq(tc, triggerP, torrent, leecher); //5
-    tc = torrentLeecherConnSucc(tc, expectP); //6
-    tc = torrentLeecherDisc(tc, triggerP, torrent, leecher); //7
+    tc = nodeLeecherConnReqLoc(tc, triggerP, torrent, leecher); //5
+    tc = nodeLeecherConnSuccLoc(tc, expectP); //6
+    tc = nodeLeecherDisc(tc, triggerP, torrent, leecher); //7
     tc = state(tc, leecher, States.CONNECTED); //8
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -225,9 +225,9 @@ public class R2NodeLeecherTest {
     tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = torrentConnect(tc, leecher, 0, MAX_TORRENTS_PER_LEECHER);//5-24
-    tc = torrentLeecherDisc(tc, triggerP, t, leecher); //25
-    tc = torrentLeecherConnReq(tc, triggerP, t, leecher); //26
-    tc = torrentLeecherConnSucc(tc, expectP); //27
+    tc = nodeLeecherDisc(tc, triggerP, t, leecher); //25
+    tc = nodeLeecherConnReqLoc(tc, triggerP, t, leecher); //26
+    tc = nodeLeecherConnSuccLoc(tc, expectP); //27
     tc = state(tc, leecher, States.CONNECTED); //28
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -237,8 +237,8 @@ public class R2NodeLeecherTest {
   public TestContext torrentConnect(TestContext tc, KAddress leecher, int startId, int nr) {
     for (int i = 0; i < nr; i++) {
       OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(i));
-      tc = torrentLeecherConnReq(tc, triggerP, torrent, leecher); //1
-      tc = torrentLeecherConnSucc(tc, expectP);  //1
+      tc = nodeLeecherConnReqLoc(tc, triggerP, torrent, leecher); //1
+      tc = nodeLeecherConnSuccLoc(tc, expectP);  //1
     }
     return tc;
   }
@@ -265,12 +265,12 @@ public class R2NodeLeecherTest {
     tc = tc.body();
     tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
-    tc = torrentLeecherConnReq(tc, triggerP, torrent, leecher); //5
-    tc = torrentLeecherConnSucc(tc, expectP); //6
+    tc = nodeLeecherConnReqLoc(tc, triggerP, torrent, leecher); //5
+    tc = nodeLeecherConnSuccLoc(tc, expectP); //6
     tc = nodeLeecherDisconnectNet(tc, networkP, self, leecher); //7
     tc = tc.unordered();
     tc = nodeLeecherCancelTimer(tc, timerP); //8
-    tc = torrentLeecherConnFail(tc, expectP);//9
+    tc = nodeLeecherConnFailLoc(tc, expectP);//9
     tc = tc.end();
     tc = inactiveFSM(tc, leecher); //10
     tc.repeat(1).body().end();

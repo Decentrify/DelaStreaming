@@ -158,9 +158,9 @@ public class R2NodeLeecher {
     public R2NodeLeecherEvents.ConnectInd connect(R2NodeLeecherEvents.ConnectReq req) {
       if (torrents.size() < HardCodedConfig.MAX_TORRENTS_PER_LEECHER) {
         torrents.put(req.torrentId, new Torrent(req));
-        return req.accept();
+        return req.success();
       } else {
-        return req.reject();
+        return req.fail();
       }
     }
     
@@ -185,7 +185,7 @@ public class R2NodeLeecher {
     }
     
     public void connFail(Consumer disc) {
-      disc.accept(req.reject());
+      disc.accept(req.fail());
     }
   }
 

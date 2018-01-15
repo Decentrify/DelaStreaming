@@ -37,6 +37,8 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
+import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeLeecher;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 
@@ -51,6 +53,8 @@ public class R2TorrentComp extends ComponentDefinition {
   private Ports ports;
   private MultiFSM nodeSeeders;
   private MultiFSM nodeLeechers;
+  private MultiFSM torrentSeeders;
+  private MultiFSM torrentLeechers;
   private MultiFSM torrents;
   private MultiFSM metadataMngr;
   private MultiFSM hashMngr;
@@ -59,6 +63,8 @@ public class R2TorrentComp extends ComponentDefinition {
   private R1Hash.ES hashMngrES;
   private R2NodeSeeder.ES nodeSeederES;
   private R2NodeLeecher.ES nodeLeecherES;
+  private R1TorrentSeeder.ES torrentSeederES;
+  private R1TorrentLeecher.ES torrentLeecherES;
 
   public R2TorrentComp(Init init) {
     logPrefix = "<" + init.selfAdr.getId() + ">";
@@ -70,12 +76,16 @@ public class R2TorrentComp extends ComponentDefinition {
   private void setupFSM(Init init) {
     nodeSeederES = new R2NodeSeeder.ES(ports, init.selfAdr);
     nodeLeecherES = new R2NodeLeecher.ES(ports, init.selfAdr);
+    torrentSeederES = new R1TorrentSeeder.ES(ports);
+    torrentLeecherES = new R1TorrentLeecher.ES(ports);
     torrentES = new R2Torrent.ES(ports);
     metadatMngrES = new R1MetadataGet.ES(ports);
     hashMngrES = new R1Hash.ES(ports);
 
     nodeSeederES.setProxy(proxy);
     nodeLeecherES.setProxy(proxy);
+    torrentSeederES.setProxy(proxy);
+    torrentLeecherES.setProxy(proxy);
     torrentES.setProxy(proxy);
     metadatMngrES.setProxy(proxy);
     hashMngrES.setProxy(proxy);
@@ -89,6 +99,8 @@ public class R2TorrentComp extends ComponentDefinition {
       FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
       nodeSeeders = R2NodeSeeder.FSM.multifsm(fsmIdFactory, nodeSeederES, oexa);
       nodeLeechers = R2NodeLeecher.FSM.multifsm(fsmIdFactory, nodeLeecherES, oexa);
+      torrentSeeders = R2NodeSeeder.FSM.multifsm(fsmIdFactory, nodeSeederES, oexa);
+      torrentLeechers = R2NodeLeecher.FSM.multifsm(fsmIdFactory, nodeLeecherES, oexa);
       torrents = R2Torrent.FSM.multifsm(fsmIdFactory, torrentES, oexa);
       metadataMngr = R1MetadataGet.FSM.multifsm(fsmIdFactory, metadatMngrES, oexa);
       hashMngr = R1Hash.FSM.multifsm(fsmIdFactory, hashMngrES, oexa);
@@ -104,6 +116,8 @@ public class R2TorrentComp extends ComponentDefinition {
       LOG.info("{}starting", logPrefix);
       nodeSeeders.setupHandlers();
       nodeLeechers.setupHandlers();
+      torrentSeeders.setupHandlers();
+      torrentLeechers.setupHandlers();
       torrents.setupHandlers();
       metadataMngr.setupHandlers();
       hashMngr.setupHandlers();

@@ -50,11 +50,11 @@ public class R2NodeLeecherEvents {
       super(BasicIdentifiers.eventId(), torrentId, leecherId);
     }
 
-    public ConnectSucc accept() {
+    public ConnectSucc success() {
       return new ConnectSucc(eventId, torrentId, nodeId);
     }
 
-    public ConnectFail reject() {
+    public ConnectFail fail() {
       return new ConnectFail(eventId, torrentId, nodeId);
     }
   }

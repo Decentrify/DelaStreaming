@@ -40,21 +40,21 @@ import se.sics.silk.SystemSetup;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder.States;
-import se.sics.silk.r2torrent.conn.R2NodeSeederAuxComp;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederCancelTimer;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnFailLoc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnRejNet;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnReqLoc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnReqNet;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnSuccLoc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnSuccNet;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederDisconnectLoc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederDisconnectNet;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederPingNet;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederPingTimeout;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederPingTimer;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederPongNet;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederScheduleTimer;
+import se.sics.silk.r2torrent.conn.helper.R2NodeSeederAuxComp;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederCancelTimer;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnFailLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnRejNet;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnReqLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnReqNet;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnSuccLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnSuccNet;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederDisconnectLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederDisconnectNet;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederPingNet;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederPingTimeout;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederPingTimer;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederPongNet;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederScheduleTimer;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

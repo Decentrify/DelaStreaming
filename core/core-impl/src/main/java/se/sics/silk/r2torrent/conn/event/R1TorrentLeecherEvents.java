@@ -23,14 +23,14 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
+import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1TorrentSeederEvents {
+public class R1TorrentLeecherEvents {
 
-  public static abstract class Req extends SilkEvent.E2 implements R1TorrentSeeder.Event2 {
+  public static abstract class Req extends SilkEvent.E2 implements R1TorrentLeecher.Event2 {
 
     public Req(Identifier eventId, OverlayId torrentId, Identifier fileId, Identifier nodeId) {
       super(eventId, torrentId, fileId, nodeId);

@@ -69,7 +69,7 @@ public class R1TorrentSeeder {
   public static Identifier fsmBaseId(OverlayId torrentId, Identifier seederId) {
     return new PairIdentifier(torrentId, seederId);
   }
-  
+
   public static interface Event1 extends FSMEvent, Identifiable, SilkEvent.TorrentEvent, SilkEvent.NodeEvent {
   }
 
@@ -175,13 +175,11 @@ public class R1TorrentSeeder {
         .subscribe(Handlers.connect2, States.CONNECTED)
         .basicEvent(R1TorrentSeederEvents.Disconnect.class)
         .subscribe(Handlers.disconnect, States.CONNECT, States.CONNECTED)
-
         .basicEvent(R2NodeSeederEvents.ConnectSucc.class)
         .subscribe(Handlers.connected, States.CONNECT)
         .basicEvent(R2NodeSeederEvents.ConnectFail.class)
         .subscribe(Handlers.failed, States.CONNECT, States.CONNECTED)
-        .buildEvents()
-        ;
+        .buildEvents();
       return def;
     }
 
@@ -191,8 +189,12 @@ public class R1TorrentSeeder {
       public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
         if (event instanceof Event1) {
           Event1 e = (Event1) event;
-          return Optional.of(new PairIdentifier(e.torrentId(), e.nodeId()));
+          return Optional.of(fsmBaseId(e.torrentId(), e.nodeId()));
+        } else if(event instanceof Event2) {
+          Event2 e = (Event2) event;
+          return Optional.of(fsmBaseId(e.torrentId(), e.nodeId()));
         }
+         
         return Optional.empty();
       }
     };
@@ -209,7 +211,7 @@ public class R1TorrentSeeder {
     static FSMBasicEventHandler connect0 = new FSMBasicEventHandler<ES, IS, R1TorrentSeederEvents.ConnectReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TorrentSeederEvents.ConnectReq req) {
-        is.seeder = req.seeder;
+        is.seeder = req.node;
         is.torrentId = req.torrentId;
         is.reqTracker.connect(req);
         R2NodeSeederEvents.Req r = new R2NodeSeederEvents.ConnectReq(is.torrentId, is.seeder);
@@ -234,7 +236,7 @@ public class R1TorrentSeeder {
         return States.CONNECTED;
       }
     };
-    
+
     static FSMBasicEventHandler disconnect = new FSMBasicEventHandler<ES, IS, R1TorrentSeederEvents.Disconnect>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TorrentSeederEvents.Disconnect req) {
@@ -263,22 +265,22 @@ public class R1TorrentSeeder {
         return FSMBasicStateNames.FINAL;
       }
     };
-  }
 
-  private static void sendR2(ES es, R2NodeSeederEvents.Req event) {
-    es.getProxy().trigger(event, es.ports.loopbackSend);
-  }
+    private static void sendR2(ES es, R2NodeSeederEvents.Req event) {
+      es.getProxy().trigger(event, es.ports.loopbackSend);
+    }
 
-  private static void sendR0(ES es, R1TorrentSeederEvents.Ind event) {
-    es.getProxy().trigger(event, es.ports.loopbackSend);
-  }
-  
-  private static Consumer<R1TorrentSeederEvents.Ind> sendR0(ES es) {
-    return new Consumer<R1TorrentSeederEvents.Ind>() {
-      @Override
-      public void accept(R1TorrentSeederEvents.Ind ind) {
-        sendR0(es, ind);
-      }
-    };
+    private static void sendR0(ES es, R1TorrentSeederEvents.Ind event) {
+      es.getProxy().trigger(event, es.ports.loopbackSend);
+    }
+
+    private static Consumer<R1TorrentSeederEvents.Ind> sendR0(ES es) {
+      return new Consumer<R1TorrentSeederEvents.Ind>() {
+        @Override
+        public void accept(R1TorrentSeederEvents.Ind ind) {
+          sendR0(es, ind);
+        }
+      };
+    }
   }
 }

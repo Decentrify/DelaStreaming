@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.conn;
+package se.sics.silk.r2torrent.conn.helper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,22 +28,25 @@ import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.r2torrent.R2TorrentComp;
+import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2NodeSeederAuxComp extends ComponentDefinition {
+public class R1TorrentLeecherAuxComp extends ComponentDefinition {
 
-  private static final Logger LOG = LoggerFactory.getLogger(R2NodeSeederAuxComp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(R1TorrentLeecherAuxComp.class);
   private String logPrefix;
 
   private R2TorrentComp.Ports ports;
   private MultiFSM fsm;
-  private R2NodeSeeder.ES es;
+  private R1TorrentLeecher.ES fsmEs;
 
-  public R2NodeSeederAuxComp(Init init) {
+  public R1TorrentLeecherAuxComp(Init init) {
     logPrefix = "<" + init.selfAdr.getId() + ">";
     ports = new R2TorrentComp.Ports(proxy);
     subscribe(handleStart, control);
@@ -51,9 +54,9 @@ public class R2NodeSeederAuxComp extends ComponentDefinition {
   }
 
   private void setupFSM(Init init) {
-    es = new R2NodeSeeder.ES(ports, init.selfAdr);
+    fsmEs = new R1TorrentLeecher.ES(ports);
 
-    es.setProxy(proxy);
+    fsmEs.setProxy(proxy);
     try {
       OnFSMExceptionAction oexa = new OnFSMExceptionAction() {
         @Override
@@ -62,7 +65,7 @@ public class R2NodeSeederAuxComp extends ComponentDefinition {
         }
       };
       FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
-      fsm = R2NodeSeeder.FSM.multifsm(fsmIdFactory, es, oexa);
+      fsm = R1TorrentLeecher.FSM.multifsm(fsmIdFactory, fsmEs, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }
@@ -78,16 +81,18 @@ public class R2NodeSeederAuxComp extends ComponentDefinition {
   };
 
   //******************************************TESTING HELPERS***********************************************************
-  public boolean activeSeederFSM(KAddress seeder) {
-    return fsm.activeFSM(seeder.getId());
+  public boolean activeLeecherFSM(OverlayId torrentId, KAddress leecher) {
+    Identifier fsmBaseId = R1TorrentLeecher.fsmBaseId(torrentId, leecher.getId());
+    return fsm.activeFSM(fsmBaseId);
   }
   
-  public FSMStateName seederState(KAddress seeder) {
-    return fsm.getFSMState(seeder.getId());
+  public FSMStateName leecherState(OverlayId torrentId, KAddress leecher) {
+    Identifier fsmBaseId = R1TorrentLeecher.fsmBaseId(torrentId, leecher.getId());
+    return fsm.getFSMState(fsmBaseId);
   }
   //********************************************************************************************************************
 
-  public static class Init extends se.sics.kompics.Init<R2NodeSeederAuxComp> {
+  public static class Init extends se.sics.kompics.Init<R1TorrentLeecherAuxComp> {
 
     public final KAddress selfAdr;
 

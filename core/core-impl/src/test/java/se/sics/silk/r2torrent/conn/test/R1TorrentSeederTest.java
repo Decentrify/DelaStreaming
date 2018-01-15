@@ -41,17 +41,17 @@ import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder.States;
-import se.sics.silk.r2torrent.conn.R1TorrentSeederAuxComp;
-import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederConnFail;
-import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederConnReq;
-import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederConnSucc;
-import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederDisconnect;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeConnFailLoc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeConnSuccLoc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnFailLoc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnReqLoc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnSuccLoc;
-import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederDisconnectLoc;
+import se.sics.silk.r2torrent.conn.helper.R1TorrentSeederAuxComp;
+import static se.sics.silk.r2torrent.conn.helper.R1TorrentSeederHelper.torrentSeederConnFail;
+import static se.sics.silk.r2torrent.conn.helper.R1TorrentSeederHelper.torrentSeederConnReq;
+import static se.sics.silk.r2torrent.conn.helper.R1TorrentSeederHelper.torrentSeederConnSucc;
+import static se.sics.silk.r2torrent.conn.helper.R1TorrentSeederHelper.torrentSeederDisconnect;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeConnFailLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeConnSuccLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnFailLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnReqLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnSuccLoc;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederDisconnectLoc;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

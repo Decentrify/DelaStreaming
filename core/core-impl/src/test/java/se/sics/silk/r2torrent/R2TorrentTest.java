@@ -24,7 +24,6 @@ import org.junit.After;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import se.sics.kompics.Component;
 import se.sics.kompics.Port;
 import se.sics.kompics.fsm.FSMException;
@@ -39,9 +38,9 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
+import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
 import se.sics.silk.r2torrent.event.R1HashEvents;
 import se.sics.silk.r2torrent.event.R1MetadataEvents;
-import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
 import se.sics.silk.r2torrent.event.R2TorrentCtrlEvents;
 
 /**
@@ -84,7 +83,7 @@ public class R2TorrentTest {
   public void clean() {
   }
 
-  @Test
+//  @Test
   public void testSimple() {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
