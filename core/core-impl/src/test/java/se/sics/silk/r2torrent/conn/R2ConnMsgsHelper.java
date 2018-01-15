@@ -18,17 +18,9 @@
  */
 package se.sics.silk.r2torrent.conn;
 
-import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
-
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2NodeConnHelper {
-  public static R2NodeConnMsgs.ConnectReq nodeConnectReq() {
-    return new R2NodeConnMsgs.ConnectReq();
-  }
+public class R2ConnMsgsHelper {
   
-  public static R2NodeConnMsgs.Disconnect nodeDisconnect() {
-    return new R2NodeConnMsgs.Disconnect();
-  }
 }

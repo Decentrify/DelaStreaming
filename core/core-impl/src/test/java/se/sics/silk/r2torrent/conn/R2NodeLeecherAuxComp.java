@@ -34,16 +34,16 @@ import se.sics.silk.r2torrent.R2TorrentComp;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2NodeSeederAuxComp extends ComponentDefinition {
+public class R2NodeLeecherAuxComp extends ComponentDefinition {
 
-  private static final Logger LOG = LoggerFactory.getLogger(R2NodeSeederAuxComp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(R2NodeLeecherAuxComp.class);
   private String logPrefix;
 
   private R2TorrentComp.Ports ports;
   private MultiFSM fsm;
-  private R2NodeSeeder.ES es;
+  private R2NodeLeecher.ES es;
 
-  public R2NodeSeederAuxComp(Init init) {
+  public R2NodeLeecherAuxComp(Init init) {
     logPrefix = "<" + init.selfAdr.getId() + ">";
     ports = new R2TorrentComp.Ports(proxy);
     subscribe(handleStart, control);
@@ -51,7 +51,7 @@ public class R2NodeSeederAuxComp extends ComponentDefinition {
   }
 
   private void setupFSM(Init init) {
-    es = new R2NodeSeeder.ES(ports, init.selfAdr);
+    es = new R2NodeLeecher.ES(ports, init.selfAdr);
 
     es.setProxy(proxy);
     try {
@@ -62,7 +62,7 @@ public class R2NodeSeederAuxComp extends ComponentDefinition {
         }
       };
       FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
-      fsm = R2NodeSeeder.FSM.multifsm(fsmIdFactory, es, oexa);
+      fsm = R2NodeLeecher.FSM.multifsm(fsmIdFactory, es, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }
@@ -78,16 +78,16 @@ public class R2NodeSeederAuxComp extends ComponentDefinition {
   };
 
   //******************************************TESTING HELPERS***********************************************************
-  public boolean activeSeederFSM(KAddress seeder) {
+  public boolean activeLeecherFSM(KAddress seeder) {
     return fsm.activeFSM(seeder.getId());
   }
   
-  public FSMStateName seederState(KAddress seeder) {
+  public FSMStateName leecherState(KAddress seeder) {
     return fsm.getFSMState(seeder.getId());
   }
   //********************************************************************************************************************
 
-  public static class Init extends se.sics.kompics.Init<R2NodeSeederAuxComp> {
+  public static class Init extends se.sics.kompics.Init<R2NodeLeecherAuxComp> {
 
     public final KAddress selfAdr;
 

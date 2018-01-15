@@ -16,33 +16,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2conn.event;
+package se.sics.silk.r2torrent.conn.event;
 
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.silk.r2torrent.R2NodeLeecher;
+import se.sics.silk.r2torrent.conn.R2NodeLeecher;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2ConnLeecherTimeout extends Timeout implements R2NodeLeecher.Event {
-  private final Identifier eventId;
-  private final Identifier leecherId;
-  public R2ConnLeecherTimeout(SchedulePeriodicTimeout spt, Identifier seederId) {
+public class R2NodeLeecherTimeout extends Timeout implements R2NodeLeecher.Timeout {
+  private final Identifier nodeId;
+  public R2NodeLeecherTimeout(SchedulePeriodicTimeout spt, Identifier nodeId) {
     super(spt);
-    this.eventId = BasicIdentifiers.eventId();
-    this.leecherId = seederId;
+    this.nodeId = nodeId;
   }
 
   @Override
-  public Identifier getId() {
-    return eventId;
-  }
-  
-  @Override
-  public Identifier getConnLeecherFSMId() {
-    return leecherId;
+  public Identifier nodeId() {
+    return nodeId;
   }
 }

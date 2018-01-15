@@ -1,3 +1,5 @@
+package se.sics.silk.r2torrent.conn.test;
+
 ///*
 // * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
 // * 2009 Royal Institute of Technology (KTH)

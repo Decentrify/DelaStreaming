@@ -59,10 +59,10 @@ import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.conn.event.R2NodeSeederTimeout;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
+import se.sics.silk.r2torrent.conn.event.R2NodeSeederTimeout;
 import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
 
 /**
@@ -82,6 +82,8 @@ public class R2NodeSeeder {
   public static class HardCodedConfig {
     public static final long pingTimerPeriod = 1000;
     public static final int deadPings = 5;
+    public static  final int retries = 5;
+    public static final long retryInterval = 300;
   }
   
   public static interface Msg extends FSMEvent, Identifiable {
@@ -187,14 +189,10 @@ public class R2NodeSeeder {
     private ComponentProxy proxy;
     public final R2TorrentComp.Ports ports;
     public final KAddress selfAdr;
-    private final int retries;
-    private final long retryInterval;
 
-    public ES(R2TorrentComp.Ports ports, KAddress selfAdr, int retries, long retryInterval) {
+    public ES(R2TorrentComp.Ports ports, KAddress selfAdr) {
       this.ports = ports;
       this.selfAdr = selfAdr;
-      this.retries = retries;
-      this.retryInterval = retryInterval;
     }
 
     @Override
@@ -207,20 +205,13 @@ public class R2NodeSeeder {
       return proxy;
     }
 
-    public int getRetries() {
-      return retries;
-    }
-
-    public long getRetryInterval() {
-      return retryInterval;
-    }
   }
 
   public static class IS implements FSMInternalState {
 
     private final FSMIdentifier fsmId;
     KAddress seederAdr;
-    final ReqTracker reqTracker = new ReqTracker();
+    final TorrentReqTracker reqTracker = new TorrentReqTracker();
     final PingTracker pingTracker = new PingTracker();
     UUID connPingTimer;
 
@@ -234,7 +225,7 @@ public class R2NodeSeeder {
     }
   }
   
-  public static class ReqTracker {
+  public static class TorrentReqTracker {
 
     Map<OverlayId, R2NodeSeederEvents.ConnectReq> reqs = new HashMap<>();
 
@@ -435,7 +426,7 @@ public class R2NodeSeeder {
 
     private static <C extends KompicsEvent & Identifiable> void bestEffortMsg(ES es, IS is, C content) {
       KHeader header = new BasicHeader(es.selfAdr, is.seederAdr, Transport.UDP);
-      BestEffortMsg.Request wrap = new BestEffortMsg.Request(content, es.getRetries(), es.getRetryInterval());
+      BestEffortMsg.Request wrap = new BestEffortMsg.Request(content, HardCodedConfig.retries, HardCodedConfig.retryInterval);
       KContentMsg msg = new BasicContentMsg(header, wrap);
       es.getProxy().trigger(msg, es.ports.network);
     }

@@ -18,7 +18,6 @@
  */
 package se.sics.silk.r2torrent;
 
-import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Channel;
@@ -38,6 +37,8 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.r2torrent.conn.R2NodeLeecher;
+import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -67,7 +68,7 @@ public class R2TorrentComp extends ComponentDefinition {
   }
 
   private void setupFSM(Init init) {
-    nodeSeederES = new R2NodeSeeder.ES(ports, init.selfAdr, init.retries, init.retryInterval);
+    nodeSeederES = new R2NodeSeeder.ES(ports, init.selfAdr);
     nodeLeecherES = new R2NodeLeecher.ES(ports, init.selfAdr);
     torrentES = new R2Torrent.ES(ports);
     metadatMngrES = new R1MetadataGet.ES(ports);

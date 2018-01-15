@@ -18,18 +18,45 @@
  */
 package se.sics.silk;
 
+import com.google.common.base.Predicate;
 import se.sics.kompics.network.Transport;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.silk.PredicateHelper.ContentPredicate;
+import se.sics.silk.PredicateHelper.MsgBEReqPredicate;
+import se.sics.silk.PredicateHelper.MsgDstPredicate;
+import se.sics.silk.PredicateHelper.MsgPredicate;
+import se.sics.silk.PredicateHelper.MsgSrcDstPredicate;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class MsgHelper {
+
   public static <C extends Object> BasicContentMsg msg(KAddress src, KAddress dst, C content) {
     BasicHeader header = new BasicHeader(src, dst, Transport.UDP);
     BasicContentMsg msg = new BasicContentMsg(header, content);
     return msg;
+  }
+
+  public static <C extends Object> MsgBEReqPredicate<C> beMsg(Class<C> contentType, Predicate msgP) {
+    return new MsgBEReqPredicate(contentType, msgP);
+  }
+
+  public static MsgPredicate msg(Predicate msgP, Predicate contentP) {
+    return new MsgPredicate(msgP, contentP);
+  }
+  
+  public static Predicate destination(KAddress node) {
+    return new MsgDstPredicate(node);
+  }
+  
+  public static Predicate srcDst(KAddress src, KAddress dst) {
+    return new MsgSrcDstPredicate(src, dst);
+  }
+  
+  public static Predicate content(Class contentType) {
+    return new ContentPredicate(contentType);
   }
 }

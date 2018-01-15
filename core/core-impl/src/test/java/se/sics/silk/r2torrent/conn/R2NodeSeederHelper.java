@@ -32,8 +32,10 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.silk.FutureHelper;
 import se.sics.silk.MsgHelper;
+import static se.sics.silk.MsgHelper.beMsg;
+import static se.sics.silk.MsgHelper.destination;
+import static se.sics.silk.MsgHelper.msg;
 import se.sics.silk.PredicateHelper;
-import se.sics.silk.PredicateHelper.MsgBEReqPredicate;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederTimeout;
 import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
@@ -79,7 +81,7 @@ public class R2NodeSeederHelper {
   }
   
   public static TestContext nodeSeederConnFailLoc(TestContext tc, Port expectP, OverlayId torrentId) {
-    Predicate p = new PredicateHelper.TorrentEPredicate<R2NodeSeederEvents.ConnectFail>(torrentId);
+    Predicate p = new PredicateHelper.TorrentEPredicate<>(torrentId);
     return tc.expect(R2NodeSeederEvents.ConnectFail.class, p, expectP, Direction.OUT);
   }
   
@@ -95,7 +97,8 @@ public class R2NodeSeederHelper {
     return tc.expect(R2NodeSeederEvents.Disconnect.class, expectP, Direction.OUT);
   }
   
-  public static TestContext nodeSeederDisconnectLoc(TestContext tc, Port triggerP, R2NodeSeederEvents.Disconnect req) {
+  public static TestContext nodeSeederDisconnectLoc(TestContext tc, Port triggerP, OverlayId torrentId, KAddress seeder) {
+    R2NodeSeederEvents.Disconnect req = new R2NodeSeederEvents.Disconnect(torrentId, seeder.getId());
     return tc.trigger(req, triggerP);
   }
   
@@ -117,7 +120,7 @@ public class R2NodeSeederHelper {
   }
   //***************************************************NET**************************************************************
   public static TestContext nodeSeederConnReqNet(TestContext tc, Port expectNetP, KAddress seeder) {
-    Predicate p = netDstBE(R2NodeConnMsgs.ConnectReq.class, seeder);
+    Predicate p = beMsg(R2NodeConnMsgs.ConnectReq.class, destination(seeder));
     return tc.expect(BasicContentMsg.class, p, expectNetP, Direction.OUT);
   }
   
@@ -128,6 +131,12 @@ public class R2NodeSeederHelper {
       .trigger(f, triggerNetP);
   }
   
+  public static TestContext nodeSeederConnSuccNet(TestContext tc, Port network, KAddress self, KAddress seeder) {
+    R2NodeConnMsgs.ConnectReq req = new R2NodeConnMsgs.ConnectReq();
+    Msg m = msg(seeder, self, req.accept());
+    return tc.trigger(m, network);
+  }
+  
   public static TestContext nodeSeederConnRejNet(TestContext tc, Port expectNetP, Port triggerNetP) {
     Future f = nodeSeederConnRejNet();
     return tc
@@ -135,8 +144,14 @@ public class R2NodeSeederHelper {
       .trigger(f, triggerNetP);
   }
   
+  public static TestContext nodeSeederConnRejNet(TestContext tc, Port network, KAddress self, KAddress seeder) {
+    R2NodeConnMsgs.ConnectReq req = new R2NodeConnMsgs.ConnectReq();
+    Msg m = msg(seeder, self, req.reject());
+    return tc.trigger(m, network);
+  }
+  
   public static TestContext nodeSeederPingNet(TestContext tc, Port netP, KAddress seeder) {
-    Predicate p = netDstBE(R2NodeConnMsgs.Ping.class, seeder);
+    Predicate p = beMsg(R2NodeConnMsgs.Ping.class, destination(seeder));
     return tc.expect(Msg.class, p, netP, Direction.OUT);
   }
   
@@ -147,18 +162,20 @@ public class R2NodeSeederHelper {
       .trigger(f, netP);
   }
   
-  public static TestContext nodeSeederDisconnectNet(TestContext tc, Port triggerNetP, Msg msg) {
+  public static TestContext nodeSeederPongNet(TestContext tc, Port network, KAddress self, KAddress seeder) {
+    R2NodeConnMsgs.Ping ping = new R2NodeConnMsgs.Ping();
+    Msg m = msg(seeder, self, ping.ack());
+    return tc.trigger(m, network);
+  }
+  public static TestContext nodeSeederDisconnectNet(TestContext tc, Port triggerNetP, KAddress self, KAddress seeder) {
+    R2NodeConnMsgs.Disconnect disc = new R2NodeConnMsgs.Disconnect();
+    Msg msg = msg(seeder, self, disc);
     return tc.trigger(msg, triggerNetP);
   }
   
   public static TestContext nodeSeederDisconnectNet(TestContext tc, Port expectedNetP, KAddress seeder) {
-    Predicate p = netDstBE(R2NodeConnMsgs.Disconnect.class, seeder);
+    Predicate p = beMsg(R2NodeConnMsgs.Disconnect.class, destination(seeder));
     return tc.expect(BasicContentMsg.class, p, expectedNetP, Direction.OUT);
-  }
-  
-  private static <C extends Object> MsgBEReqPredicate<C> netDstBE(Class<C> contentType, KAddress seeder) {
-    Predicate<BasicContentMsg> msgP = new PredicateHelper.MsgDstPredicate(seeder);
-    return new MsgBEReqPredicate(contentType, msgP, PredicateHelper.TRUE_P);
   }
   
   public static Future<Msg, Msg> nodeSeederConnSuccNet() {

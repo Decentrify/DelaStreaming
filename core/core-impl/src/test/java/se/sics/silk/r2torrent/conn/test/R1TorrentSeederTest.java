@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.conn;
+package se.sics.silk.r2torrent.conn.test;
 
 import com.google.common.base.Predicate;
 import java.util.Random;
@@ -41,6 +41,7 @@ import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder.States;
+import se.sics.silk.r2torrent.conn.R1TorrentSeederAuxComp;
 import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederConnFail;
 import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederConnReq;
 import static se.sics.silk.r2torrent.conn.R1TorrentSeederHelper.torrentSeederConnSucc;
@@ -126,7 +127,7 @@ public class R1TorrentSeederTest {
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file1, seeder));//2
     tc = nodeSeederConnReqLoc(tc, expectP);//3
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file2, seeder)); //4
-    tc = torrentSeederDisconnect(tc, triggerP, torrentSeederDisconnect(torrent1, file2, seeder.getId()));//5
+    tc = torrentSeederDisconnect(tc, triggerP, torrent1, file2, seeder);//5
     tc = state(tc, torrent1, seeder, States.CONNECT);//6
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -182,7 +183,7 @@ public class R1TorrentSeederTest {
     tc = connected(tc, torrent1, file1, seeder); //2-5
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file2, seeder)); //6
     tc = torrentSeederConnSucc(tc, expectP);//7
-    tc = torrentSeederDisconnect(tc, triggerP, torrentSeederDisconnect(torrent1, file2, seeder.getId()));//8
+    tc = torrentSeederDisconnect(tc, triggerP, torrent1, file2, seeder);//8
     tc = state(tc, torrent1, seeder, States.CONNECTED);//6
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -244,7 +245,7 @@ public class R1TorrentSeederTest {
     tc = inactiveFSM(tc, torrent1, seeder); //1
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent1, file1, seeder));//2
     tc = nodeSeederConnReqLoc(tc, expectP);//3
-    tc = torrentSeederDisconnect(tc, triggerP, torrentSeederDisconnect(torrent1, file1, seeder.getId())); //4
+    tc = torrentSeederDisconnect(tc, triggerP, torrent1, file1, seeder); //4
     tc = nodeSeederDisconnectLoc(tc, expectP); //5
     tc = inactiveFSM(tc, torrent1, seeder); //6
     tc.repeat(1).body().end();
@@ -282,7 +283,7 @@ public class R1TorrentSeederTest {
     tc = tc.body();
     tc = inactiveFSM(tc, torrent1, seeder); //1
     tc = connected(tc, torrent1, file1, seeder);//2-5
-    tc = torrentSeederDisconnect(tc, triggerP, torrentSeederDisconnect(torrent1, file1, seeder.getId())); //6
+    tc = torrentSeederDisconnect(tc, triggerP, torrent1, file1, seeder); //6
     tc = nodeSeederDisconnectLoc(tc, expectP); //7
     tc = inactiveFSM(tc, torrent1, seeder); //8
     tc.repeat(1).body().end();

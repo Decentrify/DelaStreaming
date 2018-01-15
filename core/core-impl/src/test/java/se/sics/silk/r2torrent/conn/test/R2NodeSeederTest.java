@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.conn;
+package se.sics.silk.r2torrent.conn.test;
 
 import com.google.common.base.Predicate;
 import org.junit.After;
@@ -38,7 +38,9 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder.States;
+import se.sics.silk.r2torrent.conn.R2NodeSeederAuxComp;
 import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederCancelTimer;
 import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnFailLoc;
 import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederConnRejNet;
@@ -51,6 +53,7 @@ import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederDisconnec
 import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederPingNet;
 import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederPingTimeout;
 import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederPingTimer;
+import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederPongNet;
 import static se.sics.silk.r2torrent.conn.R2NodeSeederHelper.nodeSeederScheduleTimer;
 
 /**
@@ -98,8 +101,27 @@ public class R2NodeSeederTest {
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
-  //*************************************************CONNECT TO FAIL****************************************************
+
+  //***************************************************START TO END*****************************************************
+  @Test
+  public void testStartEnd() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
+    tc = tc.body();
+    tc = inactiveFSM(tc, seeder); //1
+    tc = nodeSeederDisconnectLoc(tc, triggerP, torrent, seeder); //2
+    tc = inactiveFSM(tc, seeder); //3
+    tc = nodeSeederDisconnectNet(tc, networkP, selfAdr, seeder);//4
+    tc = inactiveFSM(tc, seeder); //5
+    tc = nodeSeederPongNet(tc, networkP, selfAdr, seeder);//6
+    tc = inactiveFSM(tc, seeder);//7
+    tc = nodeSeederConnSuccNet(tc, networkP, selfAdr, seeder);//8
+    tc = inactiveFSM(tc, seeder);//9
+    tc = nodeSeederConnRejNet(tc, networkP, selfAdr, seeder);//10
+    tc = inactiveFSM(tc, seeder); //11
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+  }
   //*************************************************CONNECT TO END*****************************************************
   //*****************************************************LOCAL**********************************************************
   @Test
@@ -109,7 +131,7 @@ public class R2NodeSeederTest {
     tc = tc.body();
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent1, seeder)); //1
     tc = nodeSeederConnReqNet(tc, networkP, seeder);//2
-    tc = nodeSeederDisconnectLoc(tc, triggerP, nodeSeederDisconnectLoc(torrent1, seeder.getId())); //3
+    tc = nodeSeederDisconnectLoc(tc, triggerP, torrent1, seeder); //3
     tc = nodeSeederDisconnectNet(tc, networkP, seeder); //4
     tc = inactiveFSM(tc, seeder); //5
     tc.repeat(1).body().end();
@@ -137,7 +159,7 @@ public class R2NodeSeederTest {
     tc = tc.body();
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent1, seeder)); //1
     tc = nodeSeederConnReqNet(tc, networkP, seeder);//2
-    tc = nodeSeederDisconnectNet(tc, networkP, nodeSeederDisconnectNet(seeder, selfAdr)); //3
+    tc = nodeSeederDisconnectNet(tc, networkP, selfAdr, seeder); //3
     tc = nodeSeederConnFailLoc(tc, expectP, torrent1); //4
     tc = inactiveFSM(tc, seeder); //5
     tc.repeat(1).body().end();
@@ -217,7 +239,7 @@ public class R2NodeSeederTest {
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent2, seeder)); //6
     tc = nodeSeederConnSuccLoc(tc, expectP); //7
-    tc = nodeSeederDisconnectLoc(tc, triggerP, nodeSeederDisconnectLoc(torrent2, seeder.getId())); //8
+    tc = nodeSeederDisconnectLoc(tc, triggerP, torrent2, seeder); //8
     tc = state(tc, seeder, States.CONNECTED); //9
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -256,7 +278,7 @@ public class R2NodeSeederTest {
     KAddress seeder = SystemHelper.getAddress(1);
     tc = tc.body();
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
-    tc = nodeSeederDisconnectLoc(tc, triggerP, nodeSeederDisconnectLoc(torrent1, seeder.getId())); //6
+    tc = nodeSeederDisconnectLoc(tc, triggerP, torrent1, seeder); //6
     tc = tc.unordered();
     tc = nodeSeederDisconnectNet(tc, networkP, seeder); //7
     tc = nodeSeederCancelTimer(tc, timerP); //8
@@ -273,7 +295,7 @@ public class R2NodeSeederTest {
     KAddress seeder = SystemHelper.getAddress(1);
     tc = tc.body();
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
-    tc = nodeSeederDisconnectNet(tc, networkP, nodeSeederDisconnectNet(seeder, selfAdr)); //6
+    tc = nodeSeederDisconnectNet(tc, networkP, selfAdr, seeder); //6
     tc = tc.unordered();
     tc = nodeSeederConnFailLoc(tc, expectP, torrent1); //7
     tc = nodeSeederCancelTimer(tc, timerP); //8

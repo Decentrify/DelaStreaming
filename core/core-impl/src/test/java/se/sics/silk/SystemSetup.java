@@ -33,7 +33,7 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.nstream.TorrentIds;
 import se.sics.silk.r2torrent.R1Hash;
 import se.sics.silk.r2torrent.R1MetadataGet;
-import se.sics.silk.r2torrent.R2NodeLeecher;
+import se.sics.silk.r2torrent.conn.R2NodeLeecher;
 import se.sics.silk.r2torrent.R2Torrent;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder;

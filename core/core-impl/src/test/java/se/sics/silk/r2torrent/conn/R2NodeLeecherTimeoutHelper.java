@@ -18,17 +18,26 @@
  */
 package se.sics.silk.r2torrent.conn;
 
-import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
+import com.google.common.base.Predicate;
+import se.sics.kompics.Port;
+import se.sics.kompics.testing.Direction;
+import se.sics.kompics.testing.TestContext;
+import se.sics.kompics.timer.CancelPeriodicTimeout;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.PredicateHelper.NodeEPredicate;
+import se.sics.silk.PredicateHelper.PeriodicTimerPredicate;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2NodeConnHelper {
-  public static R2NodeConnMsgs.ConnectReq nodeConnectReq() {
-    return new R2NodeConnMsgs.ConnectReq();
+public class R2NodeLeecherTimeoutHelper {
+  public static TestContext nodeLeecherSetTimer(TestContext tc, Port timerP, KAddress leecher) {
+    Predicate p = new PeriodicTimerPredicate(new NodeEPredicate(leecher.getId()));
+    return tc.expect(SchedulePeriodicTimeout.class, p, timerP, Direction.OUT);
   }
   
-  public static R2NodeConnMsgs.Disconnect nodeDisconnect() {
-    return new R2NodeConnMsgs.Disconnect();
+  public static TestContext nodeLeecherCancelTimer(TestContext tc, Port timerP) {
+    return tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT);
   }
 }

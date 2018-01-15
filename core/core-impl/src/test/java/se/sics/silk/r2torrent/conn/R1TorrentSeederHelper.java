@@ -42,7 +42,8 @@ public class R1TorrentSeederHelper {
     return tc.expect(R1TorrentSeederEvents.ConnectFail.class, expectP, Direction.OUT);
   }
   
-  public static TestContext torrentSeederDisconnect(TestContext tc, Port triggerP, R1TorrentSeederEvents.Disconnect req) {
+  public static TestContext torrentSeederDisconnect(TestContext tc, Port triggerP, OverlayId torrentId, Identifier fileId, KAddress seeder) {
+    R1TorrentSeederEvents.Disconnect req = new R1TorrentSeederEvents.Disconnect(torrentId, fileId, seeder.getId());
     return tc.trigger(req, triggerP);
   }
   

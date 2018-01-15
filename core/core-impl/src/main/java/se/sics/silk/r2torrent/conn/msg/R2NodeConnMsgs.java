@@ -20,7 +20,7 @@ package se.sics.silk.r2torrent.conn.msg;
 
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.silk.r2torrent.R2NodeLeecher;
+import se.sics.silk.r2torrent.conn.R2NodeLeecher;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 
 /**
