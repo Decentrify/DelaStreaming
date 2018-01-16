@@ -18,7 +18,6 @@
  */
 package se.sics.silk.r2torrent;
 
-import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,12 +39,15 @@ import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
 import se.sics.kompics.fsm.handler.FSMPatternEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.silk.r2torrent.event.R1MetadataEvents;
+import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.conn.event.R1TorrentSeederEvents;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
+import se.sics.silk.r2torrent.event.R1MetadataGetEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -58,19 +60,22 @@ public class R1MetadataGet {
   public static Identifier fsmBaseId(OverlayId torrentId, Identifier fileId, Identifier seederId) {
     return new PairIdentifier(new PairIdentifier(torrentId, fileId), seederId);
   }
-  
+
   public static enum States implements FSMStateName {
+
     CONNECT
   }
 
-  public static interface Event extends FSMEvent {
+  public static Identifier fsmBaseId(OverlayId torrentId, Identifier fileId) {
+    return new PairIdentifier(torrentId, fileId);
+  }
 
-    public Identifier getR1MetadataFSMId();
+  public static interface Event extends FSMEvent, Identifiable, SilkEvent.TorrentEvent, SilkEvent.FileEvent {
   }
 
   public static interface TorrentEvent extends Event {
   }
-  
+
   public static interface ConnEvent extends Event {
   }
 
@@ -78,9 +83,10 @@ public class R1MetadataGet {
 
     FSMIdentifier fsmId;
     OverlayId torrentId;
+    Identifier fileId;
     KAddress seeder;
-    R1MetadataEvents.MetaGetReq metaGetReq;
-    
+    R1MetadataGetEvents.MetaGetReq metaGetReq;
+
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
     }
@@ -89,14 +95,15 @@ public class R1MetadataGet {
     public FSMIdentifier getFSMId() {
       return fsmId;
     }
-    
-    public void setMetaGetReq(R1MetadataEvents.MetaGetReq req) {
+
+    public void init(R1MetadataGetEvents.MetaGetReq req) {
       torrentId = req.torrentId;
+      fileId = req.fileId;
       seeder = req.seeder;
       metaGetReq = req;
     }
   }
-  
+
   public static class ISBuilder implements FSMInternalStateBuilder {
 
     @Override
@@ -142,17 +149,16 @@ public class R1MetadataGet {
       return FSMBuilder.semanticDef()
         .defaultFallback(Handlers.basicDefault(), Handlers.patternDefault())
         .positivePort(R2TorrentPort.class)
-        .basicEvent(R1MetadataEvents.MetaGetReq.class)
+        .basicEvent(R1MetadataGetEvents.MetaGetReq.class)
         .subscribeOnStart(Handlers.metadataGet)
-        .basicEvent(R2NodeSeederEvents.ConnectSucc.class)
+        .basicEvent(R1TorrentSeederEvents.ConnectSucc.class)
         .subscribe(Handlers.connSucc, States.CONNECT)
         .basicEvent(R2NodeSeederEvents.ConnectFail.class)
         .subscribe(Handlers.connFail, States.CONNECT)
-        .basicEvent(R1MetadataEvents.MetaStop.class)
+        .basicEvent(R1MetadataGetEvents.MetaStop.class)
         .subscribeOnStart(Handlers.stop1)
         .subscribe(Handlers.stop2, States.CONNECT)
-        .buildEvents()
-        ;
+        .buildEvents();
     }
 
     static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
@@ -160,7 +166,8 @@ public class R1MetadataGet {
       @Override
       public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
         if (event instanceof Event) {
-          return Optional.of(((Event) event).getR1MetadataFSMId());
+          Event e = (Event) event;
+          return Optional.of(fsmBaseId(e.torrentId(), e.fileId()));
         }
         return Optional.empty();
       }
@@ -202,25 +209,25 @@ public class R1MetadataGet {
       };
     }
 
-    static FSMBasicEventHandler metadataGet = new FSMBasicEventHandler<ES, IS, R1MetadataEvents.MetaGetReq>() {
+    static FSMBasicEventHandler metadataGet = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.MetaGetReq>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataEvents.MetaGetReq req) {
-        is.setMetaGetReq(req);
-        R2NodeSeederEvents.ConnectReq r = new R2NodeSeederEvents.ConnectReq(is.torrentId, is.seeder);
-        sendNodeSeeder(es, r);
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.MetaGetReq req) {
+        is.init(req);
+        R1TorrentSeederEvents.ConnectReq r = new R1TorrentSeederEvents.ConnectReq(is.torrentId, is.fileId, is.seeder);
+        sendTorrentSeeder(es, r);
         return States.CONNECT;
       }
     };
-    
-    static FSMBasicEventHandler connSucc = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.ConnectSucc>() {
+
+    static FSMBasicEventHandler connSucc = new FSMBasicEventHandler<ES, IS, R1TorrentSeederEvents.ConnectSucc>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.ConnectSucc event) throws
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R1TorrentSeederEvents.ConnectSucc event) throws
         FSMException {
         sendTorrent(es, is.metaGetReq.success());
         return FSMBasicStateNames.FINAL;
       }
     };
-    
+
     static FSMBasicEventHandler connFail = new FSMBasicEventHandler<ES, IS, R2NodeSeederEvents.ConnectSucc>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeSeederEvents.ConnectSucc event) throws
@@ -229,28 +236,28 @@ public class R1MetadataGet {
         return FSMBasicStateNames.FINAL;
       }
     };
-    
-    static FSMBasicEventHandler stop1 = new FSMBasicEventHandler<ES, IS, R1MetadataEvents.MetaStop>() {
+
+    static FSMBasicEventHandler stop1 = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.MetaStop>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataEvents.MetaStop req) {
-        sendTorrent(es, req.ack());
-        return FSMBasicStateNames.FINAL;
-      }
-    };
-    
-    static FSMBasicEventHandler stop2 = new FSMBasicEventHandler<ES, IS, R1MetadataEvents.MetaStop>() {
-      @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataEvents.MetaStop req) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.MetaStop req) {
         sendTorrent(es, req.ack());
         return FSMBasicStateNames.FINAL;
       }
     };
 
-    private static void sendTorrent(ES es, R2Torrent.MetadataEvent e) {
+    static FSMBasicEventHandler stop2 = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.MetaStop>() {
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.MetaStop req) {
+        sendTorrent(es, req.ack());
+        return FSMBasicStateNames.FINAL;
+      }
+    };
+
+    private static void sendTorrent(ES es, R1MetadataGetEvents.Ind e) {
       es.getProxy().trigger(e, es.ports.loopbackSend);
     }
-    
-    private static void sendNodeSeeder(ES es, R2NodeSeeder.Event e) {
+
+    private static void sendTorrentSeeder(ES es, R1TorrentSeederEvents.Req e) {
       es.getProxy().trigger(e, es.ports.loopbackSend);
     }
   }

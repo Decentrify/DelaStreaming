@@ -18,15 +18,18 @@
  */
 package se.sics.silk.r2torrent;
 
+import se.sics.kompics.Port;
+import se.sics.kompics.testing.Direction;
 import se.sics.kompics.testing.Future;
-import se.sics.silk.r2torrent.event.R1MetadataEvents;
+import se.sics.kompics.testing.TestContext;
+import se.sics.silk.r2torrent.event.R1MetadataGetEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1MetadataHelper {
 
-  public static abstract class MyFuture<I extends R1MetadataEvents.E2, O extends R1MetadataEvents.E3> extends Future<I, O> {
+  public static abstract class MyFuture<I extends R1MetadataGetEvents.Req, O extends R1MetadataGetEvents.Ind> extends Future<I, O> {
 
     I req;
 
@@ -37,39 +40,43 @@ public class R1MetadataHelper {
     }
   }
   
-  public static Future<R1MetadataEvents.MetaGetReq, R1MetadataEvents.MetaGetSucc> transferMetaGetSucc() {
-    return new MyFuture<R1MetadataEvents.MetaGetReq, R1MetadataEvents.MetaGetSucc>() {
+  public static Future<R1MetadataGetEvents.MetaGetReq, R1MetadataGetEvents.MetaGetSucc> transferMetaGetSucc() {
+    return new MyFuture<R1MetadataGetEvents.MetaGetReq, R1MetadataGetEvents.MetaGetSucc>() {
       @Override
-      public R1MetadataEvents.MetaGetSucc get() {
+      public R1MetadataGetEvents.MetaGetSucc get() {
         return req.success();
       }
     };
   }
 
-  public static Future<R1MetadataEvents.MetaGetReq, R1MetadataEvents.MetaGetFail> transferMetaGetFail() {
-    return new MyFuture<R1MetadataEvents.MetaGetReq, R1MetadataEvents.MetaGetFail>() {
+  public static Future<R1MetadataGetEvents.MetaGetReq, R1MetadataGetEvents.MetaGetFail> transferMetaGetFail() {
+    return new MyFuture<R1MetadataGetEvents.MetaGetReq, R1MetadataGetEvents.MetaGetFail>() {
       @Override
-      public R1MetadataEvents.MetaGetFail get() {
+      public R1MetadataGetEvents.MetaGetFail get() {
         return req.fail();
       }
     };
   }
 
-  public static Future<R1MetadataEvents.MetaServeReq, R1MetadataEvents.MetaServeSucc> transferMetaServeSucc() {
-    return new MyFuture<R1MetadataEvents.MetaServeReq, R1MetadataEvents.MetaServeSucc>() {
+  public static Future<R1MetadataGetEvents.MetaServeReq, R1MetadataGetEvents.MetaServeSucc> transferMetaServeSucc() {
+    return new MyFuture<R1MetadataGetEvents.MetaServeReq, R1MetadataGetEvents.MetaServeSucc>() {
       @Override
-      public R1MetadataEvents.MetaServeSucc get() {
+      public R1MetadataGetEvents.MetaServeSucc get() {
         return req.success();
       }
     };
   }
   
-  public static Future<R1MetadataEvents.MetaStop, R1MetadataEvents.MetaStopAck> transferMetaStop() {
-    return new MyFuture<R1MetadataEvents.MetaStop, R1MetadataEvents.MetaStopAck>() {
+  public static Future<R1MetadataGetEvents.MetaStop, R1MetadataGetEvents.MetaStopAck> transferMetaStop() {
+    return new MyFuture<R1MetadataGetEvents.MetaStop, R1MetadataGetEvents.MetaStopAck>() {
       @Override
-      public R1MetadataEvents.MetaStopAck get() {
+      public R1MetadataGetEvents.MetaStopAck get() {
         return req.ack();
       }
     };
+  }
+
+  public static TestContext mngrMetaGetReq(TestContext tc, Port expectP) {
+    return tc.expect(R1MetadataGetEvents.MetaGetReq.class, expectP, Direction.OUT);
   }
 }

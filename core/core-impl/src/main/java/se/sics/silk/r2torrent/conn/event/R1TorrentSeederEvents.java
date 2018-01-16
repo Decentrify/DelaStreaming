@@ -23,6 +23,7 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
 
 /**
@@ -37,7 +38,7 @@ public class R1TorrentSeederEvents {
     }
   }
 
-  public static abstract class Ind extends SilkEvent.E2 {
+  public static abstract class Ind extends SilkEvent.E2 implements R1MetadataGet.ConnEvent {
 
     public Ind(Identifier eventId, OverlayId torrentId, Identifier fileId, Identifier nodeId) {
       super(eventId, torrentId, fileId, nodeId);

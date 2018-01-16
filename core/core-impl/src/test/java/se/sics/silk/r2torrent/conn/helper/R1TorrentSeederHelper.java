@@ -34,10 +34,6 @@ public class R1TorrentSeederHelper {
     return tc.trigger(req, triggerP);
   }
   
-  public static TestContext torrentSeederConnSucc(TestContext tc, Port expectP) {
-    return tc.expect(R1TorrentSeederEvents.ConnectSucc.class, expectP, Direction.OUT);
-  }
-  
   public static TestContext torrentSeederConnFail(TestContext tc, Port expectP) {
     return tc.expect(R1TorrentSeederEvents.ConnectFail.class, expectP, Direction.OUT);
   }

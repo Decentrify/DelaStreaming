@@ -18,50 +18,29 @@
  */
 package se.sics.silk.r2torrent.event;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.R2Torrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1MetadataEvents {
-   public static abstract class E1 implements KompicsEvent, Identifiable {
+public class R1MetadataGetEvents {
 
-    public final Identifier eventId;
-    public final OverlayId torrentId;
+  public static abstract class Req extends SilkEvent.E4 implements R1MetadataGet.TorrentEvent {
 
-    E1(Identifier eventId, OverlayId torrentId) {
-      this.eventId = eventId;
-      this.torrentId = torrentId;
-    }
-
-    @Override
-    public Identifier getId() {
-      return eventId;
+    public Req(Identifier eventId, OverlayId torrentId, Identifier fileId) {
+      super(eventId, torrentId, fileId);
     }
   }
 
-  public static class E2 extends E1 implements R1MetadataGet.TorrentEvent {
+  public static abstract class Ind extends SilkEvent.E3 implements R2Torrent.MetadataEvent {
 
-    public E2(Identifier eventId, OverlayId torrentId) {
-      super(eventId, torrentId);
-    }
-
-    @Override
-    public Identifier getR1MetadataFSMId() {
-      return torrentId.baseId;
-    }
-  }
-
-  public static class E3 extends E1 implements R2Torrent.MetadataEvent {
-
-    public E3(Identifier eventId, OverlayId torrentId) {
+    public Ind(Identifier eventId, OverlayId torrentId) {
       super(eventId, torrentId);
     }
 
@@ -70,11 +49,13 @@ public class R1MetadataEvents {
       return torrentId.baseId;
     }
   }
-  
-  public static class MetaGetReq extends E2 {
+
+  public static class MetaGetReq extends Req {
+
     public final KAddress seeder;
-    public MetaGetReq(OverlayId torrentId, KAddress seeder) {
-      super(BasicIdentifiers.eventId(), torrentId);
+
+    public MetaGetReq(OverlayId torrentId, Identifier fileId, KAddress seeder) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId);
       this.seeder = seeder;
     }
 
@@ -87,24 +68,24 @@ public class R1MetadataEvents {
     }
   }
 
-  public static class MetaGetSucc extends E3 {
+  public static class MetaGetSucc extends Ind {
 
     MetaGetSucc(MetaGetReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class MetaGetFail extends E3 {
+  public static class MetaGetFail extends Ind {
 
     MetaGetFail(MetaGetReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class MetaServeReq extends E2 {
+  public static class MetaServeReq extends Req {
 
-    public MetaServeReq(OverlayId torrentId) {
-      super(BasicIdentifiers.eventId(), torrentId);
+    public MetaServeReq(OverlayId torrentId, Identifier fileId) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId);
     }
 
     public MetaServeSucc success() {
@@ -112,17 +93,17 @@ public class R1MetadataEvents {
     }
   }
 
-  public static class MetaServeSucc extends E3 {
+  public static class MetaServeSucc extends Ind {
 
     public MetaServeSucc(MetaServeReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class MetaStop extends E2 {
+  public static class MetaStop extends Req {
 
-    public MetaStop(OverlayId torrentId) {
-      super(BasicIdentifiers.eventId(), torrentId);
+    public MetaStop(OverlayId torrentId, Identifier fileId) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId);
     }
 
     public MetaStopAck ack() {
@@ -130,7 +111,7 @@ public class R1MetadataEvents {
     }
   }
 
-  public static class MetaStopAck extends E3 {
+  public static class MetaStopAck extends Ind {
 
     MetaStopAck(MetaStop req) {
       super(req.eventId, req.torrentId);

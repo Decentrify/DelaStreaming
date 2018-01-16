@@ -27,7 +27,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <kompics.version>1.0.0-SNAPSHOT</kompics.version>
     <ktoolbox.version>2.0.4-SNAPSHOT</ktoolbox.version>
-    <kompicstesting.version>1.0-SNAPSHOT</kompicstesting.version>
+    <kompicstesting.version>0.3.0</kompicstesting.version>
     <kompicsfsm.version>1.0.0-SNAPSHOT</kompicsfsm.version>
         
     <logger.version>1.7.5</logger.version>
@@ -52,12 +52,12 @@
     <dependency> 
       <groupId>se.sics.kompics.testing</groupId>
       <artifactId>kompics-testing</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <version>${kompicstesting.version}</version>
     </dependency>
     <dependency>
       <groupId>se.sics.kompics.fsm</groupId>
       <artifactId>core</artifactId>
-      <version>1.0.0-SNAPSHOT</version>
+      <version>${kompicsfsm.version}</version>
     </dependency>
     <dependency>
       <groupId>se.sics.ktoolbox.util</groupId>

@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.mock;
+package se.sics.silk.r2torrent.pair.helper;
 
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
@@ -36,8 +36,6 @@ import se.sics.silk.mocktimer.MockTimerComp.TriggerTimeout;
 import se.sics.silk.r2torrent.R2Torrent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentCtrlPort;
-import se.sics.silk.r2torrent.mock.MockTorrentCtrlEvent;
-import se.sics.silk.r2torrent.mock.MockTorrentCtrlPort;
 
 /**
  *

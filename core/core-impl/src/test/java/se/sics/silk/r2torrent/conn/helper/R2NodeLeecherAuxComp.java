@@ -79,12 +79,12 @@ public class R2NodeLeecherAuxComp extends ComponentDefinition {
   };
 
   //******************************************TESTING HELPERS***********************************************************
-  public boolean activeLeecherFSM(KAddress seeder) {
-    return fsm.activeFSM(seeder.getId());
+  public boolean activeLeecherFSM(KAddress leecher) {
+    return fsm.activeFSM(leecher.getId());
   }
   
-  public FSMStateName leecherState(KAddress seeder) {
-    return fsm.getFSMState(seeder.getId());
+  public FSMStateName leecherState(KAddress leecher) {
+    return fsm.getFSMState(leecher.getId());
   }
   //********************************************************************************************************************
 

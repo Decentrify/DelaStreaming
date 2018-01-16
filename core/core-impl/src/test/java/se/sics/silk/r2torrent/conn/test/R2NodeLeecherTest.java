@@ -18,8 +18,9 @@
  */
 package se.sics.silk.r2torrent.conn.test;
 
-import com.google.common.base.Predicate;
 import org.junit.After;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -27,7 +28,6 @@ import org.junit.Test;
 import se.sics.kompics.Component;
 import se.sics.kompics.Port;
 import se.sics.kompics.fsm.FSMException;
-import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.testing.TestContext;
 import se.sics.kompics.timer.Timer;
@@ -60,6 +60,7 @@ public class R2NodeLeecherTest {
 
   private TestContext<R2NodeLeecherAuxComp> tc;
   private Component comp;
+  private R2NodeLeecherAuxComp compState;
   private Port<R2TorrentPort> triggerP;
   private Port<R2TorrentPort> expectP;
   private Port<Network> networkP;
@@ -76,6 +77,7 @@ public class R2NodeLeecherTest {
   public void testSetup() {
     tc = getContext();
     comp = tc.getComponentUnderTest();
+    compState = (R2NodeLeecherAuxComp)comp.getComponent();
     triggerP = comp.getNegative(R2TorrentPort.class);
     expectP = comp.getPositive(R2TorrentPort.class);
     networkP = comp.getNegative(Network.class);
@@ -102,21 +104,47 @@ public class R2NodeLeecherTest {
 
   //************************************************START TO END********************************************************
   @Test
-  public void testStartEnd() {
+  public void testStartEnd1() {
     OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = nodeLeecherConnReqLoc(tc, triggerP, torrent, leecher);
-    tc = inactiveFSM(tc, leecher); 
-    tc = nodeLeecherDisc(tc, triggerP, torrent, leecher);
-    tc = inactiveFSM(tc, leecher); 
-    tc = nodeLeecherPing(tc, networkP, self, leecher);
-    tc = inactiveFSM(tc, leecher);
-    tc = nodeLeecherDisconnectNet(tc, networkP, self, leecher);
-    tc = inactiveFSM(tc, leecher); 
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertFalse(compState.activeLeecherFSM(leecher));
+  }
+  
+  @Test
+  public void testStartEnd2() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress leecher = SystemHelper.getAddress(1);
+    tc = tc.body();
+    tc = nodeLeecherDisc(tc, triggerP, torrent, leecher);
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    assertFalse(compState.activeLeecherFSM(leecher));
+  }
+  
+  @Test
+  public void testStartEnd3() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress leecher = SystemHelper.getAddress(1);
+    tc = tc.body();
+    tc = nodeLeecherPing(tc, networkP, self, leecher);
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    assertFalse(compState.activeLeecherFSM(leecher));
+  }
+  
+  @Test
+  public void testStartEnd4() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress leecher = SystemHelper.getAddress(1);
+    tc = tc.body();
+    tc = nodeLeecherDisconnectNet(tc, networkP, self, leecher);
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    assertFalse(compState.activeLeecherFSM(leecher));
   }
 
   //************************************************START TO CONNECTED**************************************************
@@ -125,11 +153,10 @@ public class R2NodeLeecherTest {
   public void testStartConnect() {
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
-    tc = state(tc, leecher, States.CONNECTED); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.leecherState(leecher));
   }
 
   private TestContext connected(TestContext tc, KAddress leecher) {
@@ -146,12 +173,11 @@ public class R2NodeLeecherTest {
   public void testConnectedPing() {
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = ping(tc, leecher); //5-6
-    tc = state(tc, leecher, States.CONNECTED); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.leecherState(leecher));
   }
 
   private TestContext ping(TestContext tc, KAddress leecher) {
@@ -164,13 +190,12 @@ public class R2NodeLeecherTest {
   public void testConnectedConnect() {
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = nodeLeecherConnReqNet(tc, networkP, self, leecher); //5
     tc = nodeLeecherConnSuccNet(tc, networkP, leecher);//6
-    tc = state(tc, leecher, States.CONNECTED); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.leecherState(leecher));
   }
 
   @Test
@@ -178,13 +203,12 @@ public class R2NodeLeecherTest {
     OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = nodeLeecherConnReqLoc(tc, triggerP, torrent, leecher); //5
     tc = nodeLeecherConnSuccLoc(tc, expectP); //6
-    tc = state(tc, leecher, States.CONNECTED); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.leecherState(leecher));
   }
 
   @Test
@@ -192,14 +216,13 @@ public class R2NodeLeecherTest {
     OverlayId t = torrentIdFactory.id(new BasicBuilders.IntBuilder(MAX_TORRENTS_PER_LEECHER));
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = torrentConnect(tc, leecher, 0, MAX_TORRENTS_PER_LEECHER);//5-24
     tc = nodeLeecherConnReqLoc(tc, triggerP, t, leecher); //25
     tc = nodeLeecherConnFailLoc(tc, expectP); //26
-    tc = state(tc, leecher, States.CONNECTED); //27
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.leecherState(leecher));
   }
 
   @Test
@@ -207,14 +230,13 @@ public class R2NodeLeecherTest {
     OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = nodeLeecherConnReqLoc(tc, triggerP, torrent, leecher); //5
     tc = nodeLeecherConnSuccLoc(tc, expectP); //6
     tc = nodeLeecherDisc(tc, triggerP, torrent, leecher); //7
-    tc = state(tc, leecher, States.CONNECTED); //8
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.leecherState(leecher));
   }
 
   @Test
@@ -222,15 +244,14 @@ public class R2NodeLeecherTest {
     OverlayId t = torrentIdFactory.id(new BasicBuilders.IntBuilder(MAX_TORRENTS_PER_LEECHER - 1));
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = torrentConnect(tc, leecher, 0, MAX_TORRENTS_PER_LEECHER);//5-24
     tc = nodeLeecherDisc(tc, triggerP, t, leecher); //25
     tc = nodeLeecherConnReqLoc(tc, triggerP, t, leecher); //26
     tc = nodeLeecherConnSuccLoc(tc, expectP); //27
-    tc = state(tc, leecher, States.CONNECTED); //28
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.leecherState(leecher));
   }
 
   //1-20
@@ -249,13 +270,12 @@ public class R2NodeLeecherTest {
   public void testConnectedDisconnect1() {
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = nodeLeecherDisconnectNet(tc, networkP, self, leecher); //5
     tc = nodeLeecherCancelTimer(tc, timerP); //6
-    tc = inactiveFSM(tc, leecher); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertFalse(compState.activeLeecherFSM(leecher));
   }
 
   @Test
@@ -263,7 +283,6 @@ public class R2NodeLeecherTest {
     OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress leecher = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, leecher); //1
     tc = connected(tc, leecher); //2-4
     tc = nodeLeecherConnReqLoc(tc, triggerP, torrent, leecher); //5
     tc = nodeLeecherConnSuccLoc(tc, expectP); //6
@@ -272,36 +291,8 @@ public class R2NodeLeecherTest {
     tc = nodeLeecherCancelTimer(tc, timerP); //8
     tc = nodeLeecherConnFailLoc(tc, expectP);//9
     tc = tc.end();
-    tc = inactiveFSM(tc, leecher); //10
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-  }
-  //********************************************************************************************************************
-
-  TestContext inactiveFSM(TestContext tc, KAddress seeder) {
-    return tc.inspect(inactiveFSM(seeder));
-  }
-
-  TestContext activeFSM(TestContext tc, KAddress leecher) {
-    return tc.inspect(activeFSM(leecher));
-  }
-
-  TestContext state(TestContext tc, KAddress leecher, FSMStateName expectedState) {
-    return tc.inspect(state(leecher, expectedState));
-  }
-
-  Predicate<R2NodeLeecherAuxComp> inactiveFSM(KAddress leecher) {
-    return (R2NodeLeecherAuxComp t) -> !t.activeLeecherFSM(leecher);
-  }
-
-  Predicate<R2NodeLeecherAuxComp> activeFSM(KAddress leecher) {
-    return (R2NodeLeecherAuxComp t) -> t.activeLeecherFSM(leecher);
-  }
-
-  Predicate<R2NodeLeecherAuxComp> state(KAddress leecher, FSMStateName expectedState) {
-    return (R2NodeLeecherAuxComp t) -> {
-      FSMStateName currentState = t.leecherState(leecher);
-      return currentState.equals(expectedState);
-    };
+    assertFalse(compState.activeLeecherFSM(leecher));
   }
 }

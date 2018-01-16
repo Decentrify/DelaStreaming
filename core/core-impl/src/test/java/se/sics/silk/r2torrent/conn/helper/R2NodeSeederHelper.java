@@ -58,10 +58,6 @@ public class R2NodeSeederHelper {
     return tc.trigger(req, triggerP);
   }
   
-  public static TestContext nodeSeederConnSuccLoc(TestContext tc, Port expectP) {
-    return tc.expect(R2NodeSeederEvents.ConnectSucc.class, expectP, Direction.OUT);
-  }
-  
   public static TestContext nodeSeederConnSuccLoc(TestContext tc, Port triggerP, Future f) {
     return tc.trigger(f, triggerP);
   }
@@ -124,13 +120,6 @@ public class R2NodeSeederHelper {
     return tc.expect(BasicContentMsg.class, p, expectNetP, Direction.OUT);
   }
   
-  public static TestContext nodeSeederConnSuccNet(TestContext tc, Port expectNetP, Port triggerNetP) {
-    Future f = nodeSeederConnSuccNet();
-    return tc
-      .answerRequest(Msg.class, expectNetP, f)
-      .trigger(f, triggerNetP);
-  }
-  
   public static TestContext nodeSeederConnSuccNet(TestContext tc, Port network, KAddress self, KAddress seeder) {
     R2NodeConnMsgs.ConnectReq req = new R2NodeConnMsgs.ConnectReq();
     Msg m = msg(seeder, self, req.accept());
@@ -178,14 +167,7 @@ public class R2NodeSeederHelper {
     return tc.expect(BasicContentMsg.class, p, expectedNetP, Direction.OUT);
   }
   
-  public static Future<Msg, Msg> nodeSeederConnSuccNet() {
-    return new FutureHelper.NetBEFuture<R2NodeConnMsgs.ConnectReq>(R2NodeConnMsgs.ConnectReq.class) {
-      @Override
-      public Msg get() {
-        return msg.answer(content.accept());
-      }
-    };
-  }
+  
   
   public static Future<Msg, Msg> nodeSeederConnRejNet() {
     return new FutureHelper.NetBEFuture<R2NodeConnMsgs.ConnectReq>(R2NodeConnMsgs.ConnectReq.class) {

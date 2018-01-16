@@ -99,8 +99,8 @@ public class R2TorrentComp extends ComponentDefinition {
       FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
       nodeSeeders = R2NodeSeeder.FSM.multifsm(fsmIdFactory, nodeSeederES, oexa);
       nodeLeechers = R2NodeLeecher.FSM.multifsm(fsmIdFactory, nodeLeecherES, oexa);
-      torrentSeeders = R2NodeSeeder.FSM.multifsm(fsmIdFactory, nodeSeederES, oexa);
-      torrentLeechers = R2NodeLeecher.FSM.multifsm(fsmIdFactory, nodeLeecherES, oexa);
+      torrentSeeders = R1TorrentSeeder.FSM.multifsm(fsmIdFactory, torrentSeederES, oexa);
+      torrentLeechers = R1TorrentLeecher.FSM.multifsm(fsmIdFactory, torrentLeecherES, oexa);
       torrents = R2Torrent.FSM.multifsm(fsmIdFactory, torrentES, oexa);
       metadataMngr = R1MetadataGet.FSM.multifsm(fsmIdFactory, metadatMngrES, oexa);
       hashMngr = R1Hash.FSM.multifsm(fsmIdFactory, hashMngrES, oexa);
@@ -191,8 +191,6 @@ public class R2TorrentComp extends ComponentDefinition {
   public static class Init extends se.sics.kompics.Init<R2TorrentComp> {
 
     public final KAddress selfAdr;
-    public final int retries = 5;
-    public final long retryInterval = 1000;
 
     public Init(KAddress selfAdr) {
       this.selfAdr = selfAdr;

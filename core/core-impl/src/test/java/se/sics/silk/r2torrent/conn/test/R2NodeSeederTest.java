@@ -18,8 +18,9 @@
  */
 package se.sics.silk.r2torrent.conn.test;
 
-import com.google.common.base.Predicate;
 import org.junit.After;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -27,7 +28,6 @@ import org.junit.Test;
 import se.sics.kompics.Component;
 import se.sics.kompics.Port;
 import se.sics.kompics.fsm.FSMException;
-import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.testing.TestContext;
 import se.sics.kompics.timer.Timer;
@@ -37,6 +37,8 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
+import static se.sics.silk.TorrentTestHelper.netNodeConnAcc;
+import static se.sics.silk.TorrentTestHelper.nodeSeederConnSucc;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder.States;
@@ -46,7 +48,6 @@ import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederCo
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnRejNet;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnReqLoc;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnReqNet;
-import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnSuccLoc;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnSuccNet;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederDisconnectLoc;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederDisconnectNet;
@@ -62,6 +63,7 @@ import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederSc
 public class R2NodeSeederTest {
   private TestContext<R2NodeSeederAuxComp> tc;
   private Component comp;
+  private R2NodeSeederAuxComp compState;
   private Port<R2TorrentPort> triggerP;
   private Port<R2TorrentPort> expectP;
   private Port<Network> networkP;
@@ -78,6 +80,7 @@ public class R2NodeSeederTest {
   public void testSetup() {
     tc = getContext();
     comp = tc.getComponentUnderTest();
+    compState = (R2NodeSeederAuxComp)comp.getComponent();
     triggerP = comp.getNegative(R2TorrentPort.class);
     expectP = comp.getPositive(R2TorrentPort.class);
     networkP = comp.getNegative(Network.class);
@@ -104,23 +107,57 @@ public class R2NodeSeederTest {
 
   //***************************************************START TO END*****************************************************
   @Test
-  public void testStartEnd() {
+  public void testStartEnd1() {
     OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
     tc = tc.body();
-    tc = inactiveFSM(tc, seeder); //1
     tc = nodeSeederDisconnectLoc(tc, triggerP, torrent, seeder); //2
-    tc = inactiveFSM(tc, seeder); //3
-    tc = nodeSeederDisconnectNet(tc, networkP, selfAdr, seeder);//4
-    tc = inactiveFSM(tc, seeder); //5
-    tc = nodeSeederPongNet(tc, networkP, selfAdr, seeder);//6
-    tc = inactiveFSM(tc, seeder);//7
-    tc = nodeSeederConnSuccNet(tc, networkP, selfAdr, seeder);//8
-    tc = inactiveFSM(tc, seeder);//9
-    tc = nodeSeederConnRejNet(tc, networkP, selfAdr, seeder);//10
-    tc = inactiveFSM(tc, seeder); //11
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
+  }
+  
+  @Test
+  public void testStartEnd2() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
+    tc = tc.body();
+    tc = nodeSeederDisconnectNet(tc, networkP, selfAdr, seeder);//4
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
+  }
+  
+  @Test
+  public void testStartEnd3() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
+    tc = tc.body();
+    tc = nodeSeederPongNet(tc, networkP, selfAdr, seeder);//6
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
+  }
+  @Test
+  public void testStartEnd4() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
+    tc = tc.body();
+    tc = nodeSeederConnSuccNet(tc, networkP, selfAdr, seeder);//8
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
+  }
+  
+  @Test
+  public void testStartEnd5() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
+    tc = tc.body();
+    tc = nodeSeederConnRejNet(tc, networkP, selfAdr, seeder);//10
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
   }
   //*************************************************CONNECT TO END*****************************************************
   //*****************************************************LOCAL**********************************************************
@@ -133,9 +170,9 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnReqNet(tc, networkP, seeder);//2
     tc = nodeSeederDisconnectLoc(tc, triggerP, torrent1, seeder); //3
     tc = nodeSeederDisconnectNet(tc, networkP, seeder); //4
-    tc = inactiveFSM(tc, seeder); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
   }
   
   //*****************************************************SEEDER*********************************************************
@@ -147,9 +184,9 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent1, seeder)); //1
     tc = nodeSeederConnRejNet(tc, networkP, networkP);//2-3
     tc = nodeSeederConnFailLoc(tc, expectP, torrent1); //4
-    tc = inactiveFSM(tc, seeder); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
   }
   
   @Test
@@ -161,9 +198,9 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnReqNet(tc, networkP, seeder);//2
     tc = nodeSeederDisconnectNet(tc, networkP, selfAdr, seeder); //3
     tc = nodeSeederConnFailLoc(tc, expectP, torrent1); //4
-    tc = inactiveFSM(tc, seeder); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
   }
   //***********************************************CONNECT TO CONNECT***************************************************
   @Test
@@ -175,9 +212,9 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent1, seeder)); //1
     tc = nodeSeederConnReqNet(tc, networkP, seeder);//2
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent2, seeder)); //3
-    tc = state(tc, seeder, States.CONNECT); //4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECT, compState.seederState(seeder));
   }
   //**********************************************CONNECT TO CONNECTED**************************************************
   @Test
@@ -186,16 +223,16 @@ public class R2NodeSeederTest {
     KAddress seeder = SystemHelper.getAddress(1);
     tc = tc.body();
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
-    tc = state(tc, seeder, States.CONNECTED); //6
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.seederState(seeder));
   }
   
   private TestContext simpleConnSucc(TestContext tc, KAddress seeder, OverlayId torrentId) {
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrentId, seeder)); //1
-    tc = nodeSeederConnSuccNet(tc, networkP, networkP);//2-3
+    tc = netNodeConnAcc(tc, networkP);//2-3
     tc = nodeSeederScheduleTimer(tc, timerP); //4
-    tc = nodeSeederConnSuccLoc(tc, expectP);//5
+    tc = nodeSeederConnSucc(tc, expectP);//5
     return tc;
   }
   
@@ -207,13 +244,13 @@ public class R2NodeSeederTest {
     tc = tc.body();
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent1, seeder)); //1
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent2, seeder)); //2
-    tc = nodeSeederConnSuccNet(tc, networkP, networkP);//3-4
+    tc = netNodeConnAcc(tc, networkP);//3-4
     tc = nodeSeederScheduleTimer(tc, timerP); //5
-    tc = nodeSeederConnSuccLoc(tc, expectP);//6
-    tc = nodeSeederConnSuccLoc(tc, expectP);//7
-    tc = state(tc, seeder, States.CONNECTED); //8
+    tc = nodeSeederConnSucc(tc, expectP);//6
+    tc = nodeSeederConnSucc(tc, expectP);//7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.seederState(seeder));
   }
   //*************************************************CONNECTED TO CONNECTED*********************************************
   @Test
@@ -224,10 +261,10 @@ public class R2NodeSeederTest {
     tc = tc.body();
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent2, seeder)); //6
-    tc = nodeSeederConnSuccLoc(tc, expectP); //7
-    tc = state(tc, seeder, States.CONNECTED); //8
+    tc = nodeSeederConnSucc(tc, expectP); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.seederState(seeder));
   }
   
   @Test
@@ -238,11 +275,11 @@ public class R2NodeSeederTest {
     tc = tc.body();
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent2, seeder)); //6
-    tc = nodeSeederConnSuccLoc(tc, expectP); //7
+    tc = nodeSeederConnSucc(tc, expectP); //7
     tc = nodeSeederDisconnectLoc(tc, triggerP, torrent2, seeder); //8
-    tc = state(tc, seeder, States.CONNECTED); //9
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.seederState(seeder));
   }
   
   @Test
@@ -253,9 +290,9 @@ public class R2NodeSeederTest {
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
     tc = missedPings(tc, seeder, R2NodeSeeder.HardCodedConfig.deadPings-1); //6-7
     tc = pingPong(tc, seeder); //8-9
-    tc = state(tc, seeder, States.CONNECTED); //10
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertEquals(States.CONNECTED, compState.seederState(seeder));
   }
   
   private TestContext missedPings(TestContext tc, KAddress seeder, int missedPings) {
@@ -283,9 +320,9 @@ public class R2NodeSeederTest {
     tc = nodeSeederDisconnectNet(tc, networkP, seeder); //7
     tc = nodeSeederCancelTimer(tc, timerP); //8
     tc = tc.end();
-    tc = inactiveFSM(tc, seeder); //9
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
   }
   
   
@@ -300,9 +337,9 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnFailLoc(tc, expectP, torrent1); //7
     tc = nodeSeederCancelTimer(tc, timerP); //8
     tc = tc.end();
-    tc = inactiveFSM(tc, seeder); //9
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    assertFalse(compState.activeSeederFSM(seeder));
   }
   
   @Test
@@ -317,35 +354,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederCancelTimer(tc, timerP);
     tc = nodeSeederConnFailLoc(tc, expectP, torrent1);
     tc = tc.end();
-    tc = inactiveFSM(tc, seeder); //8
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-  }
-  
-  TestContext inactiveFSM(TestContext tc, KAddress seeder) {
-    return tc.inspect(inactiveFSM(seeder));
-  }
-  
-  TestContext activeFSM(TestContext tc, KAddress seeder) {
-    return tc.inspect(activeFSM(seeder));
-  }
-  
-  TestContext state(TestContext tc, KAddress seeder, FSMStateName expectedState) {
-    return tc.inspect(state(seeder, expectedState));
-  }
-  
-  Predicate<R2NodeSeederAuxComp> inactiveFSM(KAddress seeder) {
-    return (R2NodeSeederAuxComp t) -> !t.activeSeederFSM(seeder);
-  }
-  
-  Predicate<R2NodeSeederAuxComp> activeFSM(KAddress seeder) {
-    return (R2NodeSeederAuxComp t) -> t.activeSeederFSM(seeder);
-  }
-  
-  Predicate<R2NodeSeederAuxComp> state(KAddress seeder, FSMStateName expectedState) {
-    return (R2NodeSeederAuxComp t) -> {
-      FSMStateName currentState = t.seederState(seeder);
-      return currentState.equals(expectedState);
-    };
+    assertFalse(compState.activeSeederFSM(seeder));
   }
 }

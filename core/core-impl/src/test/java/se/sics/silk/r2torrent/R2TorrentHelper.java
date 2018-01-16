@@ -18,21 +18,22 @@
  */
 package se.sics.silk.r2torrent;
 
-import se.sics.kompics.network.Msg;
-import se.sics.kompics.testing.Future;
-import se.sics.silk.FutureHelper;
-import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
+import java.util.LinkedList;
+import java.util.List;
+import se.sics.kompics.Port;
+import se.sics.kompics.testing.TestContext;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.r2torrent.event.R2TorrentCtrlEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2NodeConnHelper {
-  public static Future<Msg, Msg> connAcc() {
-    return new FutureHelper.NetBEFuture<R2NodeConnMsgs.ConnectReq>(R2NodeConnMsgs.ConnectReq.class) {
-      @Override
-      public Msg get() {
-        return msg.answer(content.accept());
-      }
-    };
+public class R2TorrentHelper {
+  public static TestContext ctrlMetadataGetReq(TestContext tc, Port ctrlP, OverlayId torrentId, KAddress seeder) {
+    List<KAddress> seeders = new LinkedList<>();
+    seeders.add(seeder);
+    R2TorrentCtrlEvents.MetaGetReq r = new R2TorrentCtrlEvents.MetaGetReq(torrentId, seeders);
+    return tc.trigger(r, ctrlP);
   }
 }

@@ -37,7 +37,6 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
-import se.sics.silk.r2torrent.R1Hash.States;
 import se.sics.silk.r2torrent.event.R1HashEvents;
 
 /**
@@ -86,11 +85,11 @@ public class R1HashTest1 {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     
     tc = tc.body();
-    tc = tc.inspect(inactiveFSM(torrent1.baseId)); // 1
     tc = transferHashSucc(tc, torrent1); // 3-5
     tc = transferStop(tc, torrent1); // 5-7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
+    
   }
   
   @Test
@@ -98,7 +97,6 @@ public class R1HashTest1 {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     
     tc = tc.body();
-    tc = tc.inspect(inactiveFSM(torrent1.baseId)); // 1
     tc = transferStop(tc, torrent1); // 3-5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -109,7 +107,6 @@ public class R1HashTest1 {
     OverlayId torrent1 = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     
     tc = tc.body();
-    tc = tc.inspect(inactiveFSM(torrent1.baseId)); // 1
     tc = transferHashSucc(tc, torrent1); //3-5
     tc = transferStop(tc, torrent1); // 5-7
     tc.repeat(1).body().end();
@@ -120,16 +117,14 @@ public class R1HashTest1 {
 
     return tc
       .trigger(transferHash(torrentId), torrentP)
-      .expect(R1HashEvents.HashSucc.class, torrentP, Direction.OUT)
-      .inspect(state(torrentId.baseId, States.HASH));
+      .expect(R1HashEvents.HashSucc.class, torrentP, Direction.OUT);
   }
   
   private TestContext transferStop(TestContext tc, OverlayId torrentId) {
 
     return tc
       .trigger(transferStop(torrentId), torrentP)
-      .expect(R1HashEvents.HashStopAck.class, torrentP, Direction.OUT)
-      .inspect(inactiveFSM(torrentId.baseId));
+      .expect(R1HashEvents.HashStopAck.class, torrentP, Direction.OUT);
   }
   
   Predicate<R2TorrentComp> inactiveFSM(Identifier torrentBaseId) {
