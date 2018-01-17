@@ -28,19 +28,20 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.fsm.FSMException;
-import se.sics.kompics.fsm.FSMInternalState;
-import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
-import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeLeecher;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder;
+import se.sics.silk.r2torrent.torrent.R1Hash;
+import se.sics.silk.r2torrent.torrent.R1MetadataGet;
+import se.sics.silk.r2torrent.torrent.R1MetadataServe;
+import se.sics.silk.r2torrent.torrent.R2Torrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -56,10 +57,12 @@ public class R2TorrentComp extends ComponentDefinition {
   private MultiFSM torrentSeeders;
   private MultiFSM torrentLeechers;
   private MultiFSM torrents;
-  private MultiFSM metadataMngr;
+  private MultiFSM metadataGet;
+  private MultiFSM metadataServe;
   private MultiFSM hashMngr;
   private R2Torrent.ES torrentES;
-  private R1MetadataGet.ES metadatMngrES;
+  private R1MetadataGet.ES metadataGetES;
+  private R1MetadataServe.ES metadataServeES;
   private R1Hash.ES hashMngrES;
   private R2NodeSeeder.ES nodeSeederES;
   private R2NodeLeecher.ES nodeLeecherES;
@@ -74,12 +77,13 @@ public class R2TorrentComp extends ComponentDefinition {
   }
 
   private void setupFSM(Init init) {
-    nodeSeederES = new R2NodeSeeder.ES(ports, init.selfAdr);
-    nodeLeecherES = new R2NodeLeecher.ES(ports, init.selfAdr);
-    torrentSeederES = new R1TorrentSeeder.ES(ports);
-    torrentLeecherES = new R1TorrentLeecher.ES(ports);
-    torrentES = new R2Torrent.ES(ports);
-    metadatMngrES = new R1MetadataGet.ES(ports);
+    nodeSeederES = new R2NodeSeeder.ES(init.selfAdr);
+    nodeLeecherES = new R2NodeLeecher.ES(init.selfAdr);
+    torrentSeederES = new R1TorrentSeeder.ES();
+    torrentLeecherES = new R1TorrentLeecher.ES();
+    torrentES = new R2Torrent.ES();
+    metadataGetES = new R1MetadataGet.ES();
+    metadataServeES = new R1MetadataServe.ES();
     hashMngrES = new R1Hash.ES(ports);
 
     nodeSeederES.setProxy(proxy);
@@ -87,8 +91,17 @@ public class R2TorrentComp extends ComponentDefinition {
     torrentSeederES.setProxy(proxy);
     torrentLeecherES.setProxy(proxy);
     torrentES.setProxy(proxy);
-    metadatMngrES.setProxy(proxy);
+    metadataGetES.setProxy(proxy);
+    metadataServeES.setProxy(proxy);
     hashMngrES.setProxy(proxy);
+    
+    nodeLeecherES.setPorts(ports);
+    nodeSeederES.setPorts(ports);
+    torrentLeecherES.setPorts(ports);
+    torrentSeederES.setPorts(ports);
+    torrentES.setPorts(ports);
+    metadataGetES.setPorts(ports);
+    metadataServeES.setPorts(ports);
     try {
       OnFSMExceptionAction oexa = new OnFSMExceptionAction() {
         @Override
@@ -102,7 +115,8 @@ public class R2TorrentComp extends ComponentDefinition {
       torrentSeeders = R1TorrentSeeder.FSM.multifsm(fsmIdFactory, torrentSeederES, oexa);
       torrentLeechers = R1TorrentLeecher.FSM.multifsm(fsmIdFactory, torrentLeecherES, oexa);
       torrents = R2Torrent.FSM.multifsm(fsmIdFactory, torrentES, oexa);
-      metadataMngr = R1MetadataGet.FSM.multifsm(fsmIdFactory, metadatMngrES, oexa);
+      metadataGet = R1MetadataGet.FSM.multifsm(fsmIdFactory, metadataGetES, oexa);
+      metadataServe = R1MetadataServe.FSM.multifsm(fsmIdFactory, metadataServeES, oexa);
       hashMngr = R1Hash.FSM.multifsm(fsmIdFactory, hashMngrES, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
@@ -119,55 +133,11 @@ public class R2TorrentComp extends ComponentDefinition {
       torrentSeeders.setupHandlers();
       torrentLeechers.setupHandlers();
       torrents.setupHandlers();
-      metadataMngr.setupHandlers();
+      metadataGet.setupHandlers();
+      metadataServe.setupHandlers();
       hashMngr.setupHandlers();
     }
   };
-
-  //******************************************TESTING HELPERS***********************************************************
-  FSMInternalState getConnSeederIS(Identifier baseId) {
-    return nodeSeeders.getFSMInternalState(baseId);
-  }
-
-  FSMStateName getConnSeederState(Identifier baseId) {
-    return nodeSeeders.getFSMState(baseId);
-  }
-
-  boolean activeSeederFSM(Identifier baseId) {
-    return nodeSeeders.activeFSM(baseId);
-  }
-  
-  FSMStateName getConnLeecherState(Identifier baseId) {
-    return nodeLeechers.getFSMState(baseId);
-  }
-  
-  boolean activeLeecherFSM(Identifier baseId) {
-    return nodeLeechers.activeFSM(baseId);
-  }
-  
-  FSMStateName getTorrentState(Identifier baseId) {
-    return torrents.getFSMState(baseId);
-  }
-
-  boolean activeTorrentFSM(Identifier baseId) {
-    return torrents.activeFSM(baseId);
-  }
-
-  FSMStateName getMetadataState(Identifier baseId) {
-    return metadataMngr.getFSMState(baseId);
-  }
-
-  boolean activeMetadataFSM(Identifier baseId) {
-    return metadataMngr.activeFSM(baseId);
-  }
-
-  FSMStateName getHashState(Identifier baseId) {
-    return hashMngr.getFSMState(baseId);
-  }
-
-  boolean activeHashFSM(Identifier baseId) {
-    return hashMngr.activeFSM(baseId);
-  }
   //********************************************************************************************************************
 
   public static class Ports {

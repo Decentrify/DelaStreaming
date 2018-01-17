@@ -20,7 +20,7 @@ package se.sics.silk.r2torrent;
 
 import se.sics.kompics.PortType;
 import se.sics.kompics.fsm.event.FSMWrongState;
-import se.sics.silk.r2torrent.event.R2TorrentCtrlEvents;
+import se.sics.silk.r2torrent.torrent.event.R2TorrentCtrlEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

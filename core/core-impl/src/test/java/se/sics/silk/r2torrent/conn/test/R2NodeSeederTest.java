@@ -26,11 +26,17 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import se.sics.kompics.Component;
+import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Port;
+import se.sics.kompics.config.Config;
 import se.sics.kompics.fsm.FSMException;
+import se.sics.kompics.fsm.MultiFSM;
+import se.sics.kompics.fsm.OnFSMExceptionAction;
+import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.testing.TestContext;
 import se.sics.kompics.timer.Timer;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
@@ -39,10 +45,11 @@ import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import static se.sics.silk.TorrentTestHelper.netNodeConnAcc;
 import static se.sics.silk.TorrentTestHelper.nodeSeederConnSucc;
+import se.sics.silk.TorrentWrapperComp;
+import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder.States;
-import se.sics.silk.r2torrent.conn.helper.R2NodeSeederAuxComp;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederCancelTimer;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnFailLoc;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnRejNet;
@@ -61,9 +68,9 @@ import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederSc
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R2NodeSeederTest {
-  private TestContext<R2NodeSeederAuxComp> tc;
+  private TestContext<TorrentWrapperComp> tc;
   private Component comp;
-  private R2NodeSeederAuxComp compState;
+  private TorrentWrapperComp compState;
   private Port<R2TorrentPort> triggerP;
   private Port<R2TorrentPort> expectP;
   private Port<Network> networkP;
@@ -80,17 +87,39 @@ public class R2NodeSeederTest {
   public void testSetup() {
     tc = getContext();
     comp = tc.getComponentUnderTest();
-    compState = (R2NodeSeederAuxComp)comp.getComponent();
+    compState = (TorrentWrapperComp)comp.getComponent();
     triggerP = comp.getNegative(R2TorrentPort.class);
     expectP = comp.getPositive(R2TorrentPort.class);
     networkP = comp.getNegative(Network.class);
     timerP = comp.getNegative(Timer.class);
   }
 
-  private TestContext<R2NodeSeederAuxComp> getContext() {
+  private TestContext<TorrentWrapperComp> getContext() {
     selfAdr = SystemHelper.getAddress(0);
-    R2NodeSeederAuxComp.Init init = new R2NodeSeederAuxComp.Init(selfAdr);
-    TestContext<R2NodeSeederAuxComp> context = TestContext.newInstance(R2NodeSeederAuxComp.class, init);
+    TorrentWrapperComp.Setup setup = new TorrentWrapperComp.Setup() {
+      @Override
+      public MultiFSM setupFSM(ComponentProxy proxy, Config config, R2TorrentComp.Ports ports) {
+        try {
+          R2NodeSeeder.ES fsmEs = new R2NodeSeeder.ES(selfAdr);
+          fsmEs.setProxy(proxy);
+          fsmEs.setPorts(ports);
+          
+          OnFSMExceptionAction oexa = new OnFSMExceptionAction() {
+            @Override
+            public void handle(FSMException ex) {
+              throw new RuntimeException(ex);
+            }
+          };
+          FSMIdentifierFactory fsmIdFactory = config.getValue(FSMIdentifierFactory.CONFIG_KEY,
+            FSMIdentifierFactory.class);
+          return R2NodeSeeder.FSM.multifsm(fsmIdFactory, fsmEs, oexa);
+        } catch (FSMException ex) {
+          throw new RuntimeException(ex);
+        }
+      }
+    };
+    TorrentWrapperComp.Init init = new TorrentWrapperComp.Init(selfAdr, setup);
+    TestContext<TorrentWrapperComp> context = TestContext.newInstance(TorrentWrapperComp.class, init);
     return context;
   }
 
@@ -114,7 +143,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederDisconnectLoc(tc, triggerP, torrent, seeder); //2
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
   @Test
@@ -125,7 +155,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederDisconnectNet(tc, networkP, selfAdr, seeder);//4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
   @Test
@@ -136,7 +167,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederPongNet(tc, networkP, selfAdr, seeder);//6
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   @Test
   public void testStartEnd4() {
@@ -146,7 +178,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnSuccNet(tc, networkP, selfAdr, seeder);//8
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
   @Test
@@ -157,7 +190,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnRejNet(tc, networkP, selfAdr, seeder);//10
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   //*************************************************CONNECT TO END*****************************************************
   //*****************************************************LOCAL**********************************************************
@@ -172,7 +206,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederDisconnectNet(tc, networkP, seeder); //4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
   //*****************************************************SEEDER*********************************************************
@@ -186,7 +221,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnFailLoc(tc, expectP, torrent1); //4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
   @Test
@@ -200,7 +236,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnFailLoc(tc, expectP, torrent1); //4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   //***********************************************CONNECT TO CONNECT***************************************************
   @Test
@@ -214,7 +251,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent2, seeder)); //3
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertEquals(States.CONNECT, compState.seederState(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertEquals(States.CONNECT, compState.fsm.getFSMState(fsmBaseId));
   }
   //**********************************************CONNECT TO CONNECTED**************************************************
   @Test
@@ -225,7 +263,8 @@ public class R2NodeSeederTest {
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertEquals(States.CONNECTED, compState.seederState(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertEquals(States.CONNECTED, compState.fsm.getFSMState(fsmBaseId));
   }
   
   private TestContext simpleConnSucc(TestContext tc, KAddress seeder, OverlayId torrentId) {
@@ -250,7 +289,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnSucc(tc, expectP);//7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertEquals(States.CONNECTED, compState.seederState(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertEquals(States.CONNECTED, compState.fsm.getFSMState(fsmBaseId));
   }
   //*************************************************CONNECTED TO CONNECTED*********************************************
   @Test
@@ -264,7 +304,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnSucc(tc, expectP); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertEquals(States.CONNECTED, compState.seederState(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertEquals(States.CONNECTED, compState.fsm.getFSMState(fsmBaseId));
   }
   
   @Test
@@ -279,7 +320,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederDisconnectLoc(tc, triggerP, torrent2, seeder); //8
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertEquals(States.CONNECTED, compState.seederState(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertEquals(States.CONNECTED, compState.fsm.getFSMState(fsmBaseId));
   }
   
   @Test
@@ -292,7 +334,8 @@ public class R2NodeSeederTest {
     tc = pingPong(tc, seeder); //8-9
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertEquals(States.CONNECTED, compState.seederState(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertEquals(States.CONNECTED, compState.fsm.getFSMState(fsmBaseId));
   }
   
   private TestContext missedPings(TestContext tc, KAddress seeder, int missedPings) {
@@ -322,7 +365,8 @@ public class R2NodeSeederTest {
     tc = tc.end();
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
   
@@ -339,7 +383,8 @@ public class R2NodeSeederTest {
     tc = tc.end();
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
   @Test
@@ -356,6 +401,7 @@ public class R2NodeSeederTest {
     tc = tc.end();
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    assertFalse(compState.activeSeederFSM(seeder));
+    Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
 }

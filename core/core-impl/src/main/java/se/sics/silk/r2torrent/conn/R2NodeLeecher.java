@@ -33,7 +33,6 @@ import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
 import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.fsm.FSMException;
-import se.sics.kompics.fsm.FSMExternalState;
 import se.sics.kompics.fsm.FSMInternalState;
 import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.FSMStateName;
@@ -57,6 +56,7 @@ import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
+import se.sics.silk.r2torrent.R2TorrentES;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.event.R2NodeLeecherEvents;
 import se.sics.silk.r2torrent.conn.event.R2NodeLeecherTimeout;
@@ -88,6 +88,10 @@ public class R2NodeLeecher {
   }
   
   public static interface Timeout extends FSMEvent, SilkEvent.NodeEvent {
+  }
+  
+  public static Identifier fsmBaseId(KAddress leecher) {
+    return leecher.getId();
   }
   
   static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
@@ -197,14 +201,13 @@ public class R2NodeLeecher {
     }
   }
 
-  public static class ES implements FSMExternalState {
+  public static class ES implements R2TorrentES {
 
     private ComponentProxy proxy;
-    public final R2TorrentComp.Ports ports;
+    public R2TorrentComp.Ports ports;
     public final KAddress selfAdr;
 
-    public ES(R2TorrentComp.Ports ports, KAddress selfAdr) {
-      this.ports = ports;
+    public ES(KAddress selfAdr) {
       this.selfAdr = selfAdr;
     }
 
@@ -216,6 +219,11 @@ public class R2NodeLeecher {
     @Override
     public ComponentProxy getProxy() {
       return proxy;
+    }
+
+    @Override
+    public void setPorts(R2TorrentComp.Ports ports) {
+      this.ports = ports;
     }
   }
 

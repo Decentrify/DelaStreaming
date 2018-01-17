@@ -16,62 +16,35 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.event;
+package se.sics.silk.r2torrent.torrent.event;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.silk.r2torrent.R1Hash;
-import se.sics.silk.r2torrent.R2Torrent;
+import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.torrent.R1Hash;
+import se.sics.silk.r2torrent.torrent.R2Torrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1HashEvents {
 
-  public static abstract class E1 implements KompicsEvent, Identifiable {
+  public static abstract class Req extends SilkEvent.E3 implements R1Hash.TorrentEvent {
 
-    public final Identifier eventId;
-    public final OverlayId torrentId;
-
-    E1(Identifier eventId, OverlayId torrentId) {
-      this.eventId = eventId;
-      this.torrentId = torrentId;
-    }
-
-    @Override
-    public Identifier getId() {
-      return eventId;
-    }
-  }
-
-  public static class E2 extends E1 implements R1Hash.TorrentEvent {
-
-    public E2(Identifier eventId, OverlayId torrentId) {
+    public Req(Identifier eventId, OverlayId torrentId) {
       super(eventId, torrentId);
     }
-
-    @Override
-    public Identifier getR1HashFSMId() {
-      return torrentId.baseId;
-    }
   }
 
-  public static class E3 extends E1 implements R2Torrent.HashEvent {
+  public static abstract class Ind extends SilkEvent.E3 implements R2Torrent.HashEvent {
 
-    public E3(Identifier eventId, OverlayId torrentId) {
+    public Ind(Identifier eventId, OverlayId torrentId) {
       super(eventId, torrentId);
     }
-
-    @Override
-    public Identifier getR2TorrentFSMId() {
-      return torrentId.baseId;
-    }
   }
 
-  public static class HashReq extends E2 {
+  public static class HashReq extends Req {
 
     public HashReq(OverlayId torrentId) {
       super(BasicIdentifiers.eventId(), torrentId);
@@ -86,21 +59,21 @@ public class R1HashEvents {
     }
   }
 
-  public static class HashSucc extends E3 {
+  public static class HashSucc extends Ind {
 
     HashSucc(HashReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class HashFail extends E3 {
+  public static class HashFail extends Ind {
 
     HashFail(HashReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class HashStop extends E2 {
+  public static class HashStop extends Req {
 
     public HashStop(OverlayId torrentId) {
       super(BasicIdentifiers.eventId(), torrentId);
@@ -111,7 +84,7 @@ public class R1HashEvents {
     }
   }
 
-  public static class HashStopAck extends E3 {
+  public static class HashStopAck extends Ind {
 
     HashStopAck(HashStop req) {
       super(req.eventId, req.torrentId);

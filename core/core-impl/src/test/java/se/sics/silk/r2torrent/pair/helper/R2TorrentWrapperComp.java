@@ -33,9 +33,9 @@ import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.silk.mocktimer.MockNetworkComp;
 import se.sics.silk.mocktimer.MockTimerComp;
 import se.sics.silk.mocktimer.MockTimerComp.TriggerTimeout;
-import se.sics.silk.r2torrent.R2Torrent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentCtrlPort;
+import se.sics.silk.r2torrent.torrent.R2Torrent;
 
 /**
  *
@@ -142,7 +142,7 @@ public class R2TorrentWrapperComp extends ComponentDefinition {
 
     @Override
     public Identifier getValue(R2Torrent.CtrlEvent event) {
-      return event.getR2TorrentFSMId();
+      return R2Torrent.fsmBaseId(event.torrentId());
     }
   }
 }

@@ -16,22 +16,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.event;
+package se.sics.silk.r2torrent.torrent.event;
 
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.R1MetadataGet;
-import se.sics.silk.r2torrent.R2Torrent;
+import se.sics.silk.r2torrent.torrent.R1MetadataServe;
+import se.sics.silk.r2torrent.torrent.R2Torrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1MetadataGetEvents {
+public class R1MetadataServeEvents {
 
-  public static abstract class Req extends SilkEvent.E4 implements R1MetadataGet.TorrentEvent {
+  public static abstract class Req extends SilkEvent.E4 implements R1MetadataServe.TorrentEvent {
 
     public Req(Identifier eventId, OverlayId torrentId, Identifier fileId) {
       super(eventId, torrentId, fileId);
@@ -43,77 +42,52 @@ public class R1MetadataGetEvents {
     public Ind(Identifier eventId, OverlayId torrentId) {
       super(eventId, torrentId);
     }
-
-    @Override
-    public Identifier getR2TorrentFSMId() {
-      return torrentId.baseId;
-    }
   }
 
-  public static class MetaGetReq extends Req {
+  public static class ServeReq extends Req {
 
-    public final KAddress seeder;
 
-    public MetaGetReq(OverlayId torrentId, Identifier fileId, KAddress seeder) {
+    public ServeReq(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
-      this.seeder = seeder;
     }
 
-    public MetaGetSucc success() {
-      return new MetaGetSucc(this);
+    public ServeSucc success() {
+      return new ServeSucc(this);
     }
 
-    public MetaGetFail fail() {
-      return new MetaGetFail(this);
+    public ServeFail fail() {
+      return new ServeFail(this);
     }
   }
 
-  public static class MetaGetSucc extends Ind {
+  public static class ServeSucc extends Ind {
 
-    MetaGetSucc(MetaGetReq req) {
+    ServeSucc(ServeReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class MetaGetFail extends Ind {
+  public static class ServeFail extends Ind {
 
-    MetaGetFail(MetaGetReq req) {
+    ServeFail(ServeReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class MetaServeReq extends Req {
+  public static class Stop extends Req {
 
-    public MetaServeReq(OverlayId torrentId, Identifier fileId) {
+    public Stop(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
     }
 
-    public MetaServeSucc success() {
-      return new MetaServeSucc(this);
+    public StopAck ack() {
+      return new StopAck(this);
     }
   }
 
-  public static class MetaServeSucc extends Ind {
+  public static class StopAck extends Ind {
 
-    public MetaServeSucc(MetaServeReq req) {
-      super(req.eventId, req.torrentId);
-    }
-  }
-
-  public static class MetaStop extends Req {
-
-    public MetaStop(OverlayId torrentId, Identifier fileId) {
-      super(BasicIdentifiers.eventId(), torrentId, fileId);
-    }
-
-    public MetaStopAck ack() {
-      return new MetaStopAck(this);
-    }
-  }
-
-  public static class MetaStopAck extends Ind {
-
-    MetaStopAck(MetaStop req) {
+    StopAck(Stop req) {
       super(req.eventId, req.torrentId);
     }
   }

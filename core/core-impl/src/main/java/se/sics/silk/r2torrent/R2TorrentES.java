@@ -18,22 +18,11 @@
  */
 package se.sics.silk.r2torrent;
 
-import java.util.LinkedList;
-import java.util.List;
-import se.sics.kompics.Port;
-import se.sics.kompics.testing.TestContext;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.silk.r2torrent.event.R2TorrentCtrlEvents;
+import se.sics.kompics.fsm.FSMExternalState;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2TorrentHelper {
-  public static TestContext ctrlMetadataGetReq(TestContext tc, Port ctrlP, OverlayId torrentId, KAddress seeder) {
-    List<KAddress> seeders = new LinkedList<>();
-    seeders.add(seeder);
-    R2TorrentCtrlEvents.MetaGetReq r = new R2TorrentCtrlEvents.MetaGetReq(torrentId, seeders);
-    return tc.trigger(r, ctrlP);
-  }
+public interface R2TorrentES extends FSMExternalState {
+  public void setPorts(R2TorrentComp.Ports ports);
 }

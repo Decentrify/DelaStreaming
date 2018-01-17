@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent;
+package se.sics.silk.r2torrent.torrent;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,20 +29,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.PatternExtractor;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
 import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.fsm.FSMException;
-import se.sics.kompics.fsm.FSMExternalState;
 import se.sics.kompics.fsm.FSMInternalState;
 import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
-import se.sics.kompics.fsm.handler.FSMPatternEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.util.Identifier;
@@ -50,10 +47,17 @@ import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
-import static se.sics.silk.r2torrent.R2Torrent.HardCodedConfig.seed;
-import se.sics.silk.r2torrent.event.R1HashEvents;
-import se.sics.silk.r2torrent.event.R1MetadataGetEvents;
-import se.sics.silk.r2torrent.event.R2TorrentCtrlEvents;
+import se.sics.silk.DefaultHandlers;
+import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.R2TorrentComp;
+import se.sics.silk.r2torrent.R2TorrentCtrlPort;
+import se.sics.silk.r2torrent.R2TorrentES;
+import se.sics.silk.r2torrent.R2TorrentPort;
+import static se.sics.silk.r2torrent.torrent.R2Torrent.HardCodedConfig.seed;
+import se.sics.silk.r2torrent.torrent.event.R1HashEvents;
+import se.sics.silk.r2torrent.torrent.event.R1MetadataGetEvents;
+import se.sics.silk.r2torrent.torrent.event.R1MetadataServeEvents;
+import se.sics.silk.r2torrent.torrent.event.R2TorrentCtrlEvents;
 import se.sics.silk.r2torrent.util.R2TorrentStatus;
 
 /**
@@ -84,9 +88,7 @@ public class R2Torrent {
     CLEAN_TRANSFER
   }
 
-  public static interface Event extends FSMEvent {
-
-    public Identifier getR2TorrentFSMId();
+  public static interface Event extends FSMEvent, SilkEvent.TorrentEvent {
   }
 
   public static interface HashEvent extends Event {
@@ -99,6 +101,10 @@ public class R2Torrent {
   public static interface CtrlEvent extends Event {
   }
 
+  public static Identifier fsmBaseId(OverlayId torrentId) {
+    return torrentId;
+  }
+  
   public static class HardCodedConfig {
     public static final long seed = 1234;
   }
@@ -175,14 +181,13 @@ public class R2Torrent {
     }
   }
 
-  public static class ES implements FSMExternalState {
+  public static class ES implements R2TorrentES {
 
-    public final R2TorrentComp.Ports ports;
+    public R2TorrentComp.Ports ports;
     private ComponentProxy proxy;
     public final IntIdFactory fileIdFactory;
     
-    public ES(R2TorrentComp.Ports ports) {
-      this.ports = ports;
+    public ES() {
       this.fileIdFactory = new IntIdFactory(new Random(seed));
     }
 
@@ -194,6 +199,11 @@ public class R2Torrent {
     @Override
     public ComponentProxy getProxy() {
       return proxy;
+    }
+
+    @Override
+    public void setPorts(R2TorrentComp.Ports ports) {
+      this.ports = ports;
     }
   }
 
@@ -233,7 +243,7 @@ public class R2Torrent {
 
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       return FSMBuilder.semanticDef()
-        .defaultFallback(Handlers.basicDefault(), Handlers.patternDefault())
+        .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault())
         .negativePort(R2TorrentCtrlPort.class)
         .basicEvent(R2TorrentCtrlEvents.MetaGetReq.class)
         .subscribeOnStart(Handlers.getMetaReq)
@@ -246,13 +256,13 @@ public class R2Torrent {
         .subscribe(Handlers.stop2, States.DATA_STORAGE, States.HASH, States.UPLOAD, States.TRANSFER)
         .buildEvents()
         .positivePort(R2TorrentPort.class)
-        .basicEvent(R1MetadataGetEvents.MetaGetSucc.class)
+        .basicEvent(R1MetadataGetEvents.GetSucc.class)
         .subscribe(Handlers.metaGetSucc, States.META_GET)
-        .basicEvent(R1MetadataGetEvents.MetaGetFail.class)
+        .basicEvent(R1MetadataGetEvents.GetFail.class)
         .subscribe(Handlers.metaGetFail, States.META_GET)
-        .basicEvent(R1MetadataGetEvents.MetaServeSucc.class)
+        .basicEvent(R1MetadataServeEvents.ServeSucc.class)
         .subscribe(Handlers.metaServeSucc, States.META_SERVE)
-        .basicEvent(R1MetadataGetEvents.MetaStopAck.class)
+        .basicEvent(R1MetadataGetEvents.StopAck.class)
         .subscribe(Handlers.metaClean, States.CLEAN_META)
         .basicEvent(R1HashEvents.HashSucc.class)
         .subscribe(Handlers.hashSucc, States.HASH)
@@ -268,7 +278,8 @@ public class R2Torrent {
       @Override
       public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
         if (event instanceof Event) {
-          return Optional.of(((Event) event).getR2TorrentFSMId());
+          Event e = (Event)event;
+          return Optional.of(fsmBaseId(e.torrentId()));
         }
         return Optional.empty();
       }
@@ -282,42 +293,14 @@ public class R2Torrent {
   }
 
   public static class Handlers {
-
-    static FSMBasicEventHandler basicDefault() {
-      return new FSMBasicEventHandler<ES, IS, KompicsEvent>() {
-        @Override
-        public FSMStateName handle(FSMStateName state, ES es, IS is, KompicsEvent req) {
-          if (FSMBasicStateNames.START.equals(state)) {
-            return FSMBasicStateNames.FINAL;
-          } else {
-            return state;
-          }
-        }
-      };
-    }
-
-    static FSMPatternEventHandler patternDefault() {
-      return new FSMPatternEventHandler<ES, IS, KompicsEvent>() {
-        @Override
-        public FSMStateName handle(FSMStateName state, ES es, IS is, KompicsEvent req,
-          PatternExtractor<Class, KompicsEvent> container) {
-          if (FSMBasicStateNames.START.equals(state)) {
-            return FSMBasicStateNames.FINAL;
-          } else {
-            return state;
-          }
-        }
-      };
-    }
-
     //****************************************************CTRL**********************************************************
     static FSMBasicEventHandler stop1 = new FSMBasicEventHandler<ES, IS, R2TorrentCtrlEvents.Stop>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2TorrentCtrlEvents.Stop req) {
         is.setStopReq(req);
         Identifier metaFileId = es.fileIdFactory.id(new BasicBuilders.IntBuilder(0));
-        R1MetadataGetEvents.MetaStop r = new R1MetadataGetEvents.MetaStop(is.torrentId, metaFileId);
-        sendMetadata(es, r);
+        R1MetadataGetEvents.Stop r = new R1MetadataGetEvents.Stop(is.torrentId, metaFileId);
+        sendMetaGet(es, r);
         return States.CLEAN_META;
       }
     };
@@ -337,8 +320,8 @@ public class R2Torrent {
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2TorrentCtrlEvents.MetaGetReq req) {
         is.setGetMetaReq(req);
         Identifier metaFileId = es.fileIdFactory.id(new BasicBuilders.IntBuilder(0));
-        R1MetadataGetEvents.MetaGetReq r = new R1MetadataGetEvents.MetaGetReq(is.torrentId, metaFileId, is.seeders.getMetadataSeeder());
-        sendMetadata(es, r);
+        R1MetadataGetEvents.GetReq r = new R1MetadataGetEvents.GetReq(is.torrentId, metaFileId, is.seeders.getMetadataSeeder());
+        sendMetaGet(es, r);
         return States.META_GET;
       }
     };
@@ -357,15 +340,15 @@ public class R2Torrent {
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2TorrentCtrlEvents.Upload req) {
         is.setUploadReq(req);
         Identifier metaFileId = es.fileIdFactory.id(new BasicBuilders.IntBuilder(0));
-        R1MetadataGetEvents.MetaServeReq r = new R1MetadataGetEvents.MetaServeReq(is.torrentId, metaFileId);
-        sendMetadata(es, r);
+        R1MetadataServeEvents.ServeReq r = new R1MetadataServeEvents.ServeReq(is.torrentId, metaFileId);
+        sendMetaServe(es, r);
         return States.META_SERVE;
       }
     };
     //****************************************************TRANSFER******************************************************
-    static FSMBasicEventHandler metaClean = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.MetaStopAck>() {
+    static FSMBasicEventHandler metaClean = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.StopAck>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.MetaStopAck ack) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.StopAck ack) {
         if (is.ctrl.stopReq != null) {
           sendCtrl(es, is.ctrl.stopReq.ack());
         }
@@ -373,26 +356,26 @@ public class R2Torrent {
       }
     };
 
-    static FSMBasicEventHandler metaGetSucc = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.MetaGetSucc>() {
+    static FSMBasicEventHandler metaGetSucc = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.GetSucc>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.MetaGetSucc resp) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.GetSucc resp) {
         sendCtrl(es, is.ctrl.getMetaReq.success());
         return States.DATA_STORAGE;
       }
     };
 
-    static FSMBasicEventHandler metaGetFail = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.MetaGetFail>() {
+    static FSMBasicEventHandler metaGetFail = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.GetFail>() {
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.MetaGetFail resp) {
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.GetFail resp) {
         sendCtrl(es, is.ctrl.getMetaReq.fail());
         return FSMBasicStateNames.FINAL;
       }
     };
 
     static FSMBasicEventHandler metaServeSucc
-      = new FSMBasicEventHandler<ES, IS, R1MetadataGetEvents.MetaServeSucc>() {
+      = new FSMBasicEventHandler<ES, IS, R1MetadataServeEvents.ServeSucc>() {
         @Override
-        public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataGetEvents.MetaServeSucc resp) {
+        public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataServeEvents.ServeSucc resp) {
           LOG.info("META-SERVE success - processing");
           sendCtrl(es, is.ctrl.uploadReq.success(R2TorrentStatus.HASH));
           R1HashEvents.HashReq r = new R1HashEvents.HashReq(is.torrentId);
@@ -426,8 +409,8 @@ public class R2Torrent {
           R2TorrentStatus.ERROR);
         sendCtrl(es, ind);
         Identifier metaFileId = es.fileIdFactory.id(new BasicBuilders.IntBuilder(0));
-        R1MetadataGetEvents.MetaStop r = new R1MetadataGetEvents.MetaStop(is.torrentId, metaFileId);
-        sendMetadata(es, r);
+        R1MetadataGetEvents.Stop r = new R1MetadataGetEvents.Stop(is.torrentId, metaFileId);
+        sendMetaGet(es, r);
         return States.CLEAN_META;
       }
     };
@@ -436,13 +419,17 @@ public class R2Torrent {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1HashEvents.HashStopAck ack) {
         Identifier metaFileId = es.fileIdFactory.id(new BasicBuilders.IntBuilder(0));
-        R1MetadataGetEvents.MetaStop r = new R1MetadataGetEvents.MetaStop(is.torrentId, metaFileId);
-        sendMetadata(es, r);
+        R1MetadataGetEvents.Stop r = new R1MetadataGetEvents.Stop(is.torrentId, metaFileId);
+        sendMetaGet(es, r);
         return States.CLEAN_META;
       }
     };
 
-    private static void sendMetadata(ES es, R1MetadataGet.TorrentEvent e) {
+    private static void sendMetaGet(ES es, R1MetadataGet.TorrentEvent e) {
+      es.getProxy().trigger(e, es.ports.loopbackSend);
+    }
+    
+    private static void sendMetaServe(ES es, R1MetadataServe.TorrentEvent e) {
       es.getProxy().trigger(e, es.ports.loopbackSend);
     }
 

@@ -16,14 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent;
+package se.sics.silk.r2torrent.torrent;
 
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.PatternExtractor;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
@@ -36,11 +35,15 @@ import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
-import se.sics.kompics.fsm.handler.FSMPatternEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.util.Identifier;
-import se.sics.silk.r2torrent.event.R1HashEvents;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.silk.DefaultHandlers;
+import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.R2TorrentComp;
+import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.r2torrent.torrent.event.R1HashEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -55,12 +58,14 @@ public class R1Hash {
     HASH
   }
 
-  public static interface Event extends FSMEvent {
-
-    public Identifier getR1HashFSMId();
+  public static interface Event extends FSMEvent, SilkEvent.TorrentEvent {
   }
   
   public static interface TorrentEvent extends Event {
+  }
+  
+  public static Identifier fsmBaseId(OverlayId torrentId) {
+    return torrentId;
   }
 
   public static class IS implements FSMInternalState {
@@ -120,7 +125,7 @@ public class R1Hash {
 
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       return FSMBuilder.semanticDef()
-        .defaultFallback(Handlers.basicDefault(), Handlers.patternDefault())
+        .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault())
         .positivePort(R2TorrentPort.class)
         .basicEvent(R1HashEvents.HashReq.class)
         .subscribeOnStart(Handlers.hash)
@@ -135,7 +140,8 @@ public class R1Hash {
       @Override
       public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
         if (event instanceof Event) {
-          return Optional.of(((Event) event).getR1HashFSMId());
+          Event e = (Event)event;
+          return Optional.of(fsmBaseId(e.torrentId()));
         }
         return Optional.empty();
       }
@@ -149,33 +155,6 @@ public class R1Hash {
   }
   
   public static class Handlers {
-    static FSMBasicEventHandler basicDefault() {
-      return new FSMBasicEventHandler<ES, IS, KompicsEvent>() {
-        @Override
-        public FSMStateName handle(FSMStateName state, ES es, IS is, KompicsEvent req) {
-          if (FSMBasicStateNames.START.equals(state)) {
-            return FSMBasicStateNames.FINAL;
-          } else {
-            return state;
-          }
-        }
-      };
-    }
-
-    static FSMPatternEventHandler patternDefault() {
-      return new FSMPatternEventHandler<ES, IS, KompicsEvent>() {
-        @Override
-        public FSMStateName handle(FSMStateName state, ES es, IS is, KompicsEvent req,
-          PatternExtractor<Class, KompicsEvent> container) {
-          if (FSMBasicStateNames.START.equals(state)) {
-            return FSMBasicStateNames.FINAL;
-          } else {
-            return state;
-          }
-        }
-      };
-    }
-
     static FSMBasicEventHandler hash = new FSMBasicEventHandler<ES, IS, R1HashEvents.HashReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1HashEvents.HashReq req) {

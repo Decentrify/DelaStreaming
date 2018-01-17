@@ -16,44 +16,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.event;
+package se.sics.silk.r2torrent.torrent.event;
 
 import java.util.List;
-import se.sics.kompics.util.Identifiable;
-import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.silk.r2torrent.R2Torrent;
+import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.torrent.R2Torrent;
 import se.sics.silk.r2torrent.util.R2TorrentStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R2TorrentCtrlEvents {
-
-  public static abstract class Base implements R2Torrent.CtrlEvent, Identifiable {
-
-    public final Identifier eventId;
-    public final OverlayId torrentId;
-
-    Base(Identifier eventId, OverlayId torrentId) {
-      this.eventId = eventId;
-      this.torrentId = torrentId;
-    }
-
-    @Override
-    public Identifier getId() {
-      return eventId;
-    }
-
-    @Override
-    public Identifier getR2TorrentFSMId() {
-      return torrentId.baseId;
-    }
-  }
-
-  public static class MetaGetReq extends Base {
+  public static class MetaGetReq extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
     public final List<KAddress> partners;
     public MetaGetReq(OverlayId torrentId, List<KAddress> partners) {
       super(BasicIdentifiers.eventId(), torrentId);
@@ -69,28 +46,28 @@ public class R2TorrentCtrlEvents {
     }
   }
 
-  public static class MetaGetSucc extends Base {
+  public static class MetaGetSucc extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
 
     MetaGetSucc(MetaGetReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class MetaGetFail extends Base {
+  public static class MetaGetFail extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
 
     MetaGetFail(MetaGetReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class Download extends Base {
+  public static class Download extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
 
     public Download(OverlayId torrentId) {
       super(BasicIdentifiers.eventId(), torrentId);
     }
   }
   
-  public static class Upload extends Base {
+  public static class Upload extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
     public Upload(OverlayId torrentId) {
       super(BasicIdentifiers.eventId(), torrentId);
     }
@@ -100,7 +77,7 @@ public class R2TorrentCtrlEvents {
     }
   }
 
-  public static class TorrentBaseInfoReq extends Base {
+  public static class TorrentBaseInfoReq extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
 
     public TorrentBaseInfoReq(OverlayId torrentId) {
       super(BasicIdentifiers.eventId(), torrentId);
@@ -111,7 +88,7 @@ public class R2TorrentCtrlEvents {
     }
   }
 
-  public static class TorrentBaseInfo extends Base {
+  public static class TorrentBaseInfo extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
 
     public final R2TorrentStatus status;
 
@@ -131,7 +108,7 @@ public class R2TorrentCtrlEvents {
     }
   }
   
-  public static class Stop extends Base {
+  public static class Stop extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
     public Stop(OverlayId torrentId) {
       super(BasicIdentifiers.eventId(), torrentId);
     }
@@ -141,11 +118,10 @@ public class R2TorrentCtrlEvents {
     }
   }
   
-  public static class StopAck extends Base {
+  public static class StopAck extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
 
     StopAck(Stop req) {
       super(req.eventId, req.torrentId);
     }
-    
   }
 }

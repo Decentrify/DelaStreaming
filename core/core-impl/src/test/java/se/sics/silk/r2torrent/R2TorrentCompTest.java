@@ -35,15 +35,22 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
-import static se.sics.silk.TorrentTestHelper.metadataGetSucc;
+import static se.sics.silk.TorrentTestHelper.eCtrlBaseInfoInd;
+import static se.sics.silk.TorrentTestHelper.eCtrlMetaGetSucc;
+import static se.sics.silk.TorrentTestHelper.eHashReq;
+import static se.sics.silk.TorrentTestHelper.eHashSucc;
+import static se.sics.silk.TorrentTestHelper.eMetadataGetReq;
+import static se.sics.silk.TorrentTestHelper.eMetadataGetSucc;
+import static se.sics.silk.TorrentTestHelper.eMetadataServeReq;
+import static se.sics.silk.TorrentTestHelper.eMetadataServeSucc;
+import static se.sics.silk.TorrentTestHelper.eTorrentSeederConnReq;
+import static se.sics.silk.TorrentTestHelper.eTorrentSeederConnSucc;
 import static se.sics.silk.TorrentTestHelper.netNodeConnAcc;
 import static se.sics.silk.TorrentTestHelper.nodeSeederConnSucc;
+import static se.sics.silk.TorrentTestHelper.tCtrlDownloadReq;
+import static se.sics.silk.TorrentTestHelper.tCtrlMetaGetReq;
+import static se.sics.silk.TorrentTestHelper.tCtrlUploadReq;
 import static se.sics.silk.TorrentTestHelper.timerSchedulePeriodicTimeout;
-import static se.sics.silk.TorrentTestHelper.torrentMetaGetSucc;
-import static se.sics.silk.TorrentTestHelper.torrentSeederConnReq;
-import static se.sics.silk.TorrentTestHelper.torrentSeederConnSucc;
-import static se.sics.silk.r2torrent.R1MetadataHelper.mngrMetaGetReq;
-import static se.sics.silk.r2torrent.R2TorrentHelper.ctrlMetadataGetReq;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnReqLoc;
 
 /**
@@ -101,25 +108,39 @@ public class R2TorrentCompTest {
     KAddress seeder = SystemHelper.getAddress(1);
     
     tc = tc.body();
-    tc = ctrlMetadataGetReq(tc, ctrlP, torrent, seeder); //1
-    tc = mngrMetaGetReq(tc, expectP); //2
-    tc = torrentSeederConnReq(tc, expectP); //3
+    tc = tCtrlMetaGetReq(tc, ctrlP, torrent, seeder); //1
+    tc = eMetadataGetReq(tc, expectP); //2
+    tc = eTorrentSeederConnReq(tc, expectP); //3
     tc = nodeSeederConnReqLoc(tc, expectP); //4
     tc = netNodeConnAcc(tc, networkP); //5-6
     tc = timerSchedulePeriodicTimeout(tc, timerP);//7
     tc = nodeSeederConnSucc(tc, expectP); //8
-    tc = torrentSeederConnSucc(tc, expectP); //9
-    tc = metadataGetSucc(tc, expectP); //10
-    tc = torrentMetaGetSucc(tc, ctrlP); //11
-//    tc
-//      .expect(R1MetadataEvents.MetaGetSucc.class, expectP, Direction.OUT)
-//      .expect(R2TorrentCtrlEvents.MetaGetSucc.class, ctrlP, Direction.OUT)
-//      .trigger(ctrlDownload(torrent), ctrlP)
-//      .expect(R1HashEvents.HashReq.class, expectP, Direction.OUT)
-//      .expect(R1HashEvents.HashSucc.class, expectP, Direction.OUT)
-//      .expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, ctrlP, Direction.OUT);
+    tc = eTorrentSeederConnSucc(tc, expectP); //9
+    tc = eMetadataGetSucc(tc, expectP); //10
+    tc = eCtrlMetaGetSucc(tc, ctrlP); //11
+    tc = tCtrlDownloadReq(tc, ctrlP, torrent);//12
+    tc = eHashReq(tc, expectP);//13
+    tc = eHashSucc(tc, expectP);//14
+    tc = eCtrlBaseInfoInd(tc, ctrlP); //15
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
  
+  @Test
+  public void testSeeder() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
+    KAddress leecher = SystemHelper.getAddress(2);
+    
+    tc = tc.body();
+    tc = tCtrlUploadReq(tc, ctrlP, torrent); //1
+    tc = eMetadataServeReq(tc, expectP); //2
+    tc = eMetadataServeSucc(tc, expectP); //3
+    tc = eCtrlBaseInfoInd(tc, ctrlP); //4
+    tc = eHashReq(tc, expectP); //5
+    tc = eHashSucc(tc, expectP); //6
+    tc = eCtrlBaseInfoInd(tc, ctrlP); //7
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+  }
 }

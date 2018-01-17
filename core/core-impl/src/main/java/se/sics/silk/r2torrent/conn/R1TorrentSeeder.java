@@ -31,7 +31,6 @@ import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
 import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.fsm.FSMException;
-import se.sics.kompics.fsm.FSMExternalState;
 import se.sics.kompics.fsm.FSMInternalState;
 import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.FSMStateName;
@@ -48,6 +47,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
+import se.sics.silk.r2torrent.R2TorrentES;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.event.R1TorrentSeederEvents;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
@@ -136,14 +136,10 @@ public class R1TorrentSeeder {
     }
   }
 
-  public static class ES implements FSMExternalState {
+  public static class ES implements R2TorrentES {
 
     R2TorrentComp.Ports ports;
     ComponentProxy proxy;
-
-    public ES(R2TorrentComp.Ports ports) {
-      this.ports = ports;
-    }
 
     @Override
     public void setProxy(ComponentProxy proxy) {
@@ -153,6 +149,11 @@ public class R1TorrentSeeder {
     @Override
     public ComponentProxy getProxy() {
       return proxy;
+    }
+
+    @Override
+    public void setPorts(R2TorrentComp.Ports ports) {
+      this.ports = ports;
     }
   }
 
