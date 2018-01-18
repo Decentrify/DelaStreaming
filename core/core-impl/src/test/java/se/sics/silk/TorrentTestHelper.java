@@ -55,18 +55,18 @@ public class TorrentTestHelper {
     tc = tc.trigger(f, network);
     return tc;
   }
-  
+
   public static TestContext tNetNodeConnReq(TestContext tc, Port network, KAddress src, KAddress dst) {
     R2NodeConnMsgs.ConnectReq content = new R2NodeConnMsgs.ConnectReq();
     return tc.trigger(msg(src, dst, content), network);
   }
-  
+
   public static TestContext eNetNodeConnAcc(TestContext tc, Port network) {
     Predicate payloadP = new PredicateHelper.ContentPredicate(R2NodeConnMsgs.ConnectAcc.class);
     Predicate p = new PredicateHelper.MsgPredicate(PredicateHelper.TRUE_P, payloadP);
     return tc.expect(BasicContentMsg.class, network, Direction.OUT);
   }
-  
+
   //*****************************************************NODE_SEEDER****************************************************
   public static TestContext eNodeSeederConnSucc(TestContext tc, Port expectP) {
     return tc.expect(R2NodeSeederEvents.ConnectSucc.class, expectP, Direction.OUT);
@@ -104,26 +104,28 @@ public class TorrentTestHelper {
     Predicate p = new PredicateHelper.MsgBEReqPredicate<>(R1MetadataMsgs.Get.class, msgP);
     return tc.expect(BasicContentMsg.class, p, network, Direction.OUT);
   }
-  
+
   public static TestContext eNetMetadataServe(TestContext tc, Port network, KAddress src, KAddress dst) {
     Predicate payloadP = new PredicateHelper.ContentPredicate(R1MetadataMsgs.Serve.class);
     Predicate msgP = new PredicateHelper.MsgSrcDstPredicate(src, dst);
     Predicate p = new PredicateHelper.MsgPredicate(msgP, payloadP);
     return tc.expect(BasicContentMsg.class, p, network, Direction.OUT);
   }
-  
-  public static TestContext tNetMetadataGet(TestContext tc, Port network, KAddress src, KAddress dst, OverlayId torrentId, Identifier fileId) {
+
+  public static TestContext tNetMetadataGet(TestContext tc, Port network, KAddress src, KAddress dst,
+    OverlayId torrentId, Identifier fileId) {
     R1MetadataMsgs.Get payload = new R1MetadataMsgs.Get(torrentId, fileId);
     BasicContentMsg msg = msg(src, dst, payload);
     return tc.trigger(msg, network);
   }
-  
-  public static TestContext tNetMetadataServe(TestContext tc, Port network, KAddress src, KAddress dst, OverlayId torrentId, Identifier fileId) {
+
+  public static TestContext tNetMetadataServe(TestContext tc, Port network, KAddress src, KAddress dst,
+    OverlayId torrentId, Identifier fileId) {
     R1MetadataMsgs.Get payload = new R1MetadataMsgs.Get(torrentId, fileId);
     BasicContentMsg msg = msg(src, dst, payload.answer());
     return tc.trigger(msg, network);
   }
-  
+
   public static TestContext netMetadata(TestContext tc, Port network) {
     Future f = new FutureHelper.NetBEFuture<R1MetadataMsgs.Get>(R1MetadataMsgs.Get.class) {
 
@@ -136,6 +138,7 @@ public class TorrentTestHelper {
       .answerRequest(BasicContentMsg.class, network, f)
       .trigger(f, network);
   }
+
   //*************************************************TORRENT CTRL********************************************************
   public static TestContext tCtrlMetaGetReq(TestContext tc, Port ctrlP, OverlayId torrentId, KAddress seeder) {
     List<KAddress> seeders = new LinkedList<>();
@@ -143,22 +146,22 @@ public class TorrentTestHelper {
     R2TorrentCtrlEvents.MetaGetReq r = new R2TorrentCtrlEvents.MetaGetReq(torrentId, seeders);
     return tc.trigger(r, ctrlP);
   }
-  
+
   public static TestContext tCtrlDownloadReq(TestContext tc, Port ctrlP, OverlayId torrentId) {
     R2TorrentCtrlEvents.Download r = new R2TorrentCtrlEvents.Download(torrentId);
     return tc.trigger(r, ctrlP);
   }
-  
+
   public static TestContext tCtrlUploadReq(TestContext tc, Port ctrlP, OverlayId torrentId) {
     R2TorrentCtrlEvents.Upload r = new R2TorrentCtrlEvents.Upload(torrentId);
     return tc.trigger(r, ctrlP);
   }
-  
+
   public static TestContext tCtrlStopReq(TestContext tc, Port ctrlP, OverlayId torrentId) {
     R2TorrentCtrlEvents.Stop r = new R2TorrentCtrlEvents.Stop(torrentId);
     return tc.trigger(r, ctrlP);
   }
-  
+
   public static TestContext eCtrlMetaGetReq(TestContext tc, Port expectP) {
     return tc.expect(R2TorrentCtrlEvents.MetaGetReq.class, expectP, Direction.OUT);
   }
@@ -166,14 +169,15 @@ public class TorrentTestHelper {
   public static TestContext eCtrlMetaGetSucc(TestContext tc, Port expectP) {
     return tc.expect(R2TorrentCtrlEvents.MetaGetSucc.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eCtrlBaseInfoInd(TestContext tc, Port expectP, R2TorrentStatus status) {
     return tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, torrentBaseInfo(status), expectP, Direction.OUT);
   }
-  
+
   public static TestContext eCtrlStopAck(TestContext tc, Port expectP) {
     return tc.expect(R2TorrentCtrlEvents.StopAck.class, expectP, Direction.OUT);
   }
+
   //************************************************METADATA_GET********************************************************
   public static TestContext tMetadataGetReq(TestContext tc, Port triggerP, OverlayId torrentId, Identifier fileId,
     KAddress seeder) {
@@ -197,47 +201,126 @@ public class TorrentTestHelper {
   public static TestContext eMetadataStopAck(TestContext tc, Port expectP) {
     return tc.expect(R1MetadataGetEvents.StopAck.class, expectP, Direction.OUT);
   }
+  
+  public static TestContext metadataGetSucc(TestContext tc, Port expectP, Port triggerP) {
+    Future f = new FutureHelper.BasicFuture<R1MetadataGetEvents.GetReq, R1MetadataGetEvents.GetSucc>() {
+      @Override
+      public R1MetadataGetEvents.GetSucc get() {
+        return event.success();
+      }
+    };
+
+    return tc
+      .answerRequest(R1MetadataGetEvents.GetReq.class, expectP, f)
+      .trigger(f, triggerP);
+  }
+  
+  public static TestContext metadataGetStop(TestContext tc, Port expectP, Port triggerP) {
+    Future f = new FutureHelper.BasicFuture<R1MetadataGetEvents.Stop, R1MetadataGetEvents.StopAck>() {
+      @Override
+      public R1MetadataGetEvents.StopAck get() {
+        return event.ack();
+      }
+    };
+
+    return tc
+      .answerRequest(R1MetadataGetEvents.Stop.class, expectP, f)
+      .trigger(f, triggerP);
+  }
+
   //***********************************************METADATA_SERVE*******************************************************
+  public static TestContext metadataServeSucc(TestContext tc, Port expectP, Port triggerP) {
+    Future f = new FutureHelper.BasicFuture<R1MetadataServeEvents.ServeReq, R1MetadataServeEvents.ServeSucc>() {
+      @Override
+      public R1MetadataServeEvents.ServeSucc get() {
+        return event.success();
+      }
+    };
+
+    return tc
+      .answerRequest(R1MetadataServeEvents.ServeReq.class, expectP, f)
+      .trigger(f, triggerP);
+  }
+  public static TestContext metadataServeStop(TestContext tc, Port expectP, Port triggerP) {
+    Future f = new FutureHelper.BasicFuture<R1MetadataServeEvents.Stop, R1MetadataServeEvents.StopAck>() {
+      @Override
+      public R1MetadataServeEvents.StopAck get() {
+        return event.ack();
+      }
+    };
+
+    return tc
+      .answerRequest(R1MetadataServeEvents.Stop.class, expectP, f)
+      .trigger(f, triggerP);
+  }
+
   public static TestContext tMetadataServeReq(TestContext tc, Port triggerP, OverlayId torrentId, Identifier fileId) {
     R1MetadataServeEvents.ServeReq req = new R1MetadataServeEvents.ServeReq(torrentId, fileId);
     return tc.trigger(req, triggerP);
   }
-  
+
   public static TestContext tMetadataServeStop(TestContext tc, Port triggerP, OverlayId torrentId, Identifier fileId) {
     R1MetadataServeEvents.Stop req = new R1MetadataServeEvents.Stop(torrentId, fileId);
     return tc.trigger(req, triggerP);
   }
-  
+
   public static TestContext eMetadataServeReq(TestContext tc, Port expectP) {
     return tc.expect(R1MetadataServeEvents.ServeReq.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eMetadataServeSucc(TestContext tc, Port expectP) {
     return tc.expect(R1MetadataServeEvents.ServeSucc.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eMetadataServeStop(TestContext tc, Port expectP) {
     return tc.expect(R1MetadataServeEvents.Stop.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eMetadataServeStopAck(TestContext tc, Port expectP) {
     return tc.expect(R1MetadataServeEvents.StopAck.class, expectP, Direction.OUT);
   }
+
   //*****************************************************HASH***********************************************************
   public static TestContext eHashSucc(TestContext tc, Port expectP) {
     return tc.expect(R1HashEvents.HashSucc.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eHashReq(TestContext tc, Port expectP) {
     return tc.expect(R1HashEvents.HashReq.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eHashStop(TestContext tc, Port expectP) {
     return tc.expect(R1HashEvents.HashStop.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eHashStopAck(TestContext tc, Port expectP) {
     return tc.expect(R1HashEvents.HashStopAck.class, expectP, Direction.OUT);
+  }
+
+  public static TestContext hashSucc(TestContext tc, Port expectP, Port triggerP) {
+    Future f = new BasicFuture<R1HashEvents.HashReq, R1HashEvents.HashSucc>() {
+
+      @Override
+      public R1HashEvents.HashSucc get() {
+        return event.success();
+      }
+    };
+    return tc
+      .answerRequest(R1HashEvents.HashReq.class, expectP, f)
+      .trigger(f, triggerP);
+  }
+  
+  public static TestContext hashStop(TestContext tc, Port expectP, Port triggerP) {
+    Future f = new BasicFuture<R1HashEvents.HashStop, R1HashEvents.HashStopAck>() {
+
+      @Override
+      public R1HashEvents.HashStopAck get() {
+        return event.ack();
+      }
+    };
+    return tc
+      .answerRequest(R1HashEvents.HashStop.class, expectP, f)
+      .trigger(f, triggerP);
   }
   //**************************************************FUTURES***********************************************************
   public static Future<Msg, Msg> netNodeConnAcc() {
@@ -248,7 +331,7 @@ public class TorrentTestHelper {
       }
     };
   }
-  
+
   public static Future<R1HashEvents.HashReq, R1HashEvents.HashSucc> hashSucc() {
     return new BasicFuture<R1HashEvents.HashReq, R1HashEvents.HashSucc>() {
       @Override
@@ -276,13 +359,13 @@ public class TorrentTestHelper {
       }
     };
   }
-  
+
   //**************************************************PREDICATES********************************************************
   public static Predicate torrentBaseInfo(R2TorrentStatus status) {
     return new Predicate<R2TorrentCtrlEvents.TorrentBaseInfo>() {
       @Override
       public boolean apply(R2TorrentCtrlEvents.TorrentBaseInfo t) {
-        R2TorrentCtrlEvents.TorrentBaseInfo event = (R2TorrentCtrlEvents.TorrentBaseInfo)t;
+        R2TorrentCtrlEvents.TorrentBaseInfo event = (R2TorrentCtrlEvents.TorrentBaseInfo) t;
         return event.status.equals(status);
       }
     };

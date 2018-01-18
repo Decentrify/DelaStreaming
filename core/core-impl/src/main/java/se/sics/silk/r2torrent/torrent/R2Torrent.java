@@ -225,16 +225,16 @@ public class R2Torrent {
         .nextStates(States.DATA_STORAGE, States.HASH, States.CLEAN_META_SERVE)
         .buildTransition()
         .onState(States.DATA_STORAGE)
-        .nextStates(States.HASH, States.CLEAN_HASH)
+        .nextStates(States.HASH, States.CLEAN_META_SERVE)
         .buildTransition()
         .onState(States.HASH)
         .nextStates(States.UPLOAD, States.TRANSFER, States.CLEAN_HASH, States.CLEAN_META_SERVE)
         .buildTransition()
         .onState(States.TRANSFER)
-        .nextStates(States.CLEAN_HASH)
+        .nextStates(States.CLEAN_META_SERVE)
         .buildTransition()
         .onState(States.UPLOAD)
-        .nextStates(States.CLEAN_HASH)
+        .nextStates(States.CLEAN_META_SERVE)
         .buildTransition()
         .onState(States.CLEAN_HASH)
         .nextStates(States.CLEAN_META_SERVE)
@@ -248,8 +248,9 @@ public class R2Torrent {
     }
 
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
-      return FSMBuilder.semanticDef()
-        .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault())
+      FSMBuilder.SemanticDefinition def = FSMBuilder.semanticDef()
+        .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault());
+      def = def
         .negativePort(R2TorrentCtrlPort.class)
         .basicEvent(R2TorrentCtrlEvents.MetaGetReq.class)
         .subscribeOnStart(Handlers.getMetaReq)
@@ -258,9 +259,11 @@ public class R2Torrent {
         .basicEvent(R2TorrentCtrlEvents.Upload.class)
         .subscribeOnStart(Handlers.upload)
         .basicEvent(R2TorrentCtrlEvents.Stop.class)
-        .subscribe(Handlers.stop1, States.META_GET, States.META_SERVE)
-        .subscribe(Handlers.stop3, States.DATA_STORAGE, States.HASH, States.UPLOAD, States.TRANSFER)
-        .buildEvents()
+        .subscribe(Handlers.stop1, States.META_GET)
+        .subscribe(Handlers.stop2, States.META_SERVE, States.DATA_STORAGE, States.UPLOAD, States.TRANSFER)
+        .subscribe(Handlers.stop3, States.HASH)
+        .buildEvents();
+      def = def
         .positivePort(R2TorrentPort.class)
         .basicEvent(R1MetadataGetEvents.GetSucc.class)
         .subscribe(Handlers.metaGetSucc, States.META_GET)
@@ -268,15 +271,19 @@ public class R2Torrent {
         .subscribe(Handlers.metaGetFail, States.META_GET)
         .basicEvent(R1MetadataServeEvents.ServeSucc.class)
         .subscribe(Handlers.metaServeSucc, States.META_SERVE)
-        .basicEvent(R1MetadataGetEvents.StopAck.class)
-        .subscribe(Handlers.metaGetClean, States.CLEAN_META_GET)
         .basicEvent(R1HashEvents.HashSucc.class)
         .subscribe(Handlers.hashSucc, States.HASH)
         .basicEvent(R1HashEvents.HashFail.class)
         .subscribe(Handlers.hashFail, States.HASH)
+        .basicEvent(R1MetadataGetEvents.StopAck.class)
+        .subscribe(Handlers.metaGetClean, States.CLEAN_META_GET)
+        .basicEvent(R1MetadataServeEvents.StopAck.class)
+        .subscribe(Handlers.metaServeClean, States.CLEAN_META_SERVE)
         .basicEvent(R1HashEvents.HashStopAck.class)
         .subscribe(Handlers.cleanHash, States.CLEAN_HASH)
         .buildEvents();
+      
+      return def;
     }
 
     static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {

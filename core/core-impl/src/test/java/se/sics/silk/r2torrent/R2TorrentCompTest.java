@@ -40,9 +40,8 @@ import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import static se.sics.silk.TorrentTestHelper.eCtrlBaseInfoInd;
 import static se.sics.silk.TorrentTestHelper.eCtrlMetaGetSucc;
+import static se.sics.silk.TorrentTestHelper.eCtrlStopAck;
 import static se.sics.silk.TorrentTestHelper.eHashReq;
-import static se.sics.silk.TorrentTestHelper.eHashStop;
-import static se.sics.silk.TorrentTestHelper.eHashStopAck;
 import static se.sics.silk.TorrentTestHelper.eHashSucc;
 import static se.sics.silk.TorrentTestHelper.eMetadataGetReq;
 import static se.sics.silk.TorrentTestHelper.eMetadataGetSucc;
@@ -139,21 +138,20 @@ public class R2TorrentCompTest {
     tc = eMetadataServeReq(tc, expectP); //14
     tc = eMetadataServeSucc(tc, expectP); //15
     tc = eCtrlBaseInfoInd(tc, ctrlP, R2TorrentStatus.META_SERVE); //16
-    tc = tCtrlDownloadReq(tc, ctrlP, torrent);//14
-    tc = eHashReq(tc, expectP);//15
-    tc = eHashSucc(tc, expectP);//16
-    tc = eCtrlBaseInfoInd(tc, ctrlP, R2TorrentStatus.HASH); //17
-    tc = stop(tc, torrent); //18-22
+    tc = tCtrlDownloadReq(tc, ctrlP, torrent);//17
+    tc = eHashReq(tc, expectP);//18
+    tc = eHashSucc(tc, expectP);//19
+    tc = eCtrlBaseInfoInd(tc, ctrlP, R2TorrentStatus.HASH); //20
+    tc = stop(tc, torrent); //21-24
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
 
   private TestContext stop(TestContext tc, OverlayId torrent) {
     tc = tCtrlStopReq(tc, ctrlP, torrent); //1
-    tc = eHashStop(tc, expectP); //2
-    tc = eHashStopAck(tc, expectP); //3
-    tc = eMetadataServeStop(tc, expectP); //4
-    tc = eMetadataServeStopAck(tc, expectP); //5
+    tc = eMetadataServeStop(tc, expectP); //2
+    tc = eMetadataServeStopAck(tc, expectP); //3
+    tc = eCtrlStopAck(tc, ctrlP); //4
     return tc;
   }
 
@@ -179,7 +177,7 @@ public class R2TorrentCompTest {
     tc = tc.end();
     tc = tNetMetadataGet(tc, networkP, leecher, seeder, torrent, file0); //11
     tc = eNetMetadataServe(tc, networkP, seeder, leecher); //12
-    tc = stop(tc, torrent); //13-17
+    tc = stop(tc, torrent); //13-16
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }

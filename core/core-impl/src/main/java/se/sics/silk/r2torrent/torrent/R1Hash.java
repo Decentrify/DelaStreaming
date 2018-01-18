@@ -159,7 +159,7 @@ public class R1Hash {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1HashEvents.HashReq req) {
         sendTorrent(es, req.success());
-        return States.HASH;
+        return FSMBasicStateNames.FINAL;
       }
     };
     
