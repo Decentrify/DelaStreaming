@@ -65,6 +65,7 @@ import static se.sics.silk.TorrentTestHelper.tCtrlUploadReq;
 import static se.sics.silk.TorrentTestHelper.tNetMetadataGet;
 import static se.sics.silk.TorrentTestHelper.tNetNodeConnReq;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.eNodeSeederConnReq;
+import se.sics.silk.r2torrent.util.R2TorrentStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -137,11 +138,11 @@ public class R2TorrentCompTest {
     tc = eCtrlMetaGetSucc(tc, ctrlP); //13
     tc = eMetadataServeReq(tc, expectP); //14
     tc = eMetadataServeSucc(tc, expectP); //15
-    tc = eCtrlBaseInfoInd(tc, ctrlP); //16
+    tc = eCtrlBaseInfoInd(tc, ctrlP, R2TorrentStatus.META_SERVE); //16
     tc = tCtrlDownloadReq(tc, ctrlP, torrent);//14
     tc = eHashReq(tc, expectP);//15
     tc = eHashSucc(tc, expectP);//16
-    tc = eCtrlBaseInfoInd(tc, ctrlP); //17
+    tc = eCtrlBaseInfoInd(tc, ctrlP, R2TorrentStatus.HASH); //17
     tc = stop(tc, torrent); //18-22
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -167,10 +168,10 @@ public class R2TorrentCompTest {
     tc = tCtrlUploadReq(tc, ctrlP, torrent); //1
     tc = eMetadataServeReq(tc, expectP); //2
     tc = eMetadataServeSucc(tc, expectP); //3
-    tc = eCtrlBaseInfoInd(tc, ctrlP); //4
+    tc = eCtrlBaseInfoInd(tc, ctrlP, R2TorrentStatus.META_SERVE); //4
     tc = eHashReq(tc, expectP); //5
     tc = eHashSucc(tc, expectP); //6
-    tc = eCtrlBaseInfoInd(tc, ctrlP); //7
+    tc = eCtrlBaseInfoInd(tc, ctrlP, R2TorrentStatus.HASH); //7
     tc = tNetNodeConnReq(tc, networkP, leecher, seeder); //8
     tc = tc.unordered();
     tc = eTimerSchedulePeriodicTimeout(tc, timerP);//9

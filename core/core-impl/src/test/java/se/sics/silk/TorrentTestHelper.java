@@ -41,6 +41,7 @@ import se.sics.silk.r2torrent.torrent.event.R1MetadataGetEvents;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataServeEvents;
 import se.sics.silk.r2torrent.torrent.event.R2TorrentCtrlEvents;
 import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgs;
+import se.sics.silk.r2torrent.util.R2TorrentStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -166,8 +167,8 @@ public class TorrentTestHelper {
     return tc.expect(R2TorrentCtrlEvents.MetaGetSucc.class, expectP, Direction.OUT);
   }
   
-  public static TestContext eCtrlBaseInfoInd(TestContext tc, Port expectP) {
-    return tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, expectP, Direction.OUT);
+  public static TestContext eCtrlBaseInfoInd(TestContext tc, Port expectP, R2TorrentStatus status) {
+    return tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, torrentBaseInfo(status), expectP, Direction.OUT);
   }
   
   public static TestContext eCtrlStopAck(TestContext tc, Port expectP) {
@@ -248,7 +249,7 @@ public class TorrentTestHelper {
     };
   }
   
-  public static Future<R1HashEvents.HashReq, R1HashEvents.HashSucc> gashSucc() {
+  public static Future<R1HashEvents.HashReq, R1HashEvents.HashSucc> hashSucc() {
     return new BasicFuture<R1HashEvents.HashReq, R1HashEvents.HashSucc>() {
       @Override
       public R1HashEvents.HashSucc get() {
@@ -272,6 +273,17 @@ public class TorrentTestHelper {
       @Override
       public R1HashEvents.HashStopAck get() {
         return event.ack();
+      }
+    };
+  }
+  
+  //**************************************************PREDICATES********************************************************
+  public static Predicate torrentBaseInfo(R2TorrentStatus status) {
+    return new Predicate<R2TorrentCtrlEvents.TorrentBaseInfo>() {
+      @Override
+      public boolean apply(R2TorrentCtrlEvents.TorrentBaseInfo t) {
+        R2TorrentCtrlEvents.TorrentBaseInfo event = (R2TorrentCtrlEvents.TorrentBaseInfo)t;
+        return event.status.equals(status);
       }
     };
   }

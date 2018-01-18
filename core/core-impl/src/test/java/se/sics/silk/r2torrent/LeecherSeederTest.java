@@ -39,10 +39,12 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.PredicateHelper;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
+import static se.sics.silk.TorrentTestHelper.torrentBaseInfo;
+import se.sics.silk.r2torrent.helper.LeecherSeederComp;
 import se.sics.silk.r2torrent.helper.MockTorrentCtrlEvent;
 import se.sics.silk.r2torrent.helper.MockTorrentCtrlPort;
-import se.sics.silk.r2torrent.helper.LeecherSeederComp;
 import se.sics.silk.r2torrent.torrent.event.R2TorrentCtrlEvents;
+import se.sics.silk.r2torrent.util.R2TorrentStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -102,8 +104,8 @@ public class LeecherSeederTest {
 
   private TestContext upload(TestContext tc, KAddress target, OverlayId torrentId) {
     tc = mockIn(tc, ctrlP, target, new R2TorrentCtrlEvents.Upload(torrentId));
-    tc = mockOut(tc, ctrlP, target, new PredicateHelper.ContentPredicate(R2TorrentCtrlEvents.TorrentBaseInfo.class));
-    tc = mockOut(tc, ctrlP, target, new PredicateHelper.ContentPredicate(R2TorrentCtrlEvents.TorrentBaseInfo.class));
+    tc = mockOut(tc, ctrlP, target, torrentBaseInfo(R2TorrentStatus.META_SERVE));
+    tc = mockOut(tc, ctrlP, target, torrentBaseInfo(R2TorrentStatus.HASH));
     return tc;
   }
   
@@ -112,8 +114,9 @@ public class LeecherSeederTest {
     seeders.add(seeder);
     tc = mockIn(tc, ctrlP, target, new R2TorrentCtrlEvents.MetaGetReq(torrentId, seeders));
     tc = mockOut(tc, ctrlP, target, new PredicateHelper.ContentPredicate(R2TorrentCtrlEvents.MetaGetSucc.class));
+    tc = mockOut(tc, ctrlP, target, torrentBaseInfo(R2TorrentStatus.META_SERVE));
     tc = mockIn(tc, ctrlP, target, new R2TorrentCtrlEvents.Download(torrentId));
-    tc = mockOut(tc, ctrlP, target, new PredicateHelper.ContentPredicate(R2TorrentCtrlEvents.TorrentBaseInfo.class));
+    tc = mockOut(tc, ctrlP, target, torrentBaseInfo(R2TorrentStatus.HASH));
     return tc;
   }
 
