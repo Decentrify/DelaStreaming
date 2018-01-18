@@ -44,7 +44,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import static se.sics.silk.TorrentTestHelper.netNodeConnAcc;
-import static se.sics.silk.TorrentTestHelper.nodeSeederConnSucc;
+import static se.sics.silk.TorrentTestHelper.eNodeSeederConnSucc;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentPort;
@@ -271,7 +271,7 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrentId, seeder)); //1
     tc = netNodeConnAcc(tc, networkP);//2-3
     tc = nodeSeederScheduleTimer(tc, timerP); //4
-    tc = nodeSeederConnSucc(tc, expectP);//5
+    tc = eNodeSeederConnSucc(tc, expectP);//5
     return tc;
   }
   
@@ -285,8 +285,8 @@ public class R2NodeSeederTest {
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent2, seeder)); //2
     tc = netNodeConnAcc(tc, networkP);//3-4
     tc = nodeSeederScheduleTimer(tc, timerP); //5
-    tc = nodeSeederConnSucc(tc, expectP);//6
-    tc = nodeSeederConnSucc(tc, expectP);//7
+    tc = eNodeSeederConnSucc(tc, expectP);//6
+    tc = eNodeSeederConnSucc(tc, expectP);//7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
@@ -301,7 +301,7 @@ public class R2NodeSeederTest {
     tc = tc.body();
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent2, seeder)); //6
-    tc = nodeSeederConnSucc(tc, expectP); //7
+    tc = eNodeSeederConnSucc(tc, expectP); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R2NodeSeeder.fsmBaseId(seeder);
@@ -316,7 +316,7 @@ public class R2NodeSeederTest {
     tc = tc.body();
     tc = simpleConnSucc(tc, seeder, torrent1); //1-5
     tc = nodeSeederConnReqLoc(tc, triggerP, nodeSeederConnReqLoc(torrent2, seeder)); //6
-    tc = nodeSeederConnSucc(tc, expectP); //7
+    tc = eNodeSeederConnSucc(tc, expectP); //7
     tc = nodeSeederDisconnectLoc(tc, triggerP, torrent2, seeder); //8
     tc.repeat(1).body().end();
     assertTrue(tc.check());

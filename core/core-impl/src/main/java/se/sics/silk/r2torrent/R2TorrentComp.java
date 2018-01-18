@@ -82,7 +82,7 @@ public class R2TorrentComp extends ComponentDefinition {
     torrentSeederES = new R1TorrentSeeder.ES();
     torrentLeecherES = new R1TorrentLeecher.ES();
     torrentES = new R2Torrent.ES();
-    metadataGetES = new R1MetadataGet.ES();
+    metadataGetES = new R1MetadataGet.ES(init.selfAdr);
     metadataServeES = new R1MetadataServe.ES();
     hashMngrES = new R1Hash.ES(ports);
 

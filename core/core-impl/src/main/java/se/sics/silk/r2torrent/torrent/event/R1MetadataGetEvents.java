@@ -64,16 +64,18 @@ public class R1MetadataGetEvents {
   }
 
   public static class GetSucc extends Ind {
-
+    public final Identifier fileId;
     GetSucc(GetReq req) {
       super(req.eventId, req.torrentId);
+      this.fileId = req.fileId;
     }
   }
 
   public static class GetFail extends Ind {
-
+    public final Identifier fileId;
     GetFail(GetReq req) {
       super(req.eventId, req.torrentId);
+      this.fileId = req.fileId;
     }
   }
 

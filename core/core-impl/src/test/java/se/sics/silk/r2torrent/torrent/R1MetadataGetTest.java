@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.torrent.test;
+package se.sics.silk.r2torrent.torrent;
 
 import java.util.Random;
 import org.junit.After;
@@ -34,6 +34,7 @@ import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.kompics.network.Network;
 import se.sics.kompics.testing.TestContext;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
@@ -45,7 +46,9 @@ import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import static se.sics.silk.TorrentTestHelper.eMetadataGetSucc;
 import static se.sics.silk.TorrentTestHelper.eMetadataStopAck;
+import static se.sics.silk.TorrentTestHelper.eNetMetadataGet;
 import static se.sics.silk.TorrentTestHelper.eTorrentSeederConnReq;
+import static se.sics.silk.TorrentTestHelper.netMetadata;
 import static se.sics.silk.TorrentTestHelper.tMetadataGetReq;
 import static se.sics.silk.TorrentTestHelper.tMetadataStop;
 import static se.sics.silk.TorrentTestHelper.torrentSeederConnSucc;
@@ -66,6 +69,7 @@ public class R1MetadataGetTest {
   private TorrentWrapperComp compState;
   private Port<R2TorrentPort> triggerP;
   private Port<R2TorrentPort> expectP;
+  private Port<Network> networkP;
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
   private KAddress selfAdr;
@@ -82,6 +86,7 @@ public class R1MetadataGetTest {
     compState = (TorrentWrapperComp) comp.getComponent();
     triggerP = comp.getNegative(R2TorrentPort.class);
     expectP = comp.getPositive(R2TorrentPort.class);
+    networkP = comp.getNegative(Network.class);
     intIdFactory = new IntIdFactory(new Random());
   }
 
@@ -91,7 +96,7 @@ public class R1MetadataGetTest {
       @Override
       public MultiFSM setupFSM(ComponentProxy proxy, Config config, R2TorrentComp.Ports ports) {
         try {
-          R1MetadataGet.ES fsmEs = new R1MetadataGet.ES();
+          R1MetadataGet.ES fsmEs = new R1MetadataGet.ES(selfAdr);
           fsmEs.setProxy(proxy);
           fsmEs.setPorts(ports);
           
@@ -148,11 +153,27 @@ public class R1MetadataGetTest {
     tc = tc.body();
     tc = tMetadataGetReq(tc, triggerP, torrent, file0, seeder); //1
     tc = torrentSeederConnSucc(tc, expectP, triggerP); //2-3
-    tc = eMetadataGetSucc(tc, expectP); //4
+    tc = eNetMetadataGet(tc, networkP, selfAdr, seeder); //4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1MetadataGet.fsmBaseId(torrent, file0);
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmBaseId));
+  }
+  
+  //*************************************************ACTIVE TO STOP*****************************************************
+  @Test
+  public void testActiveMetadataGet() {
+    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    KAddress seeder = SystemHelper.getAddress(1);
+    Identifier file0 = intIdFactory.id(new BasicBuilders.IntBuilder(0));
+    tc = tc.body();
+    tc = tMetadataGetReq(tc, triggerP, torrent, file0, seeder); //1
+    tc = torrentSeederConnSucc(tc, expectP, triggerP); //2-3
+    tc = netMetadata(tc, networkP); //4-5
+    tc = eMetadataGetSucc(tc, expectP); //6
+    assertTrue(tc.check());
+    Identifier fsmBaseId = R1MetadataGet.fsmBaseId(torrent, file0);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   //*************************************************CONNECT TO STOP****************************************************
   @Test
@@ -165,23 +186,6 @@ public class R1MetadataGetTest {
     tc = eTorrentSeederConnReq(tc, expectP); //2
     tc = tMetadataStop(tc, triggerP, torrent, file0); //3
     tc = eMetadataStopAck(tc, expectP); //4
-    tc.repeat(1).body().end();
-    assertTrue(tc.check());
-    Identifier fsmBaseId = R1MetadataGet.fsmBaseId(torrent, file0);
-    assertFalse(compState.fsm.activeFSM(fsmBaseId));
-  }
-  //*************************************************ACTIVE TO STOP*****************************************************
-  @Test
-  public void testActiveStop() {
-    OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-    KAddress seeder = SystemHelper.getAddress(1);
-    Identifier file0 = intIdFactory.id(new BasicBuilders.IntBuilder(0));
-    tc = tc.body();
-    tc = tMetadataGetReq(tc, triggerP, torrent, file0, seeder); //1
-    tc = torrentSeederConnSucc(tc, expectP, triggerP); //2-3
-    tc = eMetadataGetSucc(tc, expectP); //4
-    tc = tMetadataStop(tc, triggerP, torrent, file0); //5
-    tc = eMetadataStopAck(tc, expectP); //6
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1MetadataGet.fsmBaseId(torrent, file0);

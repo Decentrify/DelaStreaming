@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.PatternExtractor;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
@@ -352,63 +351,63 @@ public class R2NodeSeeder {
       }
     };
 
-    static FSMPatternEventHandler netConnPong = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Pong>() {
+    static FSMPatternEventHandler netConnPong = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Pong, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.Pong payload,
-        PatternExtractor<Class, R2NodeConnMsgs.Pong> container) throws FSMException {
+        BasicContentMsg msg) throws FSMException {
         is.pingTracker.pong();
         return state;
       }
     };
 
-    static FSMPatternEventHandler netConnAcc = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectAcc>() {
+    static FSMPatternEventHandler netConnAcc = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectAcc, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.ConnectAcc payload,
-        PatternExtractor<Class, R2NodeConnMsgs.ConnectAcc> container) throws FSMException {
+        BasicContentMsg msg) throws FSMException {
         scheduleConnPing(es, is);
         is.reqTracker.connected(sendR1(es));
         return States.CONNECTED;
       }
     };
 
-    static FSMPatternEventHandler netConnRej = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectRej>() {
+    static FSMPatternEventHandler netConnRej = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectRej, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.ConnectRej payload,
-        PatternExtractor<Class, R2NodeConnMsgs.ConnectRej> container) throws FSMException {
+        BasicContentMsg msg) throws FSMException {
         is.reqTracker.failed(sendR1(es));
         return FSMBasicStateNames.FINAL;
       }
     };
 
-    static FSMPatternEventHandler netDisc1 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Disconnect>() {
+    static FSMPatternEventHandler netDisc1 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Disconnect, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.Disconnect payload,
-        PatternExtractor<Class, R2NodeConnMsgs.Disconnect> container) throws FSMException {
+        BasicContentMsg container) throws FSMException {
         is.reqTracker.failed(sendR1(es));
         return FSMBasicStateNames.FINAL;
       }
     };
     
-    static FSMPatternEventHandler netDisc2 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Disconnect>() {
+    static FSMPatternEventHandler netDisc2 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Disconnect, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.Disconnect payload,
-        PatternExtractor<Class, R2NodeConnMsgs.Disconnect> container) throws FSMException {
+        BasicContentMsg container) throws FSMException {
         cancelConnPing(es, is);
         is.reqTracker.failed(sendR1(es));
         return FSMBasicStateNames.FINAL;
       }
     };
     
-    static FSMPatternEventHandler beTout1 = new FSMPatternEventHandler<ES, IS, BestEffortMsg.Timeout>() {
+    static FSMPatternEventHandler beTout1 = new FSMPatternEventHandler<ES, IS, BestEffortMsg.Timeout, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, BestEffortMsg.Timeout payload,
-        PatternExtractor<Class, BestEffortMsg.Timeout> container) throws FSMException {
+        BasicContentMsg msg) throws FSMException {
         if (payload.content instanceof R2NodeConnMsgs.ConnectReq) {
           is.reqTracker.failed(sendR1(es));
           return FSMBasicStateNames.FINAL;
@@ -417,15 +416,15 @@ public class R2NodeSeeder {
       }
     };
 
-    static FSMPatternEventHandler beTout2 = new FSMPatternEventHandler<ES, IS, BestEffortMsg.Timeout>() {
+    static FSMPatternEventHandler beTout2 = new FSMPatternEventHandler<ES, IS, BestEffortMsg.Timeout, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, BestEffortMsg.Timeout payload,
-        PatternExtractor<Class, BestEffortMsg.Timeout> container) throws FSMException {
+        BasicContentMsg msg) throws FSMException {
         if (payload.content instanceof R2NodeConnMsgs.Ping) {
           //we ignore R2ConnMsgs.Ping be timeouts - handled by the ping mechanism itself
         } else {
-          throw new RuntimeException("unexpected msg:" + container);
+          throw new RuntimeException("unexpected msg:" + msg);
         }
         return state;
       }
@@ -438,11 +437,6 @@ public class R2NodeSeeder {
       es.getProxy().trigger(msg, es.ports.network);
     }
     
-    private static <C extends KompicsEvent & Identifiable> void answerMsg(ES es, BasicContentMsg msg, C content) {
-      KContentMsg resp = msg.answer(content);
-      es.getProxy().trigger(resp, es.ports.network);
-    }
-
     private static void sendR1(ES es, R2NodeSeederEvents.Ind event) {
       es.getProxy().trigger(event, es.ports.loopbackSend);
     }

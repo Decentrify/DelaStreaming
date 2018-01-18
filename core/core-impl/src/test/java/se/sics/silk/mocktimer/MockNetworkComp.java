@@ -57,7 +57,7 @@ public class MockNetworkComp extends ComponentDefinition {
       } else {
         sendMsg = msg;
       }
-      trigger(msg, network);
+      trigger(sendMsg, network);
     }
   };
 

@@ -46,7 +46,7 @@ import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
 public class R2NodeSeederHelper {
 
   //*****************************************************LOCAL**********************************************************
-  public static TestContext nodeSeederConnReqLoc(TestContext tc, Port expectP) {
+  public static TestContext eNodeSeederConnReq(TestContext tc, Port expectP) {
     return tc.expect(R2NodeSeederEvents.ConnectReq.class, expectP, Direction.OUT);
   }
   

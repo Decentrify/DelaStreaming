@@ -30,21 +30,7 @@ import se.sics.silk.r2torrent.torrent.R2Torrent;
  */
 public class R1MetadataServeEvents {
 
-  public static abstract class Req extends SilkEvent.E4 implements R1MetadataServe.TorrentEvent {
-
-    public Req(Identifier eventId, OverlayId torrentId, Identifier fileId) {
-      super(eventId, torrentId, fileId);
-    }
-  }
-
-  public static abstract class Ind extends SilkEvent.E3 implements R2Torrent.MetadataEvent {
-
-    public Ind(Identifier eventId, OverlayId torrentId) {
-      super(eventId, torrentId);
-    }
-  }
-
-  public static class ServeReq extends Req {
+  public static class ServeReq extends SilkEvent.E4 implements R1MetadataServe.TorrentEvent {
 
 
     public ServeReq(OverlayId torrentId, Identifier fileId) {
@@ -60,21 +46,21 @@ public class R1MetadataServeEvents {
     }
   }
 
-  public static class ServeSucc extends Ind {
+  public static class ServeSucc extends SilkEvent.E3 implements R2Torrent.MetadataEvent {
 
     ServeSucc(ServeReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class ServeFail extends Ind {
+  public static class ServeFail extends SilkEvent.E3 implements R2Torrent.MetadataEvent {
 
     ServeFail(ServeReq req) {
       super(req.eventId, req.torrentId);
     }
   }
 
-  public static class Stop extends Req {
+  public static class Stop extends SilkEvent.E4 implements R1MetadataServe.TorrentEvent {
 
     public Stop(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
@@ -85,7 +71,7 @@ public class R1MetadataServeEvents {
     }
   }
 
-  public static class StopAck extends Ind {
+  public static class StopAck extends SilkEvent.E3 implements R2Torrent.MetadataEvent {
 
     StopAck(Stop req) {
       super(req.eventId, req.torrentId);

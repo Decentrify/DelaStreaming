@@ -18,6 +18,7 @@
  */
 package se.sics.silk.r2torrent;
 
+import java.util.Random;
 import org.junit.After;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
@@ -29,7 +30,9 @@ import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.testing.TestContext;
 import se.sics.kompics.timer.Timer;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -38,20 +41,30 @@ import se.sics.silk.SystemSetup;
 import static se.sics.silk.TorrentTestHelper.eCtrlBaseInfoInd;
 import static se.sics.silk.TorrentTestHelper.eCtrlMetaGetSucc;
 import static se.sics.silk.TorrentTestHelper.eHashReq;
+import static se.sics.silk.TorrentTestHelper.eHashStop;
+import static se.sics.silk.TorrentTestHelper.eHashStopAck;
 import static se.sics.silk.TorrentTestHelper.eHashSucc;
 import static se.sics.silk.TorrentTestHelper.eMetadataGetReq;
 import static se.sics.silk.TorrentTestHelper.eMetadataGetSucc;
 import static se.sics.silk.TorrentTestHelper.eMetadataServeReq;
+import static se.sics.silk.TorrentTestHelper.eMetadataServeStop;
+import static se.sics.silk.TorrentTestHelper.eMetadataServeStopAck;
 import static se.sics.silk.TorrentTestHelper.eMetadataServeSucc;
+import static se.sics.silk.TorrentTestHelper.eNetMetadataServe;
+import static se.sics.silk.TorrentTestHelper.eNetNodeConnAcc;
+import static se.sics.silk.TorrentTestHelper.eNodeSeederConnSucc;
+import static se.sics.silk.TorrentTestHelper.eTimerSchedulePeriodicTimeout;
 import static se.sics.silk.TorrentTestHelper.eTorrentSeederConnReq;
 import static se.sics.silk.TorrentTestHelper.eTorrentSeederConnSucc;
+import static se.sics.silk.TorrentTestHelper.netMetadata;
 import static se.sics.silk.TorrentTestHelper.netNodeConnAcc;
-import static se.sics.silk.TorrentTestHelper.nodeSeederConnSucc;
 import static se.sics.silk.TorrentTestHelper.tCtrlDownloadReq;
 import static se.sics.silk.TorrentTestHelper.tCtrlMetaGetReq;
+import static se.sics.silk.TorrentTestHelper.tCtrlStopReq;
 import static se.sics.silk.TorrentTestHelper.tCtrlUploadReq;
-import static se.sics.silk.TorrentTestHelper.timerSchedulePeriodicTimeout;
-import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnReqLoc;
+import static se.sics.silk.TorrentTestHelper.tNetMetadataGet;
+import static se.sics.silk.TorrentTestHelper.tNetNodeConnReq;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.eNodeSeederConnReq;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -66,6 +79,7 @@ public class R2TorrentCompTest {
   private Port<R2TorrentPort> expectP;
   private Port<R2TorrentPort> triggerP;
   private static OverlayIdFactory torrentIdFactory;
+  private IntIdFactory intIdFactory;
   private KAddress selfAdr;
 
   @BeforeClass
@@ -82,6 +96,7 @@ public class R2TorrentCompTest {
     timerP = comp.getNegative(Timer.class);
     expectP = comp.getPositive(R2TorrentPort.class);
     triggerP = comp.getNegative(R2TorrentPort.class);
+    intIdFactory = new IntIdFactory(new Random());
   }
 
   private TestContext<R2TorrentComp> getContext() {
@@ -101,37 +116,53 @@ public class R2TorrentCompTest {
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
   @Test
   public void testLeecher() {
     OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
-    
+
+//    tc = tc.setTimeout(10*60*1000);
     tc = tc.body();
     tc = tCtrlMetaGetReq(tc, ctrlP, torrent, seeder); //1
     tc = eMetadataGetReq(tc, expectP); //2
     tc = eTorrentSeederConnReq(tc, expectP); //3
-    tc = nodeSeederConnReqLoc(tc, expectP); //4
+    tc = eNodeSeederConnReq(tc, expectP); //4
     tc = netNodeConnAcc(tc, networkP); //5-6
-    tc = timerSchedulePeriodicTimeout(tc, timerP);//7
-    tc = nodeSeederConnSucc(tc, expectP); //8
+    tc = eTimerSchedulePeriodicTimeout(tc, timerP);//7
+    tc = eNodeSeederConnSucc(tc, expectP); //8
     tc = eTorrentSeederConnSucc(tc, expectP); //9
-    tc = eMetadataGetSucc(tc, expectP); //10
-    tc = eCtrlMetaGetSucc(tc, ctrlP); //11
-    tc = tCtrlDownloadReq(tc, ctrlP, torrent);//12
-    tc = eHashReq(tc, expectP);//13
-    tc = eHashSucc(tc, expectP);//14
-    tc = eCtrlBaseInfoInd(tc, ctrlP); //15
+    tc = netMetadata(tc, networkP); //10-11
+    tc = eMetadataGetSucc(tc, expectP); //12
+    tc = eCtrlMetaGetSucc(tc, ctrlP); //13
+    tc = eMetadataServeReq(tc, expectP); //14
+    tc = eMetadataServeSucc(tc, expectP); //15
+    tc = eCtrlBaseInfoInd(tc, ctrlP); //16
+    tc = tCtrlDownloadReq(tc, ctrlP, torrent);//14
+    tc = eHashReq(tc, expectP);//15
+    tc = eHashSucc(tc, expectP);//16
+    tc = eCtrlBaseInfoInd(tc, ctrlP); //17
+    tc = stop(tc, torrent); //18-22
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
- 
+
+  private TestContext stop(TestContext tc, OverlayId torrent) {
+    tc = tCtrlStopReq(tc, ctrlP, torrent); //1
+    tc = eHashStop(tc, expectP); //2
+    tc = eHashStopAck(tc, expectP); //3
+    tc = eMetadataServeStop(tc, expectP); //4
+    tc = eMetadataServeStopAck(tc, expectP); //5
+    return tc;
+  }
+
   @Test
   public void testSeeder() {
     OverlayId torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     KAddress seeder = SystemHelper.getAddress(1);
     KAddress leecher = SystemHelper.getAddress(2);
-    
+    Identifier file0 = intIdFactory.id(new BasicBuilders.IntBuilder(0));
+
     tc = tc.body();
     tc = tCtrlUploadReq(tc, ctrlP, torrent); //1
     tc = eMetadataServeReq(tc, expectP); //2
@@ -140,6 +171,14 @@ public class R2TorrentCompTest {
     tc = eHashReq(tc, expectP); //5
     tc = eHashSucc(tc, expectP); //6
     tc = eCtrlBaseInfoInd(tc, ctrlP); //7
+    tc = tNetNodeConnReq(tc, networkP, leecher, seeder); //8
+    tc = tc.unordered();
+    tc = eTimerSchedulePeriodicTimeout(tc, timerP);//9
+    tc = eNetNodeConnAcc(tc, networkP);//10
+    tc = tc.end();
+    tc = tNetMetadataGet(tc, networkP, leecher, seeder, torrent, file0); //11
+    tc = eNetMetadataServe(tc, networkP, seeder, leecher); //12
+    tc = stop(tc, torrent); //13-17
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }

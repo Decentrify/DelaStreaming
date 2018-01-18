@@ -16,13 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.pair.helper;
+package se.sics.silk.r2torrent.helper;
 
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
+import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Negative;
+import se.sics.kompics.Port;
+import se.sics.kompics.fsm.event.FSMWrongState;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
@@ -36,15 +39,15 @@ import se.sics.silk.mocktimer.MockTimerComp.TriggerTimeout;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentCtrlPort;
 import se.sics.silk.r2torrent.torrent.R2Torrent;
+import se.sics.silk.r2torrent.torrent.event.R2TorrentCtrlEvents;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2TorrentWrapperComp extends ComponentDefinition {
+public class LeecherSeederComp extends ComponentDefinition {
 
-  Negative<MockTorrentCtrlPort> inOnlyTorrent = provides(MockTorrentCtrlPort.class);
-  Negative<R2TorrentCtrlPort> outOnlyTorrent = provides(R2TorrentCtrlPort.class);
+  Negative<MockTorrentCtrlPort> ctrlPort = provides(MockTorrentCtrlPort.class);
   Negative<MockTimerComp.Port> mockTimer = provides(MockTimerComp.Port.class);
   public Component n1;
   public Component n2;
@@ -58,7 +61,7 @@ public class R2TorrentWrapperComp extends ComponentDefinition {
   KAddress adr1;
   KAddress adr2;
 
-  public R2TorrentWrapperComp(Init init) {
+  public LeecherSeederComp(Init init) {
     adr1 = init.adr1;
     adr2 = init.adr2;
     mockTimer1 = create(MockTimerComp.class, Init.NONE);
@@ -70,20 +73,38 @@ public class R2TorrentWrapperComp extends ComponentDefinition {
     mngrComp2 = (R2TorrentComp) n2.getComponent();
 
     mockTimerChannel = One2NChannel.getChannel("mock-timer", mockTimer, new TimerCtrlIdExtractor());
-    networkChannel = One2NChannel.getChannel("moch-network", mockNetwork.getPositive(Network.class),
+    networkChannel = One2NChannel.getChannel("mock-network", mockNetwork.getPositive(Network.class),
       new NetworkIdExtractor());
 
     connect(n1.getNegative(Timer.class), mockTimer1.getPositive(Timer.class), Channel.TWO_WAY);
     connect(n2.getNegative(Timer.class), mockTimer2.getPositive(Timer.class), Channel.TWO_WAY);
-    connect(n1.getPositive(R2TorrentCtrlPort.class), outOnlyTorrent, Channel.TWO_WAY);
-    connect(n2.getPositive(R2TorrentCtrlPort.class), outOnlyTorrent, Channel.TWO_WAY);
 
     networkChannel.addChannel(init.adr1.getId(), n1.getNegative(Network.class));
     networkChannel.addChannel(init.adr2.getId(), n2.getNegative(Network.class));
     mockTimerChannel.addChannel(init.adr1.getId(), mockTimer1.getPositive(MockTimerComp.Port.class));
     mockTimerChannel.addChannel(init.adr2.getId(), mockTimer2.getPositive(MockTimerComp.Port.class));
   
-    subscribe(handleTorrentCtrlReq, inOnlyTorrent);
+    subscribe(handleTorrentCtrlReq, ctrlPort);
+    subscribeTorrentCtrl(adr1, n1.getPositive(R2TorrentCtrlPort.class));
+    subscribeTorrentCtrl(adr2, n2.getPositive(R2TorrentCtrlPort.class));
+  }
+  
+  private void subscribeTorrentCtrl(KAddress adr, Port port) {
+    subscribe(ctrlHandler(R2TorrentCtrlEvents.MetaGetSucc.class, adr), port);
+    subscribe(ctrlHandler(R2TorrentCtrlEvents.MetaGetFail.class, adr), port);
+    subscribe(ctrlHandler(R2TorrentCtrlEvents.TorrentBaseInfo.class, adr), port);
+    subscribe(ctrlHandler(R2TorrentCtrlEvents.StopAck.class, adr), port);
+    subscribe(ctrlHandler(FSMWrongState.class, adr), port);
+  }
+  
+  public <E extends KompicsEvent> Handler<E> ctrlHandler(Class<E> eventType, KAddress target) {
+    return new Handler<E>(eventType) {
+
+      @Override
+      public void handle(E event) {
+        trigger(new MockTorrentCtrlEvent(target, event), ctrlPort);
+      }
+    };
   }
 
   Handler handleTorrentCtrlReq = new Handler<MockTorrentCtrlEvent>() {
@@ -99,7 +120,7 @@ public class R2TorrentWrapperComp extends ComponentDefinition {
     }
   };
   
-  public static class Init extends se.sics.kompics.Init<R2TorrentWrapperComp> {
+  public static class Init extends se.sics.kompics.Init<LeecherSeederComp> {
 
     KAddress adr1;
     KAddress adr2;

@@ -46,10 +46,10 @@ public class DefaultHandlers {
   }
 
   public static FSMPatternEventHandler patternDefault() {
-    return new FSMPatternEventHandler<FSMExternalState, FSMInternalState, KompicsEvent>() {
+    return new FSMPatternEventHandler<FSMExternalState, FSMInternalState, KompicsEvent, PatternExtractor>() {
       @Override
       public FSMStateName handle(FSMStateName state, FSMExternalState es, FSMInternalState is, KompicsEvent req,
-        PatternExtractor<Class, KompicsEvent> container) {
+        PatternExtractor container) {
         if (FSMBasicStateNames.START.equals(state)) {
           return FSMBasicStateNames.FINAL;
         } else {

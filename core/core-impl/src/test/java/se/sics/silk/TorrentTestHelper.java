@@ -18,6 +18,7 @@
  */
 package se.sics.silk;
 
+import com.google.common.base.Predicate;
 import java.util.LinkedList;
 import java.util.List;
 import se.sics.kompics.Port;
@@ -29,6 +30,7 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.silk.FutureHelper.BasicFuture;
 import static se.sics.silk.MsgHelper.msg;
 import se.sics.silk.r2torrent.conn.event.R1TorrentSeederEvents;
@@ -38,13 +40,14 @@ import se.sics.silk.r2torrent.torrent.event.R1HashEvents;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataGetEvents;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataServeEvents;
 import se.sics.silk.r2torrent.torrent.event.R2TorrentCtrlEvents;
+import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class TorrentTestHelper {
 
-  //***************************************************NETWORK**********************************************************
+  //************************************************NETWORK_CONN********************************************************
   public static TestContext netNodeConnAcc(TestContext tc, Port network) {
     Future<Msg, Msg> f = netNodeConnAcc();
     tc = tc.answerRequest(Msg.class, network, f);
@@ -58,11 +61,13 @@ public class TorrentTestHelper {
   }
   
   public static TestContext eNetNodeConnAcc(TestContext tc, Port network) {
-    return tc.expect(R2NodeConnMsgs.ConnectAcc.class, network, Direction.OUT);
+    Predicate payloadP = new PredicateHelper.ContentPredicate(R2NodeConnMsgs.ConnectAcc.class);
+    Predicate p = new PredicateHelper.MsgPredicate(PredicateHelper.TRUE_P, payloadP);
+    return tc.expect(BasicContentMsg.class, network, Direction.OUT);
   }
-
+  
   //*****************************************************NODE_SEEDER****************************************************
-  public static TestContext nodeSeederConnSucc(TestContext tc, Port expectP) {
+  public static TestContext eNodeSeederConnSucc(TestContext tc, Port expectP) {
     return tc.expect(R2NodeSeederEvents.ConnectSucc.class, expectP, Direction.OUT);
   }
 
@@ -88,10 +93,86 @@ public class TorrentTestHelper {
   }
 
   //***************************************************TIMER************************************************************
-  public static TestContext timerSchedulePeriodicTimeout(TestContext tc, Port timerP) {
+  public static TestContext eTimerSchedulePeriodicTimeout(TestContext tc, Port timerP) {
     return tc.expect(SchedulePeriodicTimeout.class, timerP, Direction.OUT);
   }
 
+  //**********************************************NETWORK_METADATA******************************************************
+  public static TestContext eNetMetadataGet(TestContext tc, Port network, KAddress src, KAddress dst) {
+    Predicate msgP = new PredicateHelper.MsgSrcDstPredicate(src, dst);
+    Predicate p = new PredicateHelper.MsgBEReqPredicate<>(R1MetadataMsgs.Get.class, msgP);
+    return tc.expect(BasicContentMsg.class, p, network, Direction.OUT);
+  }
+  
+  public static TestContext eNetMetadataServe(TestContext tc, Port network, KAddress src, KAddress dst) {
+    Predicate payloadP = new PredicateHelper.ContentPredicate(R1MetadataMsgs.Serve.class);
+    Predicate msgP = new PredicateHelper.MsgSrcDstPredicate(src, dst);
+    Predicate p = new PredicateHelper.MsgPredicate(msgP, payloadP);
+    return tc.expect(BasicContentMsg.class, p, network, Direction.OUT);
+  }
+  
+  public static TestContext tNetMetadataGet(TestContext tc, Port network, KAddress src, KAddress dst, OverlayId torrentId, Identifier fileId) {
+    R1MetadataMsgs.Get payload = new R1MetadataMsgs.Get(torrentId, fileId);
+    BasicContentMsg msg = msg(src, dst, payload);
+    return tc.trigger(msg, network);
+  }
+  
+  public static TestContext tNetMetadataServe(TestContext tc, Port network, KAddress src, KAddress dst, OverlayId torrentId, Identifier fileId) {
+    R1MetadataMsgs.Get payload = new R1MetadataMsgs.Get(torrentId, fileId);
+    BasicContentMsg msg = msg(src, dst, payload.answer());
+    return tc.trigger(msg, network);
+  }
+  
+  public static TestContext netMetadata(TestContext tc, Port network) {
+    Future f = new FutureHelper.NetBEFuture<R1MetadataMsgs.Get>(R1MetadataMsgs.Get.class) {
+
+      @Override
+      public Msg get() {
+        return msg.answer(content.answer());
+      }
+    };
+    return tc
+      .answerRequest(BasicContentMsg.class, network, f)
+      .trigger(f, network);
+  }
+  //*************************************************TORRENT CTRL********************************************************
+  public static TestContext tCtrlMetaGetReq(TestContext tc, Port ctrlP, OverlayId torrentId, KAddress seeder) {
+    List<KAddress> seeders = new LinkedList<>();
+    seeders.add(seeder);
+    R2TorrentCtrlEvents.MetaGetReq r = new R2TorrentCtrlEvents.MetaGetReq(torrentId, seeders);
+    return tc.trigger(r, ctrlP);
+  }
+  
+  public static TestContext tCtrlDownloadReq(TestContext tc, Port ctrlP, OverlayId torrentId) {
+    R2TorrentCtrlEvents.Download r = new R2TorrentCtrlEvents.Download(torrentId);
+    return tc.trigger(r, ctrlP);
+  }
+  
+  public static TestContext tCtrlUploadReq(TestContext tc, Port ctrlP, OverlayId torrentId) {
+    R2TorrentCtrlEvents.Upload r = new R2TorrentCtrlEvents.Upload(torrentId);
+    return tc.trigger(r, ctrlP);
+  }
+  
+  public static TestContext tCtrlStopReq(TestContext tc, Port ctrlP, OverlayId torrentId) {
+    R2TorrentCtrlEvents.Stop r = new R2TorrentCtrlEvents.Stop(torrentId);
+    return tc.trigger(r, ctrlP);
+  }
+  
+  public static TestContext eCtrlMetaGetReq(TestContext tc, Port expectP) {
+    return tc.expect(R2TorrentCtrlEvents.MetaGetReq.class, expectP, Direction.OUT);
+  }
+
+  public static TestContext eCtrlMetaGetSucc(TestContext tc, Port expectP) {
+    return tc.expect(R2TorrentCtrlEvents.MetaGetSucc.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext eCtrlBaseInfoInd(TestContext tc, Port expectP) {
+    return tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext eCtrlStopAck(TestContext tc, Port expectP) {
+    return tc.expect(R2TorrentCtrlEvents.StopAck.class, expectP, Direction.OUT);
+  }
   //************************************************METADATA_GET********************************************************
   public static TestContext tMetadataGetReq(TestContext tc, Port triggerP, OverlayId torrentId, Identifier fileId,
     KAddress seeder) {
@@ -134,39 +215,13 @@ public class TorrentTestHelper {
     return tc.expect(R1MetadataServeEvents.ServeSucc.class, expectP, Direction.OUT);
   }
   
+  public static TestContext eMetadataServeStop(TestContext tc, Port expectP) {
+    return tc.expect(R1MetadataServeEvents.Stop.class, expectP, Direction.OUT);
+  }
+  
   public static TestContext eMetadataServeStopAck(TestContext tc, Port expectP) {
     return tc.expect(R1MetadataServeEvents.StopAck.class, expectP, Direction.OUT);
   }
-  //*************************************************TORRENT CTRL********************************************************
-  public static TestContext tCtrlMetaGetReq(TestContext tc, Port ctrlP, OverlayId torrentId, KAddress seeder) {
-    List<KAddress> seeders = new LinkedList<>();
-    seeders.add(seeder);
-    R2TorrentCtrlEvents.MetaGetReq r = new R2TorrentCtrlEvents.MetaGetReq(torrentId, seeders);
-    return tc.trigger(r, ctrlP);
-  }
-  
-  public static TestContext tCtrlDownloadReq(TestContext tc, Port ctrlP, OverlayId torrentId) {
-    R2TorrentCtrlEvents.Download r = new R2TorrentCtrlEvents.Download(torrentId);
-    return tc.trigger(r, ctrlP);
-  }
-  
-  public static TestContext tCtrlUploadReq(TestContext tc, Port ctrlP, OverlayId torrentId) {
-    R2TorrentCtrlEvents.Upload r = new R2TorrentCtrlEvents.Upload(torrentId);
-    return tc.trigger(r, ctrlP);
-  }
-  
-  public static TestContext eCtrlMetaGetReq(TestContext tc, Port expectP) {
-    return tc.expect(R2TorrentCtrlEvents.MetaGetReq.class, expectP, Direction.OUT);
-  }
-
-  public static TestContext eCtrlMetaGetSucc(TestContext tc, Port expectP) {
-    return tc.expect(R2TorrentCtrlEvents.MetaGetSucc.class, expectP, Direction.OUT);
-  }
-  
-  public static TestContext eCtrlBaseInfoInd(TestContext tc, Port expectP) {
-    return tc.expect(R2TorrentCtrlEvents.TorrentBaseInfo.class, expectP, Direction.OUT);
-  }
-  
   //*****************************************************HASH***********************************************************
   public static TestContext eHashSucc(TestContext tc, Port expectP) {
     return tc.expect(R1HashEvents.HashSucc.class, expectP, Direction.OUT);
@@ -174,6 +229,14 @@ public class TorrentTestHelper {
   
   public static TestContext eHashReq(TestContext tc, Port expectP) {
     return tc.expect(R1HashEvents.HashReq.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext eHashStop(TestContext tc, Port expectP) {
+    return tc.expect(R1HashEvents.HashStop.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext eHashStopAck(TestContext tc, Port expectP) {
+    return tc.expect(R1HashEvents.HashStopAck.class, expectP, Direction.OUT);
   }
   //**************************************************FUTURES***********************************************************
   public static Future<Msg, Msg> netNodeConnAcc() {

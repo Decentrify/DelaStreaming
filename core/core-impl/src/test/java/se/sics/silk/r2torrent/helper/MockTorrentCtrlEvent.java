@@ -16,11 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.util;
+package se.sics.silk.r2torrent.helper;
+
+import se.sics.kompics.KompicsEvent;
+import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public enum R2TorrentStatus {
-  META_GET, META_SERVE, HASH, TRANSFER, ERROR
+public class MockTorrentCtrlEvent implements KompicsEvent {
+  public final KAddress adr;
+  public final KompicsEvent event;
+  
+  public MockTorrentCtrlEvent(KAddress adr, KompicsEvent event) {
+    this.adr = adr;
+    this.event = event;
+  }
 }

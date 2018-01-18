@@ -53,6 +53,7 @@ import se.sics.silk.r2torrent.conn.R1TorrentSeeder.States;
 import static se.sics.silk.r2torrent.conn.helper.R1TorrentSeederHelper.torrentSeederConnFail;
 import static se.sics.silk.r2torrent.conn.helper.R1TorrentSeederHelper.torrentSeederConnReq;
 import static se.sics.silk.r2torrent.conn.helper.R1TorrentSeederHelper.torrentSeederDisconnect;
+import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.eNodeSeederConnReq;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeConnFailLoc;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeConnSuccLoc;
 import static se.sics.silk.r2torrent.conn.helper.R2NodeSeederHelper.nodeSeederConnFailLoc;
@@ -139,7 +140,7 @@ public class R1TorrentSeederTest {
 
     tc = tc.body();
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent, file1, seeder));//2
-    tc = nodeSeederConnReqLoc(tc, expectP);//3
+    tc = eNodeSeederConnReq(tc, expectP);//3
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent, file2, seeder));//4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -156,7 +157,7 @@ public class R1TorrentSeederTest {
 
     tc = tc.body();
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent, file1, seeder));//2
-    tc = nodeSeederConnReqLoc(tc, expectP);//3
+    tc = eNodeSeederConnReq(tc, expectP);//3
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent, file2, seeder)); //4
     tc = torrentSeederDisconnect(tc, triggerP, torrent, file2, seeder);//5
     tc.repeat(1).body().end();
@@ -283,7 +284,7 @@ public class R1TorrentSeederTest {
 
     tc = tc.body();
     tc = torrentSeederConnReq(tc, triggerP, torrentSeederConnReq(torrent, file1, seeder));//2
-    tc = nodeSeederConnReqLoc(tc, expectP);//3
+    tc = eNodeSeederConnReq(tc, expectP);//3
     tc = torrentSeederDisconnect(tc, triggerP, torrent, file1, seeder); //4
     tc = nodeSeederDisconnectLoc(tc, expectP); //5
     tc.repeat(1).body().end();

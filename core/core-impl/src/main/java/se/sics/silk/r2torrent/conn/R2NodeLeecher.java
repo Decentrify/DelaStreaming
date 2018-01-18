@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.PatternExtractor;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
@@ -274,48 +273,47 @@ public class R2NodeLeecher {
 
   public static class Handlers {
 
-    static FSMPatternEventHandler netConnReq1 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectReq>() {
+    static FSMPatternEventHandler netConnReq1 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectReq, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.ConnectReq payload,
-        PatternExtractor<Class, R2NodeConnMsgs.ConnectReq> container) throws FSMException {
-        BasicContentMsg msg = (BasicContentMsg) container;
+        BasicContentMsg msg) throws FSMException {
         is.leecherAdr = msg.getSource();
         is.req = payload;
         scheduleConnPing(es, is);
-        answerNet(es, container, payload.accept());
+        answerNet(es, msg, payload.accept());
         return States.CONNECTED;
       }
     };
 
-    static FSMPatternEventHandler netConnReq2 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectReq>() {
+    static FSMPatternEventHandler netConnReq2 = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.ConnectReq, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.ConnectReq payload,
-        PatternExtractor<Class, R2NodeConnMsgs.ConnectReq> container) throws FSMException {
-        answerNet(es, container, payload.accept());
+        BasicContentMsg msg) throws FSMException {
+        answerNet(es, msg, payload.accept());
         return States.CONNECTED;
       }
     };
 
-    static FSMPatternEventHandler netDiscReq = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Disconnect>() {
+    static FSMPatternEventHandler netDiscReq = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Disconnect, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.Disconnect payload,
-        PatternExtractor<Class, R2NodeConnMsgs.Disconnect> container) throws FSMException {
+        BasicContentMsg msg) throws FSMException {
         is.torrentMngr.disconnectAll(sendR1(es));
         cancelConnPing(es, is);
         return FSMBasicStateNames.FINAL;
       }
     };
     
-    static FSMPatternEventHandler netPingReq = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Ping>() {
+    static FSMPatternEventHandler netPingReq = new FSMPatternEventHandler<ES, IS, R2NodeConnMsgs.Ping, BasicContentMsg>() {
 
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R2NodeConnMsgs.Ping payload,
-        PatternExtractor<Class, R2NodeConnMsgs.Ping> container) throws FSMException {
+        BasicContentMsg msg) throws FSMException {
         is.pingTracker.ping();
-        answerNet(es, container, payload.ack());
+        answerNet(es, msg, payload.ack());
         return States.CONNECTED;
       }
     };
@@ -350,8 +348,7 @@ public class R2NodeLeecher {
       }
     };
 
-    private static <C extends KompicsEvent & Identifiable> void answerNet(ES es, PatternExtractor container, C content) {
-      BasicContentMsg msg = (BasicContentMsg) container;
+    private static <C extends KompicsEvent & Identifiable> void answerNet(ES es, BasicContentMsg msg, C content) {
       KContentMsg resp = msg.answer(content);
       es.getProxy().trigger(resp, es.ports.network);
     }

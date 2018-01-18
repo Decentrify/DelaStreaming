@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.PatternExtractor;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
@@ -34,18 +35,23 @@ import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
+import se.sics.kompics.fsm.handler.FSMPatternEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.kompics.network.Network;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataServeEvents;
+import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -75,6 +81,9 @@ public class R1MetadataServe {
   }
 
   public static interface ConnEvent extends Event {
+  }
+
+  public static interface Msg extends Event {
   }
 
   public static class IS implements FSMInternalState {
@@ -138,19 +147,29 @@ public class R1MetadataServe {
         .toFinal()
         .buildTransition()
         .onState(States.ACTIVE)
+        .nextStates(States.ACTIVE)
         .toFinal()
         .buildTransition();
     }
 
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
-      return FSMBuilder.semanticDef()
-        .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault())
+      FSMBuilder.SemanticDefinition def = FSMBuilder.semanticDef()
+        .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault());
+
+      def = def
         .positivePort(R2TorrentPort.class)
         .basicEvent(R1MetadataServeEvents.ServeReq.class)
-        .subscribeOnStart(Handlers.metadataServe)
+        .subscribeOnStart(Handlers.serveRequest)
         .basicEvent(R1MetadataServeEvents.Stop.class)
         .subscribe(Handlers.stop, States.ACTIVE)
         .buildEvents();
+
+      def = def
+        .positivePort(Network.class)
+        .patternEvent(R1MetadataMsgs.Get.class, BasicContentMsg.class)
+        .subscribe(Handlers.serve, States.ACTIVE)
+        .buildEvents();
+      return def;
     }
 
     static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
@@ -160,6 +179,12 @@ public class R1MetadataServe {
         if (event instanceof Event) {
           Event e = (Event) event;
           return Optional.of(fsmBaseId(e.torrentId(), e.fileId()));
+        } else if (event instanceof PatternExtractor) {
+          PatternExtractor pattern = (PatternExtractor) event;
+          if (pattern.extractValue() instanceof Event) {
+            Event e = (Event) pattern.extractValue();
+            return Optional.of(fsmBaseId(e.torrentId(), e.fileId()));
+          }
         }
         return Optional.empty();
       }
@@ -174,7 +199,7 @@ public class R1MetadataServe {
 
   public static class Handlers {
 
-    static FSMBasicEventHandler metadataServe = new FSMBasicEventHandler<ES, IS, R1MetadataServeEvents.ServeReq>() {
+    static FSMBasicEventHandler serveRequest = new FSMBasicEventHandler<ES, IS, R1MetadataServeEvents.ServeReq>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataServeEvents.ServeReq req) {
         is.init(req);
@@ -191,7 +216,22 @@ public class R1MetadataServe {
       }
     };
 
-    private static void sendTorrent(ES es, R1MetadataServeEvents.Ind e) {
+    static FSMPatternEventHandler serve = new FSMPatternEventHandler<ES, IS, R1MetadataMsgs.Get, BasicContentMsg>() {
+
+      @Override
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R1MetadataMsgs.Get payload,
+        BasicContentMsg msg) throws FSMException {
+        answerNet(es, msg, payload.answer());
+        return state;
+      }
+    };
+
+    private static <C extends KompicsEvent & Identifiable> void answerNet(ES es, BasicContentMsg msg, C payload) {
+      KContentMsg resp = msg.answer(payload);
+      es.getProxy().trigger(resp, es.ports.network);
+    }
+
+    private static void sendTorrent(ES es, R2Torrent.MetadataEvent e) {
       es.getProxy().trigger(e, es.ports.loopbackSend);
     }
   }

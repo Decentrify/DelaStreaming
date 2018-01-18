@@ -16,15 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.pair.helper;
+package se.sics.silk.r2torrent.torrent.msg;
 
-import se.sics.kompics.PortType;
+import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.torrent.R1MetadataGet;
+import se.sics.silk.r2torrent.torrent.R1MetadataServe;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class MockTorrentCtrlPort extends PortType {
-  {
-    request(MockTorrentCtrlEvent.class);
+public class R1MetadataMsgs {
+  public static class Get extends SilkEvent.E4 implements R1MetadataServe.Msg {
+    public Get(OverlayId torrentId, Identifier fileId) {
+      super(BasicIdentifiers.msgId(), torrentId, fileId);
+    }
+    
+    public Serve answer() {
+      return new Serve(this);
+    }
+  }
+  
+  public static class Serve extends SilkEvent.E4 implements R1MetadataGet.Msg {
+    public Serve(Get req) {
+      super(req.eventId, req.torrentId, req.fileId);
+    }
   }
 }

@@ -71,10 +71,6 @@ public class R2TorrentCtrlEvents {
     public Upload(OverlayId torrentId) {
       super(BasicIdentifiers.eventId(), torrentId);
     }
-    
-    public TorrentBaseInfo success(R2TorrentStatus status) {
-      return new TorrentBaseInfo(this, status);
-    }
   }
 
   public static class TorrentBaseInfoReq extends SilkEvent.E3 implements R2Torrent.CtrlEvent {
@@ -98,11 +94,6 @@ public class R2TorrentCtrlEvents {
     }
 
     TorrentBaseInfo(TorrentBaseInfoReq req, R2TorrentStatus status) {
-      super(req.eventId, req.torrentId);
-      this.status = status;
-    }
-    
-    TorrentBaseInfo(Upload req, R2TorrentStatus status) {
       super(req.eventId, req.torrentId);
       this.status = status;
     }

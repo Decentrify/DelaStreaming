@@ -88,7 +88,7 @@ public class PredicateHelper {
       this.msgP = msgP;
       this.contentP = contentP;
     }
-
+    
     @Override
     public boolean apply(BasicContentMsg msg) {
       if (!msgP.apply(msg)) {
