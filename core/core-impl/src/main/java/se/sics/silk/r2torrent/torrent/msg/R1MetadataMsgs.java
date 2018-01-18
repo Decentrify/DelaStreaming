@@ -30,8 +30,12 @@ import se.sics.silk.r2torrent.torrent.R1MetadataServe;
  */
 public class R1MetadataMsgs {
   public static class Get extends SilkEvent.E4 implements R1MetadataServe.Msg {
+    Get(Identifier msgId, OverlayId torrentId, Identifier fileId) {
+      super(msgId, torrentId, fileId);
+    }
+    
     public Get(OverlayId torrentId, Identifier fileId) {
-      super(BasicIdentifiers.msgId(), torrentId, fileId);
+      this(BasicIdentifiers.msgId(), torrentId, fileId);
     }
     
     public Serve answer() {
@@ -40,6 +44,10 @@ public class R1MetadataMsgs {
   }
   
   public static class Serve extends SilkEvent.E4 implements R1MetadataGet.Msg {
+    Serve(Identifier msgId, OverlayId torrentId, Identifier fileId) {
+      super(msgId, torrentId, fileId);
+    }
+    
     public Serve(Get req) {
       super(req.eventId, req.torrentId, req.fileId);
     }

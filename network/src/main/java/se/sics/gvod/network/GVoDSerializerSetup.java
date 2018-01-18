@@ -43,14 +43,16 @@ import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockDetailsSerializer;
 import se.sics.silk.r2torrent.conn.msg.ConnMsgsSerializers;
 import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
+import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgSerializers;
+import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class GVoDSerializerSetup {
     //You may add up to max serializers without the need to recompile all the projects that use the serializer space after gvod
-    public static int maxSerializers = 25;
-    public static int serializerIds = 24;
+    public static int maxSerializers = 35;
+    public static int serializerIds = 26;
     
     public static enum GVoDSerializers {
         FileIdentifier(FileId.class, "nStreamFileIdentifier"),
@@ -77,7 +79,9 @@ public class GVoDSerializerSetup {
         ConnMsgsConnectRej(R2NodeConnMsgs.ConnectRej.class, "silkConnMsgsConnectRej"),
         ConnMsgsDisconnect(R2NodeConnMsgs.Disconnect.class, "silkConnMsgsDisconnect"),
         ConnMsgsPing(R2NodeConnMsgs.Ping.class, "silkConnMsgsPing"),
-        ConnMsgsPong(R2NodeConnMsgs.Pong.class, "silkConnMsgsPong")
+        ConnMsgsPong(R2NodeConnMsgs.Pong.class, "silkConnMsgsPong"),
+        R1MetadataMsgsGet(R1MetadataMsgs.Get.class, "silkMetadataGet"),
+        R1MetadataMsgsServe(R1MetadataMsgs.Serve.class, "silkMetadataServe")
         ;
         
         
@@ -200,6 +204,14 @@ public class GVoDSerializerSetup {
         ConnMsgsSerializers.Pong connMsgsPongSerializer = new ConnMsgsSerializers.Pong(currentId++);
         Serializers.register(connMsgsPongSerializer, GVoDSerializers.ConnMsgsPong.serializerName);
         Serializers.register(GVoDSerializers.ConnMsgsPong.serializedClass, GVoDSerializers.ConnMsgsPong.serializerName);
+        
+        R1MetadataMsgSerializers.Get metadataGetSerializer = new R1MetadataMsgSerializers.Get(currentId++);
+        Serializers.register(metadataGetSerializer, GVoDSerializers.R1MetadataMsgsGet.serializerName);
+        Serializers.register(GVoDSerializers.R1MetadataMsgsGet.serializedClass, GVoDSerializers.R1MetadataMsgsGet.serializerName);
+        
+        R1MetadataMsgSerializers.Serve metadataServeSerializer = new R1MetadataMsgSerializers.Serve(currentId++);
+        Serializers.register(metadataServeSerializer, GVoDSerializers.R1MetadataMsgsServe.serializerName);
+        Serializers.register(GVoDSerializers.R1MetadataMsgsServe.serializedClass, GVoDSerializers.R1MetadataMsgsServe.serializerName);
         assert startingId + serializerIds == currentId;
         assert serializerIds <= maxSerializers;
         return startingId + maxSerializers;
