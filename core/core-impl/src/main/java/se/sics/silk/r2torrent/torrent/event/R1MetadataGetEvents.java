@@ -57,10 +57,6 @@ public class R1MetadataGetEvents {
     public GetSucc success() {
       return new GetSucc(this);
     }
-
-    public GetFail fail() {
-      return new GetFail(this);
-    }
   }
 
   public static class GetSucc extends Ind {
@@ -71,29 +67,21 @@ public class R1MetadataGetEvents {
     }
   }
 
-  public static class GetFail extends Ind {
-    public final Identifier fileId;
-    GetFail(GetReq req) {
-      super(req.eventId, req.torrentId);
-      this.fileId = req.fileId;
-    }
-  }
-
   public static class Stop extends Req {
 
     public Stop(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
     }
-
-    public StopAck ack() {
-      return new StopAck(this);
+    
+    public Stopped ack() {
+      return new Stopped(torrentId);
     }
   }
 
-  public static class StopAck extends Ind {
+  public static class Stopped extends Ind {
 
-    StopAck(Stop req) {
-      super(req.eventId, req.torrentId);
+    public Stopped(OverlayId torrentId) {
+      super(BasicIdentifiers.eventId(), torrentId);
     }
   }
 }

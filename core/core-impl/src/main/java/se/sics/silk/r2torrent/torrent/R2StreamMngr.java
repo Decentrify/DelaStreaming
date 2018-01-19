@@ -77,7 +77,7 @@ public class R2StreamMngr {
   public static interface StreamEvent extends Event {
   }
 
-  public static interface R1StreamEvent extends Event, R1StreamCtrlEvent, SilkEvent.TorrentEvent, SilkEvent.FileEvent {
+  public static interface R1StreamEvent extends Event, R2StreamCtrlEvent, SilkEvent.TorrentEvent, SilkEvent.FileEvent {
   }
 
   public static Identifier fsmBaseId(OverlayId torrentId, Identifier fileId) {
@@ -242,7 +242,7 @@ public class R2StreamMngr {
       es.getProxy().trigger(e, es.ports.streamCtrl);
     }
 
-    private static void sendR1StreamCtrl(ES es, R1StreamCtrlEvent e) {
+    private static void sendR1StreamCtrl(ES es, R2StreamCtrlEvent e) {
       es.getProxy().trigger(e, es.ports.loopbackSend);
     }
   }

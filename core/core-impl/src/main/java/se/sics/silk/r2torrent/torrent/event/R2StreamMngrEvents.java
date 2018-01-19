@@ -24,7 +24,7 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.torrent.R1StreamCtrlEvent;
+import se.sics.silk.r2torrent.torrent.R2StreamCtrlEvent;
 import se.sics.silk.r2torrent.torrent.R2StreamMngr;
 
 /**
@@ -48,7 +48,7 @@ public class R2StreamMngrEvents {
     }
   }
 
-  public static class OpenSucc extends SilkEvent.E4 implements R1StreamCtrlEvent {
+  public static class OpenSucc extends SilkEvent.E4 implements R2StreamCtrlEvent {
 
     public OpenSucc(Open req) {
       super(req.eventId, req.torrentId, req.fileId);
@@ -68,7 +68,7 @@ public class R2StreamMngrEvents {
     }
   }
 
-  public static class CloseAck extends SilkEvent.E4 implements R1StreamCtrlEvent {
+  public static class CloseAck extends SilkEvent.E4 implements R2StreamCtrlEvent {
 
     public CloseAck(Close req) {
       super(req.eventId, req.torrentId, req.fileId);

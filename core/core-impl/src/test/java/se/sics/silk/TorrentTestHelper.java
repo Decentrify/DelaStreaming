@@ -83,6 +83,10 @@ public class TorrentTestHelper {
   public static TestContext eTorrentSeederConnSucc(TestContext tc, Port expectP) {
     return tc.expect(R1TorrentSeederEvents.ConnectSucc.class, expectP, Direction.OUT);
   }
+  
+  public static TestContext eTorrentSeederDisc(TestContext tc, Port expectP) {
+    return tc.expect(R1TorrentSeederEvents.Disconnect.class, expectP, Direction.OUT);
+  }
 
   public static TestContext torrentSeederConnSucc(TestContext tc, Port expectP, Port triggerP) {
     Future f = new BasicFuture<R1TorrentSeederEvents.ConnectReq, R1TorrentSeederEvents.ConnectSucc>() {
@@ -259,7 +263,7 @@ public class TorrentTestHelper {
   }
 
   public static TestContext eMetadataStopAck(TestContext tc, Port expectP) {
-    return tc.expect(R1MetadataGetEvents.StopAck.class, expectP, Direction.OUT);
+    return tc.expect(R1MetadataGetEvents.Stopped.class, expectP, Direction.OUT);
   }
   
   public static TestContext metadataGetSucc(TestContext tc, Port expectP, Port triggerP) {
@@ -276,9 +280,9 @@ public class TorrentTestHelper {
   }
   
   public static TestContext metadataGetStop(TestContext tc, Port expectP, Port triggerP) {
-    Future f = new FutureHelper.BasicFuture<R1MetadataGetEvents.Stop, R1MetadataGetEvents.StopAck>() {
+    Future f = new FutureHelper.BasicFuture<R1MetadataGetEvents.Stop, R1MetadataGetEvents.Stopped>() {
       @Override
-      public R1MetadataGetEvents.StopAck get() {
+      public R1MetadataGetEvents.Stopped get() {
         return event.ack();
       }
     };

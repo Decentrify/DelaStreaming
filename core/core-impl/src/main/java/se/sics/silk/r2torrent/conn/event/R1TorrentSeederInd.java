@@ -16,12 +16,12 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.torrent;
+package se.sics.silk.r2torrent.conn.event;
 
 import se.sics.kompics.fsm.FSMEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface R1StreamCtrlEvent extends FSMEvent {
+public interface R1TorrentSeederInd extends FSMEvent {
 }

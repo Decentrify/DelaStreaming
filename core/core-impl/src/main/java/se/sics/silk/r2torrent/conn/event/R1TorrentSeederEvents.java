@@ -23,29 +23,14 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
+import se.sics.silk.r2torrent.torrent.R1MetadataGet;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1TorrentSeederEvents {
-
-  public static abstract class Req extends SilkEvent.E2 implements R1TorrentSeeder.Event2 {
-
-    public Req(Identifier eventId, OverlayId torrentId, Identifier fileId, Identifier nodeId) {
-      super(eventId, torrentId, fileId, nodeId);
-    }
-  }
-
-  public static abstract class Ind extends SilkEvent.E2 implements R1MetadataGet.ConnEvent {
-
-    public Ind(Identifier eventId, OverlayId torrentId, Identifier fileId, Identifier nodeId) {
-      super(eventId, torrentId, fileId, nodeId);
-    }
-  }
-  
-  public static class ConnectReq extends Req {
+  public static class ConnectReq extends SilkEvent.E2 implements R1TorrentSeeder.Event2 {
     public final KAddress node;
     public ConnectReq(OverlayId torrentId, Identifier fileId, KAddress node) {
       super(BasicIdentifiers.eventId(), torrentId, fileId, node.getId());
@@ -61,19 +46,19 @@ public class R1TorrentSeederEvents {
     }
   }
   
-  public static class ConnectSucc extends Ind {
+  public static class ConnectSucc extends SilkEvent.E2 implements R1MetadataGet.ConnEvent {
     ConnectSucc(Identifier eventId, OverlayId torrentId, Identifier fileId, Identifier nodeId) {
       super(eventId, torrentId, fileId, nodeId);
     }
   }
   
-  public static class ConnectFail extends Ind {
+  public static class ConnectFail extends SilkEvent.E2 implements R1MetadataGet.ConnEvent {
     ConnectFail(Identifier eventId, OverlayId torrentId, Identifier fileId, Identifier nodeId) {
       super(eventId, torrentId, fileId, nodeId);
     }
   }
   
-  public static class Disconnect extends Req {
+  public static class Disconnect extends SilkEvent.E2 implements R1TorrentSeeder.Event2 {
     public Disconnect(OverlayId torrentId, Identifier fileId, Identifier nodeId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId, nodeId);
     }

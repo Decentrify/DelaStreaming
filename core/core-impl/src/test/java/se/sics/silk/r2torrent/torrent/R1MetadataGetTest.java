@@ -48,6 +48,7 @@ import static se.sics.silk.TorrentTestHelper.eMetadataGetSucc;
 import static se.sics.silk.TorrentTestHelper.eMetadataStopAck;
 import static se.sics.silk.TorrentTestHelper.eNetMetadataGet;
 import static se.sics.silk.TorrentTestHelper.eTorrentSeederConnReq;
+import static se.sics.silk.TorrentTestHelper.eTorrentSeederDisc;
 import static se.sics.silk.TorrentTestHelper.netMetadata;
 import static se.sics.silk.TorrentTestHelper.tMetadataGetReq;
 import static se.sics.silk.TorrentTestHelper.tMetadataStop;
@@ -56,7 +57,6 @@ import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.TorrentWrapperComp.Setup;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentPort;
-import se.sics.silk.r2torrent.torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.torrent.R1MetadataGet.States;
 
 /**
@@ -185,7 +185,8 @@ public class R1MetadataGetTest {
     tc = tMetadataGetReq(tc, triggerP, torrent, file0, seeder); //1
     tc = eTorrentSeederConnReq(tc, expectP); //2
     tc = tMetadataStop(tc, triggerP, torrent, file0); //3
-    tc = eMetadataStopAck(tc, expectP); //4
+    tc = eTorrentSeederDisc(tc, expectP); //4
+    tc = eMetadataStopAck(tc, expectP); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1MetadataGet.fsmBaseId(torrent, file0);

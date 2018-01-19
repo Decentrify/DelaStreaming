@@ -50,6 +50,7 @@ import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
 import se.sics.silk.r2torrent.R2TorrentPort;
 import se.sics.silk.r2torrent.conn.event.R1TorrentSeederEvents;
+import se.sics.silk.r2torrent.conn.event.R1TorrentSeederInd;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
 
 /**
@@ -101,19 +102,19 @@ public class R1TorrentSeeder {
       reqs.put(new PairIdentifier(req.torrentId, req.fileId), req);
     }
 
-    void connected(Consumer<R1TorrentSeederEvents.Ind> answerR0) {
+    void connected(Consumer<R1TorrentSeederInd> answerR0) {
       reqs.values().stream().forEach((req) -> {
         answerR0.accept(req.success());
       });
     }
 
-    void failed(Consumer<R1TorrentSeederEvents.Ind> answerR0) {
+    void failed(Consumer<R1TorrentSeederInd> answerR0) {
       reqs.values().stream().forEach((req) -> {
         answerR0.accept(req.fail());
       });
     }
 
-    void disconnected(Consumer<R1TorrentSeederEvents.Ind> answerR0) {
+    void disconnected(Consumer<R1TorrentSeederInd> answerR0) {
       reqs.values().stream().forEach((req) -> {
         answerR0.accept(req.fail());
       });
@@ -271,14 +272,14 @@ public class R1TorrentSeeder {
       es.getProxy().trigger(event, es.ports.loopbackSend);
     }
 
-    private static void sendR0(ES es, R1TorrentSeederEvents.Ind event) {
+    private static void sendR0(ES es, R1TorrentSeederInd event) {
       es.getProxy().trigger(event, es.ports.loopbackSend);
     }
 
-    private static Consumer<R1TorrentSeederEvents.Ind> sendR0(ES es) {
-      return new Consumer<R1TorrentSeederEvents.Ind>() {
+    private static Consumer<R1TorrentSeederInd> sendR0(ES es) {
+      return new Consumer<R1TorrentSeederInd>() {
         @Override
-        public void accept(R1TorrentSeederEvents.Ind ind) {
+        public void accept(R1TorrentSeederInd ind) {
           sendR0(es, ind);
         }
       };
