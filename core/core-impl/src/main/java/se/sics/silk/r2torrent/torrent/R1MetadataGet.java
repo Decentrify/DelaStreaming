@@ -94,6 +94,9 @@ public class R1MetadataGet {
 
   public static interface Msg extends Event {
   }
+  
+  public static interface StreamEvent extends Event, R1StreamCtrlEvent {
+  }
 
   public static class HardCodedcConfig {
 

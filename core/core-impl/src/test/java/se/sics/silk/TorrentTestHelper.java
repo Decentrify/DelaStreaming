@@ -31,6 +31,8 @@ import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.nstream.storage.durable.events.DStreamConnect;
+import se.sics.nstream.storage.durable.events.DStreamDisconnect;
 import se.sics.silk.FutureHelper.BasicFuture;
 import static se.sics.silk.MsgHelper.msg;
 import se.sics.silk.r2torrent.conn.event.R1TorrentSeederEvents;
@@ -39,6 +41,7 @@ import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
 import se.sics.silk.r2torrent.torrent.event.R1HashEvents;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataGetEvents;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataServeEvents;
+import se.sics.silk.r2torrent.torrent.event.R2StreamMngrEvents;
 import se.sics.silk.r2torrent.torrent.event.R2TorrentCtrlEvents;
 import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgs;
 import se.sics.silk.r2torrent.util.R2TorrentStatus;
@@ -177,7 +180,64 @@ public class TorrentTestHelper {
   public static TestContext eCtrlStopAck(TestContext tc, Port expectP) {
     return tc.expect(R2TorrentCtrlEvents.StopAck.class, expectP, Direction.OUT);
   }
+  //*************************************************STREAM MNGR********************************************************
+  public static TestContext tStreamOpen(TestContext tc, Port triggerP, R2StreamMngrEvents.Open event) {
+    return tc.trigger(event, triggerP);
+  }
+  
+  public static TestContext tStreamOpened(TestContext tc, Port triggerP, DStreamConnect.Request event) {
+    return tc.trigger(event, triggerP);
+  }
+  
+  public static TestContext tStreamClose(TestContext tc, Port triggerP, R2StreamMngrEvents.Close event) {
+    return tc.trigger(event, triggerP);
+  }
+  
+  public static TestContext tStreamClosed(TestContext tc, Port triggerP, DStreamDisconnect.Request event) {
+    return tc.trigger(event, triggerP);
+  }
+  
+  public static TestContext eStreamOpenSucc(TestContext tc, Port expectP) {
+    return tc.expect(R2StreamMngrEvents.OpenSucc.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext eStreamCloseAck(TestContext tc, Port expectP) {
+    return tc.expect(R2StreamMngrEvents.CloseAck.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext eStreamOpenReq(TestContext tc, Port expectP) {
+    return tc.expect(DStreamConnect.Request.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext eStreamCloseReq(TestContext tc, Port expectP) {
+    return tc.expect(DStreamDisconnect.Request.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext streamOpenSucc(TestContext tc, Port streamCtrl, int filePos) {
+    Future f = new FutureHelper.BasicFuture<DStreamConnect.Request, DStreamConnect.Success>() {
 
+      @Override
+      public DStreamConnect.Success get() {
+        return event.success(filePos);
+      }
+    };
+    return tc
+      .answerRequest(DStreamConnect.Request.class, streamCtrl, f)
+      .trigger(f, streamCtrl);
+  }
+  
+  public static TestContext streamCloseSucc(TestContext tc, Port streamCtrl) {
+    Future f = new FutureHelper.BasicFuture<DStreamDisconnect.Request, DStreamDisconnect.Success>() {
+
+      @Override
+      public DStreamDisconnect.Success get() {
+        return event.success();
+      }
+    };
+    return tc
+      .answerRequest(DStreamDisconnect.Request.class, streamCtrl, f)
+      .trigger(f, streamCtrl);
+  }
   //************************************************METADATA_GET********************************************************
   public static TestContext tMetadataGetReq(TestContext tc, Port triggerP, OverlayId torrentId, Identifier fileId,
     KAddress seeder) {

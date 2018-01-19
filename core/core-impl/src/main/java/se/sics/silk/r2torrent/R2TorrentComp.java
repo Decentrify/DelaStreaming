@@ -34,6 +34,7 @@ import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeLeecher;
@@ -51,7 +52,7 @@ public class R2TorrentComp extends ComponentDefinition {
   private static final Logger LOG = LoggerFactory.getLogger(R2TorrentComp.class);
   private String logPrefix;
 
-  private Ports ports;
+  private final Ports ports;
   private MultiFSM nodeSeeders;
   private MultiFSM nodeLeechers;
   private MultiFSM torrentSeeders;
@@ -145,6 +146,7 @@ public class R2TorrentComp extends ComponentDefinition {
     public final Negative<R2TorrentPort> loopbackSend;
     public final Positive<R2TorrentPort> loopbackSubscribe;
     public final Negative<R2TorrentCtrlPort> ctrl;
+    public final Positive<DStreamControlPort> streamCtrl;
     public final Positive<Network> network;
     public final Positive<Timer> timer;
 
@@ -153,6 +155,7 @@ public class R2TorrentComp extends ComponentDefinition {
       loopbackSubscribe = proxy.requires(R2TorrentPort.class);
       proxy.connect(loopbackSend.getPair(), loopbackSubscribe.getPair(), Channel.TWO_WAY);
       ctrl = proxy.provides(R2TorrentCtrlPort.class);
+      streamCtrl = proxy.requires(DStreamControlPort.class);
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
     }

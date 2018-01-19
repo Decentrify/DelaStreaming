@@ -85,6 +85,9 @@ public class R1MetadataServe {
 
   public static interface Msg extends Event {
   }
+  
+  public static interface StreamEvent extends R1MetadataGet.Event, R1StreamCtrlEvent {
+  }
 
   public static class IS implements FSMInternalState {
 

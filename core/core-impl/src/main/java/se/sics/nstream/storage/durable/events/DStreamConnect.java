@@ -20,6 +20,7 @@ package se.sics.nstream.storage.durable.events;
 
 import org.javatuples.Pair;
 import se.sics.kompics.Direct;
+import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
@@ -66,7 +67,7 @@ public class DStreamConnect {
     }
   }
 
-  public static class Success implements Direct.Response, Identifiable {
+  public static class Success implements Direct.Response, Identifiable, FSMEvent {
 
     public final Request req;
     public final long streamPos;
