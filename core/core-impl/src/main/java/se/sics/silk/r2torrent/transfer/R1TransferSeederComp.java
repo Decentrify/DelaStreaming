@@ -28,10 +28,6 @@ import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.kompics.fsm.FSMException;
-import se.sics.kompics.fsm.MultiFSM;
-import se.sics.kompics.fsm.OnFSMExceptionAction;
-import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.Timer;
@@ -58,37 +54,14 @@ public class R1TransferSeederComp extends ComponentDefinition {
   private final Ports ports;
   public final KAddress selfAdr;
   public final KAddress seederAdr;
-  private MultiFSM transferSeeder;
-  private R1TransferSeeder.ES transferSeederES;
 
   public R1TransferSeederComp(Init init) {
     ports = new Ports(proxy);
     selfAdr = init.selfAdr;
     seederAdr = init.seederAdr;
     subscribe(handleStart, control);
-    setupFSM(init);
   }
   
-  private void setupFSM(R1TransferSeederComp.Init init) {
-    transferSeederES = new R1TransferSeeder.ES(init.selfAdr, init.seederAdr, init.torrentId, init.fileId);
-
-    transferSeederES.setProxy(proxy);
-
-    transferSeederES.setPorts(ports);
-    try {
-      OnFSMExceptionAction oexa = new OnFSMExceptionAction() {
-        @Override
-        public void handle(FSMException ex) {
-          throw new RuntimeException(ex);
-        }
-      };
-      FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
-      transferSeeder = R1TransferSeeder.FSM.multifsm(fsmIdFactory, transferSeederES, oexa);
-    } catch (FSMException ex) {
-      throw new RuntimeException(ex);
-    }
-  }
-
   public static Identifier baseId(OverlayId torrentId, Identifier fileId, Identifier seederId) {
     return new PairIdentifier(new PairIdentifier(torrentId, fileId), seederId);
   }

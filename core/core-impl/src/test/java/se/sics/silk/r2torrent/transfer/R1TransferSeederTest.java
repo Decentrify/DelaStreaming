@@ -39,6 +39,7 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.testing.Direction;
 import se.sics.kompics.testing.Future;
 import se.sics.kompics.testing.TestContext;
+import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
@@ -49,12 +50,14 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.silk.FutureHelper;
+import se.sics.silk.MsgHelper;
 import se.sics.silk.SelfPort;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
-import se.sics.silk.TorrentTestHelper;
 import static se.sics.silk.TorrentTestHelper.eNetPayload;
+import static se.sics.silk.TorrentTestHelper.eSchedulePeriodicTimer;
 import se.sics.silk.WrapperComp;
+import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder.States;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederPing;
@@ -77,7 +80,6 @@ public class R1TransferSeederTest {
   private KAddress seeder;
   private OverlayId torrent;
   private Identifier file;
-  private final TorrentTestHelper th = new TorrentTestHelper();
 
   @BeforeClass
   public static void setup() throws FSMException {
@@ -106,8 +108,8 @@ public class R1TransferSeederTest {
       @Override
       public MultiFSM setupFSM(ComponentProxy proxy, Config config) {
         try {
-          R1TransferSeederComp.Ports ports = new R1TransferSeederComp.Ports(proxy);
-          R1TransferSeeder.ES fsmEs = new R1TransferSeeder.ES(self, seeder, torrent, file);
+          R2TorrentComp.Ports ports = new R2TorrentComp.Ports(proxy);
+          R1TransferSeeder.ES fsmEs = new R1TransferSeeder.ES(self);
           fsmEs.setProxy(proxy);
           fsmEs.setPorts(ports);
 
@@ -210,7 +212,7 @@ public class R1TransferSeederTest {
   public void testConnectToDisconnect() {
     tc = tc.body();
     tc = startToConnect(tc); //1-2
-    tc = disconnect(tc, torrent, file, seeder); //3-4
+    tc = localDisconnect2(tc, torrent, file, seeder); //3-4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
@@ -219,10 +221,21 @@ public class R1TransferSeederTest {
   
   //**************************************************ACTIVE TO DISCONNECT*********************************************
   @Test
-  public void testActiveToDisconnect() {
+  public void testActiveToLocalDisconnect() {
     tc = tc.body();
     tc = startToActive(tc); //1-5
-    tc = disconnect(tc, torrent, file, seeder); //6-7
+    tc = localDisconnect1(tc, torrent, file, seeder); //6-8
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
+    assertFalse(compState.fsm.activeFSM(fsmId));
+  }
+  
+  @Test
+  public void testActiveToNetDisconnect() {
+    tc = tc.body();
+    tc = startToActive(tc); //1-5
+    tc = netDisconnect(tc, torrent, file, seeder); //6-8
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
@@ -231,15 +244,29 @@ public class R1TransferSeederTest {
   //********************************************************************************************************************
   private TestContext connect(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(connect(torrentId, fileId, seeder), triggerP); //1
-    tc = connectAcc(tc, networkP); //2-3
+    tc = netConnectAcc(tc); //2-3
     tc = tc.expect(R1TransferSeederEvents.Connected.class, expectP, Direction.OUT);//4
-    tc = tc.expect(SchedulePeriodicTimeout.class, timerP, Direction.OUT); //5
+    tc = eSchedulePeriodicTimer(tc, R1TransferSeederPing.class, timerP); //5
     return tc;
   }
   
-  private TestContext disconnect(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    tc = tc.trigger(disconnect(torrentId, fileId, seeder), triggerP); //1
+  private TestContext localDisconnect1(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
+    tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), triggerP); //1
     tc = eNetPayload(tc, R1TransferMsgs.Disconnect.class, networkP); //2
+    tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //3
+    return tc;
+  }
+  
+  private TestContext localDisconnect2(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
+    tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), triggerP); //1
+    tc = eNetPayload(tc, R1TransferMsgs.Disconnect.class, networkP); //2
+    return tc;
+  }
+  
+  private TestContext netDisconnect(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
+    tc = tc.trigger(netDisconnect(torrentId, fileId, seeder), networkP); //1
+    tc = tc.expect(R1TransferSeederEvents.Disconnected.class, expectP, Direction.OUT); //2
+    tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //3
     return tc;
   }
   
@@ -259,10 +286,11 @@ public class R1TransferSeederTest {
     tc = tc.trigger(ping(torrentId, fileId, seeder), timerP); //1
     tc = tc.expect(R1TransferSeederEvents.Disconnected.class, expectP, Direction.OUT); //2
     tc = eNetPayload(tc, R1TransferMsgs.Disconnect.class, networkP);//3
+    tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //4
     return tc;
   }
   
-  private TestContext connectAcc(TestContext tc, Port networkP) {
+  private TestContext netConnectAcc(TestContext tc) {
     Future f = new FutureHelper.NetBEFuture<R1TransferMsgs.Connect>(R1TransferMsgs.Connect.class) {
       @Override
       public Msg get() {
@@ -287,11 +315,16 @@ public class R1TransferSeederTest {
   }
   
   public R1TransferSeederEvents.Connect connect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    return new R1TransferSeederEvents.Connect(torrentId, fileId, seeder.getId());
+    return new R1TransferSeederEvents.Connect(torrentId, fileId, seeder);
   }
   
-  public R1TransferSeederEvents.Disconnect disconnect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
+  public R1TransferSeederEvents.Disconnect localDisconnect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
     return new R1TransferSeederEvents.Disconnect(torrentId, fileId, seeder.getId());
+  }
+  
+  public Msg netDisconnect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
+    R1TransferMsgs.Disconnect disconnect = new R1TransferMsgs.Disconnect(torrentId, fileId);
+    return MsgHelper.msg(seeder, self, disconnect);
   }
   
   public R1TransferSeederPing ping(OverlayId torrentId, Identifier fileId, KAddress seeder) {

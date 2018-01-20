@@ -23,29 +23,32 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.transfer.R1TransferSeeder;
+import se.sics.silk.r2torrent.transfer.R1TransferLeecher;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1TransferSeederEvents {
-  public static class Connect extends SilkEvent.E2 implements R1TransferSeeder.CtrlEvent {
-    public final KAddress seederAdr;
+public class R1TransferLeecherEvents {
+   public static class ConnectReq extends SilkEvent.E2 {
+    public final KAddress leecherAdr;
+    public ConnectReq(OverlayId torrentId, Identifier fileId, KAddress leecherAdr) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId, leecherAdr.getId());
+      this.leecherAdr = leecherAdr;
+    }
     
-    public Connect(OverlayId torrentId, Identifier fileId, KAddress seederAdr) {
-      super(BasicIdentifiers.eventId(), torrentId, fileId, seederAdr.getId());
-      this.seederAdr = seederAdr;
+    public ConnectAcc accept() {
+      return new ConnectAcc(torrentId, fileId, nodeId);
     }
   }
   
-  public static class Connected extends SilkEvent.E2 {
+  public static class ConnectAcc extends SilkEvent.E2 implements R1TransferLeecher.CtrlEvent {
 
-    public Connected(OverlayId torrentId, Identifier fileId, Identifier nodeId) {
+    public ConnectAcc(OverlayId torrentId, Identifier fileId, Identifier nodeId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId, nodeId);
     }
   }
   
-  public static class Disconnect extends SilkEvent.E2 implements R1TransferSeeder.CtrlEvent {
+  public static class Disconnect extends SilkEvent.E2 implements R1TransferLeecher.CtrlEvent {
     public Disconnect(OverlayId torrentId, Identifier fileId, Identifier seederId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId, seederId);
     }

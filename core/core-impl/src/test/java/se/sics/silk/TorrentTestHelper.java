@@ -26,6 +26,7 @@ import se.sics.kompics.network.Msg;
 import se.sics.kompics.testing.Direction;
 import se.sics.kompics.testing.Future;
 import se.sics.kompics.testing.TestContext;
+import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -84,7 +85,7 @@ public class TorrentTestHelper {
   public static TestContext eTorrentSeederConnSucc(TestContext tc, Port expectP) {
     return tc.expect(R1TorrentSeederEvents.ConnectSucc.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eTorrentSeederDisc(TestContext tc, Port expectP) {
     return tc.expect(R1TorrentSeederEvents.Disconnect.class, expectP, Direction.OUT);
   }
@@ -185,40 +186,42 @@ public class TorrentTestHelper {
   public static TestContext eCtrlStopAck(TestContext tc, Port expectP) {
     return tc.expect(R2TorrentCtrlEvents.StopAck.class, expectP, Direction.OUT);
   }
+
   //*****************************************************FILE***********************************************************
+
   public static TestContext tFileOpen(TestContext tc, Port triggerP, R1FileGetEvents.Start event) {
     return tc.trigger(event, triggerP);
   }
-  
+
   public static TestContext tStreamOpened(TestContext tc, Port triggerP, DStreamConnect.Request event) {
     return tc.trigger(event, triggerP);
   }
-  
+
   public static TestContext tFileClose(TestContext tc, Port triggerP, R1FileGetEvents.Close event) {
     return tc.trigger(event, triggerP);
   }
-  
+
   public static TestContext tStreamClosed(TestContext tc, Port triggerP, DStreamDisconnect.Request event) {
     return tc.trigger(event, triggerP);
   }
-  
+
   public static TestContext tFileConnect(TestContext tc, Port triggerP, R1FileGetEvents.Connect req) {
     return tc.trigger(req, triggerP);
   }
-  
+
   public static TestContext eStreamOpenReq(TestContext tc, Port expectP) {
     return tc.expect(DStreamConnect.Request.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eStreamCloseReq(TestContext tc, Port expectP) {
     return tc.expect(DStreamDisconnect.Request.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext eFileIndication(TestContext tc, Port expectP, FileStatus status) {
     Predicate p = fileIndication(status);
     return tc.expect(R1FileGetEvents.Indication.class, p, expectP, Direction.OUT);
   }
-  
+
   public static TestContext streamOpenSucc(TestContext tc, Port streamCtrl, int filePos) {
     Future f = new FutureHelper.BasicFuture<DStreamConnect.Request, DStreamConnect.Success>() {
 
@@ -231,7 +234,7 @@ public class TorrentTestHelper {
       .answerRequest(DStreamConnect.Request.class, streamCtrl, f)
       .trigger(f, streamCtrl);
   }
-  
+
   public static TestContext streamCloseSucc(TestContext tc, Port streamCtrl) {
     Future f = new FutureHelper.BasicFuture<DStreamDisconnect.Request, DStreamDisconnect.Success>() {
 
@@ -244,11 +247,13 @@ public class TorrentTestHelper {
       .answerRequest(DStreamDisconnect.Request.class, streamCtrl, f)
       .trigger(f, streamCtrl);
   }
-  
+
   public static Predicate fileIndication(FileStatus status) {
     return (Predicate<R1FileGetEvents.Indication>) (R1FileGetEvents.Indication t) -> t.status.equals(status);
   }
+
   //************************************************METADATA_GET********************************************************
+
   public static TestContext tMetadataGetReq(TestContext tc, Port triggerP, OverlayId torrentId, Identifier fileId,
     KAddress seeder) {
     R1MetadataGetEvents.GetReq req = new R1MetadataGetEvents.GetReq(torrentId, fileId, seeder);
@@ -271,7 +276,7 @@ public class TorrentTestHelper {
   public static TestContext eMetadataStopAck(TestContext tc, Port expectP) {
     return tc.expect(R1MetadataGetEvents.Stopped.class, expectP, Direction.OUT);
   }
-  
+
   public static TestContext metadataGetSucc(TestContext tc, Port expectP, Port triggerP) {
     Future f = new FutureHelper.BasicFuture<R1MetadataGetEvents.GetReq, R1MetadataGetEvents.GetSucc>() {
       @Override
@@ -284,7 +289,7 @@ public class TorrentTestHelper {
       .answerRequest(R1MetadataGetEvents.GetReq.class, expectP, f)
       .trigger(f, triggerP);
   }
-  
+
   public static TestContext metadataGetStop(TestContext tc, Port expectP, Port triggerP) {
     Future f = new FutureHelper.BasicFuture<R1MetadataGetEvents.Stop, R1MetadataGetEvents.Stopped>() {
       @Override
@@ -311,6 +316,7 @@ public class TorrentTestHelper {
       .answerRequest(R1MetadataServeEvents.ServeReq.class, expectP, f)
       .trigger(f, triggerP);
   }
+
   public static TestContext metadataServeStop(TestContext tc, Port expectP, Port triggerP) {
     Future f = new FutureHelper.BasicFuture<R1MetadataServeEvents.Stop, R1MetadataServeEvents.StopAck>() {
       @Override
@@ -379,7 +385,7 @@ public class TorrentTestHelper {
       .answerRequest(R1HashEvents.HashReq.class, expectP, f)
       .trigger(f, triggerP);
   }
-  
+
   public static TestContext hashStop(TestContext tc, Port expectP, Port triggerP) {
     Future f = new BasicFuture<R1HashEvents.HashStop, R1HashEvents.HashStopAck>() {
 
@@ -393,7 +399,7 @@ public class TorrentTestHelper {
       .trigger(f, triggerP);
   }
   //**********************************************TRANSFER SEEDER*******************************************************
-  
+
   //**************************************************FUTURES***********************************************************
   public static Future<Msg, Msg> netNodeConnAcc() {
     return new FutureHelper.NetBEFuture<R2NodeConnMsgs.ConnectReq>(R2NodeConnMsgs.ConnectReq.class) {
@@ -442,11 +448,25 @@ public class TorrentTestHelper {
       }
     };
   }
-  
+
   //
   public static TestContext eNetPayload(TestContext tc, Class payloadType, Port network) {
     Predicate payloadP = new PredicateHelper.ContentPredicate(payloadType);
     Predicate p = new PredicateHelper.MsgPredicate(PredicateHelper.TRUE_P, payloadP);
     return tc.expect(BasicContentMsg.class, network, Direction.OUT);
+  }
+
+  public static TestContext eSchedulePeriodicTimer(TestContext tc, Class payloadType, Port timer) {
+    Predicate p = new Predicate<SchedulePeriodicTimeout>() {
+      @Override
+      public boolean apply(SchedulePeriodicTimeout t) {
+        return payloadType.isAssignableFrom(t.getTimeoutEvent().getClass());
+      }
+    };
+    return tc.expect(SchedulePeriodicTimeout.class, p, timer, Direction.OUT);
+  }
+  
+  public static TestContext eCancelPeriodicTimer(TestContext tc, Port timer) {
+    return tc.expect(CancelPeriodicTimeout.class, timer, Direction.OUT);
   }
 }

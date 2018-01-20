@@ -22,37 +22,37 @@ import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.transfer.R1TransferLeecher;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder;
-import se.sics.silk.r2torrent.transfer.events.TransferMngrEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1TransferMsgs {
-  public static class Connect extends SilkEvent.E4 implements TransferMngrEvent {
+  public static class Connect extends SilkEvent.E4 implements R1TransferLeecher.Msg {
     public Connect(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.msgId(), torrentId, fileId);
     }
     
     public ConnectAcc accept() {
-      return new ConnectAcc(eventId, torrentId, fileId);
+      return new ConnectAcc(torrentId, fileId);
     }
   }
   
   public static class ConnectAcc extends SilkEvent.E4 implements R1TransferSeeder.Msg {
 
-    public ConnectAcc(Identifier eventId, OverlayId torrentId, Identifier fileId) {
-      super(eventId, torrentId, fileId);
+    public ConnectAcc(OverlayId torrentId, Identifier fileId) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId);
     }
   }
   
-  public static class Disconnect extends SilkEvent.E4 {
+  public static class Disconnect extends SilkEvent.E4 implements R1TransferLeecher.Msg, R1TransferSeeder.Msg{
     public Disconnect(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.msgId(), torrentId, fileId);
     }
   }
   
-  public static class Ping extends SilkEvent.E4 {
+  public static class Ping extends SilkEvent.E4 implements R1TransferLeecher.Msg {
     public Ping(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.msgId(), torrentId, fileId);
     }

@@ -40,6 +40,7 @@ import se.sics.silk.r2torrent.torrent.R1Hash;
 import se.sics.silk.r2torrent.torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.torrent.R1MetadataServe;
 import se.sics.silk.r2torrent.torrent.R2Torrent;
+import se.sics.silk.r2torrent.transfer.R1TransferLeecher;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder;
 import se.sics.silkold.torrentmngr.TorrentMngrFSM;
 
@@ -82,6 +83,7 @@ public class SystemSetup {
     fsmIdFactory.registerFSMDefId(R1MetadataServe.NAME);
     fsmIdFactory.registerFSMDefId(R1Hash.NAME);
     fsmIdFactory.registerFSMDefId(R1TransferSeeder.NAME);
+    fsmIdFactory.registerFSMDefId(R1TransferLeecher.NAME);
     
     Config.Impl config = (Config.Impl) Kompics.getConfig();
     Config.Builder builder = Kompics.getConfig().modify(UUID.randomUUID());

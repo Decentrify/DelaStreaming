@@ -22,17 +22,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
-import java.util.function.Consumer;
-import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentProxy;
-import se.sics.kompics.Kill;
 import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.Start;
 import se.sics.kompics.fsm.BaseIdExtractor;
-import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
 import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.fsm.FSMException;
@@ -41,7 +36,6 @@ import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.FSMStateName;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
-import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.util.Identifiable;
@@ -52,22 +46,16 @@ import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.StreamId;
-import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nstream.storage.durable.events.DStreamConnect;
 import se.sics.nstream.storage.durable.events.DStreamDisconnect;
 import se.sics.nstream.storage.durable.events.DStreamEvent;
 import se.sics.silk.DefaultHandlers;
-import se.sics.silk.SelfPort;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
 import static se.sics.silk.r2torrent.torrent.R2Torrent.HardCodedConfig.seed;
 import se.sics.silk.r2torrent.torrent.event.R1FileGetEvents;
 import se.sics.silk.r2torrent.torrent.state.FileState;
-import se.sics.silk.r2torrent.torrent.state.FileStatus;
-import se.sics.silk.r2torrent.transfer.DownloadPort;
-import se.sics.silk.r2torrent.transfer.R1TransferSeederComp;
-import se.sics.silk.r2torrent.transfer.events.DownloadEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -184,35 +172,35 @@ public class R1FileGet {
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       FSMBuilder.SemanticDefinition def = FSMBuilder.semanticDef()
         .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault());
-      def = def
-        .positivePort(SelfPort.class)
-        .basicEvent(R1FileGetEvents.Start.class)
-        .subscribeOnStart(Handlers.fileStart)
-        .basicEvent(R1FileGetEvents.Close.class)
-        .subscribe(Handlers.fileClose, States.STORAGE, States.ACTIVE)
-        .basicEvent(R1FileGetEvents.Connect.class)
-        .subscribe(Handlers.connectSeederActive, States.ACTIVE)
-        .subscribe(Handlers.connectSeederPaused, States.PAUSED)
-        .basicEvent(R1FileGetEvents.Disconnect.class)
-        .subscribe(Handlers.disconnectSeeder, States.ACTIVE, States.PAUSED)
-        .buildEvents();
-
-      def = def
-        .positivePort(DStreamControlPort.class)
-        .basicEvent(DStreamConnect.Success.class)
-        .subscribe(Handlers.streamOpened, States.STORAGE)
-        .basicEvent(DStreamDisconnect.Success.class)
-        .subscribe(Handlers.streamClosed, States.CLOSE)
-        .buildEvents();
-
-      def = def
-        .positivePort(DownloadPort.class)
-        .basicEvent(DownloadEvents.Block.class)
-        .subscribe(Handlers.blockCompleted, States.ACTIVE, States.PAUSED)
-//        .basicEvent(DownloadEvents.Stopped.class)
-//        .subscribe(Handlers.downloadStopped1, States.ACTIVE, States.PAUSED)
-//        .subscribe(Handlers.downloadStopped2, States.CLOSE)
-        .buildEvents();
+//      def = def
+//        .positivePort(SelfPort.class)
+//        .basicEvent(R1FileGetEvents.Start.class)
+//        .subscribeOnStart(Handlers.fileStart)
+//        .basicEvent(R1FileGetEvents.Close.class)
+//        .subscribe(Handlers.fileClose, States.STORAGE, States.ACTIVE)
+//        .basicEvent(R1FileGetEvents.Connect.class)
+//        .subscribe(Handlers.connectSeederActive, States.ACTIVE)
+//        .subscribe(Handlers.connectSeederPaused, States.PAUSED)
+//        .basicEvent(R1FileGetEvents.Disconnect.class)
+//        .subscribe(Handlers.disconnectSeeder, States.ACTIVE, States.PAUSED)
+//        .buildEvents();
+//
+//      def = def
+//        .positivePort(DStreamControlPort.class)
+//        .basicEvent(DStreamConnect.Success.class)
+//        .subscribe(Handlers.streamOpened, States.STORAGE)
+//        .basicEvent(DStreamDisconnect.Success.class)
+//        .subscribe(Handlers.streamClosed, States.CLOSE)
+//        .buildEvents();
+//
+//      def = def
+//        .positivePort(DownloadPort.class)
+//        .basicEvent(DownloadEvents.Block.class)
+//        .subscribe(Handlers.blockCompleted, States.ACTIVE, States.PAUSED)
+////        .basicEvent(DownloadEvents.Stopped.class)
+////        .subscribe(Handlers.downloadStopped1, States.ACTIVE, States.PAUSED)
+////        .subscribe(Handlers.downloadStopped2, States.CLOSE)
+//        .buildEvents();
       return def;
     }
 
@@ -248,74 +236,74 @@ public class R1FileGet {
 
   public static class Handlers {
 
-    static FSMBasicEventHandler fileStart = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Start>) (
-      FSMStateName state, ES es, IS is, R1FileGetEvents.Start event) -> {
-        is.start(event);
-        DStreamConnect.Request req = new DStreamConnect.Request(Pair.with(event.streamId, event.stream));
-        sendStreamEvent(es, req);
-        return States.STORAGE;
-      };
+//    static FSMBasicEventHandler fileStart = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Start>) (
+//      FSMStateName state, ES es, IS is, R1FileGetEvents.Start event) -> {
+//        is.start(event);
+//        DStreamConnect.Request req = new DStreamConnect.Request(Pair.with(event.streamId, event.stream));
+//        sendStreamEvent(es, req);
+//        return States.STORAGE;
+//      };
+//
+//    static FSMBasicEventHandler fileClose = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Close>) (
+//      FSMStateName state, ES es, IS is, R1FileGetEvents.Close event) -> {
+//        pause(es, is);
+//        is.fileState.clearPending();
+//        DStreamDisconnect.Request req = new DStreamDisconnect.Request(is.streamId);
+//        sendStreamEvent(es, req);
+//        return States.CLOSE;
+//      };
+//
+//    static FSMBasicEventHandler filePause = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Close>) (
+//      FSMStateName state, ES es, IS is, R1FileGetEvents.Close event) -> {
+//        pause(es, is);
+//        return States.PAUSED;
+//      };
+//
+//    static FSMBasicEventHandler fileResume = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Close>) (
+//      FSMStateName state, ES es, IS is, R1FileGetEvents.Close event) -> {
+//        resume(es, is);
+//        return States.ACTIVE;
+//      };
 
-    static FSMBasicEventHandler fileClose = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Close>) (
-      FSMStateName state, ES es, IS is, R1FileGetEvents.Close event) -> {
-        pause(es, is);
-        is.fileState.clearPending();
-        DStreamDisconnect.Request req = new DStreamDisconnect.Request(is.streamId);
-        sendStreamEvent(es, req);
-        return States.CLOSE;
-      };
-
-    static FSMBasicEventHandler filePause = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Close>) (
-      FSMStateName state, ES es, IS is, R1FileGetEvents.Close event) -> {
-        pause(es, is);
-        return States.PAUSED;
-      };
-
-    static FSMBasicEventHandler fileResume = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Close>) (
-      FSMStateName state, ES es, IS is, R1FileGetEvents.Close event) -> {
-        resume(es, is);
-        return States.ACTIVE;
-      };
-
-    private static void pause(ES es, IS is) {
-      is.fileState.allConnected(disconnect(es, is));
-      is.fileState.connectedToPending();
-      R1FileGetEvents.Indication ind = new R1FileGetEvents.Indication(is.torrentId, is.fileId, FileStatus.PAUSED);
-      sendCtrlEvent(es, ind);
-    }
-
-    private static void resume(ES es, IS is) {
-      is.fileState.allPending(connect(es, is));
-      R1FileGetEvents.Indication ind = new R1FileGetEvents.Indication(is.torrentId, is.fileId, FileStatus.ACTIVE);
-      sendCtrlEvent(es, ind);
-    }
-
-    //*****************************************************SEEDERS******************************************************
-    static FSMBasicEventHandler connectSeederPaused = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Connect>) (
-      FSMStateName state, ES es, IS is, R1FileGetEvents.Connect event) -> {
-        is.fileState.seederConnect(event.seeder);
-        return state;
-      };
-
-    static FSMBasicEventHandler connectSeederActive = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Connect>) (
-      FSMStateName state, ES es, IS is, R1FileGetEvents.Connect event) -> {
-        is.fileState.seederConnect(event.seeder);
-        connect(es, is).accept(event.seeder);
-        return state;
-      };
-
-    static FSMBasicEventHandler disconnectSeeder = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Disconnect>) (
-      FSMStateName state, ES es, IS is, R1FileGetEvents.Disconnect event) -> {
-        is.fileState.seederDisconnect(event.seederId, disconnect(es, is));
-        return state;
-      };
-
-    //******************************************************DOWNLOAD****************************************************
-    static FSMBasicEventHandler blockCompleted = (FSMBasicEventHandler<ES, IS, DownloadEvents.Block>) (
-      FSMStateName state, ES es, IS is, DownloadEvents.Block event) -> {
-        disconnect(es, is).accept(event.seeder);
-        return States.CLOSE;
-      };
+//    private static void pause(ES es, IS is) {
+//      is.fileState.allConnected(disconnect(es, is));
+//      is.fileState.connectedToPending();
+//      R1FileGetEvents.Indication ind = new R1FileGetEvents.Indication(is.torrentId, is.fileId, FileStatus.PAUSED);
+//      sendCtrlEvent(es, ind);
+//    }
+//
+//    private static void resume(ES es, IS is) {
+//      is.fileState.allPending(connect(es, is));
+//      R1FileGetEvents.Indication ind = new R1FileGetEvents.Indication(is.torrentId, is.fileId, FileStatus.ACTIVE);
+//      sendCtrlEvent(es, ind);
+//    }
+//
+//    //*****************************************************SEEDERS******************************************************
+//    static FSMBasicEventHandler connectSeederPaused = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Connect>) (
+//      FSMStateName state, ES es, IS is, R1FileGetEvents.Connect event) -> {
+//        is.fileState.seederConnect(event.seeder);
+//        return state;
+//      };
+//
+//    static FSMBasicEventHandler connectSeederActive = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Connect>) (
+//      FSMStateName state, ES es, IS is, R1FileGetEvents.Connect event) -> {
+//        is.fileState.seederConnect(event.seeder);
+//        connect(es, is).accept(event.seeder);
+//        return state;
+//      };
+//
+//    static FSMBasicEventHandler disconnectSeeder = (FSMBasicEventHandler<ES, IS, R1FileGetEvents.Disconnect>) (
+//      FSMStateName state, ES es, IS is, R1FileGetEvents.Disconnect event) -> {
+//        is.fileState.seederDisconnect(event.seederId, disconnect(es, is));
+//        return state;
+//      };
+//
+//    //******************************************************DOWNLOAD****************************************************
+//    static FSMBasicEventHandler blockCompleted = (FSMBasicEventHandler<ES, IS, DownloadEvents.Block>) (
+//      FSMStateName state, ES es, IS is, DownloadEvents.Block event) -> {
+//        disconnect(es, is).accept(event.seeder);
+//        return States.CLOSE;
+//      };
 
 //    static FSMBasicEventHandler downloadStopped1 = (FSMBasicEventHandler<ES, IS, DownloadEvents.Stopped>) (
 //      FSMStateName state, ES es, IS is, DownloadEvents.Stopped event) -> {
@@ -338,50 +326,50 @@ public class R1FileGet {
 //        return state;
 //      };
 
-    private static Consumer<KAddress> connect(ES es, IS is) {
-      return (KAddress seederAdr) -> {
-        R1TransferSeederComp.Init init = new R1TransferSeederComp.Init(es.selfAdr, is.torrentId, is.fileId, seederAdr);
-        Component downloadComp = es.proxy.create(R1TransferSeederComp.class, init);
-        Identifier downloadId = R1TransferSeederComp.baseId(is.torrentId, is.fileId, seederAdr.getId());
-        es.ports.downloadC.addChannel(downloadId, downloadComp.getNegative(DownloadPort.class));
-        es.proxy.trigger(Start.event, downloadComp.control());
-        Identifier compId = R1TransferSeederComp.baseId(is.torrentId, is.fileId, seederAdr.getId());
-        is.comps.put(compId, downloadComp);
-      };
-    }
-
-    private static Consumer<KAddress> disconnect(ES es, IS is) {
-      return (KAddress seeder) -> {
-        Identifier compId = R1TransferSeederComp.baseId(is.torrentId, is.fileId, seeder.getId());
-        if (!is.comps.containsKey(compId)) {
-          R1FileGetEvents.Disconnected ind = new R1FileGetEvents.Disconnected(is.torrentId, is.fileId, seeder.getId());
-          sendCtrlEvent(es, ind);
-        } else {
-//          DownloadEvents.Stop req = new DownloadEvents.Stop(is.torrentId, is.fileId, seeder.getId());
-//          es.proxy.trigger(req, es.ports.download);
-        }
-      };
-    }
-
-    private static void killDownloadComp(ES es, IS is, KAddress seeder) {
-      Identifier compId = R1TransferSeederComp.baseId(is.torrentId, is.fileId, seeder.getId());
-      Component downloadComp = is.comps.remove(compId);
-      es.proxy.trigger(Kill.event, downloadComp.control());
-      es.ports.downloadC.removeChannel(compId, downloadComp.getNegative(DownloadPort.class));
-    }
+//    private static Consumer<KAddress> connect(ES es, IS is) {
+//      return (KAddress seederAdr) -> {
+//        R1TransferSeederComp.Init init = new R1TransferSeederComp.Init(es.selfAdr, is.torrentId, is.fileId, seederAdr);
+//        Component downloadComp = es.proxy.create(R1TransferSeederComp.class, init);
+//        Identifier downloadId = R1TransferSeederComp.baseId(is.torrentId, is.fileId, seederAdr.getId());
+//        es.ports.downloadC.addChannel(downloadId, downloadComp.getNegative(DownloadPort.class));
+//        es.proxy.trigger(Start.event, downloadComp.control());
+//        Identifier compId = R1TransferSeederComp.baseId(is.torrentId, is.fileId, seederAdr.getId());
+//        is.comps.put(compId, downloadComp);
+//      };
+//    }
+//
+//    private static Consumer<KAddress> disconnect(ES es, IS is) {
+//      return (KAddress seeder) -> {
+//        Identifier compId = R1TransferSeederComp.baseId(is.torrentId, is.fileId, seeder.getId());
+//        if (!is.comps.containsKey(compId)) {
+//          R1FileGetEvents.Disconnected ind = new R1FileGetEvents.Disconnected(is.torrentId, is.fileId, seeder.getId());
+//          sendCtrlEvent(es, ind);
+//        } else {
+////          DownloadEvents.Stop req = new DownloadEvents.Stop(is.torrentId, is.fileId, seeder.getId());
+////          es.proxy.trigger(req, es.ports.download);
+//        }
+//      };
+//    }
+//
+//    private static void killDownloadComp(ES es, IS is, KAddress seeder) {
+//      Identifier compId = R1TransferSeederComp.baseId(is.torrentId, is.fileId, seeder.getId());
+//      Component downloadComp = is.comps.remove(compId);
+//      es.proxy.trigger(Kill.event, downloadComp.control());
+//      es.ports.downloadC.removeChannel(compId, downloadComp.getNegative(DownloadPort.class));
+//    }
     //*******************************************************STORAGE****************************************************
-    static FSMBasicEventHandler streamOpened = (FSMBasicEventHandler<ES, IS, DStreamConnect.Success>) (
-      FSMStateName state, ES es, IS is, DStreamConnect.Success event) -> {
-        resume(es, is);
-        return States.ACTIVE;
-      };
-
-    static FSMBasicEventHandler streamClosed = (FSMBasicEventHandler<ES, IS, DStreamDisconnect.Success>) (
-      FSMStateName state, ES es, IS is, DStreamDisconnect.Success event) -> {
-        R1FileGetEvents.Indication ind = new R1FileGetEvents.Indication(is.torrentId, is.fileId, FileStatus.CLOSED);
-        sendCtrlEvent(es, ind);
-        return FSMBasicStateNames.FINAL;
-      };
+//    static FSMBasicEventHandler streamOpened = (FSMBasicEventHandler<ES, IS, DStreamConnect.Success>) (
+//      FSMStateName state, ES es, IS is, DStreamConnect.Success event) -> {
+//        resume(es, is);
+//        return States.ACTIVE;
+//      };
+//
+//    static FSMBasicEventHandler streamClosed = (FSMBasicEventHandler<ES, IS, DStreamDisconnect.Success>) (
+//      FSMStateName state, ES es, IS is, DStreamDisconnect.Success event) -> {
+//        R1FileGetEvents.Indication ind = new R1FileGetEvents.Indication(is.torrentId, is.fileId, FileStatus.CLOSED);
+//        sendCtrlEvent(es, ind);
+//        return FSMBasicStateNames.FINAL;
+//      };
 
     private static void sendStreamEvent(ES es, DStreamEvent e) {
       es.getProxy().trigger(e, es.ports.streamCtrl);

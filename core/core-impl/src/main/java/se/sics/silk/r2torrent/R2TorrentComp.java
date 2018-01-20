@@ -18,7 +18,6 @@
  */
 package se.sics.silk.r2torrent;
 
-import se.sics.silk.SelfPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Channel;
@@ -39,6 +38,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.storage.durable.DStreamControlPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeLeecher;
@@ -47,7 +47,6 @@ import se.sics.silk.r2torrent.torrent.R1Hash;
 import se.sics.silk.r2torrent.torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.torrent.R1MetadataServe;
 import se.sics.silk.r2torrent.torrent.R2Torrent;
-import se.sics.silk.r2torrent.transfer.R1TransferSeederComp;
 import se.sics.silk.r2torrent.transfer.DownloadPort;
 import se.sics.silk.r2torrent.transfer.events.DownloadEvent;
 
@@ -187,7 +186,8 @@ public class R2TorrentComp extends ComponentDefinition {
 
       @Override
       public Identifier getValue(DownloadEvent event) {
-        return R1TransferSeederComp.baseId(event.torrentId(), event.fileId(), event.nodeId());
+//        return R1TransferSeederComp.baseId(event.torrentId(), event.fileId(), event.nodeId());
+        return null;
       }
     };
   }
