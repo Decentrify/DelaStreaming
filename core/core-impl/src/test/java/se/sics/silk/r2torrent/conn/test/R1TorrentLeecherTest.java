@@ -46,7 +46,7 @@ import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
 import se.sics.silk.r2torrent.conn.R1TorrentLeecher.States;
 import static se.sics.silk.r2torrent.conn.helper.R1TorrentLeecherHelper.torrentLeecherConnFail;
@@ -68,8 +68,8 @@ public class R1TorrentLeecherTest {
   private TestContext<TorrentWrapperComp> tc;
   private Component comp;
   private TorrentWrapperComp compState;
-  private Port<R2TorrentPort> triggerP;
-  private Port<R2TorrentPort> expectP;
+  private Port<SelfPort> triggerP;
+  private Port<SelfPort> expectP;
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
   private KAddress selfAdr;
@@ -84,8 +84,8 @@ public class R1TorrentLeecherTest {
     tc = getContext();
     comp = tc.getComponentUnderTest();
     compState = (TorrentWrapperComp) comp.getComponent();
-    triggerP = comp.getNegative(R2TorrentPort.class);
-    expectP = comp.getPositive(R2TorrentPort.class);
+    triggerP = comp.getNegative(SelfPort.class);
+    expectP = comp.getPositive(SelfPort.class);
     intIdFactory = new IntIdFactory(new Random());
   }
 

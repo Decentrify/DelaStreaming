@@ -48,7 +48,7 @@ import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.conn.event.R1TorrentLeecherEvents;
 import se.sics.silk.r2torrent.conn.event.R2NodeLeecherEvents;
 
@@ -170,7 +170,7 @@ public class R1TorrentLeecher {
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       FSMBuilder.SemanticDefinition def = FSMBuilder.semanticDef()
         .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault());
-      def = def.positivePort(R2TorrentPort.class)
+      def = def.positivePort(SelfPort.class)
         .basicEvent(R1TorrentLeecherEvents.ConnectReq.class)
         .subscribeOnStart(Handlers.connect0)
         .subscribe(Handlers.connect1, States.CONNECT)

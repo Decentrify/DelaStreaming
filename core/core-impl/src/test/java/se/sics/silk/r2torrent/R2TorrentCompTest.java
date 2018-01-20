@@ -18,6 +18,7 @@
  */
 package se.sics.silk.r2torrent;
 
+import se.sics.silk.SelfPort;
 import java.util.Random;
 import org.junit.After;
 import static org.junit.Assert.assertTrue;
@@ -76,8 +77,8 @@ public class R2TorrentCompTest {
   private Port<R2TorrentCtrlPort> ctrlP;
   private Port<Network> networkP;
   private Port<Timer> timerP;
-  private Port<R2TorrentPort> expectP;
-  private Port<R2TorrentPort> triggerP;
+  private Port<SelfPort> expectP;
+  private Port<SelfPort> triggerP;
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
   private KAddress selfAdr;
@@ -94,8 +95,8 @@ public class R2TorrentCompTest {
     ctrlP = comp.getPositive(R2TorrentCtrlPort.class);
     networkP = comp.getNegative(Network.class);
     timerP = comp.getNegative(Timer.class);
-    expectP = comp.getPositive(R2TorrentPort.class);
-    triggerP = comp.getNegative(R2TorrentPort.class);
+    expectP = comp.getPositive(SelfPort.class);
+    triggerP = comp.getNegative(SelfPort.class);
     intIdFactory = new IntIdFactory(new Random());
   }
 

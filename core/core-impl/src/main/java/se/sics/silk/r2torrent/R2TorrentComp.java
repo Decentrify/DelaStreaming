@@ -18,6 +18,7 @@
  */
 package se.sics.silk.r2torrent;
 
+import se.sics.silk.SelfPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Channel;
@@ -33,7 +34,10 @@ import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
+import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
@@ -43,6 +47,9 @@ import se.sics.silk.r2torrent.torrent.R1Hash;
 import se.sics.silk.r2torrent.torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.torrent.R1MetadataServe;
 import se.sics.silk.r2torrent.torrent.R2Torrent;
+import se.sics.silk.r2torrent.transfer.R1TransferSeederComp;
+import se.sics.silk.r2torrent.transfer.DownloadPort;
+import se.sics.silk.r2torrent.transfer.events.DownloadEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -95,7 +102,7 @@ public class R2TorrentComp extends ComponentDefinition {
     metadataGetES.setProxy(proxy);
     metadataServeES.setProxy(proxy);
     hashMngrES.setProxy(proxy);
-    
+
     nodeLeecherES.setPorts(ports);
     nodeSeederES.setPorts(ports);
     torrentLeecherES.setPorts(ports);
@@ -143,21 +150,26 @@ public class R2TorrentComp extends ComponentDefinition {
 
   public static class Ports {
 
-    public final Negative<R2TorrentPort> loopbackSend;
-    public final Positive<R2TorrentPort> loopbackSubscribe;
+    public final Negative<SelfPort> loopbackSend;
+    public final Positive<SelfPort> loopbackSubscribe;
     public final Negative<R2TorrentCtrlPort> ctrl;
     public final Positive<DStreamControlPort> streamCtrl;
+    public final Positive<DownloadPort> download;
     public final Positive<Network> network;
     public final Positive<Timer> timer;
 
+    public final One2NChannel<DownloadPort> downloadC;
+
     public Ports(ComponentProxy proxy) {
-      loopbackSend = proxy.provides(R2TorrentPort.class);
-      loopbackSubscribe = proxy.requires(R2TorrentPort.class);
+      loopbackSend = proxy.provides(SelfPort.class);
+      loopbackSubscribe = proxy.requires(SelfPort.class);
       proxy.connect(loopbackSend.getPair(), loopbackSubscribe.getPair(), Channel.TWO_WAY);
       ctrl = proxy.provides(R2TorrentCtrlPort.class);
       streamCtrl = proxy.requires(DStreamControlPort.class);
+      download = proxy.requires(DownloadPort.class);
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
+      downloadC = One2NChannel.getChannel("r2-torrent-download", download, downloadCompIdExtractor());
     }
   }
 
@@ -168,5 +180,15 @@ public class R2TorrentComp extends ComponentDefinition {
     public Init(KAddress selfAdr) {
       this.selfAdr = selfAdr;
     }
+  }
+
+  public static ChannelIdExtractor downloadCompIdExtractor() {
+    return new ChannelIdExtractor<DownloadEvent, Identifier>(DownloadEvent.class) {
+
+      @Override
+      public Identifier getValue(DownloadEvent event) {
+        return R1TransferSeederComp.baseId(event.torrentId(), event.fileId(), event.nodeId());
+      }
+    };
   }
 }

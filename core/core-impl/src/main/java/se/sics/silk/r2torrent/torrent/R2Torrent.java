@@ -52,7 +52,7 @@ import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentCtrlPort;
 import se.sics.silk.r2torrent.R2TorrentES;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import static se.sics.silk.r2torrent.torrent.R2Torrent.HardCodedConfig.seed;
 import se.sics.silk.r2torrent.torrent.event.R1HashEvents;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataGetEvents;
@@ -264,7 +264,7 @@ public class R2Torrent {
         .subscribe(Handlers.stop3, States.HASH)
         .buildEvents();
       def = def
-        .positivePort(R2TorrentPort.class)
+        .positivePort(SelfPort.class)
         .basicEvent(R1MetadataGetEvents.GetSucc.class)
         .subscribe(Handlers.metaGetSucc, States.META_GET)
         .basicEvent(R1MetadataServeEvents.ServeSucc.class)

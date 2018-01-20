@@ -59,7 +59,7 @@ import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederTimeout;
 import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
@@ -151,7 +151,7 @@ public class R2NodeSeeder {
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       return FSMBuilder.semanticDef()
         .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault())
-        .positivePort(R2TorrentPort.class)
+        .positivePort(SelfPort.class)
         .basicEvent(R2NodeSeederEvents.ConnectReq.class)
         .subscribeOnStart(Handlers.conn0)
         .subscribe(Handlers.conn1, States.CONNECT)

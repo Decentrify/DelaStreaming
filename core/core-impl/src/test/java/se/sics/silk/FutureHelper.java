@@ -57,6 +57,27 @@ public class FutureHelper {
     }
   }
   
+  public static abstract class NetMsgFuture<C extends KompicsEvent> extends Future<Msg, Msg> {
+
+    private Class<C> contentType;
+    protected BasicContentMsg msg;
+    protected C content;
+
+    protected NetMsgFuture(Class<C> contentType) {
+      this.contentType = contentType;
+    }
+
+    @Override
+    public boolean set(Msg r) {
+      if (!(r instanceof BasicContentMsg)) {
+        return false;
+      }
+      this.msg = (BasicContentMsg) r;
+      this.content = (C) msg.extractValue();
+      return true;
+    }
+  }
+  
   public static abstract class BasicFuture<I extends KompicsEvent, O extends KompicsEvent> extends Future<I, O> {
 
     protected I event;

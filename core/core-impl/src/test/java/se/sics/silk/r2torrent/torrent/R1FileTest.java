@@ -44,40 +44,42 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.silk.SelfPort;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.TorrentIdHelper;
-import static se.sics.silk.TorrentTestHelper.eStreamCloseAck;
+import static se.sics.silk.TorrentTestHelper.eFileIndication;
 import static se.sics.silk.TorrentTestHelper.eStreamCloseReq;
 import static se.sics.silk.TorrentTestHelper.eStreamOpenReq;
-import static se.sics.silk.TorrentTestHelper.eStreamOpenSucc;
 import static se.sics.silk.TorrentTestHelper.streamCloseSucc;
 import static se.sics.silk.TorrentTestHelper.streamOpenSucc;
-import static se.sics.silk.TorrentTestHelper.tStreamClose;
-import static se.sics.silk.TorrentTestHelper.tStreamOpen;
+import static se.sics.silk.TorrentTestHelper.tFileClose;
+import static se.sics.silk.TorrentTestHelper.tFileConnect;
+import static se.sics.silk.TorrentTestHelper.tFileOpen;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
-import se.sics.silk.r2torrent.R2TorrentPort;
-import se.sics.silk.r2torrent.torrent.R2StreamMngr.States;
-import se.sics.silk.r2torrent.torrent.event.R2StreamMngrEvents;
+import se.sics.silk.r2torrent.torrent.R1FileGet.States;
+import se.sics.silk.r2torrent.torrent.event.R1FileGetEvents;
+import se.sics.silk.r2torrent.torrent.state.FileStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2StreamMngrTest {
+public class R1FileTest {
   private TestContext<TorrentWrapperComp> tc;
   private Component comp;
   private TorrentWrapperComp compState;
   private Port<DStreamControlPort> streamCtrlP;
-  private Port<R2TorrentPort> triggerP;
-  private Port<R2TorrentPort> expectP;
+  private Port<SelfPort> triggerP;
+  private Port<SelfPort> expectP;
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
   private KAddress selfAdr;
   private Identifier endpointId;
-  OverlayId torrent;
-  Identifier file;
-  StreamId streamId;
+  private OverlayId torrent;
+  private Identifier file;
+  private StreamId streamId;
+  private KAddress seeder;
 
   @BeforeClass
   public static void setup() throws FSMException {
@@ -90,13 +92,14 @@ public class R2StreamMngrTest {
     comp = tc.getComponentUnderTest();
     compState = (TorrentWrapperComp) comp.getComponent();
     streamCtrlP = comp.getNegative(DStreamControlPort.class);
-    triggerP = comp.getNegative(R2TorrentPort.class);
-    expectP = comp.getPositive(R2TorrentPort.class);
+    triggerP = comp.getNegative(SelfPort.class);
+    expectP = comp.getPositive(SelfPort.class);
     intIdFactory = new IntIdFactory(new Random());
     endpointId = intIdFactory.id(new BasicBuilders.IntBuilder(0));
     torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     file = intIdFactory.id(new BasicBuilders.IntBuilder(1));
     streamId = TorrentIdHelper.streamId(endpointId, torrent, file);
+    seeder = SystemHelper.getAddress(1);
   }
 
   private TestContext<TorrentWrapperComp> getContext() {
@@ -105,7 +108,7 @@ public class R2StreamMngrTest {
       @Override
       public MultiFSM setupFSM(ComponentProxy proxy, Config config, R2TorrentComp.Ports ports) {
         try {
-          R2StreamMngr.ES fsmEs = new R2StreamMngr.ES();
+          R1FileGet.ES fsmEs = new R1FileGet.ES(selfAdr);
           fsmEs.setProxy(proxy);
           fsmEs.setPorts(ports);
 
@@ -117,7 +120,7 @@ public class R2StreamMngrTest {
           };
           FSMIdentifierFactory fsmIdFactory = config.getValue(FSMIdentifierFactory.CONFIG_KEY,
             FSMIdentifierFactory.class);
-          return R2StreamMngr.FSM.multifsm(fsmIdFactory, fsmEs, oexa);
+          return R1FileGet.FSM.multifsm(fsmIdFactory, fsmEs, oexa);
         } catch (FSMException ex) {
           throw new RuntimeException(ex);
         }
@@ -139,19 +142,19 @@ public class R2StreamMngrTest {
     assertTrue(tc.check());
   }
 
-  //*****************************************************START TO OPEN**************************************************
+  //****************************************************START TO STORAGE************************************************
   @Test
   public void testStartToOpen() {
     tc = tc.body();
     tc = startToOpen(tc, torrent, file, streamId);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R2StreamMngr.fsmBaseId(torrent, file);
-    assertEquals(States.OPEN, compState.fsm.getFSMState(fsmBaseId));
+    Identifier fsmBaseId = R1FileGet.fsmBaseId(torrent, file);
+    assertEquals(States.STORAGE, compState.fsm.getFSMState(fsmBaseId));
   }
   
   private TestContext startToOpen(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId) {
-    tc = tStreamOpen(tc, triggerP, open(torrent, file, streamId, null));
+    tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null));
     tc = eStreamOpenReq(tc, streamCtrlP);
     return tc;
   }
@@ -162,13 +165,31 @@ public class R2StreamMngrTest {
     tc = startToActive(tc, torrent, file, streamId);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R2StreamMngr.fsmBaseId(torrent, file);
+    Identifier fsmBaseId = R1FileGet.fsmBaseId(torrent, file);
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmBaseId));
   }
   private TestContext startToActive(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId) {
-    tc = tStreamOpen(tc, triggerP, open(torrent, file, streamId, null));
+    tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null));
     tc = streamOpenSucc(tc, streamCtrlP, 0);
-    tc = eStreamOpenSucc(tc, expectP);
+    tc = eFileIndication(tc, expectP, FileStatus.ACTIVE);
+    return tc;
+  }
+  
+  //****************************************************START TO COMPLETE***********************************************
+  @Test
+  public void testStartToComplete() {
+    tc = tc.body();
+    tc = startToComplete(tc, torrent, file, streamId);
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    Identifier fsmBaseId = R1FileGet.fsmBaseId(torrent, file);
+    assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmBaseId));
+  }
+  private TestContext startToComplete(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId) {
+    tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null));
+    tc = streamOpenSucc(tc, streamCtrlP, 0);
+    tc = eFileIndication(tc, expectP, FileStatus.ACTIVE);
+    tc = tFileConnect(tc, triggerP, connect(torrent, file, seeder));
     return tc;
   }
   
@@ -179,14 +200,13 @@ public class R2StreamMngrTest {
     tc = startToClose(tc, torrent, file, streamId);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R2StreamMngr.fsmBaseId(torrent, file);
+    Identifier fsmBaseId = R1FileGet.fsmBaseId(torrent, file);
     assertEquals(States.CLOSE, compState.fsm.getFSMState(fsmBaseId));
   }
   private TestContext startToClose(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId) {
-    tc = tStreamOpen(tc, triggerP, open(torrent, file, streamId, null));
+    tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null));
     tc = streamOpenSucc(tc, streamCtrlP, 0);
-    tc = eStreamOpenSucc(tc, expectP);
-    tc = tStreamClose(tc, triggerP, close(torrent, file, streamId));
+    tc = tFileClose(tc, triggerP, close(torrent, file));
     tc = eStreamCloseReq(tc, streamCtrlP);
     return tc;
   }
@@ -195,17 +215,16 @@ public class R2StreamMngrTest {
   public void testOpenToStop() {
     tc = tc.body();
     tc = startToOpen(tc, torrent, file, streamId);
-    tc = stop(tc, torrent, file, streamId);
+    tc = stop(tc, torrent, file);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R2StreamMngr.fsmBaseId(torrent, file);
+    Identifier fsmBaseId = R1FileGet.fsmBaseId(torrent, file);
     assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
-  private TestContext stop(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId) {
-    tc = tStreamClose(tc, triggerP, close(torrent, file, streamId));
+  private TestContext stop(TestContext tc, OverlayId torrent, Identifier file) {
+    tc = tFileClose(tc, triggerP, close(torrent, file));
     tc = streamCloseSucc(tc, streamCtrlP);
-    tc = eStreamCloseAck(tc, expectP);
     return tc;
   }
   //*****************************************************ACTIVE TO STOP*************************************************
@@ -213,18 +232,22 @@ public class R2StreamMngrTest {
   public void testActiveToStop() {
     tc = tc.body();
     tc = startToActive(tc, torrent, file, streamId);
-    tc = stop(tc, torrent, file, streamId);
+    tc = stop(tc, torrent, file);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R2StreamMngr.fsmBaseId(torrent, file);
+    Identifier fsmBaseId = R1FileGet.fsmBaseId(torrent, file);
     assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
-  public R2StreamMngrEvents.Open open(OverlayId torrentId, Identifier fileId, StreamId streamId, MyStream stream) {
-    return new R2StreamMngrEvents.Open(torrentId, fileId, streamId, stream);
+  public R1FileGetEvents.Start open(OverlayId torrentId, Identifier fileId, StreamId streamId, MyStream stream) {
+    return new R1FileGetEvents.Start(torrentId, fileId, streamId, stream);
   }
   
-  public R2StreamMngrEvents.Close close(OverlayId torrentId, Identifier fileId, StreamId streamId) {
-    return new R2StreamMngrEvents.Close(torrentId, fileId, streamId);
+  public R1FileGetEvents.Close close(OverlayId torrentId, Identifier fileId) {
+    return new R1FileGetEvents.Close(torrentId, fileId);
+  }
+  
+  public R1FileGetEvents.Connect connect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
+    return new R1FileGetEvents.Connect(torrentId, fileId, seeder);
   }
 }

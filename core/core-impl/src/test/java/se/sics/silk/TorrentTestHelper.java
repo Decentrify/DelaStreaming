@@ -38,12 +38,13 @@ import static se.sics.silk.MsgHelper.msg;
 import se.sics.silk.r2torrent.conn.event.R1TorrentSeederEvents;
 import se.sics.silk.r2torrent.conn.event.R2NodeSeederEvents;
 import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
+import se.sics.silk.r2torrent.torrent.event.R1FileGetEvents;
 import se.sics.silk.r2torrent.torrent.event.R1HashEvents;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataGetEvents;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataServeEvents;
-import se.sics.silk.r2torrent.torrent.event.R2StreamMngrEvents;
 import se.sics.silk.r2torrent.torrent.event.R2TorrentCtrlEvents;
 import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgs;
+import se.sics.silk.r2torrent.torrent.state.FileStatus;
 import se.sics.silk.r2torrent.util.R2TorrentStatus;
 
 /**
@@ -184,8 +185,8 @@ public class TorrentTestHelper {
   public static TestContext eCtrlStopAck(TestContext tc, Port expectP) {
     return tc.expect(R2TorrentCtrlEvents.StopAck.class, expectP, Direction.OUT);
   }
-  //*************************************************STREAM MNGR********************************************************
-  public static TestContext tStreamOpen(TestContext tc, Port triggerP, R2StreamMngrEvents.Open event) {
+  //*****************************************************FILE***********************************************************
+  public static TestContext tFileOpen(TestContext tc, Port triggerP, R1FileGetEvents.Start event) {
     return tc.trigger(event, triggerP);
   }
   
@@ -193,7 +194,7 @@ public class TorrentTestHelper {
     return tc.trigger(event, triggerP);
   }
   
-  public static TestContext tStreamClose(TestContext tc, Port triggerP, R2StreamMngrEvents.Close event) {
+  public static TestContext tFileClose(TestContext tc, Port triggerP, R1FileGetEvents.Close event) {
     return tc.trigger(event, triggerP);
   }
   
@@ -201,12 +202,8 @@ public class TorrentTestHelper {
     return tc.trigger(event, triggerP);
   }
   
-  public static TestContext eStreamOpenSucc(TestContext tc, Port expectP) {
-    return tc.expect(R2StreamMngrEvents.OpenSucc.class, expectP, Direction.OUT);
-  }
-  
-  public static TestContext eStreamCloseAck(TestContext tc, Port expectP) {
-    return tc.expect(R2StreamMngrEvents.CloseAck.class, expectP, Direction.OUT);
+  public static TestContext tFileConnect(TestContext tc, Port triggerP, R1FileGetEvents.Connect req) {
+    return tc.trigger(req, triggerP);
   }
   
   public static TestContext eStreamOpenReq(TestContext tc, Port expectP) {
@@ -215,6 +212,11 @@ public class TorrentTestHelper {
   
   public static TestContext eStreamCloseReq(TestContext tc, Port expectP) {
     return tc.expect(DStreamDisconnect.Request.class, expectP, Direction.OUT);
+  }
+  
+  public static TestContext eFileIndication(TestContext tc, Port expectP, FileStatus status) {
+    Predicate p = fileIndication(status);
+    return tc.expect(R1FileGetEvents.Indication.class, p, expectP, Direction.OUT);
   }
   
   public static TestContext streamOpenSucc(TestContext tc, Port streamCtrl, int filePos) {
@@ -241,6 +243,10 @@ public class TorrentTestHelper {
     return tc
       .answerRequest(DStreamDisconnect.Request.class, streamCtrl, f)
       .trigger(f, streamCtrl);
+  }
+  
+  public static Predicate fileIndication(FileStatus status) {
+    return (Predicate<R1FileGetEvents.Indication>) (R1FileGetEvents.Indication t) -> t.status.equals(status);
   }
   //************************************************METADATA_GET********************************************************
   public static TestContext tMetadataGetReq(TestContext tc, Port triggerP, OverlayId torrentId, Identifier fileId,
@@ -386,6 +392,8 @@ public class TorrentTestHelper {
       .answerRequest(R1HashEvents.HashStop.class, expectP, f)
       .trigger(f, triggerP);
   }
+  //**********************************************TRANSFER SEEDER*******************************************************
+  
   //**************************************************FUTURES***********************************************************
   public static Future<Msg, Msg> netNodeConnAcc() {
     return new FutureHelper.NetBEFuture<R2NodeConnMsgs.ConnectReq>(R2NodeConnMsgs.ConnectReq.class) {
@@ -433,5 +441,12 @@ public class TorrentTestHelper {
         return event.status.equals(status);
       }
     };
+  }
+  
+  //
+  public static TestContext eNetPayload(TestContext tc, Class payloadType, Port network) {
+    Predicate payloadP = new PredicateHelper.ContentPredicate(payloadType);
+    Predicate p = new PredicateHelper.MsgPredicate(PredicateHelper.TRUE_P, payloadP);
+    return tc.expect(BasicContentMsg.class, network, Direction.OUT);
   }
 }

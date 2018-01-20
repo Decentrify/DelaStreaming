@@ -45,7 +45,7 @@ import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.conn.R2NodeLeecher;
 import static se.sics.silk.r2torrent.conn.R2NodeLeecher.HardCodedConfig.MAX_TORRENTS_PER_LEECHER;
 import se.sics.silk.r2torrent.conn.R2NodeLeecher.States;
@@ -69,8 +69,8 @@ public class R2NodeLeecherTest {
   private TestContext<TorrentWrapperComp> tc;
   private Component comp;
   private TorrentWrapperComp compState;
-  private Port<R2TorrentPort> triggerP;
-  private Port<R2TorrentPort> expectP;
+  private Port<SelfPort> triggerP;
+  private Port<SelfPort> expectP;
   private Port<Network> networkP;
   private Port<Timer> timerP;
   private static OverlayIdFactory torrentIdFactory;
@@ -86,8 +86,8 @@ public class R2NodeLeecherTest {
     tc = getContext();
     comp = tc.getComponentUnderTest();
     compState = (TorrentWrapperComp)comp.getComponent();
-    triggerP = comp.getNegative(R2TorrentPort.class);
-    expectP = comp.getPositive(R2TorrentPort.class);
+    triggerP = comp.getNegative(SelfPort.class);
+    expectP = comp.getPositive(SelfPort.class);
     networkP = comp.getNegative(Network.class);
     timerP = comp.getNegative(Timer.class);
   }

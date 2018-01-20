@@ -49,7 +49,7 @@ import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.torrent.event.R1MetadataServeEvents;
 import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgs;
 
@@ -86,7 +86,7 @@ public class R1MetadataServe {
   public static interface Msg extends Event {
   }
   
-  public static interface StreamEvent extends R1MetadataGet.Event, R2StreamCtrlEvent {
+  public static interface StreamEvent extends R1MetadataGet.Event {
   }
 
   public static class IS implements FSMInternalState {
@@ -160,7 +160,7 @@ public class R1MetadataServe {
         .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault());
 
       def = def
-        .positivePort(R2TorrentPort.class)
+        .positivePort(SelfPort.class)
         .basicEvent(R1MetadataServeEvents.ServeReq.class)
         .subscribeOnStart(Handlers.serveRequest)
         .basicEvent(R1MetadataServeEvents.Stop.class)

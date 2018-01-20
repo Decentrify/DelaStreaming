@@ -18,6 +18,7 @@
  */
 package se.sics.silk.r2torrent;
 
+import se.sics.silk.SelfPort;
 import com.google.common.base.Predicate;
 import java.util.LinkedList;
 import java.util.List;
@@ -54,7 +55,7 @@ public class LeecherSeederTest {
   private TestContext<LeecherSeederComp> tc;
   private Component comp;
   private Port<MockTorrentCtrlPort> ctrlP;
-  private Port<R2TorrentPort> leecherP;
+  private Port<SelfPort> leecherP;
   private static OverlayIdFactory torrentIdFactory;
   private KAddress seeder;
   private KAddress leecher;

@@ -56,7 +56,7 @@ import static se.sics.silk.TorrentTestHelper.torrentSeederConnSucc;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.TorrentWrapperComp.Setup;
 import se.sics.silk.r2torrent.R2TorrentComp;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.torrent.R1MetadataGet.States;
 
 /**
@@ -67,8 +67,8 @@ public class R1MetadataGetTest {
   private TestContext<TorrentWrapperComp> tc;
   private Component comp;
   private TorrentWrapperComp compState;
-  private Port<R2TorrentPort> triggerP;
-  private Port<R2TorrentPort> expectP;
+  private Port<SelfPort> triggerP;
+  private Port<SelfPort> expectP;
   private Port<Network> networkP;
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
@@ -84,8 +84,8 @@ public class R1MetadataGetTest {
     tc = getContext();
     comp = tc.getComponentUnderTest();
     compState = (TorrentWrapperComp) comp.getComponent();
-    triggerP = comp.getNegative(R2TorrentPort.class);
-    expectP = comp.getPositive(R2TorrentPort.class);
+    triggerP = comp.getNegative(SelfPort.class);
+    expectP = comp.getPositive(SelfPort.class);
     networkP = comp.getNegative(Network.class);
     intIdFactory = new IntIdFactory(new Random());
   }

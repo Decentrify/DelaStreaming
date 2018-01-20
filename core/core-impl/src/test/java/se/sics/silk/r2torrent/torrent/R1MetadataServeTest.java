@@ -52,7 +52,7 @@ import static se.sics.silk.TorrentTestHelper.tMetadataServeStop;
 import static se.sics.silk.TorrentTestHelper.tNetMetadataGet;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.torrent.R1MetadataServe;
 import se.sics.silk.r2torrent.torrent.R1MetadataServe.States;
@@ -64,8 +64,8 @@ public class R1MetadataServeTest {
   private TestContext<TorrentWrapperComp> tc;
   private Component comp;
   private TorrentWrapperComp compState;
-  private Port<R2TorrentPort> triggerP;
-  private Port<R2TorrentPort> expectP;
+  private Port<SelfPort> triggerP;
+  private Port<SelfPort> expectP;
   private Port<Network> networkP;
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
@@ -81,8 +81,8 @@ public class R1MetadataServeTest {
     tc = getContext();
     comp = tc.getComponentUnderTest();
     compState = (TorrentWrapperComp) comp.getComponent();
-    triggerP = comp.getNegative(R2TorrentPort.class);
-    expectP = comp.getPositive(R2TorrentPort.class);
+    triggerP = comp.getNegative(SelfPort.class);
+    expectP = comp.getPositive(SelfPort.class);
     networkP = comp.getNegative(Network.class);
     intIdFactory = new IntIdFactory(new Random());
   }

@@ -42,7 +42,7 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.torrent.event.R1HashEvents;
 
 /**
@@ -126,7 +126,7 @@ public class R1Hash {
     private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
       return FSMBuilder.semanticDef()
         .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault())
-        .positivePort(R2TorrentPort.class)
+        .positivePort(SelfPort.class)
         .basicEvent(R1HashEvents.HashReq.class)
         .subscribeOnStart(Handlers.hash)
         .basicEvent(R1HashEvents.HashStop.class)

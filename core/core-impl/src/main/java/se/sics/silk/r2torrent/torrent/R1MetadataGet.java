@@ -54,7 +54,7 @@ import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
 import se.sics.silk.r2torrent.conn.event.R1TorrentSeederEvents;
 import se.sics.silk.r2torrent.conn.event.R1TorrentSeederInd;
@@ -96,7 +96,7 @@ public class R1MetadataGet {
   public static interface Msg extends Event {
   }
 
-  public static interface StreamEvent extends Event, R2StreamCtrlEvent {
+  public static interface StreamEvent extends Event {
   }
 
   public static class HardCodedConfig {
@@ -187,7 +187,7 @@ public class R1MetadataGet {
         .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault());
 
       def = def
-        .positivePort(R2TorrentPort.class)
+        .positivePort(SelfPort.class)
         .basicEvent(R1MetadataGetEvents.GetReq.class)
         .subscribeOnStart(Handlers.metadataGet)
         .basicEvent(R1TorrentSeederEvents.ConnectSucc.class)

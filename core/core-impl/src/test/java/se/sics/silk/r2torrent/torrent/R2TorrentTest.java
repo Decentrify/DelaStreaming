@@ -62,7 +62,7 @@ import static se.sics.silk.TorrentTestHelper.tCtrlUploadReq;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentCtrlPort;
-import se.sics.silk.r2torrent.R2TorrentPort;
+import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.torrent.R2Torrent.States;
 import se.sics.silk.r2torrent.util.R2TorrentStatus;
 
@@ -75,8 +75,8 @@ public class R2TorrentTest {
   private Component comp;
   private TorrentWrapperComp compState;
   private Port<R2TorrentCtrlPort> ctrlP;
-  private Port<R2TorrentPort> triggerP;
-  private Port<R2TorrentPort> expectP;
+  private Port<SelfPort> triggerP;
+  private Port<SelfPort> expectP;
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
   private KAddress selfAdr;
@@ -92,8 +92,8 @@ public class R2TorrentTest {
     comp = tc.getComponentUnderTest();
     compState = (TorrentWrapperComp) comp.getComponent();
     ctrlP = comp.getPositive(R2TorrentCtrlPort.class);
-    triggerP = comp.getNegative(R2TorrentPort.class);
-    expectP = comp.getPositive(R2TorrentPort.class);
+    triggerP = comp.getNegative(SelfPort.class);
+    expectP = comp.getPositive(SelfPort.class);
     intIdFactory = new IntIdFactory(new Random());
   }
 
