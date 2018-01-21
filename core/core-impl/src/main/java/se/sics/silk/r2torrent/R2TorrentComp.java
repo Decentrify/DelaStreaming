@@ -35,6 +35,7 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.storage.durable.DStreamControlPort;
@@ -50,6 +51,7 @@ import se.sics.silk.r2torrent.torrent.R2Torrent;
 import se.sics.silk.r2torrent.transfer.R1DownloadComp;
 import se.sics.silk.r2torrent.transfer.R1DownloadPort;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadEvent;
+import se.sics.silk.r2torrent.transfer.events.R1TransferMsg;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -159,6 +161,7 @@ public class R2TorrentComp extends ComponentDefinition {
     public final Positive<Timer> timer;
 
     public final One2NChannel<R1DownloadPort> downloadC;
+    public final One2NChannel<Network> netDownloadC;
 
     public Ports(ComponentProxy proxy) {
       loopbackSend = proxy.provides(SelfPort.class);
@@ -169,7 +172,8 @@ public class R2TorrentComp extends ComponentDefinition {
       download = proxy.requires(R1DownloadPort.class);
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
-      downloadC = One2NChannel.getChannel("r2-torrent-download", download, downloadCompIdExtractor());
+      downloadC = One2NChannel.getChannel("r1-torrent-file-download-ctrl", (Negative)download.getPair(), downloadCompIdExtractor());
+      netDownloadC = One2NChannel.getChannel("r1-torrent-file-network", network, netDownloadCompIdExtractor());
     }
   }
 
@@ -188,6 +192,21 @@ public class R2TorrentComp extends ComponentDefinition {
       @Override
       public Identifier getValue(R1DownloadEvent event) {
         return R1DownloadComp.baseId(event.torrentId(), event.fileId(), event.nodeId());
+      }
+    };
+  }
+
+  public static ChannelIdExtractor netDownloadCompIdExtractor() {
+    return new ChannelIdExtractor<BasicContentMsg, Identifier>(BasicContentMsg.class) {
+
+      @Override
+      public Identifier getValue(BasicContentMsg msg) {
+        if (msg.getContent() instanceof R1TransferMsg) {
+          R1TransferMsg payload = (R1TransferMsg) msg.getContent();
+          KAddress seeder = msg.getSource();
+          return R1DownloadComp.baseId(payload.torrentId(), payload.fileId(), seeder.getId());
+        }
+        return null;
       }
     };
   }

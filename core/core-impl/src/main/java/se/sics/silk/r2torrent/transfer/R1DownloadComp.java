@@ -96,6 +96,7 @@ public class R1DownloadComp extends ComponentDefinition {
 
     @Override
     public void handle(Start event) {
+      LOG.info("starting...");
       scheduleTimer();
     }
   };

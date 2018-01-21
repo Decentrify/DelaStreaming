@@ -25,15 +25,14 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.torrent.R1FileGet;
-import se.sics.silk.r2torrent.torrent.state.FileStatus;
+import se.sics.silk.r2torrent.torrent.R1FileDownload;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1FileGetEvents {
+public class R1FileDownloadEvents {
 
-  public static class Start extends SilkEvent.E4 implements R1FileGet.CtrlEvent {
+  public static class Start extends SilkEvent.E4 implements R1FileDownload.CtrlEvent {
 
     public final StreamId streamId;
     public final MyStream stream;
@@ -45,21 +44,21 @@ public class R1FileGetEvents {
     }
   }
 
-  public static class Close extends SilkEvent.E4 implements R1FileGet.CtrlEvent {
+  public static class Close extends SilkEvent.E4 implements R1FileDownload.CtrlEvent {
     
     public Close(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
     }
   }
   
-  public static class Pause extends SilkEvent.E4 implements R1FileGet.CtrlEvent {
+  public static class Pause extends SilkEvent.E4 implements R1FileDownload.CtrlEvent {
     
     public Pause(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
     }
   }
   
-  public static class Resume extends SilkEvent.E4 implements R1FileGet.CtrlEvent {
+  public static class Resume extends SilkEvent.E4 implements R1FileDownload.CtrlEvent {
     
     public Resume(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
@@ -67,14 +66,14 @@ public class R1FileGetEvents {
   }
   
   public static class Indication extends SilkEvent.E4 {
-    public final FileStatus status;
-    public Indication(OverlayId torrentId, Identifier fileId, FileStatus status) {
+    public final R1FileDownload.States state;
+    public Indication(OverlayId torrentId, Identifier fileId, R1FileDownload.States state) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
-      this.status = status;
+      this.state = state;
     }
   }
   
-  public static class Connect extends SilkEvent.E4 implements R1FileGet.CtrlEvent {
+  public static class Connect extends SilkEvent.E4 implements R1FileDownload.CtrlEvent {
     public final KAddress seeder;
     public Connect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
@@ -82,7 +81,7 @@ public class R1FileGetEvents {
     }
   }
   
-  public static class Disconnect extends SilkEvent.E4 implements R1FileGet.CtrlEvent {
+  public static class Disconnect extends SilkEvent.E4 implements R1FileDownload.CtrlEvent {
     public final Identifier seederId;
     public Disconnect(OverlayId torrentId, Identifier fileId, Identifier seederId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
@@ -90,7 +89,7 @@ public class R1FileGetEvents {
     }
   }
   
-  public static class Disconnected extends SilkEvent.E4 implements R1FileGet.CtrlEvent {
+  public static class Disconnected extends SilkEvent.E4 implements R1FileDownload.CtrlEvent {
     public final Identifier seederId;
     public Disconnected(OverlayId torrentId, Identifier fileId, Identifier seederId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);

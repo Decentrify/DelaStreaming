@@ -25,7 +25,7 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.torrent.R1FileGet;
+import se.sics.silk.r2torrent.torrent.R1FileDownload;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -42,7 +42,7 @@ public class R1DownloadEvents {
     }
   }
   
-  public static class Completed extends SilkEvent.E2 implements R1FileGet.DownloadEvent {
+  public static class Completed extends SilkEvent.E2 implements R1FileDownload.DownloadEvent {
     public final Map<Integer, byte[]> hashes;
     public final Map<Integer, byte[]> blocks;
     public Completed(OverlayId torrentId, Identifier fileId, Identifier seederId, 

@@ -19,7 +19,9 @@
 package se.sics.silk.r2torrent.torrent.state;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Consumer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -35,20 +37,22 @@ public class FileState {
   public FileState() {
   }
 
-  public void seederConnect(KAddress seeder) {
+  public void pendingSeeder(KAddress seeder) {
     pendingSeeders.put(seeder.getId(), new FileSeederState(seeder));
   }
 
-  public void seederConnected(KAddress seeder) {
+  public void connectedSeeder(KAddress seeder) {
     connectedSeeders.put(seeder.getId(), pendingSeeders.remove(seeder.getId()));
   }
-  
-  public void seederDisconnect(Identifier seederId, Consumer<KAddress> action) {
+
+  public void disconnectedSeeder(Identifier seederId, Consumer<KAddress> action) {
     FileSeederState seederState = pendingSeeders.remove(seederId);
-    if(seederState == null) {
+    if (seederState == null) {
       seederState = connectedSeeders.remove(seederId);
     }
-    action.accept(seederState.seeder);
+    if (seederState != null) {
+      action.accept(seederState.seeder);
+    }
   }
 
   public void clearPending() {
@@ -64,7 +68,7 @@ public class FileState {
     });
     connectedSeeders.clear();
   }
-  
+
   public void connectedToPending() {
     connectedSeeders.values().stream().forEach((fss) -> {
       fss.pending();
@@ -84,8 +88,17 @@ public class FileState {
       action.accept(fss.seeder);
     });
   }
-  
-  public boolean maintainSeederActive() {
-    return false;
+
+  public Optional<KAddress> nextConnect() {
+    Iterator<FileSeederState> it = pendingSeeders.values().iterator();
+    if (it.hasNext()) {
+      return Optional.of(it.next().seeder);
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  public boolean inactive() {
+    return pendingSeeders.isEmpty() && connectedSeeders.isEmpty();
   }
 }

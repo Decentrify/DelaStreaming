@@ -35,7 +35,7 @@ import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
 import se.sics.silk.r2torrent.conn.R2NodeLeecher;
 import se.sics.silk.r2torrent.conn.R2NodeSeeder;
-import se.sics.silk.r2torrent.torrent.R1FileGet;
+import se.sics.silk.r2torrent.torrent.R1FileDownload;
 import se.sics.silk.r2torrent.torrent.R1Hash;
 import se.sics.silk.r2torrent.torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.torrent.R1MetadataServe;
@@ -78,7 +78,7 @@ public class SystemSetup {
     fsmIdFactory.registerFSMDefId(R1TorrentSeeder.NAME);
     fsmIdFactory.registerFSMDefId(R1TorrentLeecher.NAME);
     fsmIdFactory.registerFSMDefId(R2Torrent.NAME);
-    fsmIdFactory.registerFSMDefId(R1FileGet.NAME);
+    fsmIdFactory.registerFSMDefId(R1FileDownload.NAME);
     fsmIdFactory.registerFSMDefId(R1MetadataGet.NAME);
     fsmIdFactory.registerFSMDefId(R1MetadataServe.NAME);
     fsmIdFactory.registerFSMDefId(R1Hash.NAME);
