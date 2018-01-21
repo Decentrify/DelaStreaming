@@ -47,8 +47,9 @@ import se.sics.silk.r2torrent.torrent.R1Hash;
 import se.sics.silk.r2torrent.torrent.R1MetadataGet;
 import se.sics.silk.r2torrent.torrent.R1MetadataServe;
 import se.sics.silk.r2torrent.torrent.R2Torrent;
-import se.sics.silk.r2torrent.transfer.DownloadPort;
-import se.sics.silk.r2torrent.transfer.events.DownloadEvent;
+import se.sics.silk.r2torrent.transfer.R1DownloadComp;
+import se.sics.silk.r2torrent.transfer.R1DownloadPort;
+import se.sics.silk.r2torrent.transfer.events.R1DownloadEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -153,11 +154,11 @@ public class R2TorrentComp extends ComponentDefinition {
     public final Positive<SelfPort> loopbackSubscribe;
     public final Negative<R2TorrentCtrlPort> ctrl;
     public final Positive<DStreamControlPort> streamCtrl;
-    public final Positive<DownloadPort> download;
+    public final Positive<R1DownloadPort> download;
     public final Positive<Network> network;
     public final Positive<Timer> timer;
 
-    public final One2NChannel<DownloadPort> downloadC;
+    public final One2NChannel<R1DownloadPort> downloadC;
 
     public Ports(ComponentProxy proxy) {
       loopbackSend = proxy.provides(SelfPort.class);
@@ -165,7 +166,7 @@ public class R2TorrentComp extends ComponentDefinition {
       proxy.connect(loopbackSend.getPair(), loopbackSubscribe.getPair(), Channel.TWO_WAY);
       ctrl = proxy.provides(R2TorrentCtrlPort.class);
       streamCtrl = proxy.requires(DStreamControlPort.class);
-      download = proxy.requires(DownloadPort.class);
+      download = proxy.requires(R1DownloadPort.class);
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
       downloadC = One2NChannel.getChannel("r2-torrent-download", download, downloadCompIdExtractor());
@@ -182,12 +183,11 @@ public class R2TorrentComp extends ComponentDefinition {
   }
 
   public static ChannelIdExtractor downloadCompIdExtractor() {
-    return new ChannelIdExtractor<DownloadEvent, Identifier>(DownloadEvent.class) {
+    return new ChannelIdExtractor<R1DownloadEvent, Identifier>(R1DownloadEvent.class) {
 
       @Override
-      public Identifier getValue(DownloadEvent event) {
-//        return R1TransferSeederComp.baseId(event.torrentId(), event.fileId(), event.nodeId());
-        return null;
+      public Identifier getValue(R1DownloadEvent event) {
+        return R1DownloadComp.baseId(event.torrentId(), event.fileId(), event.nodeId());
       }
     };
   }

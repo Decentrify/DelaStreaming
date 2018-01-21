@@ -60,7 +60,7 @@ import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederPing;
-import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
+import se.sics.silk.r2torrent.transfer.msgs.R1TransferConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -206,11 +206,11 @@ public class R1TransferSeeder {
         .buildEvents();
       def = def
         .positivePort(Network.class)
-        .patternEvent(R1TransferMsgs.ConnectAcc.class, BasicContentMsg.class)
+        .patternEvent(R1TransferConnMsgs.ConnectAcc.class, BasicContentMsg.class)
         .subscribe(Handlers.netConnectAcc, States.CONNECT)
-        .patternEvent(R1TransferMsgs.Pong.class, BasicContentMsg.class)
+        .patternEvent(R1TransferConnMsgs.Pong.class, BasicContentMsg.class)
         .subscribe(Handlers.netPong, States.ACTIVE)
-        .patternEvent(R1TransferMsgs.Disconnect.class, BasicContentMsg.class)
+        .patternEvent(R1TransferConnMsgs.Disconnect.class, BasicContentMsg.class)
         .subscribe(Handlers.netDisconnect, States.ACTIVE)
         .buildEvents();
       def = def
@@ -253,17 +253,17 @@ public class R1TransferSeeder {
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferSeederEvents.Connect event)
         throws FSMException {
         is.init(event);
-        R1TransferMsgs.Connect connect = new R1TransferMsgs.Connect(is.torrentId, is.fileId);
+        R1TransferConnMsgs.Connect connect = new R1TransferConnMsgs.Connect(is.torrentId, is.fileId);
         bestEffortMsg(es, is, connect);
         return States.CONNECT;
       }
     };
 
     static FSMPatternEventHandler netConnectAcc
-      = new FSMPatternEventHandler<ES, IS, R1TransferMsgs.ConnectAcc, BasicContentMsg>() {
+      = new FSMPatternEventHandler<ES, IS, R1TransferConnMsgs.ConnectAcc, BasicContentMsg>() {
 
         @Override
-        public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferMsgs.ConnectAcc payload,
+        public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.ConnectAcc payload,
           BasicContentMsg container) throws FSMException {
           R1TransferSeederEvents.Connected connected
           = new R1TransferSeederEvents.Connected(is.torrentId, is.fileId, is.seederAdr.getId());
@@ -274,10 +274,10 @@ public class R1TransferSeeder {
       };
     
     static FSMPatternEventHandler netDisconnect
-      = new FSMPatternEventHandler<ES, IS, R1TransferMsgs.Disconnect, BasicContentMsg>() {
+      = new FSMPatternEventHandler<ES, IS, R1TransferConnMsgs.Disconnect, BasicContentMsg>() {
 
         @Override
-        public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferMsgs.Disconnect payload,
+        public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.Disconnect payload,
           BasicContentMsg container) throws FSMException {
           R1TransferSeederEvents.Disconnected disconnected
             = new R1TransferSeederEvents.Disconnected(is.torrentId, is.fileId, is.seederAdr.getId());
@@ -291,7 +291,7 @@ public class R1TransferSeeder {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferSeederPing event) throws FSMException {
         if (is.pingTracker.healthy()) {
-          R1TransferMsgs.Ping ping = new R1TransferMsgs.Ping(is.torrentId, is.fileId);
+          R1TransferConnMsgs.Ping ping = new R1TransferConnMsgs.Ping(is.torrentId, is.fileId);
           msg(es, is, ping);
           is.pingTracker.ping();
           return state;
@@ -299,7 +299,7 @@ public class R1TransferSeeder {
           R1TransferSeederEvents.Disconnected disconnected
             = new R1TransferSeederEvents.Disconnected(is.torrentId, is.fileId, is.seederAdr.getId());
           sendCtrl(es, is, disconnected);
-          R1TransferMsgs.Disconnect disconnect = new R1TransferMsgs.Disconnect(is.torrentId, is.fileId);
+          R1TransferConnMsgs.Disconnect disconnect = new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId);
           msg(es, is, disconnect);
           cancelPing(es, is);
           return FSMBasicStateNames.FINAL;
@@ -309,10 +309,10 @@ public class R1TransferSeeder {
     
 
     static FSMPatternEventHandler netPong
-      = new FSMPatternEventHandler<ES, IS, R1TransferMsgs.Pong, BasicContentMsg>() {
+      = new FSMPatternEventHandler<ES, IS, R1TransferConnMsgs.Pong, BasicContentMsg>() {
 
         @Override
-        public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferMsgs.Pong payload,
+        public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.Pong payload,
           BasicContentMsg container) throws FSMException {
           is.pingTracker.pong();
           return state;
@@ -324,7 +324,7 @@ public class R1TransferSeeder {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferSeederEvents.Disconnect event)
         throws FSMException {
-        R1TransferMsgs.Disconnect connect = new R1TransferMsgs.Disconnect(is.torrentId, is.fileId);
+        R1TransferConnMsgs.Disconnect connect = new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId);
         msg(es, is, connect);
         cancelPing(es, is);
         return FSMBasicStateNames.FINAL;
@@ -351,8 +351,8 @@ public class R1TransferSeeder {
 
     private static <C extends KompicsEvent & Identifiable> void bestEffortMsg(ES es, IS is, C content) {
       KHeader header = new BasicHeader(es.selfAdr, is.seederAdr, Transport.UDP);
-      BestEffortMsg.Request wrap = new BestEffortMsg.Request(content, R1TransferSeederComp.HardCodedConfig.beRetries,
-        R1TransferSeederComp.HardCodedConfig.beRetryInterval);
+      BestEffortMsg.Request wrap = new BestEffortMsg.Request(content, R1DownloadComp.HardCodedConfig.beRetries,
+        R1DownloadComp.HardCodedConfig.beRetryInterval);
       KContentMsg msg = new BasicContentMsg(header, wrap);
       es.proxy.trigger(msg, es.ports.network);
     }

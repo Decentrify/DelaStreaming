@@ -18,53 +18,85 @@
  */
 package se.sics.silk.r2torrent.transfer.msgs;
 
+import java.util.Map;
+import java.util.Set;
+import org.javatuples.Pair;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.nstream.storage.cache.KHint;
+import se.sics.nstream.util.range.RangeKReference;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.transfer.R1TransferLeecher;
-import se.sics.silk.r2torrent.transfer.R1TransferSeeder;
+import se.sics.silk.r2torrent.transfer.events.R1TransferMsg;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1TransferMsgs {
-  public static class Connect extends SilkEvent.E4 implements R1TransferLeecher.Msg {
-    public Connect(OverlayId torrentId, Identifier fileId) {
+public interface R1TransferMsgs {
+  public static class CacheHintReq extends SilkEvent.E4 implements R1TransferMsg {
+    public final KHint.Summary cacheHint;
+    public CacheHintReq(OverlayId torrentId, Identifier fileId, KHint.Summary cacheHint) {
       super(BasicIdentifiers.msgId(), torrentId, fileId);
+      this.cacheHint = cacheHint;
     }
     
-    public ConnectAcc accept() {
-      return new ConnectAcc(torrentId, fileId);
+    public CacheHintAcc accept() {
+      return new CacheHintAcc(eventId, torrentId, fileId, cacheHint);
     }
   }
   
-  public static class ConnectAcc extends SilkEvent.E4 implements R1TransferSeeder.Msg {
-
-    public ConnectAcc(OverlayId torrentId, Identifier fileId) {
-      super(BasicIdentifiers.eventId(), torrentId, fileId);
-    }
-  }
-  
-  public static class Disconnect extends SilkEvent.E4 implements R1TransferLeecher.Msg, R1TransferSeeder.Msg{
-    public Disconnect(OverlayId torrentId, Identifier fileId) {
-      super(BasicIdentifiers.msgId(), torrentId, fileId);
-    }
-  }
-  
-  public static class Ping extends SilkEvent.E4 implements R1TransferLeecher.Msg {
-    public Ping(OverlayId torrentId, Identifier fileId) {
-      super(BasicIdentifiers.msgId(), torrentId, fileId);
-    }
-    
-    public Pong pong() {
-      return new Pong(eventId, torrentId, fileId);
-    }
-  }
-  
-  public static class Pong extends SilkEvent.E4 implements R1TransferSeeder.Msg {
-    public Pong(Identifier eventId, OverlayId torrentId, Identifier fileId) {
+  public static class CacheHintAcc extends SilkEvent.E4 implements R1TransferMsg {
+    public final KHint.Summary cacheHint;
+    public CacheHintAcc(Identifier eventId, OverlayId torrentId, Identifier fileId, KHint.Summary cacheHint) {
       super(eventId, torrentId, fileId);
+      this.cacheHint = cacheHint;
+    }
+  }
+  
+  public static class PieceReq extends SilkEvent.E4 implements R1TransferMsg {
+    public final Pair<Integer, Integer> piece;
+    public PieceReq(OverlayId torrentId, Identifier fileId, Pair<Integer, Integer> piece) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId);
+      this.piece = piece;
+    }
+    
+    public PieceResp accept(RangeKReference val) {
+      return new PieceResp(torrentId, fileId, piece, Either.left(val));
+    }
+  }
+  
+  public static class PieceResp extends SilkEvent.E4 implements R1TransferMsg {
+    public final Pair<Integer, Integer> piece;
+    public final Either<KReference<byte[]>, byte[]> val;
+    public PieceResp(OverlayId torrentId, Identifier fileId,
+      Pair<Integer, Integer> piece, Either<KReference<byte[]>, byte[]> val) {
+      super(BasicIdentifiers.msgId(), torrentId, fileId);
+      this.piece = piece;
+      this.val = val;
+    }
+  }
+  
+  public static class HashReq extends SilkEvent.E4 implements R1TransferMsg {
+    public final Set<Integer> hashes;
+    
+    public HashReq(OverlayId torrentId, Identifier fileId, Set<Integer> hashes) {
+      super(BasicIdentifiers.msgId(), torrentId, fileId);
+      this.hashes = hashes;
+    }
+    
+    public HashResp accept(Map<Integer, byte[]> values) {
+      return new HashResp(eventId, torrentId, fileId, values);
+    }
+  }
+  
+  public static class HashResp extends SilkEvent.E4 implements R1TransferMsg {
+    public final Map<Integer, byte[]> hashValues;
+
+    public HashResp(Identifier eventId, OverlayId torrentId, Identifier fileId, Map<Integer, byte[]> hashValues) {
+      super(eventId, torrentId, fileId);
+      this.hashValues = hashValues;
     }
   }
 }

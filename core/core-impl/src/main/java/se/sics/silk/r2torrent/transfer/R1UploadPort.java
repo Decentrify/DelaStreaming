@@ -16,15 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.transfer.util;
+package se.sics.silk.r2torrent.transfer;
 
-import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.kompics.PortType;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TransferConnMngr {
-  public boolean connectLeecher(KAddress leecher) {
-    return true;
+public class R1UploadPort extends PortType {
+  {
+    
   }
 }

@@ -16,13 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.transfer;
+package se.sics.silk.r2torrent.transfer.events;
 
-import se.sics.kompics.fsm.FSMExternalState;
+import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.util.Identifiable;
+import se.sics.silk.event.SilkEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface DownloadES extends FSMExternalState {
-  public void setPorts(R1TransferSeederComp.Ports ports);
+public interface R1TransferMsg extends KompicsEvent, Identifiable, SilkEvent.TorrentEvent, SilkEvent.FileEvent {
 }

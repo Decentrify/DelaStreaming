@@ -16,16 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.transfer;
+package se.sics.silk.r2torrent.transfer.events;
 
-import se.sics.kompics.PortType;
-import se.sics.silk.r2torrent.transfer.events.DownloadEvents;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.Timeout;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DownloadPort extends PortType {
-  {
-    indication(DownloadEvents.Block.class);
+public class R1DownloadTimeout extends Timeout {
+  public R1DownloadTimeout(SchedulePeriodicTimeout spt) {
+    super(spt);
   }
 }

@@ -18,12 +18,15 @@
  */
 package se.sics.silk.r2torrent.transfer.events;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.util.Identifiable;
-import se.sics.silk.event.SilkEvent;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.Timeout;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface DownloadEvent extends KompicsEvent, Identifiable, SilkEvent.TorrentEvent, SilkEvent.FileEvent, SilkEvent.NodeEvent {
+public class R1UploadTimeout extends Timeout {
+  public R1UploadTimeout(SchedulePeriodicTimeout spt) {
+    super(spt);
+  }
 }

@@ -61,7 +61,7 @@ import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecher.States;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherPing;
-import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
+import se.sics.silk.r2torrent.transfer.msgs.R1TransferConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -177,7 +177,7 @@ public class R1TransferLeecherTest {
     tc = tc.body();
     tc = connected(tc, torrent, file, leecher);//1-5
     tc = tc.trigger(netConnect(torrent, file, leecher), networkP);//6
-    tc = eNetPayload(tc, R1TransferMsgs.ConnectAcc.class, networkP); //7
+    tc = eNetPayload(tc, R1TransferConnMsgs.ConnectAcc.class, networkP); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1TransferLeecher.fsmBasicId(torrent, file, leecher.getId());
@@ -258,21 +258,21 @@ public class R1TransferLeecherTest {
   public TestContext connected(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress leecher) {
     tc = tc.trigger(netConnect(torrentId, fileId, leecher), networkP);//1
     tc = localConnectAcc(tc); //2-3
-    tc = eNetPayload(tc, R1TransferMsgs.ConnectAcc.class, networkP); //4
+    tc = eNetPayload(tc, R1TransferConnMsgs.ConnectAcc.class, networkP); //4
     tc = eSchedulePeriodicTimer(tc, R1TransferLeecherPing.class, timerP); //5
     return tc;
   }
   
   private TestContext pingPong(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress leecher) {
     tc = tc.trigger(netPing(torrentId, fileId, leecher), networkP);
-    tc = eNetPayload(tc, R1TransferMsgs.Pong.class, networkP);
+    tc = eNetPayload(tc, R1TransferConnMsgs.Pong.class, networkP);
     return tc;
   }
   
   private TestContext pingDisc(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress leecher) {
     tc = tc.trigger(timerPing(torrentId, fileId, leecher), timerP); //1
     tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, expectP, Direction.OUT); //2
-    tc = eNetPayload(tc, R1TransferMsgs.Disconnect.class, networkP);//3
+    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP);//3
     tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //4
     return tc;
   }
@@ -292,17 +292,17 @@ public class R1TransferLeecherTest {
   }
 
   public Msg netConnect(OverlayId torrentId, Identifier fileId, KAddress leecher) {
-    R1TransferMsgs.Connect payload = new R1TransferMsgs.Connect(torrentId, fileId);
+    R1TransferConnMsgs.Connect payload = new R1TransferConnMsgs.Connect(torrentId, fileId);
     return MsgHelper.msg(leecher, self, payload);
   }
 
   public Msg netDisconnect(OverlayId torrentId, Identifier fileId, KAddress leecher) {
-    R1TransferMsgs.Disconnect payload = new R1TransferMsgs.Disconnect(torrentId, fileId);
+    R1TransferConnMsgs.Disconnect payload = new R1TransferConnMsgs.Disconnect(torrentId, fileId);
     return MsgHelper.msg(leecher, self, payload);
   }
   
   public Msg netPing(OverlayId torrentId, Identifier fileId, KAddress leecher) {
-    R1TransferMsgs.Ping payload = new R1TransferMsgs.Ping(torrentId, fileId);
+    R1TransferConnMsgs.Ping payload = new R1TransferConnMsgs.Ping(torrentId, fileId);
     return MsgHelper.msg(leecher, self, payload);
   }
 

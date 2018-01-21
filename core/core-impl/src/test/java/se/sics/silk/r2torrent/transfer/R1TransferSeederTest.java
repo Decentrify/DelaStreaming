@@ -61,7 +61,7 @@ import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder.States;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederPing;
-import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
+import se.sics.silk.r2torrent.transfer.msgs.R1TransferConnMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -156,7 +156,7 @@ public class R1TransferSeederTest {
   
   private TestContext startToConnect(TestContext tc) {
     tc = tc.trigger(connect(torrent, file, seeder), triggerP); //1
-    tc = eNetPayload(tc, R1TransferMsgs.Connect.class, networkP); //2
+    tc = eNetPayload(tc, R1TransferConnMsgs.Connect.class, networkP); //2
     return tc;
   }
   
@@ -252,14 +252,14 @@ public class R1TransferSeederTest {
   
   private TestContext localDisconnect1(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), triggerP); //1
-    tc = eNetPayload(tc, R1TransferMsgs.Disconnect.class, networkP); //2
+    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //2
     tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //3
     return tc;
   }
   
   private TestContext localDisconnect2(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), triggerP); //1
-    tc = eNetPayload(tc, R1TransferMsgs.Disconnect.class, networkP); //2
+    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //2
     return tc;
   }
   
@@ -278,20 +278,20 @@ public class R1TransferSeederTest {
   
   private TestContext pingFail(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(ping(torrentId, fileId, seeder), timerP); //1
-    tc = eNetPayload(tc, R1TransferMsgs.Ping.class, networkP); //2
+    tc = eNetPayload(tc, R1TransferConnMsgs.Ping.class, networkP); //2
     return tc;
   }
   
   private TestContext pingDisc(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(ping(torrentId, fileId, seeder), timerP); //1
     tc = tc.expect(R1TransferSeederEvents.Disconnected.class, expectP, Direction.OUT); //2
-    tc = eNetPayload(tc, R1TransferMsgs.Disconnect.class, networkP);//3
+    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP);//3
     tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //4
     return tc;
   }
   
   private TestContext netConnectAcc(TestContext tc) {
-    Future f = new FutureHelper.NetBEFuture<R1TransferMsgs.Connect>(R1TransferMsgs.Connect.class) {
+    Future f = new FutureHelper.NetBEFuture<R1TransferConnMsgs.Connect>(R1TransferConnMsgs.Connect.class) {
       @Override
       public Msg get() {
         return msg.answer(content.accept());
@@ -303,7 +303,7 @@ public class R1TransferSeederTest {
   }
   
   private TestContext pingPong(TestContext tc, Port networkP) {
-    Future f = new FutureHelper.NetMsgFuture<R1TransferMsgs.Ping>(R1TransferMsgs.Ping.class) {
+    Future f = new FutureHelper.NetMsgFuture<R1TransferConnMsgs.Ping>(R1TransferConnMsgs.Ping.class) {
       @Override
       public Msg get() {
         return msg.answer(content.pong());
@@ -323,7 +323,7 @@ public class R1TransferSeederTest {
   }
   
   public Msg netDisconnect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    R1TransferMsgs.Disconnect disconnect = new R1TransferMsgs.Disconnect(torrentId, fileId);
+    R1TransferConnMsgs.Disconnect disconnect = new R1TransferConnMsgs.Disconnect(torrentId, fileId);
     return MsgHelper.msg(seeder, self, disconnect);
   }
   

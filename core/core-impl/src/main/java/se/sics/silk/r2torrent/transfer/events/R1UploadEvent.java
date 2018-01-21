@@ -18,8 +18,12 @@
  */
 package se.sics.silk.r2torrent.transfer.events;
 
+import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.util.Identifiable;
+import se.sics.silk.event.SilkEvent;
+
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface TransferMngrEvent {
+public interface R1UploadEvent extends KompicsEvent, Identifiable, SilkEvent.TorrentEvent, SilkEvent.FileEvent, SilkEvent.NodeEvent {
 }
