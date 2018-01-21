@@ -68,7 +68,7 @@ public class R1UploadComp extends ComponentDefinition {
   public final OverlayId torrentId;
   public final Identifier fileId;
   public final KAddress selfAdr;
-  public final KAddress seederAdr;
+  public final KAddress leecherAdr;
   public final BlockDetails defaultBlock;
   private UUID timerId;
 
@@ -77,10 +77,10 @@ public class R1UploadComp extends ComponentDefinition {
   private final Map<Integer, byte[]> servedHashes = new HashMap<>();
   private KContentMsg<?, ?, R1TransferMsgs.CacheHintReq> pendingCacheReq;
 
-  public R1UploadComp(R1DownloadComp.Init init) {
+  public R1UploadComp(R1UploadComp.Init init) {
     ports = new Ports(proxy);
     selfAdr = init.selfAdr;
-    seederAdr = init.seederAdr;
+    leecherAdr = init.leecherAdr;
     torrentId = init.torrentId;
     fileId = init.fileId;
     defaultBlock = init.defaultBlock;
@@ -100,6 +100,7 @@ public class R1UploadComp extends ComponentDefinition {
     }
   };
 
+  @Override
   public void tearDown() {
     cancelTimer();
     for (KReference<byte[]> block : servedBlocks.values()) {
@@ -238,17 +239,15 @@ public class R1UploadComp extends ComponentDefinition {
     public final KAddress selfAdr;
     public final OverlayId torrentId;
     public final Identifier fileId;
-    public final KAddress seederAdr;
-    public final int blockSlots;
+    public final KAddress leecherAdr;
     public final BlockDetails defaultBlock;
 
-    public Init(KAddress selfAdr, OverlayId torrentId, Identifier fileId, KAddress seederAdr, int blockSlots,
+    public Init(KAddress selfAdr, OverlayId torrentId, Identifier fileId, KAddress lecherAdr,
       BlockDetails defaultBlock) {
       this.selfAdr = selfAdr;
       this.torrentId = torrentId;
       this.fileId = fileId;
-      this.seederAdr = seederAdr;
-      this.blockSlots = blockSlots;
+      this.leecherAdr = lecherAdr;
       this.defaultBlock = defaultBlock;
     }
   }

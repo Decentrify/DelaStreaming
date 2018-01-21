@@ -67,7 +67,8 @@ import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
 import static se.sics.silk.r2torrent.torrent.R2Torrent.HardCodedConfig.seed;
 import se.sics.silk.r2torrent.torrent.event.R1FileDownloadEvents;
-import se.sics.silk.r2torrent.torrent.state.FileState;
+import se.sics.silk.r2torrent.torrent.state.R1DownloadFileState;
+import se.sics.silk.r2torrent.torrent.util.R1FileMngr;
 import se.sics.silk.r2torrent.transfer.R1DownloadComp;
 import se.sics.silk.r2torrent.transfer.R1DownloadPort;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder;
@@ -116,7 +117,7 @@ public class R1FileDownload {
     StreamId streamId;
     OverlayId torrentId;
     Identifier fileId;
-    FileState fileState;
+    R1DownloadFileState fileState;
     Map<Identifier, Component> comps = new HashMap<>();
 
     public IS(FSMIdentifier fsmId) {
@@ -128,11 +129,11 @@ public class R1FileDownload {
       return fsmId;
     }
 
-    public void start(R1FileDownloadEvents.Start req) {
+    public void init(R1FileDownloadEvents.Start req) {
       this.streamId = req.streamId;
       this.torrentId = req.torrentId;
       this.fileId = req.fileId;
-      this.fileState = new FileState();
+      this.fileState = new R1DownloadFileState();
     }
   }
 
@@ -152,12 +153,14 @@ public class R1FileDownload {
     KAddress selfAdr;
     int blockSlots;
     BlockDetails defaultBlock;
+    R1FileMngr fileMngr;
 
-    public ES(KAddress selfAdr, int blockSlots, BlockDetails defaultBlock) {
+    public ES(KAddress selfAdr, int blockSlots, BlockDetails defaultBlock, R1FileMngr fileMngr) {
       this.selfAdr = selfAdr;
       this.fileIdFactory = new IntIdFactory(new Random(seed));
       this.blockSlots = blockSlots;
       this.defaultBlock = defaultBlock;
+      this.fileMngr = fileMngr;
     }
 
     @Override
@@ -272,7 +275,7 @@ public class R1FileDownload {
 
     static FSMBasicEventHandler fileStart = (FSMBasicEventHandler<ES, IS, R1FileDownloadEvents.Start>) (
       FSMStateName state, ES es, IS is, R1FileDownloadEvents.Start event) -> {
-        is.start(event);
+        is.init(event);
         sendStreamEvent(es, new DStreamConnect.Request(Pair.with(event.streamId, event.stream)));
         return States.STORAGE_PENDING;
       };

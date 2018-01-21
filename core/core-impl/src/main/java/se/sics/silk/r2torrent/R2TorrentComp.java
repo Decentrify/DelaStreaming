@@ -50,8 +50,11 @@ import se.sics.silk.r2torrent.torrent.R1MetadataServe;
 import se.sics.silk.r2torrent.torrent.R2Torrent;
 import se.sics.silk.r2torrent.transfer.R1DownloadComp;
 import se.sics.silk.r2torrent.transfer.R1DownloadPort;
+import se.sics.silk.r2torrent.transfer.R1UploadComp;
+import se.sics.silk.r2torrent.transfer.R1UploadPort;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadEvent;
 import se.sics.silk.r2torrent.transfer.events.R1TransferMsg;
+import se.sics.silk.r2torrent.transfer.events.R1UploadEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -157,11 +160,14 @@ public class R2TorrentComp extends ComponentDefinition {
     public final Negative<R2TorrentCtrlPort> ctrl;
     public final Positive<DStreamControlPort> streamCtrl;
     public final Positive<R1DownloadPort> download;
+    public final Positive<R1UploadPort> upload;
     public final Positive<Network> network;
     public final Positive<Timer> timer;
 
     public final One2NChannel<R1DownloadPort> downloadC;
+    public final One2NChannel<R1UploadPort> uploadC;
     public final One2NChannel<Network> netDownloadC;
+    public final One2NChannel<Network> netUploadC;
 
     public Ports(ComponentProxy proxy) {
       loopbackSend = proxy.provides(SelfPort.class);
@@ -170,10 +176,13 @@ public class R2TorrentComp extends ComponentDefinition {
       ctrl = proxy.provides(R2TorrentCtrlPort.class);
       streamCtrl = proxy.requires(DStreamControlPort.class);
       download = proxy.requires(R1DownloadPort.class);
+      upload = proxy.requires(R1UploadPort.class);
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
       downloadC = One2NChannel.getChannel("r1-torrent-file-download-ctrl", (Negative)download.getPair(), downloadCompIdExtractor());
-      netDownloadC = One2NChannel.getChannel("r1-torrent-file-network", network, netDownloadCompIdExtractor());
+      uploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Negative)upload.getPair(), uploadCompIdExtractor());
+      netDownloadC = One2NChannel.getChannel("r1-torrent-file-download-network", network, netDownloadCompIdExtractor());
+      netUploadC = One2NChannel.getChannel("r1-torrent-file-upload-network", network, netUploadCompIdExtractor());
     }
   }
 
@@ -205,6 +214,31 @@ public class R2TorrentComp extends ComponentDefinition {
           R1TransferMsg payload = (R1TransferMsg) msg.getContent();
           KAddress seeder = msg.getSource();
           return R1DownloadComp.baseId(payload.torrentId(), payload.fileId(), seeder.getId());
+        }
+        return null;
+      }
+    };
+  }
+  
+  public static ChannelIdExtractor uploadCompIdExtractor() {
+    return new ChannelIdExtractor<R1UploadEvent, Identifier>(R1UploadEvent.class) {
+
+      @Override
+      public Identifier getValue(R1UploadEvent event) {
+        return R1UploadComp.baseId(event.torrentId(), event.fileId(), event.nodeId());
+      }
+    };
+  }
+
+  public static ChannelIdExtractor netUploadCompIdExtractor() {
+    return new ChannelIdExtractor<BasicContentMsg, Identifier>(BasicContentMsg.class) {
+
+      @Override
+      public Identifier getValue(BasicContentMsg msg) {
+        if (msg.getContent() instanceof R1TransferMsg) {
+          R1TransferMsg payload = (R1TransferMsg) msg.getContent();
+          KAddress leecher = msg.getSource();
+          return R1UploadComp.baseId(payload.torrentId(), payload.fileId(), leecher.getId());
         }
         return null;
       }

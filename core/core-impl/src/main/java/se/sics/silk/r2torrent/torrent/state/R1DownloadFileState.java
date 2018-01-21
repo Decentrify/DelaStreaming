@@ -29,12 +29,12 @@ import se.sics.ktoolbox.util.network.KAddress;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class FileState {
+public class R1DownloadFileState {
 
   Map<Identifier, FileSeederState> pendingSeeders = new HashMap<>();
   Map<Identifier, FileSeederState> connectedSeeders = new HashMap<>();
 
-  public FileState() {
+  public R1DownloadFileState() {
   }
 
   public void pendingSeeder(KAddress seeder) {

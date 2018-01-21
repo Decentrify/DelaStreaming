@@ -18,20 +18,27 @@
  */
 package se.sics.silk.r2torrent.torrent.state;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentState {
-  public Map<Identifier, R1DownloadFileState> files = new HashMap<>();
+public class FileLeecherState {
+  public final R1TransferLeecherEvents.ConnectReq req;
+  public final KAddress leecher;
   
-  public Optional<R1DownloadFileState> openFile(Identifier fileId) {
-    R1DownloadFileState file = new R1DownloadFileState();
-    files.put(fileId, file);
-    return Optional.of(file);
+  public FileLeecherState(R1TransferLeecherEvents.ConnectReq req) {
+    this.req = req;
+    this.leecher = req.leecherAdr;
+  }
+  
+  public void pending() {
+  }
+  
+  public void connected() {
+  }
+
+  public void clear() {
   }
 }

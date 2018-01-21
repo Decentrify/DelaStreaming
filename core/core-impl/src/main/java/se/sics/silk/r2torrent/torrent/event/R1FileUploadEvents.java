@@ -16,22 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.torrent.state;
+package se.sics.silk.r2torrent.torrent.event;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.torrent.R1FileUpload;
+import se.sics.silk.r2torrent.torrent.R1FileUpload.States;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentState {
-  public Map<Identifier, R1DownloadFileState> files = new HashMap<>();
+public class R1FileUploadEvents {
+  public static class Indication extends SilkEvent.E4 {
+    public final States state;
+    public Indication(OverlayId torrentId, Identifier fileId, States state) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId);
+      this.state = state;
+    }
+  }
   
-  public Optional<R1DownloadFileState> openFile(Identifier fileId) {
-    R1DownloadFileState file = new R1DownloadFileState();
-    files.put(fileId, file);
-    return Optional.of(file);
+  public static class Disconnected extends SilkEvent.E4 implements R1FileUpload.CtrlEvent {
+    public final Identifier leecherId;
+    public Disconnected(OverlayId torrentId, Identifier fileId, Identifier leecherId) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId);
+      this.leecherId = leecherId;
+    }
   }
 }

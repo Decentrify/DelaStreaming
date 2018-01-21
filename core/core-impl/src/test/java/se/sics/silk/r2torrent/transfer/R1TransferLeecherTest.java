@@ -151,7 +151,7 @@ public class R1TransferLeecherTest {
     tc = startToConnect(tc, torrent, file, leecher);//1-2
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBasicId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
     assertEquals(States.CONNECT, compState.fsm.getFSMState(fsmBaseId));
   }
 
@@ -168,7 +168,7 @@ public class R1TransferLeecherTest {
     tc = connected(tc, torrent, file, leecher);//1-5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBasicId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmBaseId));
   }
   //***************************************************DOUBLE CONNECT***************************************************
@@ -180,7 +180,7 @@ public class R1TransferLeecherTest {
     tc = eNetPayload(tc, R1TransferConnMsgs.ConnectAcc.class, networkP); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBasicId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmBaseId));
   }
   //********************************************************PING********************************************************
@@ -196,7 +196,7 @@ public class R1TransferLeecherTest {
     tc = tc.end();
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmId = R1TransferLeecher.fsmBasicId(torrent, file, leecher.getId());
+    Identifier fsmId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmId));
   }
   
@@ -210,7 +210,7 @@ public class R1TransferLeecherTest {
     tc = pingDisc(tc, torrent, file, leecher); //7-8
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmId = R1TransferLeecher.fsmBasicId(torrent, file, leecher.getId());
+    Identifier fsmId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
     assertFalse(compState.fsm.activeFSM(fsmId));
   }
 
@@ -223,7 +223,7 @@ public class R1TransferLeecherTest {
     tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, expectP, Direction.OUT);//4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBasicId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
     assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
 
@@ -237,7 +237,7 @@ public class R1TransferLeecherTest {
     tc = eCancelPeriodicTimer(tc, timerP); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBasicId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
     assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
 
@@ -250,7 +250,7 @@ public class R1TransferLeecherTest {
     tc = eCancelPeriodicTimer(tc, timerP); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBasicId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
     assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
 

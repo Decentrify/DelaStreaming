@@ -16,22 +16,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.torrent.state;
+package se.sics.silk.r2torrent.torrent.util;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import se.sics.kompics.util.Identifier;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentState {
-  public Map<Identifier, R1DownloadFileState> files = new HashMap<>();
+public class R1FileMngr {
+  public final Map<Identifier, R1File> files = new HashMap<>();
   
-  public Optional<R1DownloadFileState> openFile(Identifier fileId) {
-    R1DownloadFileState file = new R1DownloadFileState();
-    files.put(fileId, file);
-    return Optional.of(file);
+  public void completed(Identifier fileId, StreamId streamId, MyStream stream) {
+    files.put(fileId, new R1File(streamId, stream));
+  }
+  
+  public boolean isComplete(Identifier fileId) {
+    return files.containsKey(fileId);
+  }
+  
+  public StreamId streamId(Identifier fileId) {
+    return files.get(fileId).streamId;
+  }
+  
+  public MyStream stream(Identifier fileId) {
+    return files.get(fileId).stream;
   }
 }

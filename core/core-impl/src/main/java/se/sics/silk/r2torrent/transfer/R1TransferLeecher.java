@@ -58,6 +58,7 @@ import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
 import se.sics.silk.r2torrent.conn.R2NodeLeecher;
+import se.sics.silk.r2torrent.torrent.R1FileUpload;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder.HardCodedConfig;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherPing;
@@ -90,7 +91,7 @@ public class R1TransferLeecher {
   public static interface Msg extends FSMEvent, Identifiable, SilkEvent.TorrentEvent, SilkEvent.FileEvent {
   }
 
-  public static Identifier fsmBasicId(OverlayId torrentId, Identifier fileId, Identifier leecherId) {
+  public static Identifier fsmBaseId(OverlayId torrentId, Identifier fileId, Identifier leecherId) {
     return new PairIdentifier(new PairIdentifier(torrentId, fileId), leecherId);
   }
 
@@ -135,7 +136,7 @@ public class R1TransferLeecher {
       return missedPings < R2NodeLeecher.HardCodedConfig.deadPings;
     }
   }
-  
+
   public static class ISBuilder implements FSMInternalStateBuilder {
 
     @Override
@@ -194,6 +195,8 @@ public class R1TransferLeecher {
         .positivePort(SelfPort.class)
         .basicEvent(R1TransferLeecherEvents.ConnectAcc.class)
         .subscribe(Handlers.connectAcc, States.CONNECT)
+        .basicEvent(R1TransferLeecherEvents.ConnectRej.class)
+        .subscribe(Handlers.connectRej, States.CONNECT)
         .basicEvent(R1TransferLeecherEvents.Disconnect.class)
         .subscribe(Handlers.localDisconnect, States.ACTIVE)
         .buildEvents();
@@ -222,12 +225,12 @@ public class R1TransferLeecher {
       public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
         if (event instanceof Event) {
           Event e = (Event) event;
-          return Optional.of(fsmBasicId(e.torrentId(), e.fileId(), e.nodeId()));
+          return Optional.of(fsmBaseId(e.torrentId(), e.fileId(), e.nodeId()));
         } else if (event instanceof BasicContentMsg) {
           BasicContentMsg msg = (BasicContentMsg) event;
           Msg payload = (Msg) msg.getContent();
           Identifier leecherId = msg.getSource().getId();
-          return Optional.of(fsmBasicId(payload.torrentId(), payload.fileId(), leecherId));
+          return Optional.of(fsmBaseId(payload.torrentId(), payload.fileId(), leecherId));
         }
         return Optional.empty();
       }
@@ -266,18 +269,21 @@ public class R1TransferLeecher {
           return States.ACTIVE;
         }
       };
-    static FSMBasicEventHandler connectAcc = new FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.ConnectAcc>() {
-
-      @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferLeecherEvents.ConnectAcc event)
-        throws FSMException {
+    static FSMBasicEventHandler connectAcc
+      = (FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.ConnectAcc>) (FSMStateName state,
+        ES es, IS is, R1TransferLeecherEvents.ConnectAcc event) -> {
         R1TransferConnMsgs.ConnectAcc connected = new R1TransferConnMsgs.ConnectAcc(is.torrentId, is.fileId);
         sendMsg(es, is, connected);
         schedulePing(es, is);
         return States.ACTIVE;
-      }
-    };
+      };
     
+    static FSMBasicEventHandler connectRej
+      = (FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.ConnectRej>) (FSMStateName state,
+        ES es, IS is, R1TransferLeecherEvents.ConnectRej event) -> {
+        throw new RuntimeException("not implemented");
+      };
+
     static FSMBasicEventHandler timerPing = new FSMBasicEventHandler<ES, IS, R1TransferLeecherPing>() {
       @Override
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferLeecherPing event) throws FSMException {
@@ -294,7 +300,7 @@ public class R1TransferLeecher {
         return state;
       }
     };
-    
+
     static FSMPatternEventHandler netPing
       = new FSMPatternEventHandler<ES, IS, R1TransferConnMsgs.Ping, BasicContentMsg>() {
 
@@ -326,8 +332,8 @@ public class R1TransferLeecher {
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.Disconnect payload,
           BasicContentMsg container) throws FSMException {
-          R1TransferLeecherEvents.Disconnected disconnected 
-            = new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId());
+          R1TransferLeecherEvents.Disconnected disconnected
+          = new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId());
           sendCtrl(es, is, disconnected);
           return FSMBasicStateNames.FINAL;
         }
@@ -339,21 +345,21 @@ public class R1TransferLeecher {
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.Disconnect payload,
           BasicContentMsg container) throws FSMException {
-          R1TransferLeecherEvents.Disconnected disconnected 
-            = new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId());
+          R1TransferLeecherEvents.Disconnected disconnected
+          = new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId());
           sendCtrl(es, is, disconnected);
           cancelPing(es, is);
           return FSMBasicStateNames.FINAL;
         }
       };
-    
+
     private static <C extends KompicsEvent & Identifiable> void sendMsg(ES es, IS is, C content) {
       KHeader header = new BasicHeader(es.selfAdr, is.leecherAdr, Transport.UDP);
       KContentMsg msg = new BasicContentMsg(header, content);
       es.proxy.trigger(msg, es.ports.network);
     }
 
-    private static void sendCtrl(ES es, IS is, KompicsEvent content) {
+    private static void sendCtrl(ES es, IS is, R1FileUpload.ConnectEvent content) {
       es.proxy.trigger(content, es.ports.loopbackSend);
     }
 

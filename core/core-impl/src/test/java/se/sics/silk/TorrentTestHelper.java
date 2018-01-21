@@ -399,7 +399,21 @@ public class TorrentTestHelper {
   }
   
   //**********************************************STORAGE STREAMS*******************************************************
-  public static TestContext storageStreamDisconnect(TestContext tc, Port expectP, Port triggerP) {
+  public static TestContext storageStreamConnected(TestContext tc, Port expectP, Port triggerP) {
+    Future f = new FutureHelper.BasicFuture<DStreamConnect.Request, DStreamConnect.Success>() {
+
+      @Override
+      public DStreamConnect.Success get() {
+        return event.success(0);
+      }
+    };
+    tc = tc
+      .answerRequest(DStreamConnect.Request.class, expectP, f) //1
+      .trigger(f, triggerP);//2
+    return tc;
+  }
+  
+  public static TestContext storageStreamDisconnected(TestContext tc, Port expectP, Port triggerP) {
     Future f = new BasicFuture<DStreamDisconnect.Request, DStreamDisconnect.Success>() {
 
       @Override

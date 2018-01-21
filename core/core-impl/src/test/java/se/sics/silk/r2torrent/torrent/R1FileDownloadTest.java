@@ -36,7 +36,6 @@ import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.testing.Direction;
-import se.sics.kompics.testing.Future;
 import se.sics.kompics.testing.TestContext;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
@@ -50,20 +49,21 @@ import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nstream.storage.durable.events.DStreamConnect;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.util.BlockDetails;
-import se.sics.silk.FutureHelper;
 import se.sics.silk.SelfPort;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.TorrentIdHelper;
 import static se.sics.silk.TorrentTestHelper.eCancelPeriodicTimer;
 import static se.sics.silk.TorrentTestHelper.eSchedulePeriodicTimer;
-import static se.sics.silk.TorrentTestHelper.storageStreamDisconnect;
+import static se.sics.silk.TorrentTestHelper.storageStreamConnected;
+import static se.sics.silk.TorrentTestHelper.storageStreamDisconnected;
 import static se.sics.silk.TorrentTestHelper.tFileOpen;
 import static se.sics.silk.TorrentTestHelper.transferSeederConnectSucc;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.torrent.R1FileDownload.States;
 import se.sics.silk.r2torrent.torrent.event.R1FileDownloadEvents;
+import se.sics.silk.r2torrent.torrent.util.R1FileMngr;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadTimeout;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
 
@@ -123,7 +123,7 @@ public class R1FileDownloadTest {
       @Override
       public MultiFSM setupFSM(ComponentProxy proxy, Config config, R2TorrentComp.Ports ports) {
         try {
-          R1FileDownload.ES fsmEs = new R1FileDownload.ES(selfAdr, 10, defaultBlock);
+          R1FileDownload.ES fsmEs = new R1FileDownload.ES(selfAdr, 10, defaultBlock, new R1FileMngr());
           fsmEs.setProxy(proxy);
           fsmEs.setPorts(ports);
 
@@ -157,7 +157,7 @@ public class R1FileDownloadTest {
     assertTrue(tc.check());
   }
 
-  //****************************************************START TO STORAGE_PENDING************************************************
+  //****************************************************START TO STORAGE_PENDING****************************************
   @Test
   public void testStartToStoragePending() {
     tc = tc.body();
@@ -187,7 +187,7 @@ public class R1FileDownloadTest {
 
   private TestContext startToStorageSucc(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId) {
     tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null)); //1
-    tc = storageConnected(tc);//2-4
+    tc = myStorageStreamConnected(tc);//2-4
     return tc;
   }
 
@@ -205,7 +205,7 @@ public class R1FileDownloadTest {
   private TestContext startToActive(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId,
     KAddress seeder) {
     tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null)); //1
-    tc = storageConnected(tc); //2-4
+    tc = myStorageStreamConnected(tc); //2-4
     tc = transferConnected(tc, torrent, file, seeder); //5-8
     return tc;
   }
@@ -215,7 +215,7 @@ public class R1FileDownloadTest {
   public void testMultiSeederConnect() {
     tc = tc.body();
     tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null)); //1
-    tc = storageConnected(tc); //2-4
+    tc = myStorageStreamConnected(tc); //2-4
     tc = transferConnected(tc, torrent, file, seeder1); //5-8
     tc = transferConnected(tc, torrent, file, seeder2); //9-12
     tc = transferConnected(tc, torrent, file, seeder3); //13-16
@@ -230,7 +230,7 @@ public class R1FileDownloadTest {
   public void testSeederConnectDisc() {
     tc = tc.body();
     tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null)); //1
-    tc = storageConnected(tc); //2-4
+    tc = myStorageStreamConnected(tc); //2-4
     tc = transferConnected(tc, torrent, file, seeder1); //5-8
     tc = transferConnected(tc, torrent, file, seeder2); //9-12
     tc = transferConnected(tc, torrent, file, seeder3); //13-16
@@ -250,7 +250,7 @@ public class R1FileDownloadTest {
     tc = tc.body();
     tc = startToStoragePending(tc, torrent, file, streamId);
     tc = tc.trigger(close(torrent, file), triggerP);
-    tc = storageStreamDisconnect(tc, streamCtrlP, streamCtrlP);
+    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file);
@@ -263,7 +263,7 @@ public class R1FileDownloadTest {
     tc = tc.body();
     tc = startToStorageSucc(tc, torrent, file, streamId);
     tc = tc.trigger(close(torrent, file), triggerP);
-    tc = storageStreamDisconnect(tc, streamCtrlP, streamCtrlP);
+    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file);
@@ -275,7 +275,7 @@ public class R1FileDownloadTest {
   public void testActiveClose() {
     tc = tc.body();
     tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null)); //1
-    tc = storageConnected(tc); //2-4
+    tc = myStorageStreamConnected(tc); //2-4
     tc = transferConnected(tc, torrent, file, seeder1); //5-8
     tc = disconnectActive(tc, torrent, file, new KAddress[]{seeder1});
     tc = eFileIndication(tc, States.CLOSE);
@@ -290,7 +290,7 @@ public class R1FileDownloadTest {
   public void testIdleClose() {
     tc = tc.body();
     tc = tFileOpen(tc, triggerP, open(torrent, file, streamId, null)); //1
-    tc = storageConnected(tc); //2-4
+    tc = myStorageStreamConnected(tc); //2-4
     tc = transferConnected(tc, torrent, file, seeder1); //5-8
     tc = disconnectedTransfer(tc, torrent, file, seeder1); //9-12
     tc = eFileIndication(tc, States.IDLE); //13
@@ -309,7 +309,7 @@ public class R1FileDownloadTest {
     for (KAddress seeder : seeders) {
       tc = disconnectTransfer(tc, torrentId, fileId, seeder); //2-4 - x times
     }
-    tc = storageStreamDisconnect(tc, streamCtrlP, streamCtrlP);//2+3x
+    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);//2+3x
     return tc;
   }
   
@@ -326,21 +326,12 @@ public class R1FileDownloadTest {
     return tc;
   }
 
-  public TestContext storageConnected(TestContext tc) {
-    Future f = new FutureHelper.BasicFuture<DStreamConnect.Request, DStreamConnect.Success>() {
-
-      @Override
-      public DStreamConnect.Success get() {
-        return event.success(0);
-      }
-    };
-    tc = tc
-      .answerRequest(DStreamConnect.Request.class, streamCtrlP, f) //1
-      .trigger(f, streamCtrlP);//2
-    tc = eFileIndication(tc, States.STORAGE_SUCC); //3
+  public TestContext myStorageStreamConnected(TestContext tc) {
+    tc = storageStreamConnected(tc, streamCtrlP, streamCtrlP);//1-2
+    tc = eFileIndication(tc, R1FileDownload.States.STORAGE_SUCC); //3
     return tc;
   }
-
+  
   public TestContext transferConnected(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(connect(torrentId, fileId, seeder), triggerP); //1
     tc = transferSeederConnectSucc(tc, expectP, triggerP); //2-3
