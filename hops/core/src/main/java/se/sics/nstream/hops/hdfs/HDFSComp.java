@@ -19,7 +19,10 @@
 package se.sics.nstream.hops.hdfs;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.UUID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -30,6 +33,9 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.timer.CancelTimeout;
+import se.sics.kompics.timer.SchedulePeriodicTimeout;
+import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
@@ -60,6 +66,11 @@ public class HDFSComp extends ComponentDefinition {
   private final HDFSResource hdfsResource;
   private final UserGroupInformation ugi;
   private long writePos;
+  private final TreeMap<Long, DStorageWrite.Request> pending = new TreeMap<>();
+  //
+  private boolean progressed = false;
+  private UUID flushTimer;
+  private int forceFlushCounter;
 
   public HDFSComp(Init init) {
     LOG.info("{}init", logPrefix);
@@ -68,10 +79,20 @@ public class HDFSComp extends ComponentDefinition {
     hdfsResource = init.resource;
     ugi = UserGroupInformation.createRemoteUser(hdfsEndpoint.user);
     writePos = init.streamPos;
+    forceFlushCounter = forceFlushCounter();
 
     subscribe(handleStart, control);
+    subscribe(handleFlush, timerPort);
     subscribe(handleReadRequest, resourcePort);
     subscribe(handleWriteRequest, resourcePort);
+  }
+
+  private int forceFlushCounter() {
+    Result<Long> hdfsBlockSize = HDFSHelper.blockSize(ugi, hdfsEndpoint, hdfsResource);
+    long forceFlushDataSize
+      = Math.max(HardCodedConfig.minForceFlushDataSize, (hdfsBlockSize.isSuccess() ? hdfsBlockSize.getValue() : 0));
+    int counter = (int) (forceFlushDataSize / HardCodedConfig.delaBlockSize);
+    return counter;
   }
 
   //********************************CONTROL***********************************
@@ -79,11 +100,13 @@ public class HDFSComp extends ComponentDefinition {
     @Override
     public void handle(Start event) {
       LOG.info("{}starting", logPrefix);
+      schedulePeriodicCheck();
     }
   };
 
   @Override
   public void tearDown() {
+    cancelPeriodicCheck();
   }
   //**************************************************************************
   Handler handleReadRequest = new Handler<DStorageRead.Request>() {
@@ -116,15 +139,75 @@ public class HDFSComp extends ComponentDefinition {
         System.arraycopy(req.value, sourcePos, writeValue, 0, writeAmount);
         LOG.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
           new Object[]{logPrefix, req.pos, pos, req.value.length, writeAmount});
+      } else {
+        writeValue = req.value;
       }
 
-      Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, hdfsResource, req.value);
-      DStorageWrite.Response resp = req.respond(writeResult);
-
-      writePos += writeValue.length;
-      answer(req, req.respond(Result.success(true)));
+      Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, hdfsResource, writeValue);
+      if (writeResult.isSuccess()) {
+        writePos += writeValue.length;
+        pending.put(writePos, req);
+        if (pending.size() > forceFlushCounter) {
+          inspectHDFSFile();
+        }
+      } else {
+        DStorageWrite.Response resp = req.respond(writeResult);
+        answer(req, req.respond(Result.success(true)));
+      }
     }
   };
+
+  Handler handleFlush = new Handler<FlushTimeout>() {
+
+    @Override
+    public void handle(FlushTimeout event) {
+      if (pending.isEmpty() || progressed) {
+        progressed = false;
+        return;
+      }
+      HDFSHelper.flush(ugi, hdfsEndpoint, hdfsResource);
+      inspectHDFSFile();
+      progressed = false;
+    }
+  };
+
+  private void inspectHDFSFile() {
+    Result<Long> currentFilePos = HDFSHelper.length(ugi, hdfsEndpoint, hdfsResource);
+    if (!currentFilePos.isSuccess()) {
+      return;
+    }
+    Iterator<Map.Entry<Long, DStorageWrite.Request>> it = pending.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<Long, DStorageWrite.Request> next = it.next();
+      if (next.getKey() <= currentFilePos.getValue()) {
+        answer(next.getValue(), next.getValue().respond(Result.success(true)));
+        it.remove();
+        progressed = true;
+      } else {
+        break;
+      }
+    }
+  }
+
+  private void schedulePeriodicCheck() {
+    if (flushTimer != null) {
+      return;
+    }
+    SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(HardCodedConfig.flushPeriod, HardCodedConfig.flushPeriod);
+    FlushTimeout sc = new FlushTimeout(spt);
+    spt.setTimeoutEvent(sc);
+    flushTimer = sc.getTimeoutId();
+    trigger(spt, timerPort);
+  }
+
+  private void cancelPeriodicCheck() {
+    if (flushTimer == null) {
+      return;
+    }
+    CancelTimeout cpt = new CancelTimeout(flushTimer);
+    flushTimer = null;
+    trigger(cpt, timerPort);
+  }
 
   public static class Init extends se.sics.kompics.Init<HDFSComp> {
 
@@ -180,5 +263,19 @@ public class HDFSComp extends ComponentDefinition {
     public StreamEndpoint getEndpoint() {
       return endpoint;
     }
+  }
+
+  public static class FlushTimeout extends Timeout {
+
+    public FlushTimeout(SchedulePeriodicTimeout spt) {
+      super(spt);
+    }
+  }
+
+  public static class HardCodedConfig {
+
+    public static final long flushPeriod = 1000;
+    public static final long delaBlockSize = 10 * 1024 * 1024; //10MB
+    public static final long minForceFlushDataSize = 100 * 1024 * 1024; //100MB
   }
 }
