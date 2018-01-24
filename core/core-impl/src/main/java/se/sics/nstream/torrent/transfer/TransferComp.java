@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
-import javassist.NotFoundException;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -229,7 +228,7 @@ public class TransferComp extends ComponentDefinition {
             if (connMngr.hasConnCandidates()) {
                 trigger(new Seeder.Connect(connMngr.getConnCandidate(), torrentId), connPort);
             } else {
-                answer(req, req.success(Result.timeout(new NotFoundException("no peers to download manifest def"))));
+                answer(req, req.success(Result.timeout(new IllegalArgumentException("no peers to download manifest def"))));
             }
         }
     };

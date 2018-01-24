@@ -22,7 +22,6 @@ import com.google.common.base.Optional;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import javassist.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ClassMatchedHandler;
@@ -32,11 +31,11 @@ import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.kompics.util.Identifiable;
-import se.sics.kompics.util.Identifier;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.Timer;
+import se.sics.kompics.util.Identifiable;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
@@ -183,8 +182,8 @@ public class ConnectionComp extends ComponentDefinition {
                 @Override
                 public void handle(BestEffortMsg.Timeout content, KContentMsg<KAddress, KHeader<KAddress>, BestEffortMsg.Timeout> context) {
                     LOG.trace("{}timed out:{}", logPrefix, content);
-                    Object baseContent = content.getWrappedContent();
-                    Identifier netReqId = content.getWrappedContent().getId();
+                    Object baseContent = content.extractValue();
+                    Identifier netReqId = content.extractValue().getId();
                     KAddress source = context.getHeader().getSource();
 
                     if (baseContent instanceof NetConnect.Request) {
@@ -394,7 +393,7 @@ public class ConnectionComp extends ComponentDefinition {
         public void detailedState() {
             if (connected.isEmpty()) {
                 LOG.info("{}detailed state - no connection", logPrefix);
-                trigger(new DetailedState.Deliver(Result.timeout(new NotFoundException("manifest def not found"))), connPort);
+                trigger(new DetailedState.Deliver(Result.timeout(new IllegalArgumentException("manifest def not found"))), connPort);
                 return;
             }
             KAddress peer = connected.firstEntry().getValue();

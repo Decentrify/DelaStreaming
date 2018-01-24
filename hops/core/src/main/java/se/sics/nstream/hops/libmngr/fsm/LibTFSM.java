@@ -18,12 +18,12 @@
  */
 package se.sics.nstream.hops.libmngr.fsm;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBuilder;
-import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.FSMInternalStateBuilder;
 import se.sics.kompics.fsm.MultiFSM;
@@ -100,64 +100,64 @@ public class LibTFSM {
   private static FSMBuilder.SemanticDefinition semanticDef() throws FSMException {
     return FSMBuilder.semanticDef()
       .negativePort(TorrentRestartPort.class)
-      .onBasicEvent(TorrentRestart.DwldReq.class)
+      .basicEvent(TorrentRestart.DwldReq.class)
       .subscribeOnStart(LibTHandlers.initDownloadRestart)
-      .onBasicEvent(TorrentRestart.UpldReq.class)
+      .basicEvent(TorrentRestart.UpldReq.class)
       .subscribeOnStart(LibTHandlers.initUploadRestart)
       .buildEvents()
       .negativePort(HopsTorrentPort.class)
-      .onBasicEvent(TorrentExtendedStatusEvent.Request.class)
+      .basicEvent(TorrentExtendedStatusEvent.Request.class)
       .subscribe(LibTHandlers.status, LibTStates.DOWNLOADING)
-      .onBasicEvent(HopsTorrentStopEvent.Request.class)
+      .basicEvent(HopsTorrentStopEvent.Request.class)
       .subscribeOnStart(LibTHandlers.stop0)
       .subscribe(LibTHandlers.stop1, LibTStates.PREPARE_MANIFEST_STORAGE)
       .subscribe(LibTHandlers.stop2, LibTStates.PREPARE_TRANSFER, LibTStates.DOWNLOAD_MANIFEST,
         LibTStates.EXTENDED_DETAILS, LibTStates.ADVANCE_TRANSFER)
       .subscribe(LibTHandlers.stop3, LibTStates.DOWNLOADING, LibTStates.UPLOADING)
       .subscribe(LibTHandlers.stop4, LibTStates.CLEAN_TRANSFER, LibTStates.CLEAN_STORAGE)
-      .onBasicEvent(HopsTorrentUploadEvent.Request.class)
+      .basicEvent(HopsTorrentUploadEvent.Request.class)
       .subscribeOnStart(LibTHandlers.initUpload)
       .fallback(LibTHandlers.fallbackUploadStart)
-      .onBasicEvent(HopsTorrentDownloadEvent.StartRequest.class)
+      .basicEvent(HopsTorrentDownloadEvent.StartRequest.class)
       .subscribeOnStart(LibTHandlers.initDownload)
       .fallback(LibTHandlers.fallbackUploadStart)
-      .onBasicEvent(HopsTorrentDownloadEvent.AdvanceRequest.class)
+      .basicEvent(HopsTorrentDownloadEvent.AdvanceRequest.class)
       .subscribe(LibTHandlers.extendedDetails, LibTStates.EXTENDED_DETAILS)
       .buildEvents()
       .positivePort(TransferCtrlPort.class)
-      .onBasicEvent(GetRawTorrent.Response.class)
+      .basicEvent(GetRawTorrent.Response.class)
       .subscribe(LibTHandlers.downloadManifest, LibTStates.DOWNLOAD_MANIFEST)
-      .onBasicEvent(SetupTransfer.Response.class)
+      .basicEvent(SetupTransfer.Response.class)
       .subscribe(LibTHandlers.advanceTransfer, LibTStates.ADVANCE_TRANSFER)
       .buildEvents()
       .positivePort(TorrentStatusPort.class)
-      .onBasicEvent(DownloadSummaryEvent.class)
+      .basicEvent(DownloadSummaryEvent.class)
       .subscribe(LibTHandlers.downloadCompleted, LibTStates.DOWNLOADING)
-      .onBasicEvent(StatusSummaryEvent.Response.class)
+      .basicEvent(StatusSummaryEvent.Response.class)
       .subscribe(LibTHandlers.statusReport, LibTStates.DOWNLOADING)
       .buildEvents()
       .positivePort(TorrentMngrPort.class)
-      .onBasicEvent(StartTorrent.Response.class)
+      .basicEvent(StartTorrent.Response.class)
       .subscribe(LibTHandlers.prepareTransfer, LibTStates.PREPARE_TRANSFER)
-      .onBasicEvent(StopTorrent.Response.class)
+      .basicEvent(StopTorrent.Response.class)
       .subscribe(LibTHandlers.transferCleaning, LibTStates.CLEAN_TRANSFER)
       .buildEvents()
       .positivePort(DEndpointCtrlPort.class)
-      .onBasicEvent(DEndpoint.Success.class)
+      .basicEvent(DEndpoint.Success.class)
       .subscribe(LibTHandlers.prepareManifestStorage, LibTStates.PREPARE_MANIFEST_STORAGE)
       .subscribe(LibTHandlers.prepareFilesStorage, LibTStates.PREPARE_FILES_STORAGE)
-      .onBasicEvent(DEndpoint.Disconnected.class)
+      .basicEvent(DEndpoint.Disconnected.class)
       .subscribe(LibTHandlers.endpointCleaning, LibTStates.CLEAN_STORAGE)
       .buildEvents();
   }
   static BaseIdExtractor baseIdExtractor = new BaseIdExtractor() {
 
     @Override
-    public Optional<Identifier> fromEvent(FSMEvent event) throws FSMException {
+    public Optional<Identifier> fromEvent(KompicsEvent event) throws FSMException {
       if (event instanceof LibTFSMEvent) {
         return Optional.of(((LibTFSMEvent) event).getLibTFSMId());
       }
-      return Optional.absent();
+      return Optional.empty();
     }
   };
 

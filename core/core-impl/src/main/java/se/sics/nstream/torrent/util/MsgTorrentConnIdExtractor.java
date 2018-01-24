@@ -18,13 +18,13 @@
  */
 package se.sics.nstream.torrent.util;
 
+import se.sics.kompics.PatternExtractor;
 import se.sics.kompics.util.Identifier;
+import se.sics.kompics.util.PatternExtractorHelper;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.msg.ConnectionMsg;
-import se.sics.nutil.ContentWrapper;
-import se.sics.nutil.ContentWrapperHelper;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 
 /**
@@ -46,8 +46,8 @@ public class MsgTorrentConnIdExtractor extends ChannelIdExtractor<KContentMsg, I
         }
         Object baseContent = msg.getContent();
         ConnId connId = null;
-        if(baseContent instanceof ContentWrapper) {
-            baseContent = ContentWrapperHelper.getBaseContent((ContentWrapper)baseContent, Object.class);
+        if(baseContent instanceof PatternExtractor) {
+            baseContent = PatternExtractorHelper.peelAllLayers((PatternExtractor)baseContent);
         }
         if(baseContent instanceof ConnectionMsg) {
             connId = ((ConnectionMsg)baseContent).getConnectionId(targetId);

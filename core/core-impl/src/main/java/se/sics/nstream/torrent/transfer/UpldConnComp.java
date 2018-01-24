@@ -35,12 +35,12 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
+import se.sics.kompics.util.Identifiable;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
@@ -183,7 +183,7 @@ public class UpldConnComp extends ComponentDefinition {
     = new ClassMatchedHandler<LedbatMsg.Request, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request>>() {
       @Override
       public void handle(LedbatMsg.Request content, KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Request> context) {
-        Object baseContent = content.getWrappedContent();
+        Object baseContent = content.extractValue();
         if (baseContent instanceof DownloadPiece.Request) {
           handlePiece(context, content);
         } else if (baseContent instanceof DownloadHash.Request) {
@@ -196,37 +196,37 @@ public class UpldConnComp extends ComponentDefinition {
     };
 
   public void handlePiece(KContentMsg msg, LedbatMsg.Request<DownloadPiece.Request> content) {
-    int blockNr = content.getWrappedContent().piece.getValue0();
+    int blockNr = content.extractValue().piece.getValue0();
     BlockDetails blockDetails = irregularBlocks.containsKey(blockNr) ? irregularBlocks.get(blockNr) : defaultBlock;
     KReference<byte[]> block = servedBlocks.get(blockNr);
     if (block == null) {
-      LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().badRequest());
+      LedbatMsg.Response ledbatContent = content.answer(content.extractValue().badRequest());
       answerMsg(msg, ledbatContent);
     } else {
-      KPiece pieceRange = BlockHelper.getPieceRange(content.getWrappedContent().piece, blockDetails, defaultBlock);
+      KPiece pieceRange = BlockHelper.getPieceRange(content.extractValue().piece, blockDetails, defaultBlock);
       //retain block here(range create) - release in serializer
       RangeKReference piece = RangeKReference.createInstance(block, BlockHelper.getBlockPos(blockNr, defaultBlock),
         pieceRange);
-      LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(piece));
+      LedbatMsg.Response ledbatContent = content.answer(content.extractValue().success(piece));
       answerMsg(msg, ledbatContent);
     }
   }
 
   public void handleHashes(KContentMsg msg, LedbatMsg.Request<DownloadHash.Request> content) {
     Map<Integer, byte[]> hashValues = new TreeMap<>();
-    for (Integer hashNr : content.getWrappedContent().hashes) {
+    for (Integer hashNr : content.extractValue().hashes) {
       byte[] hashVal = servedHashes.get(hashNr);
       if (hashVal == null) {
         LOG.warn("{}no hash for:{} - not serving incomplete", logPrefix, hashNr);
         LOG.warn("{}no hash - serving blocks:{}", logPrefix, servedBlocks.keySet());
         LOG.warn("{}no hash - serving hashes:{}", logPrefix, servedHashes.keySet());
-        LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().badRequest());
+        LedbatMsg.Response ledbatContent = content.answer(content.extractValue().badRequest());
         answerMsg(msg, ledbatContent);
         return;
       }
       hashValues.put(hashNr, hashVal);
     }
-    LedbatMsg.Response ledbatContent = content.answer(content.getWrappedContent().success(hashValues));
+    LedbatMsg.Response ledbatContent = content.answer(content.extractValue().success(hashValues));
     answerMsg(msg, ledbatContent);
   }
   //**************************************************************************
