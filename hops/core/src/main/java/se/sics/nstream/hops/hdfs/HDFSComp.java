@@ -28,7 +28,9 @@ import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
+import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.ktoolbox.util.result.Result;
@@ -46,136 +48,137 @@ import se.sics.nstream.storage.durable.util.StreamResource;
  */
 public class HDFSComp extends ComponentDefinition {
 
-    private final static Logger LOG = LoggerFactory.getLogger(HDFSComp.class);
-    private String logPrefix = "";
+  private final static Logger LOG = LoggerFactory.getLogger(HDFSComp.class);
+  private String logPrefix = "";
 
-    Negative<DStoragePort> resourcePort = provides(DStoragePort.class);
-    One2NChannel resourceChannel;
+  Positive<Timer> timerPort = requires(Timer.class);
+  Negative<DStoragePort> resourcePort = provides(DStoragePort.class);
+  One2NChannel resourceChannel;
 
-    private Map<Identifier, Component> components = new HashMap<>();
-    private final HDFSEndpoint hdfsEndpoint;
-    private final HDFSResource hdfsResource;
-    private final UserGroupInformation ugi;
-    private long writePos;
+  private Map<Identifier, Component> components = new HashMap<>();
+  private final HDFSEndpoint hdfsEndpoint;
+  private final HDFSResource hdfsResource;
+  private final UserGroupInformation ugi;
+  private long writePos;
 
-    public HDFSComp(Init init) {
-        LOG.info("{}init", logPrefix);
+  public HDFSComp(Init init) {
+    LOG.info("{}init", logPrefix);
 
-        hdfsEndpoint = init.endpoint;
-        hdfsResource = init.resource;
-        ugi = UserGroupInformation.createRemoteUser(hdfsEndpoint.user);
-        writePos = init.streamPos;
+    hdfsEndpoint = init.endpoint;
+    hdfsResource = init.resource;
+    ugi = UserGroupInformation.createRemoteUser(hdfsEndpoint.user);
+    writePos = init.streamPos;
 
-        subscribe(handleStart, control);
-        subscribe(handleReadRequest, resourcePort);
-        subscribe(handleWriteRequest, resourcePort);
+    subscribe(handleStart, control);
+    subscribe(handleReadRequest, resourcePort);
+    subscribe(handleWriteRequest, resourcePort);
+  }
+
+  //********************************CONTROL***********************************
+  Handler handleStart = new Handler<Start>() {
+    @Override
+    public void handle(Start event) {
+      LOG.info("{}starting", logPrefix);
     }
+  };
 
-    //********************************CONTROL***********************************
-    Handler handleStart = new Handler<Start>() {
-        @Override
-        public void handle(Start event) {
-            LOG.info("{}starting", logPrefix);
-        }
-    };
+  @Override
+  public void tearDown() {
+  }
+  //**************************************************************************
+  Handler handleReadRequest = new Handler<DStorageRead.Request>() {
+    @Override
+    public void handle(DStorageRead.Request req) {
+      LOG.trace("{}received:{}", logPrefix, req);
+      Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, hdfsResource, req.readRange);
+      DStorageRead.Response resp = req.respond(readResult);
+      LOG.trace("{}answering:{}", logPrefix, resp);
+      answer(req, resp);
+    }
+  };
+
+  Handler handleWriteRequest = new Handler<DStorageWrite.Request>() {
+    @Override
+    public void handle(DStorageWrite.Request req) {
+      LOG.info("{}write:{}", logPrefix, req);
+      if (writePos >= req.pos + req.value.length) {
+        LOG.info("{}write with pos:{} skipped", logPrefix, req.pos);
+        answer(req, req.respond(Result.success(true)));
+        return;
+      }
+      long pos = req.pos;
+      byte[] writeValue = req.value;
+      if (writePos > req.pos) {
+        pos = writePos;
+        int sourcePos = (int) (pos - writePos);
+        int writeAmount = req.value.length - sourcePos;
+        writeValue = new byte[writeAmount];
+        System.arraycopy(req.value, sourcePos, writeValue, 0, writeAmount);
+        LOG.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
+          new Object[]{logPrefix, req.pos, pos, req.value.length, writeAmount});
+      }
+
+      Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, hdfsResource, req.value);
+      DStorageWrite.Response resp = req.respond(writeResult);
+
+      writePos += writeValue.length;
+      answer(req, req.respond(Result.success(true)));
+    }
+  };
+
+  public static class Init extends se.sics.kompics.Init<HDFSComp> {
+
+    public final HDFSEndpoint endpoint;
+    public final HDFSResource resource;
+    public final UserGroupInformation ugi;
+    public final long streamPos;
+
+    public Init(HDFSEndpoint endpoint, HDFSResource resource, UserGroupInformation ugi, long streamPos) {
+      this.endpoint = endpoint;
+      this.resource = resource;
+      this.ugi = ugi;
+      this.streamPos = streamPos;
+    }
+  }
+
+  public static class StorageProvider implements DurableStorageProvider<HDFSComp> {
+
+    public final Identifier self;
+    public final HDFSEndpoint endpoint;
+
+    public StorageProvider(Identifier self, HDFSEndpoint endpoint) {
+      this.self = self;
+      this.endpoint = endpoint;
+    }
 
     @Override
-    public void tearDown() {
-    }
-    //**************************************************************************
-    Handler handleReadRequest = new Handler<DStorageRead.Request>() {
-        @Override
-        public void handle(DStorageRead.Request req) {
-            LOG.trace("{}received:{}", logPrefix, req);
-            Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, hdfsResource, req.readRange);
-            DStorageRead.Response resp = req.respond(readResult);
-            LOG.trace("{}answering:{}", logPrefix, resp);
-            answer(req, resp);
-        }
-    };
-
-    Handler handleWriteRequest = new Handler<DStorageWrite.Request>() {
-        @Override
-        public void handle(DStorageWrite.Request req) {
-            LOG.info("{}write:{}", logPrefix, req);
-            if (writePos >= req.pos + req.value.length) {
-                LOG.info("{}write with pos:{} skipped", logPrefix, req.pos);
-                answer(req, req.respond(Result.success(true)));
-                return;
-            }
-            long pos = req.pos;
-            byte[] writeValue = req.value;
-            if (writePos > req.pos) {
-                pos = writePos;
-                int sourcePos = (int) (pos - writePos);
-                int writeAmount = req.value.length - sourcePos;
-                writeValue = new byte[writeAmount];
-                System.arraycopy(req.value, sourcePos, writeValue, 0, writeAmount);
-                LOG.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
-                        new Object[]{logPrefix, req.pos, pos, req.value.length, writeAmount});
-            }
-
-            Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, hdfsResource, req.value);
-            DStorageWrite.Response resp = req.respond(writeResult);
-
-            writePos += writeValue.length;
-            answer(req, req.respond(Result.success(true)));
-        }
-    };
-
-    public static class Init extends se.sics.kompics.Init<HDFSComp> {
-
-        public final HDFSEndpoint endpoint;
-        public final HDFSResource resource;
-        public final UserGroupInformation ugi;
-        public final long streamPos;
-
-        public Init(HDFSEndpoint endpoint, HDFSResource resource, UserGroupInformation ugi, long streamPos) {
-            this.endpoint = endpoint;
-            this.resource = resource;
-            this.ugi = ugi;
-            this.streamPos = streamPos;
-        }
+    public Pair<HDFSComp.Init, Long> initiate(StreamResource resource) {
+      HDFSResource hdfsResource = (HDFSResource) resource;
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
+      Result<Long> streamPos = HDFSHelper.length(ugi, endpoint, hdfsResource);
+      if (!streamPos.isSuccess()) {
+        throw new RuntimeException(streamPos.getException());
+      }
+      if (streamPos.getValue() == -1) {
+        HDFSHelper.simpleCreate(ugi, endpoint, hdfsResource);
+      }
+      HDFSComp.Init init = new HDFSComp.Init(endpoint, hdfsResource, ugi, streamPos.getValue());
+      return Pair.with(init, streamPos.getValue());
     }
 
-    public static class StorageProvider implements DurableStorageProvider<HDFSComp> {
-
-        public final Identifier self;
-        public final HDFSEndpoint endpoint;
-
-        public StorageProvider(Identifier self, HDFSEndpoint endpoint) {
-            this.self = self;
-            this.endpoint = endpoint;
-        }
-
-        @Override
-        public Pair<HDFSComp.Init, Long> initiate(StreamResource resource) {
-            HDFSResource hdfsResource = (HDFSResource) resource;
-            UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-            Result<Long> streamPos = HDFSHelper.length(ugi, endpoint, hdfsResource);
-            if (!streamPos.isSuccess()) {
-                throw new RuntimeException(streamPos.getException());
-            }
-            if (streamPos.getValue() == -1) {
-                HDFSHelper.simpleCreate(ugi, endpoint, hdfsResource);
-            }
-            HDFSComp.Init init = new HDFSComp.Init(endpoint, hdfsResource, ugi, streamPos.getValue());
-            return Pair.with(init, streamPos.getValue());
-        }
-
-        @Override
-        public String getName() {
-            return endpoint.getEndpointName();
-        }
-
-        @Override
-        public Class<HDFSComp> getStorageDefinition() {
-            return HDFSComp.class;
-        }
-
-        @Override
-        public StreamEndpoint getEndpoint() {
-            return endpoint;
-        }
+    @Override
+    public String getName() {
+      return endpoint.getEndpointName();
     }
+
+    @Override
+    public Class<HDFSComp> getStorageDefinition() {
+      return HDFSComp.class;
+    }
+
+    @Override
+    public StreamEndpoint getEndpoint() {
+      return endpoint;
+    }
+  }
 }

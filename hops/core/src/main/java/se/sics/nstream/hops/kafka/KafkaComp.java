@@ -24,7 +24,9 @@ import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
+import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DurableStorageProvider;
@@ -39,6 +41,7 @@ public class KafkaComp extends ComponentDefinition {
     private final static Logger LOG = LoggerFactory.getLogger(KafkaComp.class);
     private String logPrefix = "";
 
+    Positive<Timer> timerPort = requires(Timer.class);
     Negative<DStoragePort> streamPort = provides(DStoragePort.class);
     KafkaProxy kafka;
     

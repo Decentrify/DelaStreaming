@@ -28,7 +28,9 @@ import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
+import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.storage.disk.DiskEndpoint;
@@ -49,6 +51,7 @@ public class DiskComp extends ComponentDefinition {
     private final static Logger LOG = LoggerFactory.getLogger(DiskComp.class);
     private String logPrefix = "";
 
+    Positive<Timer> timerPort = requires(Timer.class);
     private final Negative storagePort = provides(DStoragePort.class);
     //**************************************************************************
     private final Identifier self;
