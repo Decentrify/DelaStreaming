@@ -59,9 +59,9 @@ import static se.sics.silk.TorrentTestHelper.storageStreamConnected;
 import static se.sics.silk.TorrentTestHelper.storageStreamDisconnected;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
+import se.sics.silk.r2torrent.torrent.R1FileUpload.R1FileMngr;
 import se.sics.silk.r2torrent.torrent.R1FileUpload.States;
 import se.sics.silk.r2torrent.torrent.event.R1FileUploadEvents;
-import se.sics.silk.r2torrent.torrent.util.R1FileMngr;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 import se.sics.silk.r2torrent.transfer.events.R1UploadTimeout;
 
@@ -87,7 +87,7 @@ public class R1FileUploadTest {
   private KAddress leecher1;
   private KAddress leecher2;
   private KAddress leecher3;
-  private R1FileMngr fileMngr = new R1FileMngr();
+  private R1FileMngr fileMngr;
   private BlockDetails defaultBlock;
 
   @BeforeClass
@@ -107,6 +107,7 @@ public class R1FileUploadTest {
     file = intIdFactory.id(new BasicBuilders.IntBuilder(1));
     streamId = TorrentIdHelper.streamId(endpointId, torrent, file);
     defaultBlock = new BlockDetails(1024 * 100 + 10, 100, 1024, 10);
+    fileMngr = new R1FileMngr(endpointId, torrent);
 
     tc = getContext();
     comp = tc.getComponentUnderTest();
@@ -159,7 +160,6 @@ public class R1FileUploadTest {
   //****************************************************START TO STORAGE_PENDING****************************************
   @Test
   public void testStartToStoragePending1() {
-    fileMngr.completed(file, streamId, null);
     tc = tc.body();
     tc = startToStoragePending1(tc, torrent, file, leecher1);//1-2
     tc.repeat(1).body().end();
@@ -176,7 +176,6 @@ public class R1FileUploadTest {
 
   @Test
   public void testStartToStoragePending2() {
-    fileMngr.completed(file, streamId, null);
     tc = tc.body();
     tc = startToStoragePending2(tc, torrent, file, leecher1); //1-3
     tc.repeat(1).body().end();
@@ -195,7 +194,6 @@ public class R1FileUploadTest {
   //****************************************************START TO ACTIVE*************************************************
   @Test
   public void testStartToStorageSucc1() {
-    fileMngr.completed(file, streamId, null);
     tc = tc.body();
     tc = startToStorageSucc1(tc, torrent, file, leecher1);//1-5
     tc.repeat(1).body().end();
@@ -214,7 +212,6 @@ public class R1FileUploadTest {
 
   @Test
   public void testStartToStorageSucc2() {
-    fileMngr.completed(file, streamId, null);
     tc = tc.body();
     tc = startToStorageSucc2(tc, torrent, file, leecher1, leecher2);//1-6
     tc.repeat(1).body().end();
@@ -246,7 +243,6 @@ public class R1FileUploadTest {
   //*******************************************************DISCONNECT***************************************************
   @Test
   public void testTransferDisconnected1() {
-    fileMngr.completed(file, streamId, null);
     tc = tc.body();
     tc = tc.trigger(connect(torrent, file, leecher1), triggerP); //1
     tc = storageStreamConnected(tc, streamCtrlP, streamCtrlP);//2-3
@@ -262,7 +258,6 @@ public class R1FileUploadTest {
   
   @Test
   public void testTransferDisconnected2() {
-    fileMngr.completed(file, streamId, null);
     tc = tc.body();
     tc = tc.trigger(connect(torrent, file, leecher1), triggerP); //1
     tc = storageStreamConnected(tc, streamCtrlP, streamCtrlP);//2-3

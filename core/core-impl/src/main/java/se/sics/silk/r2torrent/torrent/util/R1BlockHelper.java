@@ -16,17 +16,29 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.transfer;
-
-import se.sics.kompics.PortType;
-import se.sics.silk.r2torrent.transfer.events.R1DownloadEvents;
+package se.sics.silk.r2torrent.torrent.util;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1DownloadPort extends PortType {
-  {
-    request(R1DownloadEvents.GetBlocks.class);
-    indication(R1DownloadEvents.Completed.class);
+public class R1BlockHelper {
+  /**
+   * @param pos - first unwritten byte in the file
+   * @param fileMetadata
+   * @return 
+   */
+  public static int blockNrFromPos(long pos, R1FileMetadata fileMetadata) {
+    int blockNr = (int) (pos / fileMetadata.defaultBlock.blockSize);
+    if (blockNr == fileMetadata.nrBlocks - 1) {
+      int lastBlockSize = (int) (pos % fileMetadata.defaultBlock.blockSize);
+      if (lastBlockSize == fileMetadata.lastBlock.blockSize) {
+        blockNr++;
+      }
+    }
+    return blockNr;
+  }
+  
+  public static long posFromBlockNr(int blockNr, R1FileMetadata fileMetadata) {
+    return blockNr * fileMetadata.defaultBlock.blockSize;
   }
 }

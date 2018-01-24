@@ -16,29 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.torrent.state;
+package se.sics.silk.r2torrent.storage.sink;
 
-import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
+import se.sics.nstream.StreamId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class FileLeecherState {
-  public final R1TransferLeecherEvents.ConnectReq req;
-  public final KAddress leecher;
-  
-  public FileLeecherState(R1TransferLeecherEvents.ConnectReq req) {
-    this.req = req;
-    this.leecher = req.leecherAdr;
-  }
-  
-  public void pending() {
-  }
-  
-  public void connected() {
-  }
-
-  public void clear() {
-  }
+public interface R1SinkSend {
+  public void writeToSink(StreamId streamId, long pos, byte[] value);
 }

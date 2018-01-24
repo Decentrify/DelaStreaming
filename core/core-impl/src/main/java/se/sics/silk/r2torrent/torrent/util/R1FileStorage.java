@@ -16,26 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.torrent.state;
+package se.sics.silk.r2torrent.torrent.util;
 
-import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class FileSeederState {
-  public final KAddress seeder;
+public class R1FileStorage {
+  public StreamId streamId;
+  public MyStream stream;
   
-  public FileSeederState(KAddress seeder) {
-    this.seeder = seeder;
-  }
-  
-  public void pending() {
-  }
-  
-  public void connected() {
-  }
-
-  public void clear() {
-  }
+  public R1FileStorage(StreamId streamId, MyStream stream) {
+    this.streamId = streamId;
+    this.stream = stream;
+  } 
 }

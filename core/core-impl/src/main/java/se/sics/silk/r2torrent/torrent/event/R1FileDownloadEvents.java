@@ -22,8 +22,6 @@ import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.nstream.StreamId;
-import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.torrent.R1FileDownload;
 
@@ -34,13 +32,8 @@ public class R1FileDownloadEvents {
 
   public static class Start extends SilkEvent.E4 implements R1FileDownload.CtrlEvent {
 
-    public final StreamId streamId;
-    public final MyStream stream;
-
-    public Start(OverlayId torrentId, Identifier fileId, StreamId streamId, MyStream stream) {
+    public Start(OverlayId torrentId, Identifier fileId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
-      this.streamId = streamId;
-      this.stream = stream;
     }
   }
 

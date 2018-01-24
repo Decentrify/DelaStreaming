@@ -16,17 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.transfer;
+package se.sics.silk.util;
 
-import se.sics.kompics.PortType;
-import se.sics.silk.r2torrent.transfer.events.R1DownloadEvents;
+import org.junit.Assert;
+import org.junit.Test;
+import se.sics.nstream.tracker.ComponentTracker;
+import se.sics.nstream.tracker.IncompleteTracker;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1DownloadPort extends PortType {
-  {
-    request(R1DownloadEvents.GetBlocks.class);
-    indication(R1DownloadEvents.Completed.class);
+public class IncompleteTrackerTest {
+
+  @Test
+  public void test1() {
+    ComponentTracker tracker = IncompleteTracker.create(6, 0);
+    Assert.assertEquals(0, tracker.nextComponentMissing(0));
+    tracker.addComponent(3);
+    tracker.addComponent(4);
+    Assert.assertEquals(5, tracker.nextComponentMissing(3));
+    tracker.addComponent(0);
+    tracker.addComponent(1);
+    tracker.addComponent(2);
+    Assert.assertEquals(5, tracker.nextComponentMissing(0));
+    Assert.assertFalse(tracker.isComplete());
+    tracker.addComponent(5);
+    Assert.assertEquals(-1, tracker.nextComponentMissing(0));
+    Assert.assertTrue(tracker.isComplete());
   }
 }

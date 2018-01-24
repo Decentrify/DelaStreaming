@@ -18,6 +18,7 @@
  */
 package se.sics.silk.r2torrent.transfer;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.javatuples.Pair;
@@ -48,6 +49,7 @@ import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
+import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadEvents;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadTimeout;
 import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
@@ -69,6 +71,7 @@ public class R1DownloadComp extends ComponentDefinition {
   public final KAddress seederAdr;
   public final R1DownloadBlockTracker blockTracker;
   public final R1Cwnd cwnd;
+  private final R1FileMetadata fileMetadata;
   private UUID timerId;
 
   public R1DownloadComp(Init init) {
@@ -77,7 +80,8 @@ public class R1DownloadComp extends ComponentDefinition {
     seederAdr = init.seederAdr;
     torrentId = init.torrentId;
     fileId = init.fileId;
-    blockTracker = new R1DownloadBlockTracker(init.defaultBlock, true);
+    this.fileMetadata = init.fileMetadata;
+    blockTracker = new R1DownloadBlockTracker(fileMetadata.defaultBlock, true);
     cwnd = new R1Cwnd(HardCodedConfig.CWND_SIZE);
     subscribe(handleStart, control);
     subscribe(handleNewBlocks, ports.ctrl);
@@ -100,16 +104,20 @@ public class R1DownloadComp extends ComponentDefinition {
       scheduleTimer();
     }
   };
-  
+
   public void tearDown() {
     cancelTimer();
   }
 
-  private Handler handleNewBlocks = new Handler<R1DownloadEvents.GetBlock>() {
+  private Handler handleNewBlocks = new Handler<R1DownloadEvents.GetBlocks>() {
     @Override
-    public void handle(R1DownloadEvents.GetBlock event) {
+    public void handle(R1DownloadEvents.GetBlocks event) {
       LOG.trace("{}new blocks:{}", logPrefix, event.blocks);
-      blockTracker.add(event.blocks, event.irregularBlocks);
+      Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
+      if (event.blocks.contains(fileMetadata.finalBlock)) {
+        irregularBlocks.put(fileMetadata.finalBlock, fileMetadata.lastBlock);
+      }
+      blockTracker.add(event.blocks, irregularBlocks);
     }
   };
 
@@ -188,14 +196,14 @@ public class R1DownloadComp extends ComponentDefinition {
       tryDownload();
     }
   };
+
   private void checkComplete() {
     if (blockTracker.hasComplete()) {
-      Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = blockTracker.getComplete();
-      LOG.trace("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(),
-        completed.getValue1().keySet()});
-      R1DownloadEvents.Completed ind = new R1DownloadEvents.Completed(torrentId, fileId, seederAdr.getId(),
-        completed.getValue0(), completed.getValue1());
-      trigger(ind, ports.ctrl);
+      Map<Integer, Pair<byte[], byte[]>> completed = blockTracker.getComplete();
+      LOG.trace("{}completed blocks:{}", new Object[]{logPrefix, completed.keySet()});
+      completed.entrySet().stream().forEach((entry) -> {
+        trigger(new R1DownloadEvents.Completed(torrentId, fileId, seederAdr.getId(), entry), ports.ctrl);
+      });
     }
   }
 
@@ -219,7 +227,7 @@ public class R1DownloadComp extends ComponentDefinition {
       cwnd.send(req.eventId);
     }
   }
-  
+
   private <C extends KompicsEvent & Identifiable> void bestEffortMsg(C content) {
     KHeader header = new BasicHeader(selfAdr, seederAdr, Transport.UDP);
     BestEffortMsg.Request wrap
@@ -227,7 +235,7 @@ public class R1DownloadComp extends ComponentDefinition {
     KContentMsg msg = new BasicContentMsg(header, wrap);
     trigger(msg, ports.network);
   }
-  
+
   private void scheduleTimer() {
     SchedulePeriodicTimeout spt
       = new SchedulePeriodicTimeout(HardCodedConfig.timeoutPeriod, HardCodedConfig.timeoutPeriod);
@@ -252,16 +260,16 @@ public class R1DownloadComp extends ComponentDefinition {
     public final Identifier fileId;
     public final KAddress seederAdr;
     public final int blockSlots;
-    public final BlockDetails defaultBlock;
+    public final R1FileMetadata fileMetadata;
 
     public Init(KAddress selfAdr, OverlayId torrentId, Identifier fileId, KAddress seederAdr, int blockSlots,
-      BlockDetails defaultBlock) {
+      R1FileMetadata fileMetadata) {
       this.selfAdr = selfAdr;
       this.torrentId = torrentId;
       this.fileId = fileId;
       this.seederAdr = seederAdr;
       this.blockSlots = blockSlots;
-      this.defaultBlock = defaultBlock;
+      this.fileMetadata = fileMetadata;
     }
   }
 

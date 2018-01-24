@@ -20,10 +20,10 @@ package se.sics.silk.r2torrent.transfer.events;
 
 import java.util.Map;
 import java.util.Set;
+import org.javatuples.Pair;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.torrent.R1FileDownload;
 
@@ -31,25 +31,30 @@ import se.sics.silk.r2torrent.torrent.R1FileDownload;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1DownloadEvents {
-  public static class GetBlock extends SilkEvent.E2 implements R1DownloadEvent {
+  public static class GetBlocks extends SilkEvent.E2 implements R1DownloadEvent {
     public final Set<Integer> blocks;
-    public final Map<Integer, BlockDetails> irregularBlocks;
-    public GetBlock(Identifier eventId, OverlayId torrentId, Identifier fileId, Identifier seederId, 
-      Set<Integer> blocks, Map<Integer, BlockDetails> irregularBlocks) {
-      super(eventId, torrentId, fileId, seederId);
+    public GetBlocks(OverlayId torrentId, Identifier fileId, Identifier seederId, 
+      Set<Integer> blocks) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId, seederId);
       this.blocks = blocks;
-      this.irregularBlocks = irregularBlocks;
     }
   }
   
   public static class Completed extends SilkEvent.E2 implements R1FileDownload.DownloadEvent {
-    public final Map<Integer, byte[]> hashes;
-    public final Map<Integer, byte[]> blocks;
+    public final int block; 
+    public final byte[] value;
+    public final byte[] hash;
     public Completed(OverlayId torrentId, Identifier fileId, Identifier seederId, 
-      Map<Integer, byte[]> hashes, Map<Integer, byte[]> blocks) {
+      int block, byte[] value, byte[] hash) {
       super(BasicIdentifiers.eventId(), torrentId, fileId, seederId);
-      this.hashes = hashes;
-      this.blocks = blocks;
+      this.block = block;
+      this.value = value;
+      this.hash = hash;
+    }
+    
+    public Completed(OverlayId torrentId, Identifier fileId, Identifier seederId, 
+      Map.Entry<Integer, Pair<byte[], byte[]>> block) {
+      this(torrentId, fileId, seederId, block.getKey(), block.getValue().getValue0(), block.getValue().getValue1());
     }
   }
 }

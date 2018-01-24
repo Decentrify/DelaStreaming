@@ -16,17 +16,29 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.transfer;
+package se.sics.silk.r2torrent.torrent.state;
 
-import se.sics.kompics.PortType;
-import se.sics.silk.r2torrent.transfer.events.R1DownloadEvents;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1DownloadPort extends PortType {
-  {
-    request(R1DownloadEvents.GetBlocks.class);
-    indication(R1DownloadEvents.Completed.class);
+public class R1FileUploadLeecherState {
+  public final R1TransferLeecherEvents.ConnectReq req;
+  public final KAddress leecher;
+  
+  public R1FileUploadLeecherState(R1TransferLeecherEvents.ConnectReq req) {
+    this.req = req;
+    this.leecher = req.leecherAdr;
+  }
+  
+  public void pending() {
+  }
+  
+  public void connected() {
+  }
+
+  public void clear() {
   }
 }

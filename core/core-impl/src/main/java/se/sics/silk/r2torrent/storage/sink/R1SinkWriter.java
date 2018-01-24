@@ -16,17 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.transfer;
+package se.sics.silk.r2torrent.storage.sink;
 
-import se.sics.kompics.PortType;
-import se.sics.silk.r2torrent.transfer.events.R1DownloadEvents;
+import se.sics.nstream.StreamId;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1DownloadPort extends PortType {
-  {
-    request(R1DownloadEvents.GetBlocks.class);
-    indication(R1DownloadEvents.Completed.class);
-  }
+public interface R1SinkWriter {
+  public void write(StreamId streamId, long pos, byte[] value, R1SinkWriteCallback callback);
 }

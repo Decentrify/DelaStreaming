@@ -64,7 +64,7 @@ public class BlockHelper {
         }
         return blockNr;
     }
-
+    
     public static int getBlockNr(long pieceNr, FileBaseDetails fileDetails) {
         int blockNr = (int) (pieceNr / fileDetails.defaultBlock.nrPieces);
         return blockNr;

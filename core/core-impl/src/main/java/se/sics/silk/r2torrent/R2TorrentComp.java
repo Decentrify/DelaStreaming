@@ -38,6 +38,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
+import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
@@ -163,6 +164,7 @@ public class R2TorrentComp extends ComponentDefinition {
     public final Positive<R1UploadPort> upload;
     public final Positive<Network> network;
     public final Positive<Timer> timer;
+    public final Positive<DStoragePort> storage;
 
     public final One2NChannel<R1DownloadPort> downloadC;
     public final One2NChannel<R1UploadPort> uploadC;
@@ -179,6 +181,7 @@ public class R2TorrentComp extends ComponentDefinition {
       upload = proxy.requires(R1UploadPort.class);
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
+      storage = proxy.requires(DStoragePort.class);
       downloadC = One2NChannel.getChannel("r1-torrent-file-download-ctrl", (Negative)download.getPair(), downloadCompIdExtractor());
       uploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Negative)upload.getPair(), uploadCompIdExtractor());
       netDownloadC = One2NChannel.getChannel("r1-torrent-file-download-network", network, netDownloadCompIdExtractor());

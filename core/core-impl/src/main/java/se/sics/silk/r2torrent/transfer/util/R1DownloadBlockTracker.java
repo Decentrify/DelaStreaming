@@ -180,17 +180,20 @@ public class R1DownloadBlockTracker {
   }
 
   //<hashes, blocks>
-  public Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> getComplete() {
-    Map<Integer, byte[]> hResult = new HashMap<>(completedHashes);
-    completedHashes.clear();
-
-    Map<Integer, byte[]> bResult = new HashMap<>();
-    for (Map.Entry<Integer, BlockMngr> completedBlock : completedBlocks.entrySet()) {
-      byte[] blockValue = completedBlock.getValue().getBlock();
-      bResult.put(completedBlock.getKey(), blockValue);
-    }
-    completedBlocks.clear();
-    return Pair.with(hResult, bResult);
+  public Map<Integer, Pair<byte[], byte[]>> getComplete() {
+    Map<Integer, Pair<byte[], byte[]>> result = new HashMap<>();
+    completedBlocks.entrySet().stream().
+      filter((completedBlock) -> (completedHashes.containsKey(completedBlock.getKey()))).
+      forEach((completedBlock) -> {
+        byte[] value = completedBlock.getValue().getBlock();
+        byte[] hash = completedHashes.get(completedBlock.getKey());
+        result.put(completedBlock.getKey(), Pair.with(value, hash));
+    });
+    result.keySet().stream().forEach((blockNr) -> {
+        completedHashes.remove(blockNr);
+        completedBlocks.remove(blockNr);
+    });
+    return result;
   }
 
   //**************************************************************************

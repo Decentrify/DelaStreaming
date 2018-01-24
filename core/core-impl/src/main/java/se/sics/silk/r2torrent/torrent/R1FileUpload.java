@@ -54,7 +54,9 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
+import se.sics.nstream.TorrentIds;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nstream.storage.durable.events.DStreamConnect;
 import se.sics.nstream.storage.durable.events.DStreamDisconnect;
@@ -62,13 +64,13 @@ import se.sics.nstream.storage.durable.events.DStreamEvent;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.SelfPort;
+import se.sics.silk.TorrentIdHelper;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
 import static se.sics.silk.r2torrent.torrent.R2Torrent.HardCodedConfig.seed;
 import se.sics.silk.r2torrent.torrent.event.R1FileUploadEvents;
-import se.sics.silk.r2torrent.torrent.state.R1UploadFileState;
-import se.sics.silk.r2torrent.torrent.util.R1FileMngr;
+import se.sics.silk.r2torrent.torrent.state.R1FileUploadLeechersState;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecher;
 import se.sics.silk.r2torrent.transfer.R1UploadComp;
 import se.sics.silk.r2torrent.transfer.R1UploadPort;
@@ -113,7 +115,7 @@ public class R1FileUpload {
     private final FSMIdentifier fsmId;
     OverlayId torrentId;
     Identifier fileId;
-    R1UploadFileState fileState = new R1UploadFileState();
+    R1FileUploadLeechersState fileState = new R1FileUploadLeechersState();
     Map<Identifier, Component> comps = new HashMap<>();
 
     public IS(FSMIdentifier fsmId) {
@@ -139,6 +141,28 @@ public class R1FileUpload {
     }
   }
 
+  public static class R1FileMngr {
+    public final Identifier endpointId;
+    public final OverlayId torrentId;
+    
+    public R1FileMngr(Identifier endpointId, OverlayId torrentId) {
+      this.endpointId = endpointId;
+      this.torrentId = torrentId;
+    }
+    public boolean isComplete(Identifier fileId) {
+      return true;
+    }
+    
+    public StreamId streamId(Identifier fileId) {
+      FileId fi = TorrentIdHelper.fileId(torrentId, endpointId);
+      return TorrentIds.streamId(endpointId, fi);
+    }
+    
+    public MyStream stream(StreamId streamId) {
+      return null;
+    }
+  }
+  
   public static class ES implements R2TorrentES {
 
     private ComponentProxy proxy;
@@ -346,7 +370,7 @@ public class R1FileUpload {
 
     private static void createStorageStream(ES es, Identifier fileId) {
       StreamId streamId = es.fileMngr.streamId(fileId);
-      MyStream stream = es.fileMngr.stream(fileId);
+      MyStream stream = es.fileMngr.stream(streamId);
       sendStreamEvent(es, new DStreamConnect.Request(Pair.with(streamId, stream)));
     }
     

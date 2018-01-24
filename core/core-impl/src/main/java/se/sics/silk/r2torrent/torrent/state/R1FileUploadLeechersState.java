@@ -28,16 +28,16 @@ import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1UploadFileState {
+public class R1FileUploadLeechersState {
 
-  Map<Identifier, FileLeecherState> pendingLeechers = new HashMap<>();
-  public final Map<Identifier, FileLeecherState> connectedLeechers = new HashMap<>();
+  Map<Identifier, R1FileUploadLeecherState> pendingLeechers = new HashMap<>();
+  public final Map<Identifier, R1FileUploadLeecherState> connectedLeechers = new HashMap<>();
 
-  public R1UploadFileState() {
+  public R1FileUploadLeechersState() {
   }
 
   public void pendingLeecher(R1TransferLeecherEvents.ConnectReq req) {
-    pendingLeechers.put(req.leecherAdr.getId(), new FileLeecherState(req));
+    pendingLeechers.put(req.leecherAdr.getId(), new R1FileUploadLeecherState(req));
   }
 
   public void pendingConnected(Consumer<KAddress> createComp, Consumer<R1TransferLeecherEvents.ConnectReq> sendEvent) {
@@ -53,11 +53,11 @@ public class R1UploadFileState {
     Consumer<R1TransferLeecherEvents.ConnectReq> sendEvent) {
     createComp.accept(req.leecherAdr);
     sendEvent.accept(req);
-    connectedLeechers.put(req.leecherAdr.getId(), new FileLeecherState(req));
+    connectedLeechers.put(req.leecherAdr.getId(), new R1FileUploadLeecherState(req));
   }
 
   public void disconnected(R1TransferLeecherEvents.Disconnected req, Consumer<KAddress> destroyComp) {
-    FileLeecherState state = connectedLeechers.remove(req.nodeId);
+    R1FileUploadLeecherState state = connectedLeechers.remove(req.nodeId);
     if(state == null) {
       return;
     }

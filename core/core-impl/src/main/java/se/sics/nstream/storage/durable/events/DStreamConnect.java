@@ -41,6 +41,10 @@ public class DStreamConnect {
       this.eventId = BasicIdentifiers.eventId();
       this.stream = stream;
     }
+    
+    public Request(StreamId streamId, MyStream stream) {
+      this(Pair.with(streamId, stream));
+    }
 
     @Override
     public Identifier getId() {
