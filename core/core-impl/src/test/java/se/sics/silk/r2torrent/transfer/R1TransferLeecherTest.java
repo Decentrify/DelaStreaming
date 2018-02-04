@@ -19,6 +19,7 @@
 package se.sics.silk.r2torrent.transfer;
 
 import java.util.Random;
+import java.util.function.BiConsumer;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -48,6 +49,7 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.FutureHelper;
 import se.sics.silk.MsgHelper;
 import se.sics.silk.SelfPort;
@@ -58,6 +60,9 @@ import static se.sics.silk.TorrentTestHelper.eNetPayload;
 import static se.sics.silk.TorrentTestHelper.eSchedulePeriodicTimer;
 import se.sics.silk.WrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
+import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
+import se.sics.silk.r2torrent.transfer.R1TransferLeecher.ES;
+import se.sics.silk.r2torrent.transfer.R1TransferLeecher.IS;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecher.States;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherPing;
@@ -68,6 +73,9 @@ import se.sics.silk.r2torrent.transfer.msgs.R1TransferConnMsgs;
  */
 public class R1TransferLeecherTest {
 
+  private static final BiConsumer<ES, IS> NOP = (ES t, IS u) -> {
+  };
+  
   private TestContext<WrapperComp> tc;
   private Component comp;
   private WrapperComp compState;
@@ -75,15 +83,19 @@ public class R1TransferLeecherTest {
   private Port<SelfPort> expectP;
   private Port<Network> networkP;
   private Port<Timer> timerP;
+  
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
   private KAddress self;
   private KAddress leecher;
   private OverlayId torrent;
   private Identifier file;
+  private R1FileMetadata fileMetadata;
 
   @BeforeClass
   public static void setup() throws FSMException {
+    R1TransferLeecher.Handlers.createUploadComp = NOP;
+    R1TransferLeecher.Handlers.killUploadComp = NOP;
     torrentIdFactory = SystemSetup.systemSetup("src/test/resources/application.conf");
   }
 
@@ -94,6 +106,11 @@ public class R1TransferLeecherTest {
     intIdFactory = new IntIdFactory(new Random());
     torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     file = intIdFactory.id(new BasicBuilders.IntBuilder(1));
+    int pieceSize = 1024;
+    int nrPieces = 10;
+    int nrBlocks = 2;
+    BlockDetails defaultBlock = new BlockDetails(pieceSize * nrPieces, nrPieces, pieceSize, pieceSize);
+    fileMetadata = R1FileMetadata.instance(pieceSize * nrPieces * nrBlocks, defaultBlock);
 
     tc = getContext();
     comp = tc.getComponentUnderTest();
@@ -110,7 +127,7 @@ public class R1TransferLeecherTest {
       public MultiFSM setupFSM(ComponentProxy proxy, Config config) {
         try {
           R2TorrentComp.Ports ports = new R2TorrentComp.Ports(proxy);
-          R1TransferLeecher.ES fsmEs = new R1TransferLeecher.ES(self);
+          R1TransferLeecher.ES fsmEs = new R1TransferLeecher.ES(self, fileMetadata.defaultBlock);
           fsmEs.setProxy(proxy);
           fsmEs.setPorts(ports);
 

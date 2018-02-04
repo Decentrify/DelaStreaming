@@ -20,10 +20,15 @@ package se.sics.silk.r2torrent.transfer;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.Channel;
+import se.sics.kompics.Component;
 import se.sics.kompics.ComponentProxy;
+import se.sics.kompics.Kill;
 import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.Start;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
@@ -52,6 +57,7 @@ import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.DefaultHandlers;
 import se.sics.silk.SelfPort;
 import se.sics.silk.event.SilkEvent;
@@ -101,9 +107,10 @@ public class R1TransferLeecher {
     KAddress leecherAdr;
     OverlayId torrentId;
     Identifier fileId;
-    UUID pingTimeoutId;
     PingTracker pingTracker = new PingTracker();
-
+    Component uploadComp;
+    UUID pingTimeoutId;
+    
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
     }
@@ -150,8 +157,9 @@ public class R1TransferLeecher {
     private ComponentProxy proxy;
     R2TorrentComp.Ports ports;
     KAddress selfAdr;
+    BlockDetails defaultBlock;
 
-    public ES(KAddress selfAdr) {
+    public ES(KAddress selfAdr, BlockDetails defaultBlock) {
       this.selfAdr = selfAdr;
     }
 
@@ -252,9 +260,7 @@ public class R1TransferLeecher {
         public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.Connect payload,
           BasicContentMsg container) throws FSMException {
           is.init(container.getSource(), payload);
-          R1TransferLeecherEvents.ConnectReq connect
-          = new R1TransferLeecherEvents.ConnectReq(is.torrentId, is.fileId, is.leecherAdr);
-          sendCtrl(es, is, connect);
+          sendCtrl(es, is, new R1TransferLeecherEvents.ConnectReq(is.torrentId, is.fileId, is.leecherAdr));
           return States.CONNECT;
         }
       };
@@ -272,8 +278,8 @@ public class R1TransferLeecher {
     static FSMBasicEventHandler connectAcc
       = (FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.ConnectAcc>) (FSMStateName state,
         ES es, IS is, R1TransferLeecherEvents.ConnectAcc event) -> {
-        R1TransferConnMsgs.ConnectAcc connected = new R1TransferConnMsgs.ConnectAcc(is.torrentId, is.fileId);
-        sendMsg(es, is, connected);
+        Handlers.createUploadComp.accept(es, is);
+        sendMsg(es, is, new R1TransferConnMsgs.ConnectAcc(is.torrentId, is.fileId));
         schedulePing(es, is);
         return States.ACTIVE;
       };
@@ -289,11 +295,9 @@ public class R1TransferLeecher {
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferLeecherPing event) throws FSMException {
         is.pingTracker.timerPing();
         if (!is.pingTracker.healthy()) {
-          R1TransferLeecherEvents.Disconnected disconnected
-            = new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId());
-          sendCtrl(es, is, disconnected);
-          R1TransferConnMsgs.Disconnect disconnect = new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId);
-          sendMsg(es, is, disconnect);
+          Handlers.killUploadComp.accept(es, is);
+          sendCtrl(es, is, new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId()));
+          sendMsg(es, is, new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId));
           cancelPing(es, is);
           return FSMBasicStateNames.FINAL;
         }
@@ -319,8 +323,8 @@ public class R1TransferLeecher {
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferLeecherEvents.Disconnect event)
         throws FSMException {
-          R1TransferConnMsgs.Disconnect disconnect = new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId);
-          sendMsg(es, is, disconnect);
+          Handlers.killUploadComp.accept(es, is);
+          sendMsg(es, is, new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId));
           cancelPing(es, is);
           return FSMBasicStateNames.FINAL;
         }
@@ -332,9 +336,7 @@ public class R1TransferLeecher {
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.Disconnect payload,
           BasicContentMsg container) throws FSMException {
-          R1TransferLeecherEvents.Disconnected disconnected
-          = new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId());
-          sendCtrl(es, is, disconnected);
+          sendCtrl(es, is, new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId()));
           return FSMBasicStateNames.FINAL;
         }
       };
@@ -345,9 +347,8 @@ public class R1TransferLeecher {
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.Disconnect payload,
           BasicContentMsg container) throws FSMException {
-          R1TransferLeecherEvents.Disconnected disconnected
-          = new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId());
-          sendCtrl(es, is, disconnected);
+          Handlers.killUploadComp.accept(es, is);
+          sendCtrl(es, is, new R1TransferLeecherEvents.Disconnected(is.torrentId, is.fileId, is.leecherAdr.getId()));
           cancelPing(es, is);
           return FSMBasicStateNames.FINAL;
         }
@@ -379,5 +380,34 @@ public class R1TransferLeecher {
         is.pingTimeoutId = null;
       }
     }
+    
+    static BiConsumer<ES, IS> createUploadComp = new BiConsumer<ES, IS>() {
+
+      @Override
+      public void accept(ES es, IS is) {
+        R1UploadComp.Init init = new R1UploadComp.Init(es.selfAdr, is.torrentId, is.fileId, is.leecherAdr,
+          es.defaultBlock);
+        Component uploadComp = es.proxy.create(R1UploadComp.class, init);
+        Identifier uploadId = R1UploadComp.baseId(is.torrentId, is.fileId, is.leecherAdr.getId());
+        es.proxy.connect(es.ports.timer, uploadComp.getNegative(Timer.class), Channel.TWO_WAY);
+        es.ports.uploadC.addChannel(uploadId, uploadComp.getPositive(R1UploadPort.class));
+        es.ports.netUploadC.addChannel(uploadId, uploadComp.getNegative(Network.class));
+        es.proxy.trigger(Start.event, uploadComp.control());
+        is.uploadComp = uploadComp;
+      }
+    };
+
+    static BiConsumer<ES, IS> killUploadComp = new BiConsumer<ES, IS>() {
+      @Override
+      public void accept(ES es, IS is) {
+        Identifier uploadId = R1UploadComp.baseId(is.torrentId, is.fileId, is.leecherAdr.getId());
+        Component uploadComp = is.uploadComp;
+        es.proxy.trigger(Kill.event, uploadComp.control());
+        es.proxy.disconnect(es.ports.timer, uploadComp.getNegative(Timer.class));
+        es.ports.uploadC.removeChannel(uploadId, uploadComp.getPositive(R1UploadPort.class));
+        es.ports.netUploadC.removeChannel(uploadId, uploadComp.getNegative(Network.class));
+        is.uploadComp = null;
+      }
+    };
   }
 }
