@@ -52,7 +52,6 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.FutureHelper;
 import se.sics.silk.MsgHelper;
-import se.sics.silk.SelfPort;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import static se.sics.silk.TorrentTestHelper.eCancelPeriodicTimer;
@@ -79,10 +78,9 @@ public class R1TransferLeecherTest {
   private TestContext<WrapperComp> tc;
   private Component comp;
   private WrapperComp compState;
-  private Port<SelfPort> triggerP;
-  private Port<SelfPort> expectP;
   private Port<Network> networkP;
   private Port<Timer> timerP;
+  private Port<R1TransferLeecherCtrl> ctrlP;
   
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
@@ -115,8 +113,7 @@ public class R1TransferLeecherTest {
     tc = getContext();
     comp = tc.getComponentUnderTest();
     compState = (WrapperComp) comp.getComponent();
-    triggerP = comp.getNegative(SelfPort.class);
-    expectP = comp.getPositive(SelfPort.class);
+    ctrlP = comp.getNegative(R1TransferLeecherCtrl.class);
     networkP = comp.getNegative(Network.class);
     timerP = comp.getNegative(Timer.class);
   }
@@ -174,7 +171,7 @@ public class R1TransferLeecherTest {
 
   public TestContext startToConnect(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress leecher) {
     tc = tc.trigger(netConnect(torrentId, fileId, leecher), networkP);//1
-    tc = tc.expect(R1TransferLeecherEvents.ConnectReq.class, expectP, Direction.OUT);//2
+    tc = tc.expect(R1TransferLeecherEvents.ConnectReq.class, ctrlP, Direction.OUT);//2
     return tc;
   }
 
@@ -237,7 +234,7 @@ public class R1TransferLeecherTest {
     tc = tc.body();
     tc = startToConnect(tc, torrent, file, leecher);//1-2
     tc = tc.trigger(netDisconnect(torrent, file, leecher), networkP);//3
-    tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, expectP, Direction.OUT);//4
+    tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, ctrlP, Direction.OUT);//4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
@@ -250,7 +247,7 @@ public class R1TransferLeecherTest {
     tc = tc.body();
     tc = connected(tc, torrent, file, leecher);//1-2
     tc = tc.trigger(netDisconnect(torrent, file, leecher), networkP);//3
-    tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, expectP, Direction.OUT);//4
+    tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, ctrlP, Direction.OUT);//4
     tc = eCancelPeriodicTimer(tc, timerP); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -262,7 +259,7 @@ public class R1TransferLeecherTest {
   public void testActiveToLocaltDisconnect() {
     tc = tc.body();
     tc = connected(tc, torrent, file, leecher);//1-2
-    tc = tc.trigger(localDisconnect(torrent, file, leecher), triggerP);//3
+    tc = tc.trigger(localDisconnect(torrent, file, leecher), ctrlP);//3
     tc = eNetPayload(tc, R1TransferLeecherEvents.Disconnected.class, networkP);//4
     tc = eCancelPeriodicTimer(tc, timerP); //5
     tc.repeat(1).body().end();
@@ -288,7 +285,7 @@ public class R1TransferLeecherTest {
   
   private TestContext pingDisc(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress leecher) {
     tc = tc.trigger(timerPing(torrentId, fileId, leecher), timerP); //1
-    tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, expectP, Direction.OUT); //2
+    tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, ctrlP, Direction.OUT); //2
     tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP);//3
     tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //4
     return tc;
@@ -304,8 +301,8 @@ public class R1TransferLeecherTest {
 
     };
     return tc
-      .answerRequest(R1TransferLeecherEvents.ConnectReq.class, expectP, f)
-      .trigger(f, triggerP);
+      .answerRequest(R1TransferLeecherEvents.ConnectReq.class, ctrlP, f)
+      .trigger(f, ctrlP);
   }
 
   public Msg netConnect(OverlayId torrentId, Identifier fileId, KAddress leecher) {

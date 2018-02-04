@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 
 /**
@@ -40,32 +39,26 @@ public class R1FileUploadLeechersState {
     pendingLeechers.put(req.leecherAdr.getId(), new R1FileUploadLeecherState(req));
   }
 
-  public void pendingConnected(Consumer<KAddress> createComp, Consumer<R1TransferLeecherEvents.ConnectReq> sendEvent) {
+  public void pendingConnected(Consumer<R1TransferLeecherEvents.ConnectReq> sendEvent) {
     pendingLeechers.values().stream().forEach((fls) -> {
-      createComp.accept(fls.leecher);
       sendEvent.accept(fls.req);
       connectedLeechers.put(fls.leecher.getId(), fls);
     });
     pendingLeechers.clear();
   }
   
-  public void connected(R1TransferLeecherEvents.ConnectReq req, Consumer<KAddress> createComp, 
+  public void connected(R1TransferLeecherEvents.ConnectReq req, 
     Consumer<R1TransferLeecherEvents.ConnectReq> sendEvent) {
-    createComp.accept(req.leecherAdr);
     sendEvent.accept(req);
     connectedLeechers.put(req.leecherAdr.getId(), new R1FileUploadLeecherState(req));
   }
 
-  public void disconnected(R1TransferLeecherEvents.Disconnected req, Consumer<KAddress> destroyComp) {
-    R1FileUploadLeecherState state = connectedLeechers.remove(req.nodeId);
-    if(state == null) {
-      return;
-    }
-    destroyComp.accept(state.leecher);
+  public void disconnected1(R1TransferLeecherEvents.Disconnected req) {
+    pendingLeechers.remove(req.nodeId);
   }
   
-  public void disconnected(R1TransferLeecherEvents.Disconnected req) {
-    pendingLeechers.remove(req.nodeId);
+  public void disconnected2(R1TransferLeecherEvents.Disconnected req) {
+    connectedLeechers.remove(req.nodeId);
   }
   
   public boolean empty() {

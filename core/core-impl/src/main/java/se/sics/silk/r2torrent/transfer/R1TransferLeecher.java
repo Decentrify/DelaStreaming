@@ -59,7 +59,6 @@ import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.DefaultHandlers;
-import se.sics.silk.SelfPort;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
@@ -200,7 +199,7 @@ public class R1TransferLeecher {
       FSMBuilder.SemanticDefinition def = FSMBuilder.semanticDef()
         .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault());
       def = def
-        .positivePort(SelfPort.class)
+        .positivePort(R1TransferLeecherCtrl.class)
         .basicEvent(R1TransferLeecherEvents.ConnectAcc.class)
         .subscribe(Handlers.connectAcc, States.CONNECT)
         .basicEvent(R1TransferLeecherEvents.ConnectRej.class)
@@ -361,7 +360,7 @@ public class R1TransferLeecher {
     }
 
     private static void sendCtrl(ES es, IS is, R1FileUpload.ConnectEvent content) {
-      es.proxy.trigger(content, es.ports.loopbackPos);
+      es.proxy.trigger(content, es.ports.transferLeecherCtrlPos);
     }
 
     private static void schedulePing(ES es, IS is) {

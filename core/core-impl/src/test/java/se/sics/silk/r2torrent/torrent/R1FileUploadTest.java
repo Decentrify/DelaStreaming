@@ -54,7 +54,6 @@ import se.sics.silk.SelfPort;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.TorrentIdHelper;
-import se.sics.silk.TorrentTestHelper;
 import static se.sics.silk.TorrentTestHelper.storageStreamConnected;
 import static se.sics.silk.TorrentTestHelper.storageStreamDisconnected;
 import se.sics.silk.TorrentWrapperComp;
@@ -62,8 +61,8 @@ import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.torrent.R1FileUpload.R1FileMngr;
 import se.sics.silk.r2torrent.torrent.R1FileUpload.States;
 import se.sics.silk.r2torrent.torrent.event.R1FileUploadEvents;
+import se.sics.silk.r2torrent.transfer.R1TransferLeecherCtrl;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
-import se.sics.silk.r2torrent.transfer.events.R1UploadTimeout;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -74,9 +73,9 @@ public class R1FileUploadTest {
   private Component comp;
   private TorrentWrapperComp compState;
   private Port<DStreamControlPort> streamCtrlP;
-  private Port<SelfPort> triggerP;
-  private Port<SelfPort> expectP;
+  private Port<R1TransferLeecherCtrl> transferLeecherP;
   private Port<Timer> timerP;
+  private Port<SelfPort> expectP;
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
   private KAddress selfAdr;
@@ -113,9 +112,9 @@ public class R1FileUploadTest {
     comp = tc.getComponentUnderTest();
     compState = (TorrentWrapperComp) comp.getComponent();
     streamCtrlP = comp.getNegative(DStreamControlPort.class);
-    triggerP = comp.getNegative(SelfPort.class);
-    expectP = comp.getPositive(SelfPort.class);
     timerP = comp.getNegative(Timer.class);
+    transferLeecherP = comp.getPositive(R1TransferLeecherCtrl.class);
+    expectP = comp.getPositive(SelfPort.class);
   }
 
   private TestContext<TorrentWrapperComp> getContext() {
@@ -169,7 +168,7 @@ public class R1FileUploadTest {
   }
 
   private TestContext startToStoragePending1(TestContext tc, OverlayId torrent, Identifier file, KAddress leecher) {
-    tc = tc.trigger(connect(torrent, file, leecher), triggerP); //1
+    tc = tc.trigger(connect(torrent, file, leecher), transferLeecherP); //1
     tc = tc.expect(DStreamConnect.Request.class, streamCtrlP, Direction.OUT); //2
     return tc;
   }
@@ -185,9 +184,9 @@ public class R1FileUploadTest {
   }
 
   private TestContext startToStoragePending2(TestContext tc, OverlayId torrent, Identifier file, KAddress leecher) {
-    tc = tc.trigger(connect(torrent, file, leecher), triggerP); //1
+    tc = tc.trigger(connect(torrent, file, leecher), transferLeecherP); //1
     tc = tc.expect(DStreamConnect.Request.class, streamCtrlP, Direction.OUT); //2
-    tc = tc.trigger(connect(torrent, file, leecher2), triggerP); //3
+    tc = tc.trigger(connect(torrent, file, leecher2), transferLeecherP); //3
     return tc;
   }
 
@@ -195,7 +194,7 @@ public class R1FileUploadTest {
   @Test
   public void testStartToStorageSucc1() {
     tc = tc.body();
-    tc = startToStorageSucc1(tc, torrent, file, leecher1);//1-5
+    tc = startToStorageSucc1(tc, torrent, file, leecher1);//5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1FileUpload.fsmBaseId(torrent, file);
@@ -203,10 +202,10 @@ public class R1FileUploadTest {
   }
 
   private TestContext startToStorageSucc1(TestContext tc, OverlayId torrent, Identifier file, KAddress leecher) {
-    tc = tc.trigger(connect(torrent, file, leecher), triggerP); //1
-    tc = storageStreamConnected(tc, streamCtrlP, streamCtrlP);//2-3
-    tc = eConnectSucc(tc);
-    tc = eFileIndication(tc, States.ACTIVE); //4
+    tc = tc.trigger(connect(torrent, file, leecher), transferLeecherP); //1
+    tc = storageStreamConnected(tc, streamCtrlP, streamCtrlP);//2
+    tc = eConnectSucc(tc); //1
+    tc = eFileIndication(tc, States.ACTIVE); //1
     return tc;
   }
 
@@ -229,9 +228,9 @@ public class R1FileUploadTest {
         return event.success(0);
       }
     };
-    tc = tc.trigger(connect(torrent, file, leecher1), triggerP); //1
+    tc = tc.trigger(connect(torrent, file, leecher1), transferLeecherP); //1
     tc = tc.answerRequest(DStreamConnect.Request.class, streamCtrlP, f); //2
-    tc = tc.trigger(connect(torrent, file, leecher2), triggerP); //3
+    tc = tc.trigger(connect(torrent, file, leecher2), transferLeecherP); //3
     tc = tc.trigger(f, streamCtrlP); //4
     tc = tc.repeat(2).body();
     tc = eConnectSucc(tc); //5-6
@@ -244,7 +243,7 @@ public class R1FileUploadTest {
   @Test
   public void testTransferDisconnected1() {
     tc = tc.body();
-    tc = tc.trigger(connect(torrent, file, leecher1), triggerP); //1
+    tc = tc.trigger(connect(torrent, file, leecher1), transferLeecherP); //1
     tc = storageStreamConnected(tc, streamCtrlP, streamCtrlP);//2-3
     tc = eConnectSucc(tc); //4-5
     tc = eFileIndication(tc, States.ACTIVE); //6
@@ -259,14 +258,14 @@ public class R1FileUploadTest {
   @Test
   public void testTransferDisconnected2() {
     tc = tc.body();
-    tc = tc.trigger(connect(torrent, file, leecher1), triggerP); //1
-    tc = storageStreamConnected(tc, streamCtrlP, streamCtrlP);//2-3
-    tc = eConnectSucc(tc); //4-5
-    tc = eFileIndication(tc, States.ACTIVE); //6
-    tc = connect(tc, torrent, file, leecher2); //7-9
-    tc = disconnected(tc, torrent, file, leecher2); //10-11
-    tc = disconnected(tc, torrent, file, leecher1); //12-13
-    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP); //14-15
+    tc = tc.trigger(connect(torrent, file, leecher1), transferLeecherP); //1
+    tc = storageStreamConnected(tc, streamCtrlP, streamCtrlP);//2
+    tc = eConnectSucc(tc); //1
+    tc = eFileIndication(tc, States.ACTIVE); //1
+    tc = connect(tc, torrent, file, leecher2); //3
+    tc = disconnected(tc, torrent, file, leecher2); //1
+    tc = disconnected(tc, torrent, file, leecher1); //1
+    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP); //2
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1FileUpload.fsmBaseId(torrent, file);
@@ -274,20 +273,18 @@ public class R1FileUploadTest {
   }
 
   public TestContext connect(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress leecher) {
-    tc = tc.trigger(connect(torrent, file, leecher), triggerP); //1
-    tc = eConnectSucc(tc); //2-3
+    tc = tc.trigger(connect(torrent, file, leecher), transferLeecherP); //1
+    tc = eConnectSucc(tc); //2
     return tc;
   }
   
    public TestContext eConnectSucc(TestContext tc) {
-    tc = TorrentTestHelper.eSchedulePeriodicTimer(tc, R1UploadTimeout.class, timerP); //1
-    tc = tc.expect(R1TransferLeecherEvents.ConnectAcc.class, expectP, Direction.OUT); //2
+    tc = tc.expect(R1TransferLeecherEvents.ConnectAcc.class, transferLeecherP, Direction.OUT); //2
     return tc;
   }
 
   public TestContext disconnected(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress leecher) {
-    tc = tc.trigger(disconnected(torrent, file, leecher), triggerP);//1
-    tc = TorrentTestHelper.eCancelPeriodicTimer(tc, timerP); //2
+    tc = tc.trigger(disconnected(torrent, file, leecher), transferLeecherP);//1
     return tc;
   }
 

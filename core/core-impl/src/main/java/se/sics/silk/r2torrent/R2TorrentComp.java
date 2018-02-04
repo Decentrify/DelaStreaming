@@ -53,6 +53,7 @@ import se.sics.silk.r2torrent.torrent.R1MetadataServe;
 import se.sics.silk.r2torrent.torrent.R2Torrent;
 import se.sics.silk.r2torrent.transfer.R1DownloadComp;
 import se.sics.silk.r2torrent.transfer.R1DownloadPort;
+import se.sics.silk.r2torrent.transfer.R1TransferLeecherCtrl;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder;
 import se.sics.silk.r2torrent.transfer.R1TransferSeederCtrl;
 import se.sics.silk.r2torrent.transfer.R1UploadComp;
@@ -175,14 +176,16 @@ public class R2TorrentComp extends ComponentDefinition {
     public final Positive<SelfPort> loopbackSubscribe;
     public final Negative<R2TorrentCtrlPort> ctrl;
     public final Positive<DStreamControlPort> streamCtrl;
-    public final Positive<R1UploadPort> upload;
     public final Positive<Network> network;
     public final Positive<Timer> timer;
     public final Positive<DStoragePort> storage;
     
-    public final Positive download;
-    public final Positive transferSeederCtrlPos;
-    public final Negative transferSeederCtrlNeg;
+    public final Positive<R1DownloadPort> download;
+    public final Positive<R1UploadPort> upload;
+    public final Positive<R1TransferSeederCtrl> transferSeederCtrlPos;
+    public final Negative<R1TransferSeederCtrl> transferSeederCtrlNeg;
+    public final Positive<R1TransferLeecherCtrl> transferLeecherCtrlPos;
+    public final Negative<R1TransferLeecherCtrl> transferLeecherCtrlNeg;
     public final One2NChannel<R1UploadPort> uploadC;
     public final One2NChannel<Network> netUploadC;
 
@@ -194,26 +197,30 @@ public class R2TorrentComp extends ComponentDefinition {
       loopbackSubscribe = proxy.requires(SelfPort.class);
       proxy.connect(proxy.getPositive(SelfPort.class), proxy.getNegative(SelfPort.class), Channel.TWO_WAY);
       ctrl = proxy.provides(R2TorrentCtrlPort.class);
-      streamCtrl = proxy.requires(DStreamControlPort.class);
-      //clean ports
-      upload = proxy.requires(R1UploadPort.class);
+
       network = proxy.requires(Network.class); 
       timer = proxy.requires(Timer.class);
       storage = proxy.requires(DStoragePort.class);
-      uploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Negative) upload.getPair(),
-        uploadCompIdExtractor());
-      netUploadC = One2NChannel.getChannel("r1-torrent-file-upload-network", network, netUploadCompIdExtractor());
-
+      streamCtrl = proxy.requires(DStreamControlPort.class);
+      
       download = proxy.requires(R1DownloadPort.class);
+      upload = proxy.requires(R1UploadPort.class);
       transferSeederCtrlPos = proxy.requires(R1TransferSeederCtrl.class);
       transferSeederCtrlNeg = proxy.provides(R1TransferSeederCtrl.class);
       proxy.connect(proxy.getPositive(R1TransferSeederCtrl.class), proxy.getNegative(R1TransferSeederCtrl.class), 
         Channel.TWO_WAY);
+      transferLeecherCtrlPos = proxy.requires(R1TransferLeecherCtrl.class);
+      transferLeecherCtrlNeg = proxy.provides(R1TransferLeecherCtrl.class);
+      proxy.connect(proxy.getPositive(R1TransferLeecherCtrl.class), proxy.getNegative(R1TransferLeecherCtrl.class), 
+        Channel.TWO_WAY);
       
-      netDownloadC = One2NChannel.getChannel("r1-torrent-transfer-download-network", network,
-        netDownloadCompIdExtractor());
       downloadC = One2NChannel.getChannel("r1-torrent-file-download-ctrl", (Negative)download.getPair(), 
         downloadCompIdExtractor());
+      uploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Negative) upload.getPair(),
+        uploadCompIdExtractor());
+      netDownloadC = One2NChannel.getChannel("r1-torrent-transfer-download-network", network,
+        netDownloadCompIdExtractor());
+      netUploadC = One2NChannel.getChannel("r1-torrent-transfer-upload-network", network, netUploadCompIdExtractor());
     }
   }
 

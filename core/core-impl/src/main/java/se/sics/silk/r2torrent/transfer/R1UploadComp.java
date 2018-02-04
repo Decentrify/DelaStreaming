@@ -233,9 +233,9 @@ public class R1UploadComp extends ComponentDefinition {
 
   public static class Ports {
 
-    public final Positive ctrl;
-    public final Positive network;
-    public final Positive timer;
+    public final Positive<R1UploadPort> ctrl;
+    public final Positive<Network> network;
+    public final Positive<Timer> timer;
 
     public Ports(ComponentProxy proxy) {
       ctrl = proxy.requires(R1UploadPort.class);
