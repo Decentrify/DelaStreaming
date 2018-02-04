@@ -53,7 +53,7 @@ import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadEvents;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadTimeout;
 import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
-import se.sics.silk.r2torrent.transfer.util.R1Cwnd;
+import se.sics.silk.r2torrent.transfer.util.R1DwnlCwnd;
 import se.sics.silk.r2torrent.transfer.util.R1DownloadBlockTracker;
 
 /**
@@ -70,7 +70,7 @@ public class R1DownloadComp extends ComponentDefinition {
   public final KAddress selfAdr;
   public final KAddress seederAdr;
   public final R1DownloadBlockTracker blockTracker;
-  public final R1Cwnd cwnd;
+  public final R1DwnlCwnd cwnd;
   private final R1FileMetadata fileMetadata;
   private UUID timerId;
 
@@ -82,7 +82,7 @@ public class R1DownloadComp extends ComponentDefinition {
     fileId = init.fileId;
     this.fileMetadata = init.fileMetadata;
     blockTracker = new R1DownloadBlockTracker(fileMetadata.defaultBlock, true);
-    cwnd = new R1Cwnd(HardCodedConfig.CWND_SIZE);
+    cwnd = new R1DwnlCwnd(HardCodedConfig.CWND_SIZE);
     subscribe(handleStart, control);
     subscribe(handleNewBlocks, ports.ctrl);
     subscribe(handleNetworkTimeouts, ports.network);

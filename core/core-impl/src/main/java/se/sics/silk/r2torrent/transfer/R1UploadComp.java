@@ -19,22 +19,22 @@
 package se.sics.silk.r2torrent.transfer;
 
 import com.google.common.collect.Sets;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
-import se.sics.kompics.Negative;
+import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.network.Msg;
 import se.sics.kompics.network.Network;
+import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timer;
@@ -45,16 +45,13 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
-import se.sics.ktoolbox.util.reference.KReference;
-import se.sics.ktoolbox.util.reference.KReferenceException;
-import se.sics.nstream.torrent.transfer.upld.event.GetBlocks;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nstream.util.BlockDetails;
-import se.sics.nstream.util.BlockHelper;
-import se.sics.nstream.util.range.KPiece;
-import se.sics.nstream.util.range.RangeKReference;
 import se.sics.silk.r2torrent.transfer.events.R1UploadEvents;
 import se.sics.silk.r2torrent.transfer.events.R1UploadTimeout;
 import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
+import se.sics.silk.r2torrent.transfer.util.R1UpldCwnd;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -69,13 +66,10 @@ public class R1UploadComp extends ComponentDefinition {
   public final Identifier fileId;
   public final KAddress selfAdr;
   public final KAddress leecherAdr;
-  public final BlockDetails defaultBlock;
   private UUID timerId;
 
-  private final Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
-  private final Map<Integer, KReference<byte[]>> servedBlocks = new HashMap<>();
-  private final Map<Integer, byte[]> servedHashes = new HashMap<>();
   private KContentMsg<?, ?, R1TransferMsgs.CacheHintReq> pendingCacheReq;
+  private final R1UpldCwnd cwnd;
 
   public R1UploadComp(R1UploadComp.Init init) {
     ports = new Ports(proxy);
@@ -83,9 +77,14 @@ public class R1UploadComp extends ComponentDefinition {
     leecherAdr = init.leecherAdr;
     torrentId = init.torrentId;
     fileId = init.fileId;
-    defaultBlock = init.defaultBlock;
+    cwnd = new R1UpldCwnd(init.defaultBlock, HardCodedConfig.cwndSize, sendMsg);
     subscribe(handleStart, control);
     subscribe(handleTimeout, ports.timer);
+    subscribe(handleCache, ports.network);
+    subscribe(handleHash, ports.network);
+    subscribe(handleBlock, ports.network);
+    subscribe(handlePiece, ports.network);
+    subscribe(handleServeBlocks, ports.ctrl);
   }
 
   public static Identifier baseId(OverlayId torrentId, Identifier fileId, Identifier seederId) {
@@ -103,36 +102,31 @@ public class R1UploadComp extends ComponentDefinition {
   @Override
   public void tearDown() {
     cancelTimer();
-    for (KReference<byte[]> block : servedBlocks.values()) {
-      silentRelease(block);
-    }
-    servedBlocks.clear();
+    cwnd.clear();
   }
 
   Handler handleTimeout = new Handler<R1UploadTimeout>() {
     @Override
     public void handle(R1UploadTimeout event) {
+      cwnd.send();
     }
   };
+
+  ClassMatchedHandler handleBlock
+    = new ClassMatchedHandler<R1TransferMsgs.BlockReq, KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.BlockReq>>() {
+      @Override
+      public void handle(R1TransferMsgs.BlockReq content,
+        KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.BlockReq> msg) {
+        cwnd.pendingBlock(content);
+      }
+    };
 
   ClassMatchedHandler handlePiece
     = new ClassMatchedHandler<R1TransferMsgs.PieceReq, KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.PieceReq>>() {
       @Override
       public void handle(R1TransferMsgs.PieceReq content,
         KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.PieceReq> msg) {
-
-        int blockNr = content.piece.getValue0();
-        BlockDetails blockDetails = irregularBlocks.containsKey(blockNr) ? irregularBlocks.get(blockNr) : defaultBlock;
-        KReference<byte[]> block = servedBlocks.get(blockNr);
-        if (block == null) {
-          throw new RuntimeException("bad request");
-        } else {
-          KPiece pieceRange = BlockHelper.getPieceRange(content.piece, blockDetails, defaultBlock);
-          //retain block here(range create) - release in serializer
-          RangeKReference piece = RangeKReference.createInstance(block, BlockHelper.getBlockPos(blockNr, defaultBlock),
-            pieceRange);
-          answerMsg(msg, content.accept(piece));
-        }
+        cwnd.pendingPiece(content);
       }
     };
 
@@ -141,18 +135,7 @@ public class R1UploadComp extends ComponentDefinition {
       @Override
       public void handle(R1TransferMsgs.HashReq content,
         KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.HashReq> msg) {
-        Map<Integer, byte[]> hashValues = new TreeMap<>();
-        for (Integer hashNr : content.hashes) {
-          byte[] hashVal = servedHashes.get(hashNr);
-          if (hashVal == null) {
-            LOG.warn("{}no hash for:{} - not serving incomplete", logPrefix, hashNr);
-            LOG.warn("{}no hash - serving blocks:{}", logPrefix, servedBlocks.keySet());
-            LOG.warn("{}no hash - serving hashes:{}", logPrefix, servedHashes.keySet());
-            throw new RuntimeException("bad request");
-          }
-          hashValues.put(hashNr, hashVal);
-        }
-        answerMsg(msg, content.accept(hashValues));
+        answerMsg(msg, content.accept(cwnd.getHashes(content.hashes)));
       }
     };
 
@@ -160,41 +143,36 @@ public class R1UploadComp extends ComponentDefinition {
     = new ClassMatchedHandler<R1TransferMsgs.CacheHintReq, KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.CacheHintReq>>() {
 
       @Override
-      public void handle(R1TransferMsgs.CacheHintReq content, KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.CacheHintReq> msg) {
+      public void handle(R1TransferMsgs.CacheHintReq content,
+        KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.CacheHintReq> msg) {
         LOG.trace("{}received:{}", new Object[]{logPrefix, content});
         if (pendingCacheReq == null) {
           LOG.debug("{}cache:{} req - ts:{} blocks:{}",
             new Object[]{logPrefix, content.getId(), content.cacheHint.lStamp, content.cacheHint.blocks});
           pendingCacheReq = msg;
-          Set<Integer> newCache = Sets.difference(content.cacheHint.blocks, servedBlocks.keySet());
-          Set<Integer> delCache = new HashSet<>(Sets.difference(servedBlocks.keySet(), content.cacheHint.blocks));
+          Set<Integer> servedBlocks = cwnd.servedBlocks();
+          Set<Integer> newCache = Sets.difference(content.cacheHint.blocks, servedBlocks);
+          Set<Integer> delCache = new HashSet<>(Sets.difference(servedBlocks, content.cacheHint.blocks));
 
           if (!newCache.isEmpty()) {
             KAddress leecher = msg.getHeader().getSource();
-            trigger(new R1UploadEvents.BlocksReq(content.torrentId, content.fileId, leecher.getId(), 
-              newCache, content.cacheHint), ports.ctrl);
+            trigger(new R1UploadEvents.BlocksReq(content.torrentId, content.fileId, leecher.getId(),
+                newCache, content.cacheHint), ports.ctrl);
           } else {
             answerCacheHint();
           }
           //release references that were retained when given to us
-          for (Integer blockNr : delCache) {
-            KReference<byte[]> block = servedBlocks.remove(blockNr);
-            servedHashes.remove(blockNr);
-            irregularBlocks.remove(blockNr);
-            silentRelease(block);
-          }
+          cwnd.releaseBlock(delCache);
         }
       }
     };
 
-  Handler handleGetBlocks = new Handler<GetBlocks.Response>() {
+  Handler handleServeBlocks = new Handler<R1UploadEvents.BlocksResp>() {
     @Override
-    public void handle(GetBlocks.Response resp) {
+    public void handle(R1UploadEvents.BlocksResp resp) {
       //references are already retained by whoever gives them to us
       LOG.debug("{}serving blocks:{} hashes:{}", new Object[]{logPrefix, resp.blocks.keySet(), resp.hashes.keySet()});
-      servedBlocks.putAll(resp.blocks);
-      servedHashes.putAll(resp.hashes);
-      irregularBlocks.putAll(resp.irregularBlocks);
+      cwnd.serveBlocks(resp);
       answerCacheHint();
     }
   };
@@ -203,18 +181,10 @@ public class R1UploadComp extends ComponentDefinition {
     answerMsg(pendingCacheReq, pendingCacheReq.getContent().accept());
     pendingCacheReq = null;
   }
-  
+
   private void answerMsg(KContentMsg original, Identifiable respContent) {
     LOG.trace("{}answering with:{}", logPrefix, respContent);
     trigger(original.answer(respContent), ports.network);
-  }
-
-  private void silentRelease(KReference<byte[]> ref) {
-    try {
-      ref.release();
-    } catch (KReferenceException ex) {
-      throw new RuntimeException(ex);
-    }
   }
 
   private void scheduleTimer() {
@@ -233,6 +203,15 @@ public class R1UploadComp extends ComponentDefinition {
       timerId = null;
     }
   }
+
+  private final Consumer<KompicsEvent> sendMsg = new Consumer<KompicsEvent>() {
+    @Override
+    public void accept(KompicsEvent payload) {
+      KHeader header = new BasicHeader<>(selfAdr, leecherAdr, Transport.UDP);
+      Msg msg = new BasicContentMsg(header, payload);
+      trigger(msg, ports.network);
+    }
+  };
 
   public static class Init extends se.sics.kompics.Init<R1UploadComp> {
 
@@ -254,12 +233,12 @@ public class R1UploadComp extends ComponentDefinition {
 
   public static class Ports {
 
-    public final Negative ctrl;
+    public final Positive ctrl;
     public final Positive network;
     public final Positive timer;
 
     public Ports(ComponentProxy proxy) {
-      ctrl = proxy.provides(R1UploadPort.class);
+      ctrl = proxy.requires(R1UploadPort.class);
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
     }
@@ -267,6 +246,7 @@ public class R1UploadComp extends ComponentDefinition {
 
   public static class HardCodedConfig {
 
-    public static final long timeoutPeriod = 10000;
+    public static final long timeoutPeriod = 100;
+    public static int cwndSize = 100;
   }
 }

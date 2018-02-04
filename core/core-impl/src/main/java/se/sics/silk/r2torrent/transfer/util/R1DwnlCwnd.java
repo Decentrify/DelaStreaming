@@ -27,12 +27,12 @@ import se.sics.kompics.util.Identifier;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1Cwnd {
+public class R1DwnlCwnd {
 
   private final Set<Triplet<Identifier, Integer, Integer>> pendingMsgs = new HashSet<>();
   private int size;
 
-  public R1Cwnd(int size) {
+  public R1DwnlCwnd(int size) {
     this.size = size;
   }
 
