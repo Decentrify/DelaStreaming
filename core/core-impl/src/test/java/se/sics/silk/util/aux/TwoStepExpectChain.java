@@ -16,24 +16,25 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.transfer.events;
+package se.sics.silk.util.aux;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.util.Identifiable;
-import se.sics.silk.event.SilkEvent;
+import se.sics.kompics.Port;
+import se.sics.kompics.testing.Future;
+import se.sics.kompics.testing.TestContext;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1TransferMsg {
-
-  public static interface Event extends KompicsEvent, Identifiable, SilkEvent.TorrentEvent, SilkEvent.FileEvent {
-
+public abstract class TwoStepExpectChain {
+  private Future f;
+  public TestContext request(TestContext tc, Class c, Port p, Future f) {
+    this.f = f;
+    tc = tc.answerRequest(c, p, f);
+    return tc;
   }
-
-  public static interface Dwnl extends Event {
-  }
-
-  public static interface Upld extends Event {
+  
+  public TestContext chain(TestContext tc) {
+    
+    return tc;
   }
 }

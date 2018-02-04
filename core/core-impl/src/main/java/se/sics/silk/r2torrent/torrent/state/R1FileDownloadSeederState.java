@@ -45,19 +45,21 @@ public class R1FileDownloadSeederState {
   }
 
   public void connected() {
-    parent.actions.createDownloadComp(this);
     tryDownload();
   }
 
   public void disconnect() {
     parent.fileTracker.resetBlocks(ongoingBlocks);
-    parent.actions.killDownloadComp(this);
     parent.actions.disconnect(seeder);
   }
 
   public void disconnected() {
     parent.fileTracker.resetBlocks(ongoingBlocks);
-    parent.actions.killDownloadComp(this);
+    parent.actions.disconnected(seeder);
+  }
+  
+  public void completed() {
+    parent.actions.disconnect(seeder);
     parent.actions.disconnected(seeder);
   }
 
@@ -67,19 +69,21 @@ public class R1FileDownloadSeederState {
 
   public void complete(Integer block, byte[] value, byte[] hash) {
     if (ongoingBlocks.remove(block)) {
-      parent.fileTracker.completeBlock(block);
       long pos = R1BlockHelper.posFromBlockNr(block, parent.fileMetadata);
-      parent.buffer.writeBlock(pos, KReferenceFactory.getReference(value));
       parent.buffer.writeHash(pos, KReferenceFactory.getReference(hash));
+      parent.buffer.writeBlock(pos, KReferenceFactory.getReference(value));
+      parent.fileTracker.completeBlock(block);
     }
     tryDownload();
   }
-  
+
   private void tryDownload() {
     if (ongoingBlocks.size() < HardCodedConfig.DOWNLOAD_COMP_BUFFER_SIZE - HardCodedConfig.BLOCK_BATCH_REQUEST) {
-      Set<Integer> newBlocks = parent.fileTracker.nextBlocks(HardCodedConfig.BLOCK_BATCH_REQUEST); 
-      ongoingBlocks.addAll(newBlocks);
-      parent.actions.download(seeder, newBlocks);
+      Set<Integer> newBlocks = parent.fileTracker.nextBlocks(HardCodedConfig.BLOCK_BATCH_REQUEST);
+      if (!newBlocks.isEmpty()) {
+        ongoingBlocks.addAll(newBlocks);
+        parent.actions.download(seeder, newBlocks);
+      }
     }
   }
 }

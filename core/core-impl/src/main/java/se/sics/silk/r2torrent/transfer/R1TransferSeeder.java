@@ -20,10 +20,15 @@ package se.sics.silk.r2torrent.transfer;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.Channel;
+import se.sics.kompics.Component;
 import se.sics.kompics.ComponentProxy;
+import se.sics.kompics.Kill;
 import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.Start;
 import se.sics.kompics.fsm.BaseIdExtractor;
 import se.sics.kompics.fsm.FSMBasicStateNames;
 import se.sics.kompics.fsm.FSMBuilder;
@@ -54,11 +59,11 @@ import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.silk.DefaultHandlers;
-import se.sics.silk.SelfPort;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
 import se.sics.silk.r2torrent.torrent.R1FileDownload;
+import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederPing;
 import se.sics.silk.r2torrent.transfer.msgs.R1TransferConnMsgs;
@@ -83,7 +88,7 @@ public class R1TransferSeeder {
 
   public static interface CtrlEvent extends Event {
   }
-  
+
   public static interface Timeout extends Event {
   }
 
@@ -108,8 +113,10 @@ public class R1TransferSeeder {
     KAddress seederAdr;
     OverlayId torrentId;
     Identifier fileId;
+    R1FileMetadata fileMetadata;
     UUID pingTimeoutId;
     PingTracker pingTracker = new PingTracker();
+    Component downloadComp;
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -119,11 +126,12 @@ public class R1TransferSeeder {
     public FSMIdentifier getFSMId() {
       return fsmId;
     }
-    
+
     public void init(R1TransferSeederEvents.Connect req) {
       this.torrentId = req.torrentId;
       this.fileId = req.fileId;
       this.seederAdr = req.seederAdr;
+      this.fileMetadata = req.fileMetadata;
     }
   }
 
@@ -199,7 +207,7 @@ public class R1TransferSeeder {
       FSMBuilder.SemanticDefinition def = FSMBuilder.semanticDef()
         .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault());
       def = def
-        .positivePort(SelfPort.class)
+        .negativePort(R1TransferSeederCtrl.class)
         .basicEvent(R1TransferSeederEvents.Connect.class)
         .subscribeOnStart(Handlers.connect)
         .basicEvent(R1TransferSeederEvents.Disconnect.class)
@@ -254,8 +262,7 @@ public class R1TransferSeeder {
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferSeederEvents.Connect event)
         throws FSMException {
         is.init(event);
-        R1TransferConnMsgs.Connect connect = new R1TransferConnMsgs.Connect(is.torrentId, is.fileId);
-        bestEffortMsg(es, is, connect);
+        bestEffortMsg(es, is, new R1TransferConnMsgs.Connect(is.torrentId, is.fileId));
         return States.CONNECT;
       }
     };
@@ -266,23 +273,21 @@ public class R1TransferSeeder {
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.ConnectAcc payload,
           BasicContentMsg container) throws FSMException {
-          R1TransferSeederEvents.Connected connected
-          = new R1TransferSeederEvents.Connected(is.torrentId, is.fileId, is.seederAdr);
-          sendCtrl(es, is, connected);
+          createDownloadComp.accept(es, is);
+          sendCtrl(es, is, new R1TransferSeederEvents.Connected(is.torrentId, is.fileId, is.seederAdr));
           schedulePing(es, is);
           return States.ACTIVE;
         }
       };
-    
+
     static FSMPatternEventHandler netDisconnect
       = new FSMPatternEventHandler<ES, IS, R1TransferConnMsgs.Disconnect, BasicContentMsg>() {
 
         @Override
         public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferConnMsgs.Disconnect payload,
           BasicContentMsg container) throws FSMException {
-          R1TransferSeederEvents.Disconnected disconnected
-            = new R1TransferSeederEvents.Disconnected(is.torrentId, is.fileId, is.seederAdr);
-          sendCtrl(es, is, disconnected);
+          killDownloadComp.accept(es, is);
+          sendCtrl(es, is, new R1TransferSeederEvents.Disconnected(is.torrentId, is.fileId, is.seederAdr));
           cancelPing(es, is);
           return FSMBasicStateNames.FINAL;
         }
@@ -297,17 +302,14 @@ public class R1TransferSeeder {
           is.pingTracker.ping();
           return state;
         } else {
-          R1TransferSeederEvents.Disconnected disconnected
-            = new R1TransferSeederEvents.Disconnected(is.torrentId, is.fileId, is.seederAdr);
-          sendCtrl(es, is, disconnected);
-          R1TransferConnMsgs.Disconnect disconnect = new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId);
-          msg(es, is, disconnect);
+          killDownloadComp.accept(es, is);
+          sendCtrl(es, is, new R1TransferSeederEvents.Disconnected(is.torrentId, is.fileId, is.seederAdr));
+          msg(es, is, new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId));
           cancelPing(es, is);
           return FSMBasicStateNames.FINAL;
         }
       }
     };
-    
 
     static FSMPatternEventHandler netPong
       = new FSMPatternEventHandler<ES, IS, R1TransferConnMsgs.Pong, BasicContentMsg>() {
@@ -319,14 +321,15 @@ public class R1TransferSeeder {
           return state;
         }
       };
-    
+
     static FSMBasicEventHandler disconnect = new FSMBasicEventHandler<ES, IS, R1TransferSeederEvents.Disconnect>() {
 
       @Override
-      public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferSeederEvents.Disconnect event)
+      public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferSeederEvents.Disconnect req)
         throws FSMException {
-        R1TransferConnMsgs.Disconnect connect = new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId);
-        msg(es, is, connect);
+        killDownloadComp.accept(es, is);
+        sendCtrl(es, is, req.ack());
+        msg(es, is, new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId));
         cancelPing(es, is);
         return FSMBasicStateNames.FINAL;
       }
@@ -347,7 +350,7 @@ public class R1TransferSeeder {
       };
 
     private static void sendCtrl(ES es, IS is, R1FileDownload.ConnectEvent content) {
-      es.proxy.trigger(content, es.ports.loopbackSend);
+      es.proxy.trigger(content, es.ports.transferSeederCtrlNeg);
     }
 
     private static <C extends KompicsEvent & Identifiable> void bestEffortMsg(ES es, IS is, C content) {
@@ -380,5 +383,34 @@ public class R1TransferSeeder {
         is.pingTimeoutId = null;
       }
     }
+
+    public static BiConsumer<ES, IS> createDownloadComp = new BiConsumer<ES, IS>() {
+
+      @Override
+      public void accept(ES es, IS is) {
+        R1DownloadComp.Init init = new R1DownloadComp.Init(es.selfAdr, is.torrentId, is.fileId, is.seederAdr,
+          is.fileMetadata);
+        Component downloadComp = es.proxy.create(R1DownloadComp.class, init);
+        Identifier downloadId = R1DownloadComp.baseId(is.torrentId, is.fileId, is.seederAdr.getId());
+        es.proxy.connect(es.ports.timer, downloadComp.getNegative(Timer.class), Channel.TWO_WAY);
+        es.ports.downloadC.addChannel(downloadId, downloadComp.getPositive(R1DownloadPort.class));
+        es.ports.netDownloadC.addChannel(downloadId, downloadComp.getNegative(Network.class));
+        es.proxy.trigger(Start.event, downloadComp.control());
+        is.downloadComp = downloadComp;
+      }
+    };
+
+    public static BiConsumer<ES, IS> killDownloadComp = new BiConsumer<ES, IS>() {
+      @Override
+      public void accept(ES es, IS is) {
+        Identifier downloadId = R1DownloadComp.baseId(is.torrentId, is.fileId, is.seederAdr.getId());
+        Component downloadComp = is.downloadComp;
+        es.proxy.trigger(Kill.event, downloadComp.control());
+        es.proxy.disconnect(es.ports.timer, downloadComp.getNegative(Timer.class));
+        es.ports.downloadC.removeChannel(downloadId, downloadComp.getPositive(R1DownloadPort.class));
+        es.ports.netDownloadC.removeChannel(downloadId, downloadComp.getNegative(Network.class));
+        is.downloadComp = null;
+      }
+    };
   }
 }

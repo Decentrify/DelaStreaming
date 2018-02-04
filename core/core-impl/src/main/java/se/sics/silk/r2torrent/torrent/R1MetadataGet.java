@@ -280,11 +280,11 @@ public class R1MetadataGet {
     }
 
     private static void sendTorrent(ES es, R1MetadataGetEvents.Ind e) {
-      es.getProxy().trigger(e, es.ports.loopbackSend);
+      es.getProxy().trigger(e, es.ports.loopbackPos);
     }
 
     private static void sendTorrentSeeder(ES es, R1TorrentSeeder.Event2 e) {
-      es.getProxy().trigger(e, es.ports.loopbackSend);
+      es.getProxy().trigger(e, es.ports.loopbackPos);
     }
   }
 }

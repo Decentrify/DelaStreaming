@@ -358,7 +358,7 @@ public class R2NodeLeecher {
     };
     
     private static void localSend(ES es, R2NodeLeecherEvents.Ind event) {
-      es.getProxy().trigger(event, es.ports.loopbackSend);
+      es.getProxy().trigger(event, es.ports.loopbackPos);
     }
     
     private static void scheduleConnPing(ES es, IS is) {

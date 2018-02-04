@@ -24,6 +24,7 @@ import se.sics.kompics.Channel;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
+import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
@@ -40,6 +41,7 @@ import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
+import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
 import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
@@ -51,6 +53,8 @@ import se.sics.silk.r2torrent.torrent.R1MetadataServe;
 import se.sics.silk.r2torrent.torrent.R2Torrent;
 import se.sics.silk.r2torrent.transfer.R1DownloadComp;
 import se.sics.silk.r2torrent.transfer.R1DownloadPort;
+import se.sics.silk.r2torrent.transfer.R1TransferSeeder;
+import se.sics.silk.r2torrent.transfer.R1TransferSeederCtrl;
 import se.sics.silk.r2torrent.transfer.R1UploadComp;
 import se.sics.silk.r2torrent.transfer.R1UploadPort;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadEvent;
@@ -74,6 +78,9 @@ public class R2TorrentComp extends ComponentDefinition {
   private MultiFSM metadataGet;
   private MultiFSM metadataServe;
   private MultiFSM hashMngr;
+
+  private MultiFSM transferSeeders;
+
   private R2Torrent.ES torrentES;
   private R1MetadataGet.ES metadataGetES;
   private R1MetadataServe.ES metadataServeES;
@@ -82,6 +89,8 @@ public class R2TorrentComp extends ComponentDefinition {
   private R2NodeLeecher.ES nodeLeecherES;
   private R1TorrentSeeder.ES torrentSeederES;
   private R1TorrentLeecher.ES torrentLeecherES;
+
+  private R1TransferSeeder.ES transferSeederES;
 
   public R2TorrentComp(Init init) {
     logPrefix = "<" + init.selfAdr.getId() + ">";
@@ -100,6 +109,8 @@ public class R2TorrentComp extends ComponentDefinition {
     metadataServeES = new R1MetadataServe.ES();
     hashMngrES = new R1Hash.ES(ports);
 
+    transferSeederES = new R1TransferSeeder.ES(init.selfAdr);
+
     nodeSeederES.setProxy(proxy);
     nodeLeecherES.setProxy(proxy);
     torrentSeederES.setProxy(proxy);
@@ -108,6 +119,7 @@ public class R2TorrentComp extends ComponentDefinition {
     metadataGetES.setProxy(proxy);
     metadataServeES.setProxy(proxy);
     hashMngrES.setProxy(proxy);
+    transferSeederES.setProxy(proxy);
 
     nodeLeecherES.setPorts(ports);
     nodeSeederES.setPorts(ports);
@@ -116,6 +128,7 @@ public class R2TorrentComp extends ComponentDefinition {
     torrentES.setPorts(ports);
     metadataGetES.setPorts(ports);
     metadataServeES.setPorts(ports);
+    transferSeederES.setPorts(ports);
     try {
       OnFSMExceptionAction oexa = new OnFSMExceptionAction() {
         @Override
@@ -132,6 +145,7 @@ public class R2TorrentComp extends ComponentDefinition {
       metadataGet = R1MetadataGet.FSM.multifsm(fsmIdFactory, metadataGetES, oexa);
       metadataServe = R1MetadataServe.FSM.multifsm(fsmIdFactory, metadataServeES, oexa);
       hashMngr = R1Hash.FSM.multifsm(fsmIdFactory, hashMngrES, oexa);
+      transferSeeders = R1TransferSeeder.FSM.multifsm(fsmIdFactory, transferSeederES, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }
@@ -150,42 +164,56 @@ public class R2TorrentComp extends ComponentDefinition {
       metadataGet.setupHandlers();
       metadataServe.setupHandlers();
       hashMngr.setupHandlers();
+      transferSeeders.setupHandlers();
     }
   };
   //********************************************************************************************************************
 
   public static class Ports {
 
-    public final Negative<SelfPort> loopbackSend;
+    public final Negative<SelfPort> loopbackPos;
     public final Positive<SelfPort> loopbackSubscribe;
     public final Negative<R2TorrentCtrlPort> ctrl;
     public final Positive<DStreamControlPort> streamCtrl;
-    public final Positive<R1DownloadPort> download;
     public final Positive<R1UploadPort> upload;
     public final Positive<Network> network;
     public final Positive<Timer> timer;
     public final Positive<DStoragePort> storage;
-
-    public final One2NChannel<R1DownloadPort> downloadC;
+    
+    public final Positive download;
+    public final Positive transferSeederCtrlPos;
+    public final Negative transferSeederCtrlNeg;
     public final One2NChannel<R1UploadPort> uploadC;
-    public final One2NChannel<Network> netDownloadC;
     public final One2NChannel<Network> netUploadC;
 
+    public final One2NChannel<Network> netDownloadC;
+    public final One2NChannel<R1DownloadPort> downloadC;
+
     public Ports(ComponentProxy proxy) {
-      loopbackSend = proxy.provides(SelfPort.class);
+      loopbackPos = proxy.provides(SelfPort.class);
       loopbackSubscribe = proxy.requires(SelfPort.class);
-      proxy.connect(loopbackSend.getPair(), loopbackSubscribe.getPair(), Channel.TWO_WAY);
+      proxy.connect(proxy.getPositive(SelfPort.class), proxy.getNegative(SelfPort.class), Channel.TWO_WAY);
       ctrl = proxy.provides(R2TorrentCtrlPort.class);
       streamCtrl = proxy.requires(DStreamControlPort.class);
-      download = proxy.requires(R1DownloadPort.class);
+      //clean ports
       upload = proxy.requires(R1UploadPort.class);
-      network = proxy.requires(Network.class);
+      network = proxy.requires(Network.class); 
       timer = proxy.requires(Timer.class);
       storage = proxy.requires(DStoragePort.class);
-      downloadC = One2NChannel.getChannel("r1-torrent-file-download-ctrl", (Negative)download.getPair(), downloadCompIdExtractor());
-      uploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Negative)upload.getPair(), uploadCompIdExtractor());
-      netDownloadC = One2NChannel.getChannel("r1-torrent-file-download-network", network, netDownloadCompIdExtractor());
+      uploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Negative) upload.getPair(),
+        uploadCompIdExtractor());
       netUploadC = One2NChannel.getChannel("r1-torrent-file-upload-network", network, netUploadCompIdExtractor());
+
+      download = proxy.requires(R1DownloadPort.class);
+      transferSeederCtrlPos = proxy.requires(R1TransferSeederCtrl.class);
+      transferSeederCtrlNeg = proxy.provides(R1TransferSeederCtrl.class);
+      proxy.connect(proxy.getPositive(R1TransferSeederCtrl.class), proxy.getNegative(R1TransferSeederCtrl.class), 
+        Channel.TWO_WAY);
+      
+      netDownloadC = One2NChannel.getChannel("r1-torrent-transfer-download-network", network,
+        netDownloadCompIdExtractor());
+      downloadC = One2NChannel.getChannel("r1-torrent-file-download-ctrl", (Negative)download.getPair(), 
+        downloadCompIdExtractor());
     }
   }
 
@@ -199,11 +227,16 @@ public class R2TorrentComp extends ComponentDefinition {
   }
 
   public static ChannelIdExtractor downloadCompIdExtractor() {
-    return new ChannelIdExtractor<R1DownloadEvent, Identifier>(R1DownloadEvent.class) {
+    return new ChannelIdExtractor<KompicsEvent, Identifier>(KompicsEvent.class) {
 
       @Override
-      public Identifier getValue(R1DownloadEvent event) {
-        return R1DownloadComp.baseId(event.torrentId(), event.fileId(), event.nodeId());
+      public Identifier getValue(KompicsEvent event) {
+        if (event instanceof R1DownloadEvent) {
+          R1DownloadEvent e = (R1DownloadEvent) event;
+          return R1DownloadComp.baseId(e.torrentId(), e.fileId(), e.nodeId());
+        } else {
+          return null;
+        }
       }
     };
   }
@@ -213,22 +246,33 @@ public class R2TorrentComp extends ComponentDefinition {
 
       @Override
       public Identifier getValue(BasicContentMsg msg) {
-        if (msg.getContent() instanceof R1TransferMsg) {
-          R1TransferMsg payload = (R1TransferMsg) msg.getContent();
-          KAddress seeder = msg.getSource();
+        KAddress seeder = msg.getSource();
+        if (msg.getContent() instanceof R1TransferMsg.Dwnl) {
+          R1TransferMsg.Dwnl payload = (R1TransferMsg.Dwnl) msg.getContent();
           return R1DownloadComp.baseId(payload.torrentId(), payload.fileId(), seeder.getId());
+        } else if (msg.getContent() instanceof BestEffortMsg.Request) {
+          BestEffortMsg.Request be = (BestEffortMsg.Request) msg.getContent();
+          if (be.extractValue() instanceof R1TransferMsg.Dwnl) {
+            R1TransferMsg.Dwnl payload = (R1TransferMsg.Dwnl) be.content;
+            return R1DownloadComp.baseId(payload.torrentId(), payload.fileId(), seeder.getId());
+          }
         }
         return null;
       }
     };
   }
-  
+
   public static ChannelIdExtractor uploadCompIdExtractor() {
-    return new ChannelIdExtractor<R1UploadEvent, Identifier>(R1UploadEvent.class) {
+    return new ChannelIdExtractor<KompicsEvent, Identifier>(KompicsEvent.class) {
 
       @Override
-      public Identifier getValue(R1UploadEvent event) {
-        return R1UploadComp.baseId(event.torrentId(), event.fileId(), event.nodeId());
+      public Identifier getValue(KompicsEvent event) {
+        if (event instanceof R1UploadEvent) {
+          R1UploadEvent e = (R1UploadEvent) event;
+          return R1UploadComp.baseId(e.torrentId(), e.fileId(), e.nodeId());
+        } else {
+          return null;
+        }
       }
     };
   }
@@ -238,9 +282,9 @@ public class R2TorrentComp extends ComponentDefinition {
 
       @Override
       public Identifier getValue(BasicContentMsg msg) {
-        if (msg.getContent() instanceof R1TransferMsg) {
-          R1TransferMsg payload = (R1TransferMsg) msg.getContent();
-          KAddress leecher = msg.getSource();
+        KAddress leecher = msg.getSource();
+        if (msg.getContent() instanceof R1TransferMsg.Upld) {
+          R1TransferMsg.Upld payload = (R1TransferMsg.Upld) msg.getContent();
           return R1UploadComp.baseId(payload.torrentId(), payload.fileId(), leecher.getId());
         }
         return null;

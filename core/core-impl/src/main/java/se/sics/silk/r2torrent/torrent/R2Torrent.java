@@ -459,15 +459,15 @@ public class R2Torrent {
     };
 
     private static void sendMetaGet(ES es, R1MetadataGet.TorrentEvent e) {
-      es.getProxy().trigger(e, es.ports.loopbackSend);
+      es.getProxy().trigger(e, es.ports.loopbackPos);
     }
 
     private static void sendMetaServe(ES es, R1MetadataServe.TorrentEvent e) {
-      es.getProxy().trigger(e, es.ports.loopbackSend);
+      es.getProxy().trigger(e, es.ports.loopbackPos);
     }
 
     private static void sendHash(ES es, R1Hash.TorrentEvent e) {
-      es.getProxy().trigger(e, es.ports.loopbackSend);
+      es.getProxy().trigger(e, es.ports.loopbackPos);
     }
 
     private static void sendCtrl(ES es, CtrlEvent e) {

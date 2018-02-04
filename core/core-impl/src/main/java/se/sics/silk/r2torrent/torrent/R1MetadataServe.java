@@ -235,7 +235,7 @@ public class R1MetadataServe {
     }
 
     private static void sendTorrent(ES es, R2Torrent.MetadataEvent e) {
-      es.getProxy().trigger(e, es.ports.loopbackSend);
+      es.getProxy().trigger(e, es.ports.loopbackPos);
     }
   }
 }

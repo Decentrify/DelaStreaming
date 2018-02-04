@@ -36,20 +36,20 @@ public class R1FileDownloadSeedersState {
   //to be used just by children;
   public final R1FileMetadata fileMetadata;
   public final R1FileDownloadTracker fileTracker;
-  public final R1AsyncCheckedBuffer buffer; 
+  public final R1AsyncCheckedBuffer buffer;
   public final R1FileDownload.SeederActions actions;
   //
   Map<Identifier, R1FileDownloadSeederState> pendingSeeders = new HashMap<>();
   Map<Identifier, R1FileDownloadSeederState> connectedSeeders = new HashMap<>();
 
-  public R1FileDownloadSeedersState(R1FileMetadata fileMetadata, R1FileDownloadTracker fileTracker, 
+  public R1FileDownloadSeedersState(R1FileMetadata fileMetadata, R1FileDownloadTracker fileTracker,
     R1AsyncCheckedBuffer buffer, R1FileDownload.SeederActions actions) {
     this.fileMetadata = fileMetadata;
     this.fileTracker = fileTracker;
     this.buffer = buffer;
     this.actions = actions;
   }
-  
+
   public void pending(KAddress seeder) {
     pendingSeeders.put(seeder.getId(), new R1FileDownloadSeederState(seeder, this));
   }
@@ -63,28 +63,24 @@ public class R1FileDownloadSeedersState {
     fss.connected();
     return true;
   }
-  
+
   public boolean connected(KAddress seeder) {
     R1FileDownloadSeederState fss = new R1FileDownloadSeederState(seeder, this);
     connectedSeeders.put(seeder.getId(), fss);
     fss.connected();
     return true;
   }
-  
+
   public void disconnectPending() {
-    pendingSeeders.values().stream().forEach((fss) -> {
-      fss.clearPending();
-    });
+    pendingSeeders.values().stream().forEach((fss) -> fss.clearPending());
     pendingSeeders.clear();
   }
 
   public void disconnect() {
-    connectedSeeders.values().stream().forEach((fss) -> {
-      fss.disconnect();
-    });
+    connectedSeeders.values().stream().forEach((fss) -> fss.disconnect());
     connectedSeeders.clear();
   }
-  
+
   public boolean disconnect(Identifier seederId) {
     R1FileDownloadSeederState fss = connectedSeeders.remove(seederId);
     if (fss == null) {
@@ -93,7 +89,7 @@ public class R1FileDownloadSeedersState {
     fss.disconnect();
     return true;
   }
-  
+
   public boolean disconnected(Identifier seederId) {
     R1FileDownloadSeederState fss = connectedSeeders.remove(seederId);
     if (fss == null) {
@@ -102,7 +98,12 @@ public class R1FileDownloadSeedersState {
     fss.disconnected();
     return true;
   }
-  
+
+  public void completed() {
+    connectedSeeders.values().stream().forEach((fss) -> fss.completed());
+    connectedSeeders.clear();
+  }
+
   public Optional<R1FileDownloadSeederState> state(Identifier seederId) {
     return Optional.ofNullable(connectedSeeders.get(seederId));
   }

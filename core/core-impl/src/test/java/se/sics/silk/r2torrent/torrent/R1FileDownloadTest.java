@@ -20,8 +20,11 @@ package se.sics.silk.r2torrent.torrent;
 
 import com.google.common.base.Predicate;
 import java.util.Random;
+import java.util.Set;
+import java.util.TreeSet;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -34,7 +37,9 @@ import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.kompics.network.Network;
 import se.sics.kompics.testing.Direction;
+import se.sics.kompics.testing.Future;
 import se.sics.kompics.testing.TestContext;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
@@ -44,17 +49,22 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
+import se.sics.nstream.storage.durable.events.DStorageWrite;
 import se.sics.nstream.storage.durable.events.DStreamConnect;
 import se.sics.nstream.util.BlockDetails;
+import se.sics.silk.FutureHelper;
+import se.sics.silk.FutureHelper.BasicFuture;
 import se.sics.silk.SelfPort;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.TorrentIdHelper;
-import static se.sics.silk.TorrentTestHelper.eSchedulePeriodicTimer;
+import se.sics.silk.TorrentTestHelper.CancelPeriodicTimerPredicate;
 import static se.sics.silk.TorrentTestHelper.storageStreamConnected;
+import static se.sics.silk.TorrentTestHelper.storageStreamDisconnected;
 import static se.sics.silk.TorrentTestHelper.tFileOpen;
 import static se.sics.silk.TorrentTestHelper.transferSeederConnectSucc;
 import se.sics.silk.TorrentWrapperComp;
@@ -64,8 +74,8 @@ import se.sics.silk.r2torrent.torrent.event.R1FileDownloadEvents;
 import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
 import se.sics.silk.r2torrent.torrent.util.R1TorrentDetails;
 import se.sics.silk.r2torrent.transfer.R1DownloadPort;
+import se.sics.silk.r2torrent.transfer.R1TransferSeederCtrl;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadEvents;
-import se.sics.silk.r2torrent.transfer.events.R1DownloadTimeout;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
 
 /**
@@ -73,16 +83,19 @@ import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
  */
 public class R1FileDownloadTest {
 
+  private static OverlayIdFactory torrentIdFactory;
+
   private TestContext<TorrentWrapperComp> tc;
   private Component comp;
   private TorrentWrapperComp compState;
   private Port<SelfPort> triggerP;
   private Port<SelfPort> expectP;
   private Port<Timer> timerP;
+  private Port<Network> networkP;
   private Port<DStreamControlPort> streamCtrlP;
-  private Port<DStoragePort> storagePort;
+  private Port<DStoragePort> storageP;
   private Port<R1DownloadPort> downloadP;
-  private static OverlayIdFactory torrentIdFactory;
+  private Port<R1TransferSeederCtrl> transferSeederP;
   private IntIdFactory intIdFactory;
   private KAddress selfAdr;
   private Identifier endpointId;
@@ -97,9 +110,12 @@ public class R1FileDownloadTest {
   private KAddress seeder2;
   private KAddress seeder3;
   private R1TorrentDetails torrentDetails;
+  private CancelPeriodicTimerPredicate pcp;
 
   @BeforeClass
   public static void setup() throws FSMException {
+    R1FileDownload.HardCodedConfig.DOWNLOAD_COMP_BUFFER_SIZE = 5;
+    R1FileDownload.HardCodedConfig.BLOCK_BATCH_REQUEST = 2;
     torrentIdFactory = SystemSetup.systemSetup("src/test/resources/application.conf");
   }
 
@@ -118,8 +134,11 @@ public class R1FileDownloadTest {
     file1StreamId = TorrentIdHelper.streamId(endpointId, torrent, file1);
     file2StreamId = TorrentIdHelper.streamId(endpointId, torrent, file2);
     file3StreamId = TorrentIdHelper.streamId(endpointId, torrent, file3);
-    BlockDetails defaultBlock = new BlockDetails(1024 * 100, 100, 1024, 1024);
-    R1FileMetadata fileMetadata = R1FileMetadata.instance(1024 * 100 * 2, defaultBlock);
+    int pieceSize = 1024;
+    int nrPieces = 10;
+    int nrBlocks = 5;
+    BlockDetails defaultBlock = new BlockDetails(pieceSize * nrPieces, nrPieces, pieceSize, pieceSize);
+    R1FileMetadata fileMetadata = R1FileMetadata.instance(pieceSize * nrPieces * nrBlocks, defaultBlock);
     torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA));
     torrentDetails.addMetadata(file1, fileMetadata);
     torrentDetails.addMetadata(file2, fileMetadata);
@@ -135,9 +154,11 @@ public class R1FileDownloadTest {
     triggerP = comp.getNegative(SelfPort.class);
     expectP = comp.getPositive(SelfPort.class);
     timerP = comp.getNegative(Timer.class);
+    networkP = comp.getNegative(Network.class);
     streamCtrlP = comp.getNegative(DStreamControlPort.class);
-    storagePort = comp.getNegative(DStoragePort.class);
+    storageP = comp.getNegative(DStoragePort.class);
     downloadP = comp.getNegative(R1DownloadPort.class);
+    transferSeederP = comp.getNegative(R1TransferSeederCtrl.class);
   }
 
   private TestContext<TorrentWrapperComp> getContext() {
@@ -193,15 +214,15 @@ public class R1FileDownloadTest {
     return tc;
   }
 
-  //***************************************************START TO STORAGE_SUCC********************************************
+  //********************************************************START TO IDLE***********************************************
   @Test
-  public void testStartToStorageSucc() {
+  public void testStartToIdle() {
     tc = tc.body();
     tc = startToStorageSucc(tc, torrent, file1, file1StreamId);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file1);
-    assertEquals(States.STORAGE_SUCC, compState.fsm.getFSMState(fsmBaseId));
+    assertEquals(States.IDLE, compState.fsm.getFSMState(fsmBaseId));
   }
 
   private TestContext startToStorageSucc(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId) {
@@ -229,148 +250,152 @@ public class R1FileDownloadTest {
     tc = tc.expect(R1DownloadEvents.GetBlocks.class, downloadP, Direction.OUT); //9
     return tc;
   }
-  
+
   //***************************************************DOWNLOAD_FILE****************************************************
   @Test
-  public void testDownloadFile() {
+  public void testDownloadFileInOrder() {
+    R1FileMetadata fm = torrentDetails.getMetadata(file1);
+
+    Random rand = new Random();
+    byte[] block = new byte[fm.defaultBlock.blockSize];
+    rand.nextBytes(block);
+    byte[] hash = HashUtil.makeHash(block, HashUtil.getAlgName(HashUtil.SHA));
+
+//    tc = tc.setTimeout(1000 * 60 * 10);
     tc = tc.body();
     tc = tFileOpen(tc, triggerP, open(torrent, file1)); //1
-    tc = myStorageStreamConnected(tc); //2-4
-    tc = transferConnected(tc, torrent, file1, seeder1); //5-8
+    tc = myStorageStreamConnected(tc); //3
+    tc = transferConnected(tc, torrent, file1, seeder1); //4
+    tc = downloadInOrder(tc, torrent, file1, seeder1, block, hash); //18
+    tc = transferCompleted(tc, torrent, file1, seeder1); //4
+    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);//2
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file1);
-    assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmBaseId));
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
-  TestContext getAllBlocksInOrder(TestContext tc, BlockDetails blockDetails, int nrBlocks) {
-    tc = tc.expect(R1DownloadEvents.GetBlocks.class, downloadP, Direction.OUT);
+  @Test
+  public void testDownloadFileOutOfOrder() {
+    R1FileMetadata fm = torrentDetails.getMetadata(file1);
+
     Random rand = new Random();
-    for(int i= 0; i < nrBlocks; i++) {
-      byte[] block = new byte[blockDetails.blockSize];
-      rand.nextBytes(block);
-      byte[] hash = HashUtil.makeHash(block, HashUtil.getAlgName(HashUtil.SHA));
-      tr.trigger(R1DownloadEvents.Completed)
-    }
+    byte[] block = new byte[fm.defaultBlock.blockSize];
+    rand.nextBytes(block);
+    byte[] hash = HashUtil.makeHash(block, HashUtil.getAlgName(HashUtil.SHA));
+
+//    tc = tc.setTimeout(1000 * 60 * 10);
+    tc = tc.body();
+    tc = tFileOpen(tc, triggerP, open(torrent, file1)); //1
+    tc = myStorageStreamConnected(tc); //3
+    tc = transferConnected(tc, torrent, file1, seeder1); //4
+    tc = downloadOutOfOrder(tc, torrent, file1, seeder1, block, hash); //18
+    tc = transferCompleted(tc, torrent, file1, seeder1); //4
+    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);//2
+    tc.repeat(1).body().end();
+    assertTrue(tc.check());
+    Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file1);
+    assertFalse(compState.fsm.activeFSM(fsmBaseId));
+  }
+
+  private TestContext downloadInOrder(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder,
+    byte[] block, byte[] hash) {
+    Set<Integer> blocks1 = new TreeSet<>();
+    blocks1.add(0);
+    blocks1.add(1);
+    Set<Integer> blocks2 = new TreeSet<>();
+    blocks2.add(2);
+    blocks2.add(3);
+    Set<Integer> blocks3 = new TreeSet<>();
+    blocks3.add(4);
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks1), downloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 0, block, hash), downloadP);
+    tc = blockWriteToStorage(tc); //2
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks2), downloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 1, block, hash), downloadP);
+    tc = blockWriteToStorage(tc);//2
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks3), downloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 2, block, hash), downloadP);
+    tc = blockWriteToStorage(tc);//2
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 3, block, hash), downloadP);
+    tc = blockWriteToStorage(tc);//2
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 4, block, hash), downloadP);
+    tc = blockWriteToStorage(tc);//2
     return tc;
   }
-//  //**********************************************SEEDER DISCONNECT*****************************************************
-//  @Test
-//  public void testSeederConnectDisc() {
-//    tc = tc.body();
-//    tc = tFileOpen(tc, triggerP, open(torrent, file1)); //1
-//    tc = myStorageStreamConnected(tc); //2-4
-//    tc = transferConnected(tc, torrent, file1, seeder1); //5-8
-//    tc = tc.expect(R1DownloadEvents.GetBlocks.class, downloadP, Direction.OUT); //10
-//    tc = disconnectedTransfer(tc, torrent, file1, seeder1); //11-14
-//    tc = eFileIndication(tc, States.IDLE); //15
-//    tc = transferConnected(tc, torrent, file1, seeder1); //16-19
-//    tc = tc.expect(R1DownloadEvents.GetBlocks.class, downloadP, Direction.OUT); //
-//    tc.repeat(1).body().end();
-//    assertTrue(tc.check());
-//    Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file1);
-//    assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmBaseId));
-//  }
-//
-//  //*********************************************STORAGE_PENDING TO CLOSE***********************************************
-//  @Test
-//  public void testStoragePendingClose() {
-//    tc = tc.body();
-//    tc = startToStoragePending(tc, torrent, file1, file1StreamId);
-//    tc = tc.trigger(close(torrent, file1), triggerP);
-//    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);
-//    tc.repeat(1).body().end();
-//    assertTrue(tc.check());
-//    Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file1);
-//    assertFalse(compState.fsm.activeFSM(fsmBaseId));
-//  }
-//
-//  //*********************************************STORAGE_SUCCESS TO CLOSE***********************************************
-//  @Test
-//  public void testStorageSuccessClose() {
-//    tc = tc.body();
-//    tc = startToStorageSucc(tc, torrent, file1, file1StreamId);
-//    tc = tc.trigger(close(torrent, file1), triggerP);
-//    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);
-//    tc.repeat(1).body().end();
-//    assertTrue(tc.check());
-//    Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file1);
-//    assertFalse(compState.fsm.activeFSM(fsmBaseId));
-//  }
-//
-//  //***************************************************ACTIVE TO CLOSE**************************************************
-//  @Test
-//  public void testActiveClose() {
-//    tc = tc.body();
-//    tc = tFileOpen(tc, triggerP, open(torrent, file1)); //1
-//    tc = myStorageStreamConnected(tc); //2-4
-//    tc = transferConnected(tc, torrent, file1, seeder1); //5-8
-//    tc = disconnectActive(tc, torrent, file1, new KAddress[]{seeder1});
-//    tc = eFileIndication(tc, States.CLOSE);
-//    tc.repeat(1).body().end();
-//    assertTrue(tc.check());
-//    Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file1);
-//    assertFalse(compState.fsm.activeFSM(fsmBaseId));
-//  }
-//
-//  //***************************************************IDLE TO CLOSE**************************************************
-//  @Test
-//  public void testIdleClose() {
-//    tc = tc.body();
-//    tc = tFileOpen(tc, triggerP, open(torrent, file1)); //1
-//    tc = myStorageStreamConnected(tc); //2-4
-//    tc = transferConnected(tc, torrent, file1, seeder1); //5-8
-//    tc = disconnectedTransfer(tc, torrent, file1, seeder1); //9-12
-//    tc = eFileIndication(tc, States.IDLE); //13
-//    tc = disconnectActive(tc, torrent, file1, new KAddress[]{});
-//    tc = eFileIndication(tc, States.CLOSE);
-//    tc.repeat(1).body().end();
-//    assertTrue(tc.check());
-//    Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file1);
-//    assertFalse(compState.fsm.activeFSM(fsmBaseId));
-//  }
+  
+  private TestContext downloadOutOfOrder(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder,
+    byte[] block, byte[] hash) {
+    Set<Integer> blocks1 = new TreeSet<>();
+    blocks1.add(0);
+    blocks1.add(1);
+    Set<Integer> blocks2 = new TreeSet<>();
+    blocks2.add(2);
+    blocks2.add(3);
+    Set<Integer> blocks3 = new TreeSet<>();
+    blocks3.add(4);
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks1), downloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 1, block, hash), downloadP);
+    tc = blockWriteToStorage(tc);//2
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks2), downloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 2, block, hash), downloadP);
+    tc = blockWriteToStorage(tc);//2
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks3), downloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 3, block, hash), downloadP);
+    tc = blockWriteToStorage(tc);//2
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 4, block, hash), downloadP);
+    tc = blockWriteToStorage(tc);//2
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 0, block, hash), downloadP);
+    tc = blockWriteToStorage(tc);//2
+    return tc;
+  }
 
-  //********************************************************************************************************************
-//  public TestContext disconnectActive(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress[] seeders) {
-//    tc = tc.trigger(close(torrent, file1), triggerP); //1
-//    for (KAddress seeder : seeders) {
-//      tc = disconnectTransfer(tc, torrentId, fileId, seeder); //2-4 - x times
-//    }
-//    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);//2+3x
-//    return tc;
-//  }
-//
-//  public TestContext disconnectedTransfer(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
-//    tc = tc.trigger(disconnected(torrent, file1, seeder), triggerP); //1
-//    tc = eCancelPeriodicTimer(tc, timerP); //1
-//    tc = tc.expect(R1TransferSeederEvents.Disconnect.class, expectP, Direction.OUT); //2
-//    return tc;
-//  }
-//
-//  public TestContext disconnectTransfer(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
-//    tc = tc.trigger(disconnect(torrent, file1, seeder), triggerP); //1
-//    tc = eCancelPeriodicTimer(tc, timerP); //1
-//    tc = tc.expect(R1TransferSeederEvents.Disconnect.class, expectP, Direction.OUT); //2
-//    return tc;
-//  }
+  public Predicate getBlock(Set<Integer> blocks) {
+    return (Predicate<R1DownloadEvents.GetBlocks>) (R1DownloadEvents.GetBlocks t) -> t.blocks.equals(blocks);
+  }
+
+  private TestContext blockWriteToStorage(TestContext tc) {
+    Future blockWriteF = blockWriteF();
+    tc = tc.answerRequest(DStorageWrite.Request.class, storageP, blockWriteF);
+    tc = tc.trigger(blockWriteF, storageP);
+    return tc;
+  }
+
+  private Future blockWriteF() {
+    return new FutureHelper.BasicFuture<DStorageWrite.Request, DStorageWrite.Response>() {
+      @Override
+      public DStorageWrite.Response get() {
+        return event.respond(Result.success(true));
+      }
+    };
+  }
 
   public TestContext myStorageStreamConnected(TestContext tc) {
     tc = storageStreamConnected(tc, streamCtrlP, streamCtrlP);//1-2
-    tc = eFileIndication(tc, R1FileDownload.States.STORAGE_SUCC); //3
+    tc = eFileIndication(tc, R1FileDownload.States.IDLE); //3
     return tc;
   }
-
+  
   public TestContext transferConnected(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(connect(torrentId, fileId, seeder), triggerP); //1
-    tc = transferSeederConnectSucc(tc, expectP, triggerP); //2-3
-    tc = eSchedulePeriodicTimer(tc, R1DownloadTimeout.class, timerP); //4
+    tc = transferSeederConnectSucc(tc, transferSeederP, transferSeederP); //2-3
     return tc;
   }
+  
+  public TestContext transferCompleted(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
+    Future f = new BasicFuture<R1TransferSeederEvents.Disconnect, R1TransferSeederEvents.Disconnected>() {
 
-//  public TestContext transferDisconnect(TestContext tc) {
-//    tc = tc.trigger(disconnected(torrent, file1, seeder1), triggerP);
-//    return tc;
-//  }
+      @Override
+      public R1TransferSeederEvents.Disconnected get() {
+        return event.ack();
+      }
+    };
+    tc = tc.answerRequest(R1TransferSeederEvents.Disconnect.class, transferSeederP, f);
+    tc = tc.expect(R1FileDownloadEvents.Disconnected.class, expectP, Direction.OUT);
+    tc = eFileIndication(tc, States.COMPLETED);
+    tc = tc.trigger(f, transferSeederP);
+    return tc;
+  }
 
   public TestContext eFileIndication(TestContext tc, States state) {
     Predicate p = fileIndication(state);
@@ -396,12 +421,13 @@ public class R1FileDownloadTest {
   public R1TransferSeederEvents.Disconnected disconnected(OverlayId torrentId, Identifier fileId, KAddress seeder) {
     return new R1TransferSeederEvents.Disconnected(torrentId, fileId, seeder);
   }
-  
+
   public R1FileDownloadEvents.Disconnect disconnect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
     return new R1FileDownloadEvents.Disconnect(torrentId, fileId, seeder.getId());
   }
-  
-  public R1DownloadEvents.Completed completed(OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    
+
+  public R1DownloadEvents.Completed completed(OverlayId torrentId, Identifier fileId, KAddress seeder,
+    int blockNr, byte[] block, byte[] hash) {
+    return new R1DownloadEvents.Completed(torrentId, fileId, seeder.getId(), blockNr, block, hash);
   }
 }

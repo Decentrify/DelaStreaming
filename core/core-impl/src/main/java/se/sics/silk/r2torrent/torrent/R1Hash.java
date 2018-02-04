@@ -180,7 +180,7 @@ public class R1Hash {
     };
 
     private static void sendTorrent(ES es, R2Torrent.HashEvent e) {
-      es.getProxy().trigger(e, es.ports.loopbackSend);
+      es.getProxy().trigger(e, es.ports.loopbackPos);
     }
   }
 }

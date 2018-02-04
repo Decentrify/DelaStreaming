@@ -16,24 +16,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.transfer.events;
+package se.sics.silk.r2torrent.transfer;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.util.Identifiable;
-import se.sics.silk.event.SilkEvent;
+import se.sics.kompics.PortType;
+import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1TransferMsg {
+public class R1TransferSeederCtrl extends PortType {
 
-  public static interface Event extends KompicsEvent, Identifiable, SilkEvent.TorrentEvent, SilkEvent.FileEvent {
-
-  }
-
-  public static interface Dwnl extends Event {
-  }
-
-  public static interface Upld extends Event {
+  {
+    request(R1TransferSeederEvents.Connect.class);
+    indication(R1TransferSeederEvents.Connected.class);
+    request(R1TransferSeederEvents.Disconnect.class);
+    indication(R1TransferSeederEvents.Disconnected.class);
   }
 }

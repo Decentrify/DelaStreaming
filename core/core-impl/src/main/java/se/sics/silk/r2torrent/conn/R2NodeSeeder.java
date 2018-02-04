@@ -438,7 +438,7 @@ public class R2NodeSeeder {
     }
     
     private static void sendR1(ES es, R2NodeSeederEvents.Ind event) {
-      es.getProxy().trigger(event, es.ports.loopbackSend);
+      es.getProxy().trigger(event, es.ports.loopbackPos);
     }
     
     private static Consumer<R2NodeSeederEvents.Ind> sendR1(ES es) {

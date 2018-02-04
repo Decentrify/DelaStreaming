@@ -380,7 +380,7 @@ public class R1FileUpload {
     }
 
     private static void sendCtrlEvent(ES es, KompicsEvent e) {
-      es.getProxy().trigger(e, es.ports.loopbackSend);
+      es.getProxy().trigger(e, es.ports.loopbackPos);
     }
 
     private static void sendStreamEvent(ES es, DStreamEvent e) {
@@ -388,12 +388,12 @@ public class R1FileUpload {
     }
 
     private static void sendConnectEvent(ES es, R1TransferLeecher.CtrlEvent e) {
-      es.getProxy().trigger(e, es.ports.loopbackSend);
+      es.getProxy().trigger(e, es.ports.loopbackPos);
     }
 
     private static Consumer<R1TransferLeecherEvents.ConnectReq> sendConnectAcc(ES es, IS is) {
       return (R1TransferLeecherEvents.ConnectReq req) -> {
-        es.getProxy().trigger(req.accept(), es.ports.loopbackSend);
+        es.getProxy().trigger(req.accept(), es.ports.loopbackPos);
       };
     }
   }

@@ -64,6 +64,7 @@ public class R1FileDownloadTracker {
   
   public void completeBlock(Integer block) {
     ongoingBlocks.remove(block);
+    fileTracker.addComponent(block);
   }
   
   public void resetBlocks(Set<Integer> blocks) {

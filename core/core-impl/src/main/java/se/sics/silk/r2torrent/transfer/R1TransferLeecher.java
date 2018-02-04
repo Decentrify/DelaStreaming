@@ -360,7 +360,7 @@ public class R1TransferLeecher {
     }
 
     private static void sendCtrl(ES es, IS is, R1FileUpload.ConnectEvent content) {
-      es.proxy.trigger(content, es.ports.loopbackSend);
+      es.proxy.trigger(content, es.ports.loopbackPos);
     }
 
     private static void schedulePing(ES es, IS is) {

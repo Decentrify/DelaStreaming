@@ -269,11 +269,11 @@ public class R1TorrentLeecher {
     };
 
     private static void sendR2(ES es, R2NodeLeecherEvents.Req event) {
-      es.getProxy().trigger(event, es.ports.loopbackSend);
+      es.getProxy().trigger(event, es.ports.loopbackPos);
     }
 
     private static void sendR0(ES es, R1TorrentLeecherEvents.Ind event) {
-      es.getProxy().trigger(event, es.ports.loopbackSend);
+      es.getProxy().trigger(event, es.ports.loopbackPos);
     }
 
     private static Consumer<R1TorrentLeecherEvents.Ind> sendR0(ES es) {

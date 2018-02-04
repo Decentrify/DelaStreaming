@@ -21,7 +21,6 @@ package se.sics.silk.r2torrent.transfer.util;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -68,7 +67,7 @@ public class R1DownloadBlockTracker {
   private boolean cacheConfirmed = true;
   //**************************************************************************
   private final Map<Integer, BlockMngr> ongoingBlocks = new HashMap<>();
-  private final TreeMap<Integer, LinkedList<Integer>> cachedPieces = new TreeMap<>();
+  private final TreeMap<Integer, TreeSet<Integer>> missedPieces = new TreeMap<>();
   private final TreeMap<Integer, Set<Integer>> pendingPieces = new TreeMap<>();
 
   public R1DownloadBlockTracker(BlockDetails defaultBlocksDetails, boolean withHashes) {
@@ -141,23 +140,46 @@ public class R1DownloadBlockTracker {
 //    }
   }
 
-  public boolean hasPiece() {
-    if (cachedPieces.isEmpty()) {
-      newWorkPieces();
-    }
-    return !cachedPieces.isEmpty();
+  public boolean hasMissedPiece() {
+    return !missedPieces.isEmpty();
   }
 
-  public Pair<Integer, Integer> nextPiece() {
-    Pair<Integer, Integer> nextPiece = removeNextPiece();
-    addPendingPiece(nextPiece);
-    return nextPiece;
+  public Pair<Integer, Integer> nextMissedPiece() {
+    Map.Entry<Integer, TreeSet<Integer>> nextPiece = missedPieces.firstEntry();
+    int block = nextPiece.getKey();
+    int piece = nextPiece.getValue().pollFirst();
+    addPendingPiece(block, piece);
+    if(nextPiece.getValue().isEmpty()) {
+      missedPieces.remove(block);
+    }
+    return Pair.with(block, piece);
+  }
+  
+  public boolean hasBlock() {
+    return !hashReadyBlocks.isEmpty();
+  }
+  
+  public Pair<Integer,Integer> nextBlock() {
+    int block = hashReadyBlocks.pollFirst();
+    BlockDetails bd = irregularBlockDetails.containsKey(block) ? irregularBlockDetails.remove(block)
+      : defaultBlockDetails;
+    ongoingBlocks.put(block, new InMemoryBlockMngr(bd));
+    TreeSet<Integer> pieces = new TreeSet<>();
+    for (int i = 0; i < bd.nrPieces; i++) {
+      pieces.add(i);
+    }
+    pendingPieces.put(block, pieces);
+    return Pair.with(block, bd.nrPieces);
   }
 
   public void pieceTimeout(Pair<Integer, Integer> piece) {
-    if (removePendingPiece(piece)) {
-      addNextPiece(piece);
+    TreeSet<Integer> pieces = missedPieces.get(piece.getValue0());
+    if(pieces == null) {
+      pieces = new TreeSet<>();
+      missedPieces.put(piece.getValue0(), pieces);
     }
+    pieces.add(piece.getValue1());
+    removePendingPiece(piece);
   }
 
   public void piece(Pair<Integer, Integer> piece, byte[] val) {
@@ -169,9 +191,16 @@ public class R1DownloadBlockTracker {
   public void latePiece(Pair<Integer, Integer> piece, byte[] val) {
     if (removePendingPiece(piece)) {
       addToBlock(piece, val);
+      return;
     }
-    if (removeNextPiece(piece)) {
-      addToBlock(piece, val);
+    TreeSet<Integer> pieces = missedPieces.get(piece.getValue0());
+    if(pieces != null) { 
+      if(pieces.remove(piece.getValue1())) {
+        addToBlock(piece, val);
+      }
+      if(pieces.isEmpty()) {
+        missedPieces.remove(piece.getValue0());
+      }
     }
   }
 
@@ -197,26 +226,6 @@ public class R1DownloadBlockTracker {
   }
 
   //**************************************************************************
-  private void newWorkPieces() {
-    if (!hashReadyBlocks.isEmpty()) {
-      Integer next = hashReadyBlocks.first();
-      hashReadyBlocks.remove(next);
-      newPendingBlock(next);
-    }
-  }
-
-  private void newPendingBlock(int blockNr) {
-    BlockDetails bd = irregularBlockDetails.containsKey(blockNr) ? irregularBlockDetails.remove(blockNr)
-      : defaultBlockDetails;
-    BlockMngr blockMngr = new InMemoryBlockMngr(bd);
-    ongoingBlocks.put(blockNr, blockMngr);
-    LinkedList<Integer> pieceList = new LinkedList<>();
-    for (int i = 0; i < bd.nrPieces; i++) {
-      pieceList.add(i);
-    }
-    cachedPieces.put(blockNr, pieceList);
-  }
-
   private KHint.Summary rebuildCacheHint() {
     if (!nextBlocks.isEmpty()) {
       pendingCacheBlocks.addAll(nextBlocks);
@@ -233,44 +242,14 @@ public class R1DownloadBlockTracker {
     cacheHintChanged = false;
     return oldHint.copy();
   }
-
-  private void addNextPiece(Pair<Integer, Integer> piece) {
-    LinkedList<Integer> nextBlock = cachedPieces.get(piece.getValue0());
-    if (nextBlock == null) {
-      nextBlock = new LinkedList<>();
-      cachedPieces.put(piece.getValue0(), nextBlock);
-    }
-    nextBlock.add(piece.getValue1());
-  }
-
-  private Pair<Integer, Integer> removeNextPiece() {
-    Map.Entry<Integer, LinkedList<Integer>> nextBlock = cachedPieces.firstEntry();
-    Integer nextPiece = nextBlock.getValue().removeFirst();
-    if (nextBlock.getValue().isEmpty()) {
-      cachedPieces.remove(nextBlock.getKey());
-    }
-    return Pair.with(nextBlock.getKey(), nextPiece);
-  }
-
-  private boolean removeNextPiece(Pair<Integer, Integer> piece) {
-    boolean result = false;
-    LinkedList<Integer> block = cachedPieces.get(piece.getValue0());
-    if (block != null) {
-      result = block.remove(piece.getValue1());
-      if (block.isEmpty()) {
-        cachedPieces.remove(piece.getValue0());
-      }
-    }
-    return result;
-  }
-
-  private void addPendingPiece(Pair<Integer, Integer> piece) {
-    Set<Integer> pendingBlock = pendingPieces.get(piece.getValue0());
+  
+  private void addPendingPiece(Integer block, Integer piece) {
+    Set<Integer> pendingBlock = pendingPieces.get(block);
     if (pendingBlock == null) {
       pendingBlock = new HashSet<>();
-      pendingPieces.put(piece.getValue0(), pendingBlock);
+      pendingPieces.put(block, pendingBlock);
     }
-    pendingBlock.add(piece.getValue1());
+    pendingBlock.add(piece);
   }
 
   private Boolean removePendingPiece(Pair<Integer, Integer> piece) {

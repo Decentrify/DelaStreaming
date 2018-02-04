@@ -19,6 +19,7 @@
 package se.sics.nstream.storage.durable.events;
 
 import se.sics.kompics.Direct;
+import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
@@ -65,7 +66,7 @@ public class DStorageWrite {
         }
     }
     
-    public static class Response implements Direct.Response, DStreamEvent {
+    public static class Response implements Direct.Response, DStreamEvent, FSMEvent {
         public final Request req;
         public final Result<Boolean> result;
         

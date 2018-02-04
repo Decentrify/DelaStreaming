@@ -19,6 +19,7 @@
 package se.sics.silk.r2torrent.transfer;
 
 import java.util.Random;
+import java.util.function.BiConsumer;
 import org.junit.After;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -49,15 +50,20 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.FutureHelper;
 import se.sics.silk.MsgHelper;
-import se.sics.silk.SelfPort;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
+import se.sics.silk.TorrentTestHelper.CancelPeriodicTimerPredicate;
+import static se.sics.silk.TorrentTestHelper.eCancelPeriodicTimer;
 import static se.sics.silk.TorrentTestHelper.eNetPayload;
 import static se.sics.silk.TorrentTestHelper.eSchedulePeriodicTimer;
 import se.sics.silk.WrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
+import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
+import se.sics.silk.r2torrent.transfer.R1TransferSeeder.ES;
+import se.sics.silk.r2torrent.transfer.R1TransferSeeder.IS;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder.States;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
 import se.sics.silk.r2torrent.transfer.events.R1TransferSeederPing;
@@ -67,23 +73,30 @@ import se.sics.silk.r2torrent.transfer.msgs.R1TransferConnMsgs;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1TransferSeederTest {
+
+  private static OverlayIdFactory torrentIdFactory;
+  private static final BiConsumer<ES, IS> NOP = (ES t, IS u) -> {
+  };
+  
   private TestContext<WrapperComp> tc;
   private Component comp;
   private WrapperComp compState;
-  private Port<SelfPort> triggerP;
-  private Port<SelfPort> expectP;
-  private Port<Network> networkP;
   private Port<Timer> timerP;
-  private static OverlayIdFactory torrentIdFactory;
+  private Port<Network> networkP;
+  private Port<R1TransferSeederCtrl> seederCtrlP;
   private IntIdFactory intIdFactory;
   private KAddress self;
   private KAddress seeder;
   private OverlayId torrent;
   private Identifier file;
+  private R1FileMetadata fileMetadata;
+  private CancelPeriodicTimerPredicate pcp;
 
   @BeforeClass
   public static void setup() throws FSMException {
     torrentIdFactory = SystemSetup.systemSetup("src/test/resources/application.conf");
+    R1TransferSeeder.Handlers.createDownloadComp = NOP;
+    R1TransferSeeder.Handlers.killDownloadComp = NOP;
   }
 
   @Before
@@ -93,14 +106,19 @@ public class R1TransferSeederTest {
     intIdFactory = new IntIdFactory(new Random());
     torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     file = intIdFactory.id(new BasicBuilders.IntBuilder(1));
-    
+    int pieceSize = 1024;
+    int nrPieces = 10;
+    int nrBlocks = 2;
+    BlockDetails defaultBlock = new BlockDetails(pieceSize * nrPieces, nrPieces, pieceSize, pieceSize);
+    fileMetadata = R1FileMetadata.instance(pieceSize * nrPieces * nrBlocks, defaultBlock);
+    pcp = new CancelPeriodicTimerPredicate();
+
     tc = getContext();
     comp = tc.getComponentUnderTest();
     compState = (WrapperComp) comp.getComponent();
-    triggerP = comp.getNegative(SelfPort.class);
-    expectP = comp.getPositive(SelfPort.class);
-    networkP = comp.getNegative(Network.class);
     timerP = comp.getNegative(Timer.class);
+    networkP = comp.getNegative(Network.class);
+    seederCtrlP = comp.getPositive(R1TransferSeederCtrl.class);
   }
 
   private TestContext<WrapperComp> getContext() {
@@ -142,154 +160,161 @@ public class R1TransferSeederTest {
     tc.repeat(1).body().end();
     assertTrue(tc.check());
   }
-  
+
   //***************************************************START TO CONNECT*************************************************
   @Test
   public void testStartToConnect() {
     tc = tc.body();
-    tc = startToConnect(tc); //1-2
+    tc = startToConnect(tc); //2
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
     assertEquals(States.CONNECT, compState.fsm.getFSMState(fsmId));
   }
-  
+
   private TestContext startToConnect(TestContext tc) {
-    tc = tc.trigger(connect(torrent, file, seeder), triggerP); //1
+    tc = tc.trigger(connect(torrent, file, seeder, fileMetadata), seederCtrlP); //1
     tc = eNetPayload(tc, R1TransferConnMsgs.Connect.class, networkP); //2
     return tc;
   }
-  
+
   //****************************************************START TO ACTIVE*************************************************
   @Test
   public void testStartToActive() {
     tc = tc.body();
-    tc = startToActive(tc); //1-5
+    tc = startToActive(tc); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmId));
   }
-  
+
   private TestContext startToActive(TestContext tc) {
-    tc = connect(tc, torrent, file, seeder); //1-5
+    tc = connect(tc, torrent, file, seeder, fileMetadata); //5
     return tc;
   }
-  
+
   //***********************************************************PING*****************************************************
   @Test
   public void testPingToActive() {
     tc = tc.body();
-    tc = connect(tc, torrent, file, seeder); //1-5
-    tc = tc.repeat(R1TransferSeeder.HardCodedConfig.deadPings-1).body();
-    tc = pingFail(tc, torrent, file, seeder); //7-8
+    tc = connect(tc, torrent, file, seeder, fileMetadata); //5
+    tc = tc.repeat(R1TransferSeeder.HardCodedConfig.deadPings - 1).body();
+    tc = pingFail(tc, torrent, file, seeder); //2
     tc = tc.end();
     tc = tc.repeat(R1TransferSeeder.HardCodedConfig.deadPings).body();
-    tc = pingPong(tc, torrent, file, seeder); //9-11
+    tc = pingPong(tc, torrent, file, seeder); //3
     tc = tc.end();
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmId));
   }
-  
+
   @Test
   public void testPingDisconnected() {
     tc = tc.body();
-    tc = connect(tc, torrent, file, seeder); //1-5
+    tc = connect(tc, torrent, file, seeder, fileMetadata); //5
     tc = tc.repeat(R1TransferSeeder.HardCodedConfig.deadPings).body();
-    tc = pingFail(tc, torrent, file, seeder); //7-8
+    tc = pingFail(tc, torrent, file, seeder); //2
     tc = tc.end();
-    tc = pingDisc(tc, torrent, file, seeder); //9-11
+    tc = pingDisc(tc, torrent, file, seeder); //4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
     assertFalse(compState.fsm.activeFSM(fsmId));
   }
-  
+
   //**************************************************CONNECT TO DISCONNECT*********************************************
   @Test
   public void testConnectToDisconnect() {
     tc = tc.body();
-    tc = startToConnect(tc); //1-2
-    tc = localDisconnect2(tc, torrent, file, seeder); //3-4
+    tc = startToConnect(tc); //2
+    tc = localDisconnect2(tc, torrent, file, seeder); //3
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
     assertFalse(compState.fsm.activeFSM(fsmId));
   }
-  
+
   //**************************************************ACTIVE TO DISCONNECT*********************************************
   @Test
   public void testActiveToLocalDisconnect() {
     tc = tc.body();
-    tc = startToActive(tc); //1-5
-    tc = localDisconnect1(tc, torrent, file, seeder); //6-8
+    tc = startToActive(tc); //5
+    tc = localDisconnect1(tc, torrent, file, seeder); //4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
     assertFalse(compState.fsm.activeFSM(fsmId));
   }
-  
+
   @Test
   public void testActiveToNetDisconnect() {
     tc = tc.body();
-    tc = startToActive(tc); //1-5
-    tc = netDisconnect(tc, torrent, file, seeder); //6-8
+    tc = startToActive(tc); //5
+    tc = netDisconnect(tc, torrent, file, seeder); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
     assertFalse(compState.fsm.activeFSM(fsmId));
   }
+
   //********************************************************************************************************************
-  private TestContext connect(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    tc = tc.trigger(connect(torrentId, fileId, seeder), triggerP); //1
+
+  private TestContext connect(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder,
+    R1FileMetadata fileMetadata) {
+    tc = tc.trigger(connect(torrentId, fileId, seeder, fileMetadata), seederCtrlP); //1
     tc = netConnectAcc(tc); //2-3
-    tc = tc.expect(R1TransferSeederEvents.Connected.class, expectP, Direction.OUT);//4
-    tc = eSchedulePeriodicTimer(tc, R1TransferSeederPing.class, timerP); //5
+    tc = tc.expect(R1TransferSeederEvents.Connected.class, seederCtrlP, Direction.OUT);//4
+    tc = eSchedulePeriodicTimer(tc, R1TransferSeederPing.class, timerP, pcp); //5
     return tc;
   }
-  
+
   private TestContext localDisconnect1(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), triggerP); //1
-    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //2
-    tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //3
+    tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), seederCtrlP); //1
+    tc = tc.expect(R1TransferSeederEvents.Disconnected.class, seederCtrlP, Direction.OUT); //2
+    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //3
+    tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //4
     return tc;
   }
-  
+
   private TestContext localDisconnect2(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), triggerP); //1
-    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //2
+    tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), seederCtrlP); //1
+    tc = tc.expect(R1TransferSeederEvents.Disconnected.class, seederCtrlP, Direction.OUT); //2
+    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //3
     return tc;
   }
-  
+
   private TestContext netDisconnect(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(netDisconnect(torrentId, fileId, seeder), networkP); //1
-    tc = tc.expect(R1TransferSeederEvents.Disconnected.class, expectP, Direction.OUT); //2
+    tc = tc.expect(R1TransferSeederEvents.Disconnected.class, seederCtrlP, Direction.OUT); //2
     tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //3
     return tc;
   }
-  
+
   private TestContext pingPong(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(ping(torrentId, fileId, seeder), timerP); //1
     tc = pingPong(tc, networkP); //2-3
     return tc;
   }
-  
+
   private TestContext pingFail(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(ping(torrentId, fileId, seeder), timerP); //1
     tc = eNetPayload(tc, R1TransferConnMsgs.Ping.class, networkP); //2
     return tc;
   }
-  
+
   private TestContext pingDisc(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(ping(torrentId, fileId, seeder), timerP); //1
-    tc = tc.expect(R1TransferSeederEvents.Disconnected.class, expectP, Direction.OUT); //2
+    tc = tc.unordered();
+    tc = eCancelPeriodicTimer(tc, timerP, pcp);//2
     tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP);//3
-    tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //4
+    tc = tc.expect(R1TransferSeederEvents.Disconnected.class, seederCtrlP, Direction.OUT); //4
+    tc = tc.end();
     return tc;
   }
-  
+
   private TestContext netConnectAcc(TestContext tc) {
     Future f = new FutureHelper.NetBEFuture<R1TransferConnMsgs.Connect>(R1TransferConnMsgs.Connect.class) {
       @Override
@@ -301,7 +326,7 @@ public class R1TransferSeederTest {
     tc = tc.trigger(f, networkP);
     return tc;
   }
-  
+
   private TestContext pingPong(TestContext tc, Port networkP) {
     Future f = new FutureHelper.NetMsgFuture<R1TransferConnMsgs.Ping>(R1TransferConnMsgs.Ping.class) {
       @Override
@@ -313,22 +338,23 @@ public class R1TransferSeederTest {
     tc = tc.trigger(f, networkP);
     return tc;
   }
-  
-  public R1TransferSeederEvents.Connect connect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    return new R1TransferSeederEvents.Connect(torrentId, fileId, seeder);
+
+  public R1TransferSeederEvents.Connect connect(OverlayId torrentId, Identifier fileId, KAddress seeder,
+    R1FileMetadata fileMetadata) {
+    return new R1TransferSeederEvents.Connect(torrentId, fileId, seeder, fileMetadata);
   }
-  
+
   public R1TransferSeederEvents.Disconnect localDisconnect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    return new R1TransferSeederEvents.Disconnect(torrentId, fileId, seeder.getId());
+    return new R1TransferSeederEvents.Disconnect(torrentId, fileId, seeder);
   }
-  
+
   public Msg netDisconnect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
     R1TransferConnMsgs.Disconnect disconnect = new R1TransferConnMsgs.Disconnect(torrentId, fileId);
     return MsgHelper.msg(seeder, self, disconnect);
   }
-  
+
   public R1TransferSeederPing ping(OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(R1TransferSeeder.HardCodedConfig.pingTimerPeriod, 
+    SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(R1TransferSeeder.HardCodedConfig.pingTimerPeriod,
       R1TransferSeeder.HardCodedConfig.pingTimerPeriod);
     return new R1TransferSeederPing(spt, torrentId, fileId, seeder.getId());
   }

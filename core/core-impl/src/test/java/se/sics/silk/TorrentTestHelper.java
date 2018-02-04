@@ -21,6 +21,7 @@ package se.sics.silk;
 import com.google.common.base.Predicate;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.UUID;
 import se.sics.kompics.Port;
 import se.sics.kompics.network.Msg;
 import se.sics.kompics.testing.Direction;
@@ -480,11 +481,17 @@ public class TorrentTestHelper {
     Predicate p = new PredicateHelper.MsgPredicate(PredicateHelper.TRUE_P, payloadP);
     return tc.expect(BasicContentMsg.class, network, Direction.OUT);
   }
-
+  
   public static TestContext eSchedulePeriodicTimer(TestContext tc, Class payloadType, Port timer) {
+    return tc.expect(SchedulePeriodicTimeout.class, timer, Direction.OUT);
+  }
+
+  public static TestContext eSchedulePeriodicTimer(TestContext tc, Class payloadType, Port timer, 
+    CancelPeriodicTimerPredicate cp) {
     Predicate p = new Predicate<SchedulePeriodicTimeout>() {
       @Override
       public boolean apply(SchedulePeriodicTimeout t) {
+        cp.setTimerId(t.getTimeoutEvent().getTimeoutId());
         return payloadType.isAssignableFrom(t.getTimeoutEvent().getClass());
       }
     };
@@ -493,5 +500,22 @@ public class TorrentTestHelper {
   
   public static TestContext eCancelPeriodicTimer(TestContext tc, Port timer) {
     return tc.expect(CancelPeriodicTimeout.class, timer, Direction.OUT);
+  }
+  
+  public static TestContext eCancelPeriodicTimer(TestContext tc, Port timer, CancelPeriodicTimerPredicate cp) {
+    return tc.expect(CancelPeriodicTimeout.class, cp, timer, Direction.OUT);
+  }
+  
+  public static class CancelPeriodicTimerPredicate implements Predicate<CancelPeriodicTimeout> {
+    private UUID timerId;
+    
+    public void setTimerId(UUID timerId) {
+      this.timerId = timerId;
+    }
+
+    @Override
+    public boolean apply(CancelPeriodicTimeout timeout) {
+      return timeout.getTimeoutId().equals(timerId);
+    }
   }
 }

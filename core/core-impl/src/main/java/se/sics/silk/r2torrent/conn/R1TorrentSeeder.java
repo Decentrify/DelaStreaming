@@ -269,11 +269,11 @@ public class R1TorrentSeeder {
     };
 
     private static void sendR2(ES es, R2NodeSeederEvents.Req event) {
-      es.getProxy().trigger(event, es.ports.loopbackSend);
+      es.getProxy().trigger(event, es.ports.loopbackPos);
     }
 
     private static void sendR0(ES es, R1TorrentSeederInd event) {
-      es.getProxy().trigger(event, es.ports.loopbackSend);
+      es.getProxy().trigger(event, es.ports.loopbackPos);
     }
 
     private static Consumer<R1TorrentSeederInd> sendR0(ES es) {

@@ -72,7 +72,7 @@ public class R1AsyncCheckedBuffer {
       hash.retain();
       return;
     }
-    if (!HashUtil.checkHash(hashAlg, hash.getValue().get(), block.getValue().get())) {
+    if (!HashUtil.checkHash(hashAlg, block.getValue().get(), hash.getValue().get())) {
       throw new RuntimeException("not yet implemented");
     }
     buffer.write(pos, block, bufferCallback);

@@ -24,41 +24,57 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.torrent.R1FileDownload;
+import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1TransferSeederEvents {
+
   public static class Connect extends SilkEvent.E2 implements R1TransferSeeder.CtrlEvent {
+
     public final KAddress seederAdr;
-    
-    public Connect(OverlayId torrentId, Identifier fileId, KAddress seederAdr) {
+    public final R1FileMetadata fileMetadata;
+
+    public Connect(OverlayId torrentId, Identifier fileId, KAddress seederAdr, R1FileMetadata fileMetadata) {
       super(BasicIdentifiers.eventId(), torrentId, fileId, seederAdr.getId());
       this.seederAdr = seederAdr;
+      this.fileMetadata = fileMetadata;
     }
-    
+
     public Connected success() {
       return new Connected(torrentId, fileId, seederAdr);
     }
   }
-  
+
   public static class Connected extends SilkEvent.E2 implements R1FileDownload.ConnectEvent {
+
     public final KAddress seeder;
+
     public Connected(OverlayId torrentId, Identifier fileId, KAddress seeder) {
       super(BasicIdentifiers.eventId(), torrentId, fileId, seeder.getId());
       this.seeder = seeder;
     }
   }
-  
+
   public static class Disconnect extends SilkEvent.E2 implements R1TransferSeeder.CtrlEvent {
-    public Disconnect(OverlayId torrentId, Identifier fileId, Identifier seederId) {
-      super(BasicIdentifiers.eventId(), torrentId, fileId, seederId);
+    public final KAddress seeder;
+    
+    public Disconnect(OverlayId torrentId, Identifier fileId, KAddress seeder) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId, seeder.getId());
+      this.seeder = seeder;
+    }
+    
+    public Disconnected ack() {
+      return new Disconnected(torrentId, fileId, seeder);
     }
   }
-  
+
   public static class Disconnected extends SilkEvent.E2 implements R1FileDownload.ConnectEvent {
+
     public final KAddress seeder;
+
     public Disconnected(OverlayId torrentId, Identifier fileId, KAddress seeder) {
       super(BasicIdentifiers.eventId(), torrentId, fileId, seeder.getId());
       this.seeder = seeder;

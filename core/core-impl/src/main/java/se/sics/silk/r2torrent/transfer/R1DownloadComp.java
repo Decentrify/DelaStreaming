@@ -62,7 +62,7 @@ import se.sics.silk.r2torrent.transfer.util.R1DownloadBlockTracker;
 public class R1DownloadComp extends ComponentDefinition {
 
   private static final Logger LOG = LoggerFactory.getLogger(R1DownloadComp.class);
-  private String logPrefix;
+  private String logPrefix = "";
 
   private final Ports ports;
   public final OverlayId torrentId;
@@ -105,6 +105,7 @@ public class R1DownloadComp extends ComponentDefinition {
     }
   };
 
+  @Override
   public void tearDown() {
     cancelTimer();
   }
@@ -118,6 +119,7 @@ public class R1DownloadComp extends ComponentDefinition {
         irregularBlocks.put(fileMetadata.finalBlock, fileMetadata.lastBlock);
       }
       blockTracker.add(event.blocks, irregularBlocks);
+      tryDownload();
     }
   };
 
@@ -129,9 +131,7 @@ public class R1DownloadComp extends ComponentDefinition {
         KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.CacheHintAcc> context) {
         LOG.debug("{}cache confirm ts:{}", logPrefix, content.cacheHint.lStamp);
         blockTracker.cacheConfirmed(content.cacheHint.lStamp);
-        if (cwnd.receive(content.eventId)) {
-          tryDownload();
-        }
+        tryDownload();
       }
     };
 
@@ -143,10 +143,7 @@ public class R1DownloadComp extends ComponentDefinition {
         KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.HashResp> context) {
         LOG.trace("{}received:{}", logPrefix, content);
         blockTracker.hashes(content.hashValues);
-        checkComplete();
-        if (cwnd.receive(content.eventId)) {
-          tryDownload();
-        }
+        tryDownload();
       }
     };
 
@@ -159,9 +156,8 @@ public class R1DownloadComp extends ComponentDefinition {
         LOG.trace("{}received:{}", logPrefix, content);
         blockTracker.piece(content.piece, content.val.getRight());
         checkComplete();
-        if (cwnd.receive(content.eventId)) {
-          tryDownload();
-        }
+        cwnd.receive(content.eventId, content.piece);
+        tryDownload();
       }
     };
 
@@ -179,11 +175,10 @@ public class R1DownloadComp extends ComponentDefinition {
         } else if (content instanceof R1TransferMsgs.PieceReq) {
           R1TransferMsgs.PieceReq req = (R1TransferMsgs.PieceReq) wrappedContent.content;
           blockTracker.pieceTimeout(req.piece);
-          cwnd.timeout(req.eventId);
+          cwnd.timeout(req.eventId, req.piece);
         } else if (content instanceof R1TransferMsgs.HashReq) {
           R1TransferMsgs.HashReq req = (R1TransferMsgs.HashReq) wrappedContent.content;
           blockTracker.hashTimeout(req.hashes);
-          cwnd.timeout(req.eventId);
         } else {
           LOG.warn("{}!!!possible performance issue - fix:{}", logPrefix, content);
         }
@@ -217,14 +212,20 @@ public class R1DownloadComp extends ComponentDefinition {
     while (blockTracker.hasHashes() && cwnd.canSend()) {
       R1TransferMsgs.HashReq req = new R1TransferMsgs.HashReq(torrentId, fileId, blockTracker.nextHashes());
       bestEffortMsg(req);
-      cwnd.send(req.eventId);
     }
-    int batch = 2;
-    while (blockTracker.hasPiece() && cwnd.canSend() && batch > 0) {
+    int batch = 1 + HardCodedConfig.DWNL_INC_SPEED;
+    while (blockTracker.hasMissedPiece() && cwnd.canSend() && batch > 0) {
       batch--;
-      R1TransferMsgs.PieceReq req = new R1TransferMsgs.PieceReq(torrentId, fileId, blockTracker.nextPiece());
+      R1TransferMsgs.PieceReq req = new R1TransferMsgs.PieceReq(torrentId, fileId, blockTracker.nextMissedPiece());
       bestEffortMsg(req);
-      cwnd.send(req.eventId);
+      cwnd.send(req.eventId, req.piece);
+    }
+    if(blockTracker.hasBlock() && batch > 0 && cwnd.canSend()) {
+      Pair<Integer, Integer> block = blockTracker.nextBlock();
+      R1TransferMsgs.BlockReq req 
+        = new R1TransferMsgs.BlockReq(torrentId, fileId, block.getValue0(), block.getValue1());
+      bestEffortMsg(req);
+      cwnd.sendAll(req.eventId, block.getValue0(), block.getValue1());
     }
   }
 
@@ -259,16 +260,14 @@ public class R1DownloadComp extends ComponentDefinition {
     public final OverlayId torrentId;
     public final Identifier fileId;
     public final KAddress seederAdr;
-    public final int blockSlots;
     public final R1FileMetadata fileMetadata;
 
-    public Init(KAddress selfAdr, OverlayId torrentId, Identifier fileId, KAddress seederAdr, int blockSlots,
+    public Init(KAddress selfAdr, OverlayId torrentId, Identifier fileId, KAddress seederAdr,
       R1FileMetadata fileMetadata) {
       this.selfAdr = selfAdr;
       this.torrentId = torrentId;
       this.fileId = fileId;
       this.seederAdr = seederAdr;
-      this.blockSlots = blockSlots;
       this.fileMetadata = fileMetadata;
     }
   }
@@ -291,8 +290,9 @@ public class R1DownloadComp extends ComponentDefinition {
     public static final int beRetries = 1;
     public static final int beRetryInterval = 2000;
     public static final int BATCHED_HASHES = 20;
-    public static final int CWND_SIZE = 50;
+    public static int CWND_SIZE = 50;
     public static final long timeoutPeriod = 10000;
+    public static int DWNL_INC_SPEED = 1;
   }
 
 };

@@ -20,31 +20,41 @@ package se.sics.silk.r2torrent.transfer.util;
 
 import java.util.HashSet;
 import java.util.Set;
+import org.javatuples.Pair;
+import org.javatuples.Triplet;
 import se.sics.kompics.util.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1Cwnd {
-  private final Set<Identifier> pendingMsgs = new HashSet<>();
+
+  private final Set<Triplet<Identifier, Integer, Integer>> pendingMsgs = new HashSet<>();
   private int size;
-  
+
   public R1Cwnd(int size) {
     this.size = size;
   }
+
   public boolean canSend() {
     return pendingMsgs.size() < size;
   }
-  
-  public void send(Identifier msgId) {
-    pendingMsgs.add(msgId);
+
+  public void send(Identifier msgId, Pair<Integer, Integer> piece) {
+    pendingMsgs.add(Triplet.with(msgId, piece.getValue0(), piece.getValue1()));
   }
-  
-  public boolean timeout(Identifier msgId) {
-    return pendingMsgs.remove(msgId);
+
+  public void sendAll(Identifier msgId, int block, int nrPieces) {
+    for (int i = 0; i < nrPieces; i++) {
+      pendingMsgs.add(Triplet.with(msgId, block, i));
+    }
   }
-  
-  public boolean receive(Identifier msgId) {
-    return pendingMsgs.remove(msgId);
+
+  public boolean timeout(Identifier msgId, Pair<Integer, Integer> piece) {
+    return pendingMsgs.remove(Triplet.with(msgId, piece.getValue0(), piece.getValue1()));
+  }
+
+  public boolean receive(Identifier msgId, Pair<Integer, Integer> piece) {
+    return pendingMsgs.remove(Triplet.with(msgId, piece.getValue0(), piece.getValue1()));
   }
 }

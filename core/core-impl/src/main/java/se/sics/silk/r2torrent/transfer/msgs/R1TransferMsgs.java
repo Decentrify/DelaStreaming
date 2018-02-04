@@ -35,7 +35,7 @@ import se.sics.silk.r2torrent.transfer.events.R1TransferMsg;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface R1TransferMsgs {
-  public static class CacheHintReq extends SilkEvent.E4 implements R1TransferMsg {
+  public static class CacheHintReq extends SilkEvent.E4 implements R1TransferMsg.Upld {
     public final KHint.Summary cacheHint;
     public CacheHintReq(OverlayId torrentId, Identifier fileId, KHint.Summary cacheHint) {
       super(BasicIdentifiers.msgId(), torrentId, fileId);
@@ -47,7 +47,7 @@ public interface R1TransferMsgs {
     }
   }
   
-  public static class CacheHintAcc extends SilkEvent.E4 implements R1TransferMsg {
+  public static class CacheHintAcc extends SilkEvent.E4 implements R1TransferMsg.Dwnl {
     public final KHint.Summary cacheHint;
     public CacheHintAcc(Identifier eventId, OverlayId torrentId, Identifier fileId, KHint.Summary cacheHint) {
       super(eventId, torrentId, fileId);
@@ -55,30 +55,44 @@ public interface R1TransferMsgs {
     }
   }
   
-  public static class PieceReq extends SilkEvent.E4 implements R1TransferMsg {
+  public static class BlockReq extends SilkEvent.E4 implements R1TransferMsg.Upld {
+    public final int block;
+    public final int nrPieces;
+    public BlockReq(OverlayId torrentId, Identifier fileId, int block, int nrPieces) {
+      super(BasicIdentifiers.msgId(), torrentId, fileId);
+      this.block = block;
+      this.nrPieces = nrPieces;
+    }
+    
+    public PieceResp success(int piece, byte[] val) {
+      return new PieceResp(eventId, torrentId, fileId, Pair.with(block, piece), Either.right(val));
+    }
+  }
+  
+  public static class PieceReq extends SilkEvent.E4 implements R1TransferMsg.Upld {
     public final Pair<Integer, Integer> piece;
     public PieceReq(OverlayId torrentId, Identifier fileId, Pair<Integer, Integer> piece) {
-      super(BasicIdentifiers.eventId(), torrentId, fileId);
+      super(BasicIdentifiers.msgId(), torrentId, fileId);
       this.piece = piece;
     }
     
     public PieceResp accept(RangeKReference val) {
-      return new PieceResp(torrentId, fileId, piece, Either.left(val));
+      return new PieceResp(eventId, torrentId, fileId, piece, Either.left(val));
     }
   }
   
-  public static class PieceResp extends SilkEvent.E4 implements R1TransferMsg {
+  public static class PieceResp extends SilkEvent.E4 implements R1TransferMsg.Dwnl {
     public final Pair<Integer, Integer> piece;
     public final Either<KReference<byte[]>, byte[]> val;
-    public PieceResp(OverlayId torrentId, Identifier fileId,
+    public PieceResp(Identifier msgId, OverlayId torrentId, Identifier fileId,
       Pair<Integer, Integer> piece, Either<KReference<byte[]>, byte[]> val) {
-      super(BasicIdentifiers.msgId(), torrentId, fileId);
+      super(msgId, torrentId, fileId);
       this.piece = piece;
       this.val = val;
     }
   }
   
-  public static class HashReq extends SilkEvent.E4 implements R1TransferMsg {
+  public static class HashReq extends SilkEvent.E4 implements R1TransferMsg.Upld {
     public final Set<Integer> hashes;
     
     public HashReq(OverlayId torrentId, Identifier fileId, Set<Integer> hashes) {
@@ -91,7 +105,7 @@ public interface R1TransferMsgs {
     }
   }
   
-  public static class HashResp extends SilkEvent.E4 implements R1TransferMsg {
+  public static class HashResp extends SilkEvent.E4 implements R1TransferMsg.Dwnl {
     public final Map<Integer, byte[]> hashValues;
 
     public HashResp(Identifier eventId, OverlayId torrentId, Identifier fileId, Map<Integer, byte[]> hashValues) {

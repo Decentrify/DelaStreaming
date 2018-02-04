@@ -39,7 +39,7 @@ public class DefaultHandlers {
         if (FSMBasicStateNames.START.equals(state)) {
           return FSMBasicStateNames.FINAL;
         } else {
-          return state;
+          throw new IllegalStateException("unexpected message");
         }
       }
     };
@@ -53,7 +53,7 @@ public class DefaultHandlers {
         if (FSMBasicStateNames.START.equals(state)) {
           return FSMBasicStateNames.FINAL;
         } else {
-          return state;
+          throw new IllegalStateException("unexpected message");
         }
       }
     };
