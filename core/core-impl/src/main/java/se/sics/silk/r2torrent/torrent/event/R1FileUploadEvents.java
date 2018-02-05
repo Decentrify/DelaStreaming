@@ -24,12 +24,13 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.torrent.R1FileUpload;
 import se.sics.silk.r2torrent.torrent.R1FileUpload.States;
+import se.sics.silk.r2torrent.torrent.R1Torrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1FileUploadEvents {
-  public static class Indication extends SilkEvent.E4 {
+  public static class Indication extends SilkEvent.E4 implements R1Torrent.UploadCtrl {
     public final States state;
     public Indication(OverlayId torrentId, Identifier fileId, States state) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);

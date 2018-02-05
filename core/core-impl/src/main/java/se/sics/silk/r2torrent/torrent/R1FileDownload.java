@@ -64,7 +64,7 @@ import se.sics.silk.r2torrent.storage.buffer.R1AsyncBuffer;
 import se.sics.silk.r2torrent.storage.buffer.R1AsyncCheckedBuffer;
 import se.sics.silk.r2torrent.storage.sink.R1SinkWriteCallback;
 import se.sics.silk.r2torrent.storage.sink.R1SinkWriter;
-import static se.sics.silk.r2torrent.torrent.R2Torrent.HardCodedConfig.seed;
+import static se.sics.silk.r2torrent.torrent.R1Torrent.HardCodedConfig.seed;
 import se.sics.silk.r2torrent.torrent.event.R1FileDownloadEvents;
 import se.sics.silk.r2torrent.torrent.state.R1FileDownloadSeederState;
 import se.sics.silk.r2torrent.torrent.state.R1FileDownloadSeedersState;
@@ -124,6 +124,7 @@ public class R1FileDownload {
     private final FSMIdentifier fsmId;
     public OverlayId torrentId;
     public Identifier fileId;
+    public R1TorrentDetails torrentDetails;
     public R1FileMetadata fileMetadata;
     public R1FileStorage fileStorage;
     public R1FileDownloadSeedersState seedersState;
@@ -138,17 +139,18 @@ public class R1FileDownload {
       return fsmId;
     }
 
-    public void init(ES es, R1FileDownloadEvents.Start req) {
+    public void init(R1TorrentDetails torrentDetails, R1FileDownloadEvents.Start req) {
       this.torrentId = req.torrentId;
       this.fileId = req.fileId;
-      this.fileMetadata = es.torrentDetails.getMetadata(fileId);
-      this.fileStorage = es.torrentDetails.getStorage(fileId);
+      this.torrentDetails = torrentDetails;
+      this.fileMetadata = torrentDetails.getMetadata(fileId).get();
+      this.fileStorage = torrentDetails.getStorage(fileId).get();
     }
 
     public void startSeeders(ES es, DStreamConnect.Success resp) {
       streamActions = new StreamActions(es);
       R1AsyncBuffer bAux = new R1AsyncAppendBuffer(fileStorage.streamId, streamActions);
-      R1AsyncCheckedBuffer buffer = new R1AsyncCheckedBuffer(bAux, es.torrentDetails.hashAlg);
+      R1AsyncCheckedBuffer buffer = new R1AsyncCheckedBuffer(bAux, torrentDetails.hashAlg);
       int startBlock = R1BlockHelper.blockNrFromPos(resp.streamPos, fileMetadata);
       if (startBlock == fileMetadata.nrBlocks) {
         throw new RuntimeException("fileCompleted");
@@ -175,12 +177,12 @@ public class R1FileDownload {
     public R2TorrentComp.Ports ports;
     public IntIdFactory fileIdFactory;
     public KAddress selfAdr;
-    public R1TorrentDetails torrentDetails;
+    public R1TorrentDetails.Mngr torrentDetailsMngr;
 
-    public ES(KAddress selfAdr, R1TorrentDetails torrentDetails) {
+    public ES(KAddress selfAdr, R1TorrentDetails.Mngr torrentDetailsMngr) {
       this.selfAdr = selfAdr;
       this.fileIdFactory = new IntIdFactory(new Random(seed));
-      this.torrentDetails = torrentDetails;
+      this.torrentDetailsMngr = torrentDetailsMngr;
     }
 
     @Override
@@ -228,15 +230,18 @@ public class R1FileDownload {
         .defaultFallback(DefaultHandlers.basicDefault(), DefaultHandlers.patternDefault());
       def = def
         .positivePort(SelfPort.class)
-        .basicEvent(R1FileDownloadEvents.Start.class)
-        .subscribeOnStart(Handlers.fileStart)
         .basicEvent(R1FileDownloadEvents.Close.class)
         .subscribe(Handlers.fileClose0, States.STORAGE_PENDING)
         .subscribe(Handlers.fileClose1, States.ACTIVE, States.IDLE)
-        .basicEvent(R1FileDownloadEvents.Connect.class)
-        .subscribe(Handlers.connect, States.ACTIVE, States.IDLE)
         .basicEvent(R1FileDownloadEvents.Disconnect.class)
         .subscribe(Handlers.disconnectSeeder, States.ACTIVE)
+        .buildEvents();
+      def = def
+        .negativePort(R1FileDownloadCtrl.class)
+        .basicEvent(R1FileDownloadEvents.Start.class)
+        .subscribeOnStart(Handlers.fileStart)
+        .basicEvent(R1FileDownloadEvents.Connect.class)
+        .subscribe(Handlers.connect, States.ACTIVE, States.IDLE)
         .buildEvents();
       def = def
         .positivePort(DStreamControlPort.class)
@@ -306,7 +311,15 @@ public class R1FileDownload {
 
     static FSMBasicEventHandler fileStart = (FSMBasicEventHandler<ES, IS, R1FileDownloadEvents.Start>) (
       FSMStateName state, ES es, IS is, R1FileDownloadEvents.Start event) -> {
-        is.init(es, event);
+        Optional<R1TorrentDetails> torrentDetails = es.torrentDetailsMngr.getTorrent(event.torrentId);
+        if(!torrentDetails.isPresent()) {
+          throw new RuntimeException("ups");
+        }
+        if(!torrentDetails.get().getMetadata(event.fileId).isPresent() 
+          || !torrentDetails.get().getStorage(event.fileId).isPresent()) {
+          throw new RuntimeException("ups");
+        }
+        is.init(torrentDetails.get(), event);
         sendStorageConnect(es, is);
         return States.STORAGE_PENDING;
       };
@@ -401,13 +414,11 @@ public class R1FileDownload {
       };
 
     private static void sendStorageConnect(ES es, IS is) {
-      R1FileStorage fs = es.torrentDetails.getStorage(is.fileId);
-      sendStorageEvent(es, new DStreamConnect.Request(fs.streamId, fs.stream));
+      sendStorageEvent(es, new DStreamConnect.Request(is.fileStorage.streamId, is.fileStorage.stream));
     }
 
     private static void sendStorageDisconnect(ES es, IS is) {
-      R1FileStorage fs = es.torrentDetails.getStorage(is.fileId);
-      sendStorageEvent(es, new DStreamDisconnect.Request(fs.streamId));
+      sendStorageEvent(es, new DStreamDisconnect.Request(is.fileStorage.streamId));
     }
 
     private static void sendCtrlIndication(ES es, IS is, States state) {
@@ -419,15 +430,15 @@ public class R1FileDownload {
     }
 
     private static void sendTransferEvent(ES es, R1TransferSeeder.CtrlEvent e) {
-      es.getProxy().trigger(e, es.ports.transferSeederCtrlPos);
+      es.getProxy().trigger(e, es.ports.transferSeederCtrlReq);
     }
 
-    static void sendCtrlEvent(ES es, KompicsEvent e) {
-      es.getProxy().trigger(e, es.ports.loopbackPos);
+    static void sendCtrlEvent(ES es, R1Torrent.DownloadCtrl e) {
+      es.getProxy().trigger(e, es.ports.fileDownloadCtrlProv);
     }
 
     private static void sendDownloadEvent(ES es, R1DownloadEvent e) {
-      es.getProxy().trigger(e, es.ports.download);
+      es.getProxy().trigger(e, es.ports.transferDownload);
     }
   }
 

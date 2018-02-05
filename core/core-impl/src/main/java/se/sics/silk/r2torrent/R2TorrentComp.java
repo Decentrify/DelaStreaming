@@ -21,9 +21,11 @@ package se.sics.silk.r2torrent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Channel;
+import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
+import se.sics.kompics.Kill;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
@@ -43,16 +45,18 @@ import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.silk.SelfPort;
-import se.sics.silk.r2torrent.conn.R1TorrentLeecher;
-import se.sics.silk.r2torrent.conn.R1TorrentSeeder;
-import se.sics.silk.r2torrent.conn.R2NodeLeecher;
-import se.sics.silk.r2torrent.conn.R2NodeSeeder;
-import se.sics.silk.r2torrent.torrent.R1Hash;
-import se.sics.silk.r2torrent.torrent.R1MetadataGet;
-import se.sics.silk.r2torrent.torrent.R1MetadataServe;
-import se.sics.silk.r2torrent.torrent.R2Torrent;
+import se.sics.silk.r2torrent.torrent.R1FileDownload;
+import se.sics.silk.r2torrent.torrent.R1FileDownloadCtrl;
+import se.sics.silk.r2torrent.torrent.R1FileUpload;
+import se.sics.silk.r2torrent.torrent.R1FileUploadCtrl;
+import se.sics.silk.r2torrent.torrent.R1Torrent;
+import se.sics.silk.r2torrent.torrent.R1TorrentConnComp;
+import se.sics.silk.r2torrent.torrent.R1TorrentConnPort;
+import se.sics.silk.r2torrent.torrent.R1TorrentCtrlPort;
+import se.sics.silk.r2torrent.torrent.util.R1TorrentDetails;
 import se.sics.silk.r2torrent.transfer.R1DownloadComp;
 import se.sics.silk.r2torrent.transfer.R1DownloadPort;
+import se.sics.silk.r2torrent.transfer.R1TransferLeecher;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecherCtrl;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder;
 import se.sics.silk.r2torrent.transfer.R1TransferSeederCtrl;
@@ -71,65 +75,54 @@ public class R2TorrentComp extends ComponentDefinition {
   private String logPrefix;
 
   private final Ports ports;
-  private MultiFSM nodeSeeders;
-  private MultiFSM nodeLeechers;
-  private MultiFSM torrentSeeders;
-  private MultiFSM torrentLeechers;
+  private Component overlayComp;
+  
   private MultiFSM torrents;
-  private MultiFSM metadataGet;
-  private MultiFSM metadataServe;
-  private MultiFSM hashMngr;
+  private MultiFSM fileUpload;
+  private MultiFSM fileDownload;
+  private MultiFSM transferSeeder;
+  private MultiFSM transferLeecher;
 
-  private MultiFSM transferSeeders;
-
-  private R2Torrent.ES torrentES;
-  private R1MetadataGet.ES metadataGetES;
-  private R1MetadataServe.ES metadataServeES;
-  private R1Hash.ES hashMngrES;
-  private R2NodeSeeder.ES nodeSeederES;
-  private R2NodeLeecher.ES nodeLeecherES;
-  private R1TorrentSeeder.ES torrentSeederES;
-  private R1TorrentLeecher.ES torrentLeecherES;
-
+  private R1Torrent.ES torrentES;
+  private R1FileUpload.ES fileUploadES;
+  private R1FileDownload.ES fileDownloadES;
   private R1TransferSeeder.ES transferSeederES;
+  private R1TransferLeecher.ES transferLeecherES;
 
   public R2TorrentComp(Init init) {
     logPrefix = "<" + init.selfAdr.getId() + ">";
     ports = new Ports(proxy);
     subscribe(handleStart, control);
+    setupComp(init);
     setupFSM(init);
   }
 
+  private void setupComp(Init init) {
+    R1TorrentConnComp.Init overlayCompInit = new R1TorrentConnComp.Init();
+    overlayComp = create(R1TorrentConnComp.class, overlayCompInit);
+    connect(ports.timer, overlayComp.getNegative(Timer.class), Channel.TWO_WAY);
+    connect(ports.torrentConnReq.getPair(), overlayComp.getPositive(R1TorrentConnPort.class), Channel.TWO_WAY);
+  }
+  
   private void setupFSM(Init init) {
-    nodeSeederES = new R2NodeSeeder.ES(init.selfAdr);
-    nodeLeecherES = new R2NodeLeecher.ES(init.selfAdr);
-    torrentSeederES = new R1TorrentSeeder.ES();
-    torrentLeecherES = new R1TorrentLeecher.ES();
-    torrentES = new R2Torrent.ES();
-    metadataGetES = new R1MetadataGet.ES(init.selfAdr);
-    metadataServeES = new R1MetadataServe.ES();
-    hashMngrES = new R1Hash.ES(ports);
-
+    R1TorrentDetails.Mngr mngr = new R1TorrentDetails.Mngr();
+    torrentES = new R1Torrent.ES(mngr);
+    fileUploadES = new R1FileUpload.ES(init.selfAdr, mngr);
+    fileDownloadES = new R1FileDownload.ES(init.selfAdr, mngr);
     transferSeederES = new R1TransferSeeder.ES(init.selfAdr);
+    transferLeecherES = new R1TransferLeecher.ES(init.selfAdr, mngr);
 
-    nodeSeederES.setProxy(proxy);
-    nodeLeecherES.setProxy(proxy);
-    torrentSeederES.setProxy(proxy);
-    torrentLeecherES.setProxy(proxy);
     torrentES.setProxy(proxy);
-    metadataGetES.setProxy(proxy);
-    metadataServeES.setProxy(proxy);
-    hashMngrES.setProxy(proxy);
+    fileUploadES.setProxy(proxy);
+    fileDownloadES.setProxy(proxy);
     transferSeederES.setProxy(proxy);
+    transferLeecherES.setProxy(proxy);
 
-    nodeLeecherES.setPorts(ports);
-    nodeSeederES.setPorts(ports);
-    torrentLeecherES.setPorts(ports);
-    torrentSeederES.setPorts(ports);
     torrentES.setPorts(ports);
-    metadataGetES.setPorts(ports);
-    metadataServeES.setPorts(ports);
+    fileUploadES.setPorts(ports);
+    fileDownloadES.setPorts(ports);
     transferSeederES.setPorts(ports);
+    transferLeecherES.setPorts(ports);
     try {
       OnFSMExceptionAction oexa = new OnFSMExceptionAction() {
         @Override
@@ -138,15 +131,11 @@ public class R2TorrentComp extends ComponentDefinition {
         }
       };
       FSMIdentifierFactory fsmIdFactory = config().getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
-      nodeSeeders = R2NodeSeeder.FSM.multifsm(fsmIdFactory, nodeSeederES, oexa);
-      nodeLeechers = R2NodeLeecher.FSM.multifsm(fsmIdFactory, nodeLeecherES, oexa);
-      torrentSeeders = R1TorrentSeeder.FSM.multifsm(fsmIdFactory, torrentSeederES, oexa);
-      torrentLeechers = R1TorrentLeecher.FSM.multifsm(fsmIdFactory, torrentLeecherES, oexa);
-      torrents = R2Torrent.FSM.multifsm(fsmIdFactory, torrentES, oexa);
-      metadataGet = R1MetadataGet.FSM.multifsm(fsmIdFactory, metadataGetES, oexa);
-      metadataServe = R1MetadataServe.FSM.multifsm(fsmIdFactory, metadataServeES, oexa);
-      hashMngr = R1Hash.FSM.multifsm(fsmIdFactory, hashMngrES, oexa);
-      transferSeeders = R1TransferSeeder.FSM.multifsm(fsmIdFactory, transferSeederES, oexa);
+      torrents = R1Torrent.FSM.multifsm(fsmIdFactory, torrentES, oexa);
+      fileUpload = R1FileUpload.FSM.multifsm(fsmIdFactory, fileUploadES, oexa);
+      fileDownload = R1FileDownload.FSM.multifsm(fsmIdFactory, fileDownloadES, oexa);
+      transferSeeder = R1TransferSeeder.FSM.multifsm(fsmIdFactory, transferSeederES, oexa);
+      transferLeecher = R1TransferLeecher.FSM.multifsm(fsmIdFactory, transferLeecherES, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
     }
@@ -157,70 +146,94 @@ public class R2TorrentComp extends ComponentDefinition {
     @Override
     public void handle(Start event) {
       LOG.info("{}starting", logPrefix);
-      nodeSeeders.setupHandlers();
-      nodeLeechers.setupHandlers();
-      torrentSeeders.setupHandlers();
-      torrentLeechers.setupHandlers();
       torrents.setupHandlers();
-      metadataGet.setupHandlers();
-      metadataServe.setupHandlers();
-      hashMngr.setupHandlers();
-      transferSeeders.setupHandlers();
+      fileUpload.setupHandlers();
+      fileDownload.setupHandlers();
+      transferSeeder.setupHandlers();
+      transferLeecher.setupHandlers();
     }
   };
+  
+  @Override
+  public void tearDown() {
+    killComp();
+  }
+  
+  private void killComp() {
+    trigger(Kill.event, overlayComp.control());
+    disconnect(ports.timer, overlayComp.getNegative(Timer.class));
+    disconnect(ports.torrentConnReq.getPair(), overlayComp.getPositive(R1TorrentConnPort.class));
+  }
   //********************************************************************************************************************
 
   public static class Ports {
 
     public final Negative<SelfPort> loopbackPos;
     public final Positive<SelfPort> loopbackSubscribe;
-    public final Negative<R2TorrentCtrlPort> ctrl;
-    public final Positive<DStreamControlPort> streamCtrl;
+
     public final Positive<Network> network;
     public final Positive<Timer> timer;
+    public final Positive<DStreamControlPort> streamCtrl;
     public final Positive<DStoragePort> storage;
-    
-    public final Positive<R1DownloadPort> download;
-    public final Positive<R1UploadPort> upload;
-    public final Positive<R1TransferSeederCtrl> transferSeederCtrlPos;
-    public final Negative<R1TransferSeederCtrl> transferSeederCtrlNeg;
-    public final Positive<R1TransferLeecherCtrl> transferLeecherCtrlPos;
-    public final Negative<R1TransferLeecherCtrl> transferLeecherCtrlNeg;
-    public final One2NChannel<R1UploadPort> uploadC;
-    public final One2NChannel<Network> netUploadC;
 
-    public final One2NChannel<Network> netDownloadC;
-    public final One2NChannel<R1DownloadPort> downloadC;
+    public final Negative<R1TorrentCtrlPort> torrentCtrl;
+    public final Positive<R1TorrentConnPort> torrentConnReq;
+    public final Positive<R1FileUploadCtrl> fileUploadCtrlReq;
+    public final Negative<R1FileUploadCtrl> fileUploadCtrlProv;
+    public final Positive<R1FileDownloadCtrl> fileDownloadCtrlReq;
+    public final Negative<R1FileDownloadCtrl> fileDownloadCtrlProv;
+    public final Positive<R1DownloadPort> transferDownload;
+    public final Positive<R1UploadPort> transferUpload;
+    public final Positive<R1TransferSeederCtrl> transferSeederCtrlReq;
+    public final Negative<R1TransferSeederCtrl> transferSeederCtrlProv;
+    public final Positive<R1TransferLeecherCtrl> transferLeecherCtrlReq;
+    public final Negative<R1TransferLeecherCtrl> transferLeecherCtrlProv;
+
+    public final One2NChannel<R1UploadPort> transferUploadC;
+    public final One2NChannel<R1DownloadPort> transferDownloadC;
+    public final One2NChannel<Network> netTransferUploadC;
+    public final One2NChannel<Network> netTransferDownloadC;
 
     public Ports(ComponentProxy proxy) {
       loopbackPos = proxy.provides(SelfPort.class);
       loopbackSubscribe = proxy.requires(SelfPort.class);
       proxy.connect(proxy.getPositive(SelfPort.class), proxy.getNegative(SelfPort.class), Channel.TWO_WAY);
-      ctrl = proxy.provides(R2TorrentCtrlPort.class);
 
-      network = proxy.requires(Network.class); 
+      network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
       storage = proxy.requires(DStoragePort.class);
       streamCtrl = proxy.requires(DStreamControlPort.class);
-      
-      download = proxy.requires(R1DownloadPort.class);
-      upload = proxy.requires(R1UploadPort.class);
-      transferSeederCtrlPos = proxy.requires(R1TransferSeederCtrl.class);
-      transferSeederCtrlNeg = proxy.provides(R1TransferSeederCtrl.class);
-      proxy.connect(proxy.getPositive(R1TransferSeederCtrl.class), proxy.getNegative(R1TransferSeederCtrl.class), 
+
+      torrentCtrl = proxy.provides(R1TorrentCtrlPort.class);
+      torrentConnReq = proxy.requires(R1TorrentConnPort.class);
+      fileUploadCtrlReq = proxy.requires(R1FileUploadCtrl.class);
+      fileUploadCtrlProv = proxy.provides(R1FileUploadCtrl.class);
+      proxy.connect(proxy.getPositive(R1FileUploadCtrl.class), proxy.getNegative(R1FileUploadCtrl.class),
         Channel.TWO_WAY);
-      transferLeecherCtrlPos = proxy.requires(R1TransferLeecherCtrl.class);
-      transferLeecherCtrlNeg = proxy.provides(R1TransferLeecherCtrl.class);
-      proxy.connect(proxy.getPositive(R1TransferLeecherCtrl.class), proxy.getNegative(R1TransferLeecherCtrl.class), 
+      fileDownloadCtrlReq = proxy.requires(R1FileDownloadCtrl.class);
+      fileDownloadCtrlProv = proxy.provides(R1FileDownloadCtrl.class);
+      proxy.connect(proxy.getPositive(R1FileDownloadCtrl.class), proxy.getNegative(R1FileDownloadCtrl.class),
         Channel.TWO_WAY);
-      
-      downloadC = One2NChannel.getChannel("r1-torrent-file-download-ctrl", (Negative)download.getPair(), 
-        downloadCompIdExtractor());
-      uploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Negative) upload.getPair(),
+      transferDownload = proxy.requires(R1DownloadPort.class);
+      transferUpload = proxy.requires(R1UploadPort.class);
+      transferSeederCtrlReq = proxy.requires(R1TransferSeederCtrl.class);
+      transferSeederCtrlProv = proxy.provides(R1TransferSeederCtrl.class);
+      proxy.connect(proxy.getPositive(R1TransferSeederCtrl.class), proxy.getNegative(R1TransferSeederCtrl.class),
+        Channel.TWO_WAY);
+      transferLeecherCtrlReq = proxy.requires(R1TransferLeecherCtrl.class);
+      transferLeecherCtrlProv = proxy.provides(R1TransferLeecherCtrl.class);
+      proxy.connect(proxy.getPositive(R1TransferLeecherCtrl.class), proxy.getNegative(R1TransferLeecherCtrl.class),
+        Channel.TWO_WAY);
+
+      transferDownloadC = One2NChannel.
+        getChannel("r1-torrent-file-download-ctrl", (Negative) transferDownload.getPair(),
+          downloadCompIdExtractor());
+      transferUploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Negative) transferUpload.getPair(),
         uploadCompIdExtractor());
-      netDownloadC = One2NChannel.getChannel("r1-torrent-transfer-download-network", network,
+      netTransferDownloadC = One2NChannel.getChannel("r1-torrent-transfer-download-network", network,
         netDownloadCompIdExtractor());
-      netUploadC = One2NChannel.getChannel("r1-torrent-transfer-upload-network", network, netUploadCompIdExtractor());
+      netTransferUploadC = One2NChannel.getChannel("r1-torrent-transfer-upload-network", network,
+        netUploadCompIdExtractor());
     }
   }
 

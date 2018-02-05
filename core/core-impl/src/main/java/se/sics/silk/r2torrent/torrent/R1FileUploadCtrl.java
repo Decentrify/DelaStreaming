@@ -16,12 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.conn.event;
+package se.sics.silk.r2torrent.torrent;
 
-import se.sics.kompics.fsm.FSMEvent;
+import se.sics.kompics.PortType;
+import se.sics.silk.r2torrent.torrent.event.R1FileUploadEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface R1TorrentSeederInd extends FSMEvent {
+public class R1FileUploadCtrl extends PortType {
+  {
+    indication(R1FileUploadEvents.Indication.class);
+    indication(R1FileUploadEvents.Disconnected.class);
+  }
 }

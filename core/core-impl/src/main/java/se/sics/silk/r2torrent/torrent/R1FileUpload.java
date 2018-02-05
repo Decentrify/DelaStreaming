@@ -57,14 +57,16 @@ import se.sics.nstream.storage.durable.events.DStreamConnect;
 import se.sics.nstream.storage.durable.events.DStreamDisconnect;
 import se.sics.nstream.storage.durable.events.DStreamEvent;
 import se.sics.nstream.storage.durable.util.MyStream;
-import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.TorrentIdHelper;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
-import static se.sics.silk.r2torrent.torrent.R2Torrent.HardCodedConfig.seed;
+import static se.sics.silk.r2torrent.torrent.R1Torrent.HardCodedConfig.seed;
 import se.sics.silk.r2torrent.torrent.event.R1FileUploadEvents;
 import se.sics.silk.r2torrent.torrent.state.R1FileUploadLeechersState;
+import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
+import se.sics.silk.r2torrent.torrent.util.R1FileStorage;
+import se.sics.silk.r2torrent.torrent.util.R1TorrentDetails;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecher;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecherCtrl;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
@@ -108,6 +110,9 @@ public class R1FileUpload {
     OverlayId torrentId;
     Identifier fileId;
     R1FileUploadLeechersState fileState = new R1FileUploadLeechersState();
+    R1TorrentDetails torrentDetails;
+    public R1FileMetadata fileMetadata;
+    public R1FileStorage fileStorage;
     Map<Identifier, Component> comps = new HashMap<>();
 
     public IS(FSMIdentifier fsmId) {
@@ -119,7 +124,10 @@ public class R1FileUpload {
       return fsmId;
     }
 
-    public void init(R1TransferLeecherEvents.ConnectReq req) {
+    public void init(R1TorrentDetails torrentDetails, R1TransferLeecherEvents.ConnectReq req) {
+      this.torrentDetails = torrentDetails;
+      this.fileMetadata = torrentDetails.getMetadata(req.fileId).get();
+      this.fileStorage = torrentDetails.getStorage(req.fileId).get();
       this.torrentId = req.torrentId;
       this.fileId = req.fileId;
     }
@@ -161,14 +169,12 @@ public class R1FileUpload {
     R2TorrentComp.Ports ports;
     KAddress selfAdr;
     IntIdFactory fileIdFactory;
-    R1FileMngr fileMngr;
-    BlockDetails defaultBlock;
+    R1TorrentDetails.Mngr torrentDetailsMngr;
 
-    public ES(KAddress selfAdr, R1FileMngr fileMngr, BlockDetails defaultBlock) {
+    public ES(KAddress selfAdr, R1TorrentDetails.Mngr torrentDetailsMngr) {
       this.selfAdr = selfAdr;
       this.fileIdFactory = new IntIdFactory(new Random(seed));
-      this.fileMngr = fileMngr;
-      this.defaultBlock = defaultBlock;
+      this.torrentDetailsMngr = torrentDetailsMngr;
     }
 
     @Override
@@ -280,13 +286,20 @@ public class R1FileUpload {
     static FSMBasicEventHandler connect0
       = (FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.ConnectReq>) (FSMStateName state, ES es, IS is,
         R1TransferLeecherEvents.ConnectReq req) -> {
-        if (!es.fileMngr.isComplete(req.fileId)) {
-          throw new RuntimeException("reject upload");
+        Optional<R1TorrentDetails> torrentDetails = es.torrentDetailsMngr.getTorrent(req.torrentId);
+        if(!torrentDetails.isPresent()) {
+          throw new RuntimeException("ups");
         }
-
-        is.init(req);
+        if(!torrentDetails.get().getMetadata(req.fileId).isPresent() 
+          || !torrentDetails.get().getStorage(req.fileId).isPresent()) {
+          throw new RuntimeException("ups");
+        }
+        is.init(torrentDetails.get(), req);
+        if (!is.torrentDetails.isComplete(req.fileId)) {
+          throw new RuntimeException("ups");
+        }
         is.fileState.pendingLeecher(req);
-        createStorageStream(es, is.fileId);
+        createStorageStream(es, is);
         return States.STORAGE_PENDING;
       };
 
@@ -316,7 +329,7 @@ public class R1FileUpload {
         R1TransferLeecherEvents.Disconnected req) -> {
         is.fileState.disconnected1(req);
         if (is.fileState.empty()) {
-          destroyStorageStream(es, is.fileId);
+          destroyStorageStream(es, is);
           return States.CLOSE;
         } else {
           return state;
@@ -328,26 +341,23 @@ public class R1FileUpload {
         R1TransferLeecherEvents.Disconnected req) -> {
         is.fileState.disconnected2(req);
         if (is.fileState.empty()) {
-          destroyStorageStream(es, is.fileId);
+          destroyStorageStream(es, is);
           return States.CLOSE;
         } else {
           return state;
         }
       };
 
-    private static void createStorageStream(ES es, Identifier fileId) {
-      StreamId streamId = es.fileMngr.streamId(fileId);
-      MyStream stream = es.fileMngr.stream(streamId);
-      sendStreamEvent(es, new DStreamConnect.Request(Pair.with(streamId, stream)));
+    private static void createStorageStream(ES es, IS is) {
+      sendStreamEvent(es, new DStreamConnect.Request(Pair.with(is.fileStorage.streamId, is.fileStorage.stream)));
     }
     
-    private static void destroyStorageStream(ES es, Identifier fileId) {
-      StreamId streamId = es.fileMngr.streamId(fileId);
-      sendStreamEvent(es, new DStreamDisconnect.Request(streamId));
+    private static void destroyStorageStream(ES es, IS is) {
+      sendStreamEvent(es, new DStreamDisconnect.Request(is.fileStorage.streamId));
     }
 
-    private static void sendCtrlEvent(ES es, KompicsEvent e) {
-      es.getProxy().trigger(e, es.ports.loopbackPos);
+    private static void sendCtrlEvent(ES es, R1Torrent.UploadCtrl e) {
+      es.getProxy().trigger(e, es.ports.fileUploadCtrlProv);
     }
 
     private static void sendStreamEvent(ES es, DStreamEvent e) {
@@ -355,7 +365,7 @@ public class R1FileUpload {
     }
 
     private static void sendConnectEvent(ES es, R1TransferLeecher.CtrlEvent e) {
-      es.getProxy().trigger(e, es.ports.transferLeecherCtrlNeg);
+      es.getProxy().trigger(e, es.ports.transferLeecherCtrlProv);
     }
 
     private static Consumer<R1TransferLeecherEvents.ConnectReq> sendConnectAcc(ES es, IS is) {

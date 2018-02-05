@@ -24,6 +24,7 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.torrent.R1FileDownload;
+import se.sics.silk.r2torrent.torrent.R1Torrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -58,7 +59,7 @@ public class R1FileDownloadEvents {
     }
   }
   
-  public static class Indication extends SilkEvent.E4 {
+  public static class Indication extends SilkEvent.E4 implements R1Torrent.DownloadCtrl {
     public final R1FileDownload.States state;
     public Indication(OverlayId torrentId, Identifier fileId, R1FileDownload.States state) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);
@@ -82,7 +83,7 @@ public class R1FileDownloadEvents {
     }
   }
   
-  public static class Disconnected extends SilkEvent.E4 implements R1FileDownload.CtrlEvent {
+  public static class Disconnected extends SilkEvent.E4 implements R1Torrent.DownloadCtrl {
     public final Identifier seederId;
     public Disconnected(OverlayId torrentId, Identifier fileId, Identifier seederId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);

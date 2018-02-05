@@ -16,40 +16,40 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.torrent.msg;
+package se.sics.silk.r2torrent.torrent.event;
 
-import se.sics.kompics.util.Identifier;
+import java.util.Set;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.torrent.R1MetadataGet;
-import se.sics.silk.r2torrent.torrent.R1MetadataServe;
+import se.sics.silk.r2torrent.torrent.R1Torrent;
+import se.sics.silk.r2torrent.torrent.util.R1TorrentDetails;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R1MetadataMsgs {
-  public static class Get extends SilkEvent.E4 implements R1MetadataServe.Msg {
-    Get(Identifier msgId, OverlayId torrentId, Identifier fileId) {
-      super(msgId, torrentId, fileId);
-    }
-    
-    public Get(OverlayId torrentId, Identifier fileId) {
-      this(BasicIdentifiers.msgId(), torrentId, fileId);
-    }
-    
-    public Serve answer() {
-      return new Serve(this);
+public class R1TorrentCtrlEvents {
+
+  public static class Upload extends SilkEvent.E3 implements R1Torrent.CtrlEvent {
+
+    public final R1TorrentDetails torrentDetails;
+
+    public Upload(OverlayId torrentId, R1TorrentDetails torrentDetails) {
+      super(BasicIdentifiers.eventId(), torrentId);
+      this.torrentDetails = torrentDetails;
     }
   }
-  
-  public static class Serve extends SilkEvent.E4 implements R1MetadataGet.Msg {
-    Serve(Identifier msgId, OverlayId torrentId, Identifier fileId) {
-      super(msgId, torrentId, fileId);
-    }
-    
-    public Serve(Get req) {
-      super(req.eventId, req.torrentId, req.fileId);
+
+  public static class Download extends SilkEvent.E3 implements R1Torrent.CtrlEvent {
+
+    public final R1TorrentDetails torrentDetails;
+    public final Set<KAddress> bootstrap;
+
+    public Download(OverlayId torrentId, R1TorrentDetails torrentDetails, Set<KAddress> bootstrap) {
+      super(BasicIdentifiers.eventId(), torrentId);
+      this.torrentDetails = torrentDetails;
+      this.bootstrap = bootstrap;
     }
   }
 }

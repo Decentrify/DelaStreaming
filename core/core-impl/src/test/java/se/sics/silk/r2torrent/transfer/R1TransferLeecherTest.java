@@ -48,18 +48,22 @@ import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
+import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.StreamId;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.FutureHelper;
 import se.sics.silk.MsgHelper;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
+import se.sics.silk.TorrentIdHelper;
 import static se.sics.silk.TorrentTestHelper.eCancelPeriodicTimer;
 import static se.sics.silk.TorrentTestHelper.eNetPayload;
 import static se.sics.silk.TorrentTestHelper.eSchedulePeriodicTimer;
 import se.sics.silk.WrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
+import se.sics.silk.r2torrent.torrent.util.R1TorrentDetails;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecher.ES;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecher.IS;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecher.States;
@@ -87,8 +91,9 @@ public class R1TransferLeecherTest {
   private KAddress self;
   private KAddress leecher;
   private OverlayId torrent;
-  private Identifier file;
-  private R1FileMetadata fileMetadata;
+  private Identifier file1;
+  private R1TorrentDetails torrentDetails;
+  private R1TorrentDetails.Mngr torrentDetailsMngr = new R1TorrentDetails.Mngr();
 
   @BeforeClass
   public static void setup() throws FSMException {
@@ -103,12 +108,6 @@ public class R1TransferLeecherTest {
     leecher = SystemHelper.getAddress(1);
     intIdFactory = new IntIdFactory(new Random());
     torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-    file = intIdFactory.id(new BasicBuilders.IntBuilder(1));
-    int pieceSize = 1024;
-    int nrPieces = 10;
-    int nrBlocks = 2;
-    BlockDetails defaultBlock = new BlockDetails(pieceSize * nrPieces, nrPieces, pieceSize, pieceSize);
-    fileMetadata = R1FileMetadata.instance(pieceSize * nrPieces * nrBlocks, defaultBlock);
 
     tc = getContext();
     comp = tc.getComponentUnderTest();
@@ -117,14 +116,32 @@ public class R1TransferLeecherTest {
     networkP = comp.getNegative(Network.class);
     timerP = comp.getNegative(Timer.class);
   }
+  
+  private void torrentDetails() {
+    torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA));
 
+    Identifier endpointId = intIdFactory.id(new BasicBuilders.IntBuilder(0));
+    file1 = intIdFactory.id(new BasicBuilders.IntBuilder(1));
+    StreamId file1StreamId = TorrentIdHelper.streamId(endpointId, torrent, file1);
+
+    int pieceSize = 1024;
+    int nrPieces = 10;
+    int nrBlocks = 2;
+    BlockDetails defaultBlock = new BlockDetails(pieceSize * nrPieces, nrPieces, pieceSize, pieceSize);
+    R1FileMetadata file1Metadata = R1FileMetadata.instance(pieceSize * nrPieces * nrBlocks, defaultBlock);
+    torrentDetails.addMetadata(file1, file1Metadata);
+    torrentDetails.addStorage(file1, file1StreamId, null);
+    torrentDetailsMngr.addTorrent(torrent, torrentDetails);
+  }
+  
   private TestContext<WrapperComp> getContext() {
     WrapperComp.Setup setup = new WrapperComp.Setup() {
       @Override
       public MultiFSM setupFSM(ComponentProxy proxy, Config config) {
         try {
           R2TorrentComp.Ports ports = new R2TorrentComp.Ports(proxy);
-          R1TransferLeecher.ES fsmEs = new R1TransferLeecher.ES(self, fileMetadata.defaultBlock);
+          R1TransferLeecher.ES fsmEs = new R1TransferLeecher.ES(self, torrentDetailsMngr);
           fsmEs.setProxy(proxy);
           fsmEs.setPorts(ports);
 
@@ -162,10 +179,10 @@ public class R1TransferLeecherTest {
   @Test
   public void testStartToConnect() {
     tc = tc.body();
-    tc = startToConnect(tc, torrent, file, leecher);//1-2
+    tc = startToConnect(tc, torrent, file1, leecher);//1-2
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file1, leecher.getId());
     assertEquals(States.CONNECT, compState.fsm.getFSMState(fsmBaseId));
   }
 
@@ -179,52 +196,52 @@ public class R1TransferLeecherTest {
   @Test
   public void testStartToActive() {
     tc = tc.body();
-    tc = connected(tc, torrent, file, leecher);//1-5
+    tc = connected(tc, torrent, file1, leecher);//1-5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file1, leecher.getId());
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmBaseId));
   }
   //***************************************************DOUBLE CONNECT***************************************************
   @Test
   public void testDoubleConnect() {
     tc = tc.body();
-    tc = connected(tc, torrent, file, leecher);//1-5
-    tc = tc.trigger(netConnect(torrent, file, leecher), networkP);//6
+    tc = connected(tc, torrent, file1, leecher);//1-5
+    tc = tc.trigger(netConnect(torrent, file1, leecher), networkP);//6
     tc = eNetPayload(tc, R1TransferConnMsgs.ConnectAcc.class, networkP); //7
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file1, leecher.getId());
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmBaseId));
   }
   //********************************************************PING********************************************************
   @Test
   public void testPingOk() {
     tc = tc.body();
-    tc = connected(tc, torrent, file, leecher); //1-5
+    tc = connected(tc, torrent, file1, leecher); //1-5
     tc = tc.repeat(R1TransferSeeder.HardCodedConfig.deadPings-1).body();
-    tc = tc.trigger(timerPing(torrent, file, leecher), timerP); //6
+    tc = tc.trigger(timerPing(torrent, file1, leecher), timerP); //6
     tc = tc.end();
     tc = tc.repeat(R1TransferSeeder.HardCodedConfig.deadPings).body();
-    tc = pingPong(tc, torrent, file, leecher); //7-8
+    tc = pingPong(tc, torrent, file1, leecher); //7-8
     tc = tc.end();
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
+    Identifier fsmId = R1TransferLeecher.fsmBaseId(torrent, file1, leecher.getId());
     assertEquals(States.ACTIVE, compState.fsm.getFSMState(fsmId));
   }
   
   @Test
   public void testPingDisc() {
     tc = tc.body();
-    tc = connected(tc, torrent, file, leecher); //1-5
+    tc = connected(tc, torrent, file1, leecher); //1-5
     tc = tc.repeat(R1TransferSeeder.HardCodedConfig.deadPings).body();
-    tc = tc.trigger(timerPing(torrent, file, leecher), timerP);//6
+    tc = tc.trigger(timerPing(torrent, file1, leecher), timerP);//6
     tc = tc.end();
-    tc = pingDisc(tc, torrent, file, leecher); //7-8
+    tc = pingDisc(tc, torrent, file1, leecher); //7-8
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
+    Identifier fsmId = R1TransferLeecher.fsmBaseId(torrent, file1, leecher.getId());
     assertFalse(compState.fsm.activeFSM(fsmId));
   }
 
@@ -232,12 +249,12 @@ public class R1TransferLeecherTest {
   @Test
   public void testConnectToNetDisconnect() {
     tc = tc.body();
-    tc = startToConnect(tc, torrent, file, leecher);//1-2
-    tc = tc.trigger(netDisconnect(torrent, file, leecher), networkP);//3
+    tc = startToConnect(tc, torrent, file1, leecher);//1-2
+    tc = tc.trigger(netDisconnect(torrent, file1, leecher), networkP);//3
     tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, ctrlP, Direction.OUT);//4
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file1, leecher.getId());
     assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
 
@@ -245,26 +262,26 @@ public class R1TransferLeecherTest {
   @Test
   public void testActiveToNetDisconnect() {
     tc = tc.body();
-    tc = connected(tc, torrent, file, leecher);//1-2
-    tc = tc.trigger(netDisconnect(torrent, file, leecher), networkP);//3
+    tc = connected(tc, torrent, file1, leecher);//1-2
+    tc = tc.trigger(netDisconnect(torrent, file1, leecher), networkP);//3
     tc = tc.expect(R1TransferLeecherEvents.Disconnected.class, ctrlP, Direction.OUT);//4
     tc = eCancelPeriodicTimer(tc, timerP); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file1, leecher.getId());
     assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
 
   @Test
   public void testActiveToLocaltDisconnect() {
     tc = tc.body();
-    tc = connected(tc, torrent, file, leecher);//1-2
-    tc = tc.trigger(localDisconnect(torrent, file, leecher), ctrlP);//3
+    tc = connected(tc, torrent, file1, leecher);//1-2
+    tc = tc.trigger(localDisconnect(torrent, file1, leecher), ctrlP);//3
     tc = eNetPayload(tc, R1TransferLeecherEvents.Disconnected.class, networkP);//4
     tc = eCancelPeriodicTimer(tc, timerP); //5
     tc.repeat(1).body().end();
     assertTrue(tc.check());
-    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file, leecher.getId());
+    Identifier fsmBaseId = R1TransferLeecher.fsmBaseId(torrent, file1, leecher.getId());
     assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
 

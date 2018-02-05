@@ -16,25 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.conn.event;
+package se.sics.silk.r2torrent.torrent;
 
-import se.sics.kompics.timer.SchedulePeriodicTimeout;
-import se.sics.kompics.timer.Timeout;
-import se.sics.kompics.util.Identifier;
-import se.sics.silk.r2torrent.conn.R2NodeLeecher;
+import se.sics.kompics.PortType;
+import se.sics.silk.r2torrent.torrent.event.R1TorrentConnEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2NodeLeecherTimeout extends Timeout implements R2NodeLeecher.Timeout {
-  private final Identifier nodeId;
-  public R2NodeLeecherTimeout(SchedulePeriodicTimeout spt, Identifier nodeId) {
-    super(spt);
-    this.nodeId = nodeId;
-  }
-
-  @Override
-  public Identifier nodeId() {
-    return nodeId;
+public class R1TorrentConnPort extends PortType {
+  {
+    request(R1TorrentConnEvents.Bootstrap.class);
+    indication(R1TorrentConnEvents.Seeders.class);
   }
 }

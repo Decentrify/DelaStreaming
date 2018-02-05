@@ -44,13 +44,13 @@ import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
+import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nstream.storage.durable.events.DStreamConnect;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.FutureHelper;
-import se.sics.silk.SelfPort;
 import se.sics.silk.SystemHelper;
 import se.sics.silk.SystemSetup;
 import se.sics.silk.TorrentIdHelper;
@@ -58,9 +58,10 @@ import static se.sics.silk.TorrentTestHelper.storageStreamConnected;
 import static se.sics.silk.TorrentTestHelper.storageStreamDisconnected;
 import se.sics.silk.TorrentWrapperComp;
 import se.sics.silk.r2torrent.R2TorrentComp;
-import se.sics.silk.r2torrent.torrent.R1FileUpload.R1FileMngr;
 import se.sics.silk.r2torrent.torrent.R1FileUpload.States;
 import se.sics.silk.r2torrent.torrent.event.R1FileUploadEvents;
+import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
+import se.sics.silk.r2torrent.torrent.util.R1TorrentDetails;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecherCtrl;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 
@@ -72,22 +73,21 @@ public class R1FileUploadTest {
   private TestContext<TorrentWrapperComp> tc;
   private Component comp;
   private TorrentWrapperComp compState;
+  private Port<Timer> timerP;
+  private Port<R1FileUploadCtrl> fileUploadCtrlP;
   private Port<DStreamControlPort> streamCtrlP;
   private Port<R1TransferLeecherCtrl> transferLeecherP;
-  private Port<Timer> timerP;
-  private Port<SelfPort> expectP;
+  
   private static OverlayIdFactory torrentIdFactory;
   private IntIdFactory intIdFactory;
   private KAddress selfAdr;
-  private Identifier endpointId;
   private OverlayId torrent;
   private Identifier file;
-  private StreamId streamId;
   private KAddress leecher1;
   private KAddress leecher2;
   private KAddress leecher3;
-  private R1FileMngr fileMngr;
-  private BlockDetails defaultBlock;
+  private R1TorrentDetails torrentDetails;
+  private R1TorrentDetails.Mngr torrentDetailsMngr = new R1TorrentDetails.Mngr();
 
   @BeforeClass
   public static void setup() throws FSMException {
@@ -101,20 +101,32 @@ public class R1FileUploadTest {
     leecher1 = SystemHelper.getAddress(1);
     leecher2 = SystemHelper.getAddress(2);
     leecher3 = SystemHelper.getAddress(3);
-    endpointId = intIdFactory.id(new BasicBuilders.IntBuilder(0));
-    torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-    file = intIdFactory.id(new BasicBuilders.IntBuilder(1));
-    streamId = TorrentIdHelper.streamId(endpointId, torrent, file);
-    defaultBlock = new BlockDetails(1024 * 100 + 10, 100, 1024, 10);
-    fileMngr = new R1FileMngr(endpointId, torrent);
+    torrentDetails();
 
     tc = getContext();
     comp = tc.getComponentUnderTest();
     compState = (TorrentWrapperComp) comp.getComponent();
-    streamCtrlP = comp.getNegative(DStreamControlPort.class);
     timerP = comp.getNegative(Timer.class);
+    fileUploadCtrlP = comp.getPositive(R1FileUploadCtrl.class);
+    streamCtrlP = comp.getNegative(DStreamControlPort.class);
     transferLeecherP = comp.getPositive(R1TransferLeecherCtrl.class);
-    expectP = comp.getPositive(SelfPort.class);
+  }
+  
+  private void torrentDetails() {
+    Identifier endpointId = intIdFactory.id(new BasicBuilders.IntBuilder(0));
+    torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
+    file = intIdFactory.id(new BasicBuilders.IntBuilder(1));
+    StreamId fileStreamId = TorrentIdHelper.streamId(endpointId, torrent, file);
+    int pieceSize = 1024;
+    int nrPieces = 100;
+    int nrBlocks = 10;
+    BlockDetails defaultBlock = new BlockDetails(pieceSize * nrPieces, nrPieces, pieceSize, pieceSize);
+    R1FileMetadata fileMetadata = R1FileMetadata.instance(pieceSize * nrPieces * nrBlocks, defaultBlock);
+    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA));
+    torrentDetails.addMetadata(file, fileMetadata);
+    torrentDetails.addStorage(file, fileStreamId, null);
+    torrentDetailsMngr.addTorrent(torrent, torrentDetails);
+    torrentDetails.completed(file);
   }
 
   private TestContext<TorrentWrapperComp> getContext() {
@@ -122,7 +134,7 @@ public class R1FileUploadTest {
       @Override
       public MultiFSM setupFSM(ComponentProxy proxy, Config config, R2TorrentComp.Ports ports) {
         try {
-          R1FileUpload.ES fsmEs = new R1FileUpload.ES(selfAdr, fileMngr, defaultBlock);
+          R1FileUpload.ES fsmEs = new R1FileUpload.ES(selfAdr, torrentDetailsMngr);
           fsmEs.setProxy(proxy);
           fsmEs.setPorts(ports);
 
@@ -290,7 +302,7 @@ public class R1FileUploadTest {
 
   public TestContext eFileIndication(TestContext tc, States state) {
     Predicate p = fileIndication(state);
-    return tc.expect(R1FileUploadEvents.Indication.class, p, expectP, Direction.OUT);
+    return tc.expect(R1FileUploadEvents.Indication.class, p, fileUploadCtrlP, Direction.OUT);
   }
 
   public Predicate<R1FileUploadEvents.Indication> fileIndication(States state) {

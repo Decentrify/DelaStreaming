@@ -350,7 +350,7 @@ public class R1TransferSeeder {
       };
 
     private static void sendCtrl(ES es, IS is, R1FileDownload.ConnectEvent content) {
-      es.proxy.trigger(content, es.ports.transferSeederCtrlNeg);
+      es.proxy.trigger(content, es.ports.transferSeederCtrlProv);
     }
 
     private static <C extends KompicsEvent & Identifiable> void bestEffortMsg(ES es, IS is, C content) {
@@ -393,8 +393,8 @@ public class R1TransferSeeder {
         Component downloadComp = es.proxy.create(R1DownloadComp.class, init);
         Identifier downloadId = R1DownloadComp.baseId(is.torrentId, is.fileId, is.seederAdr.getId());
         es.proxy.connect(es.ports.timer, downloadComp.getNegative(Timer.class), Channel.TWO_WAY);
-        es.ports.downloadC.addChannel(downloadId, downloadComp.getPositive(R1DownloadPort.class));
-        es.ports.netDownloadC.addChannel(downloadId, downloadComp.getNegative(Network.class));
+        es.ports.transferDownloadC.addChannel(downloadId, downloadComp.getPositive(R1DownloadPort.class));
+        es.ports.netTransferDownloadC.addChannel(downloadId, downloadComp.getNegative(Network.class));
         es.proxy.trigger(Start.event, downloadComp.control());
         is.downloadComp = downloadComp;
       }
@@ -407,8 +407,8 @@ public class R1TransferSeeder {
         Component downloadComp = is.downloadComp;
         es.proxy.trigger(Kill.event, downloadComp.control());
         es.proxy.disconnect(es.ports.timer, downloadComp.getNegative(Timer.class));
-        es.ports.downloadC.removeChannel(downloadId, downloadComp.getPositive(R1DownloadPort.class));
-        es.ports.netDownloadC.removeChannel(downloadId, downloadComp.getNegative(Network.class));
+        es.ports.transferDownloadC.removeChannel(downloadId, downloadComp.getPositive(R1DownloadPort.class));
+        es.ports.netTransferDownloadC.removeChannel(downloadId, downloadComp.getNegative(Network.class));
         is.downloadComp = null;
       }
     };

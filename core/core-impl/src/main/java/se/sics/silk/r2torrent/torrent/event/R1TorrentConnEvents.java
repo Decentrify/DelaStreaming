@@ -16,19 +16,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.conn.helper;
+package se.sics.silk.r2torrent.torrent.event;
 
-import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
+import java.util.Set;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.torrent.R1Torrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2NodeConnHelper {
-  public static R2NodeConnMsgs.ConnectReq nodeConnectReq() {
-    return new R2NodeConnMsgs.ConnectReq();
+public class R1TorrentConnEvents {
+  public static class Bootstrap extends SilkEvent.E3 {
+    public final Set<KAddress> boostrap;
+    public Bootstrap(OverlayId torrentId, Set<KAddress> boostrap) {
+      super(BasicIdentifiers.eventId(), torrentId);
+      this.boostrap = boostrap;
+    }
   }
   
-  public static R2NodeConnMsgs.Disconnect nodeDisconnect() {
-    return new R2NodeConnMsgs.Disconnect();
+  public static class Seeders extends SilkEvent.E3 implements R1Torrent.ConnEvent {
+    public final Set<KAddress> seeders;
+    public Seeders(OverlayId torrentId, Set<KAddress> seeders) {
+      super(BasicIdentifiers.eventId(), torrentId);
+      this.seeders = seeders;
+    }
   }
 }

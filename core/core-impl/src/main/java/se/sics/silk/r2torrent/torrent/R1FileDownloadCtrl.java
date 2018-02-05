@@ -16,11 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.silk.r2torrent.conn.helper;
+package se.sics.silk.r2torrent.torrent;
+
+import se.sics.kompics.PortType;
+import se.sics.silk.r2torrent.torrent.event.R1FileDownloadEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class R2ConnMsgsHelper {
-  
+public class R1FileDownloadCtrl extends PortType {
+  {
+    request(R1FileDownloadEvents.Start.class);
+    request(R1FileDownloadEvents.Connect.class);
+    indication(R1FileDownloadEvents.Indication.class);
+    indication(R1FileDownloadEvents.Disconnected.class);
+  }
 }

@@ -88,13 +88,13 @@ public class R1FileDownloadTest {
   private TestContext<TorrentWrapperComp> tc;
   private Component comp;
   private TorrentWrapperComp compState;
-  private Port<SelfPort> triggerP;
   private Port<SelfPort> expectP;
   private Port<Timer> timerP;
   private Port<Network> networkP;
+  private Port<R1FileDownloadCtrl> fileDownloadCtrl;
   private Port<DStreamControlPort> streamCtrlP;
   private Port<DStoragePort> storageP;
-  private Port<R1DownloadPort> downloadP;
+  private Port<R1DownloadPort> fileDownloadP;
   private Port<R1TransferSeederCtrl> transferSeederP;
   private IntIdFactory intIdFactory;
   private KAddress selfAdr;
@@ -110,6 +110,7 @@ public class R1FileDownloadTest {
   private KAddress seeder2;
   private KAddress seeder3;
   private R1TorrentDetails torrentDetails;
+  private final R1TorrentDetails.Mngr torrentDetailsMngr = new R1TorrentDetails.Mngr();
   private CancelPeriodicTimerPredicate pcp;
 
   @BeforeClass
@@ -126,6 +127,22 @@ public class R1FileDownloadTest {
     seeder1 = SystemHelper.getAddress(1);
     seeder2 = SystemHelper.getAddress(2);
     seeder3 = SystemHelper.getAddress(3);
+    torrentDetails();
+
+    tc = getContext();
+    comp = tc.getComponentUnderTest();
+    compState = (TorrentWrapperComp) comp.getComponent();
+    fileDownloadCtrl = comp.getPositive(R1FileDownloadCtrl.class);
+    expectP = comp.getPositive(SelfPort.class);
+    timerP = comp.getNegative(Timer.class);
+    networkP = comp.getNegative(Network.class);
+    streamCtrlP = comp.getNegative(DStreamControlPort.class);
+    storageP = comp.getNegative(DStoragePort.class);
+    fileDownloadP = comp.getNegative(R1DownloadPort.class);
+    transferSeederP = comp.getNegative(R1TransferSeederCtrl.class);
+  }
+  
+  private void torrentDetails() {
     endpointId = intIdFactory.id(new BasicBuilders.IntBuilder(0));
     torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     file1 = intIdFactory.id(new BasicBuilders.IntBuilder(1));
@@ -146,19 +163,7 @@ public class R1FileDownloadTest {
     torrentDetails.addStorage(file1, file1StreamId, null);
     torrentDetails.addStorage(file2, file2StreamId, null);
     torrentDetails.addStorage(file3, file3StreamId, null);
-    Random rand = new Random();
-
-    tc = getContext();
-    comp = tc.getComponentUnderTest();
-    compState = (TorrentWrapperComp) comp.getComponent();
-    triggerP = comp.getNegative(SelfPort.class);
-    expectP = comp.getPositive(SelfPort.class);
-    timerP = comp.getNegative(Timer.class);
-    networkP = comp.getNegative(Network.class);
-    streamCtrlP = comp.getNegative(DStreamControlPort.class);
-    storageP = comp.getNegative(DStoragePort.class);
-    downloadP = comp.getNegative(R1DownloadPort.class);
-    transferSeederP = comp.getNegative(R1TransferSeederCtrl.class);
+    torrentDetailsMngr.addTorrent(torrent, torrentDetails);
   }
 
   private TestContext<TorrentWrapperComp> getContext() {
@@ -166,7 +171,7 @@ public class R1FileDownloadTest {
       @Override
       public MultiFSM setupFSM(ComponentProxy proxy, Config config, R2TorrentComp.Ports ports) {
         try {
-          R1FileDownload.ES fsmEs = new R1FileDownload.ES(selfAdr, torrentDetails);
+          R1FileDownload.ES fsmEs = new R1FileDownload.ES(selfAdr, torrentDetailsMngr);
           fsmEs.setProxy(proxy);
           fsmEs.setPorts(ports);
 
@@ -209,7 +214,7 @@ public class R1FileDownloadTest {
   }
 
   private TestContext startToStoragePending(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId) {
-    tc = tFileOpen(tc, triggerP, open(torrent, file));
+    tc = tFileOpen(tc, fileDownloadCtrl, download(torrent, file));
     tc = tc.expect(DStreamConnect.Request.class, streamCtrlP, Direction.OUT);
     return tc;
   }
@@ -226,7 +231,7 @@ public class R1FileDownloadTest {
   }
 
   private TestContext startToStorageSucc(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId) {
-    tc = tFileOpen(tc, triggerP, open(torrent, file)); //1
+    tc = tFileOpen(tc, fileDownloadCtrl, download(torrent, file)); //1
     tc = myStorageStreamConnected(tc);//2-4
     return tc;
   }
@@ -244,17 +249,17 @@ public class R1FileDownloadTest {
 
   private TestContext startToActive(TestContext tc, OverlayId torrent, Identifier file, StreamId streamId,
     KAddress seeder) {
-    tc = tFileOpen(tc, triggerP, open(torrent, file)); //1
+    tc = tFileOpen(tc, fileDownloadCtrl, download(torrent, file)); //1
     tc = myStorageStreamConnected(tc); //2-4
     tc = transferConnected(tc, torrent, file, seeder); //5-8
-    tc = tc.expect(R1DownloadEvents.GetBlocks.class, downloadP, Direction.OUT); //9
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, fileDownloadP, Direction.OUT); //9
     return tc;
   }
 
   //***************************************************DOWNLOAD_FILE****************************************************
   @Test
   public void testDownloadFileInOrder() {
-    R1FileMetadata fm = torrentDetails.getMetadata(file1);
+    R1FileMetadata fm = torrentDetails.getMetadata(file1).get();
 
     Random rand = new Random();
     byte[] block = new byte[fm.defaultBlock.blockSize];
@@ -263,7 +268,7 @@ public class R1FileDownloadTest {
 
 //    tc = tc.setTimeout(1000 * 60 * 10);
     tc = tc.body();
-    tc = tFileOpen(tc, triggerP, open(torrent, file1)); //1
+    tc = tFileOpen(tc, fileDownloadCtrl, download(torrent, file1)); //1
     tc = myStorageStreamConnected(tc); //3
     tc = transferConnected(tc, torrent, file1, seeder1); //4
     tc = downloadInOrder(tc, torrent, file1, seeder1, block, hash); //18
@@ -277,7 +282,7 @@ public class R1FileDownloadTest {
   
   @Test
   public void testDownloadFileOutOfOrder() {
-    R1FileMetadata fm = torrentDetails.getMetadata(file1);
+    R1FileMetadata fm = torrentDetails.getMetadata(file1).get();
 
     Random rand = new Random();
     byte[] block = new byte[fm.defaultBlock.blockSize];
@@ -286,7 +291,7 @@ public class R1FileDownloadTest {
 
 //    tc = tc.setTimeout(1000 * 60 * 10);
     tc = tc.body();
-    tc = tFileOpen(tc, triggerP, open(torrent, file1)); //1
+    tc = tFileOpen(tc, fileDownloadCtrl, download(torrent, file1)); //1
     tc = myStorageStreamConnected(tc); //3
     tc = transferConnected(tc, torrent, file1, seeder1); //4
     tc = downloadOutOfOrder(tc, torrent, file1, seeder1, block, hash); //18
@@ -308,18 +313,18 @@ public class R1FileDownloadTest {
     blocks2.add(3);
     Set<Integer> blocks3 = new TreeSet<>();
     blocks3.add(4);
-    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks1), downloadP, Direction.OUT);
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 0, block, hash), downloadP);
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks1), fileDownloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 0, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc); //2
-    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks2), downloadP, Direction.OUT);
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 1, block, hash), downloadP);
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks2), fileDownloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 1, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc);//2
-    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks3), downloadP, Direction.OUT);
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 2, block, hash), downloadP);
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks3), fileDownloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 2, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc);//2
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 3, block, hash), downloadP);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 3, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc);//2
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 4, block, hash), downloadP);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 4, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc);//2
     return tc;
   }
@@ -334,18 +339,18 @@ public class R1FileDownloadTest {
     blocks2.add(3);
     Set<Integer> blocks3 = new TreeSet<>();
     blocks3.add(4);
-    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks1), downloadP, Direction.OUT);
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 1, block, hash), downloadP);
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks1), fileDownloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 1, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc);//2
-    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks2), downloadP, Direction.OUT);
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 2, block, hash), downloadP);
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks2), fileDownloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 2, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc);//2
-    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks3), downloadP, Direction.OUT);
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 3, block, hash), downloadP);
+    tc = tc.expect(R1DownloadEvents.GetBlocks.class, getBlock(blocks3), fileDownloadP, Direction.OUT);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 3, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc);//2
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 4, block, hash), downloadP);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 4, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc);//2
-    tc = tc.trigger(completed(torrentId, fileId, seeder, 0, block, hash), downloadP);
+    tc = tc.trigger(completed(torrentId, fileId, seeder, 0, block, hash), fileDownloadP);
     tc = blockWriteToStorage(tc);//2
     return tc;
   }
@@ -377,7 +382,7 @@ public class R1FileDownloadTest {
   }
   
   public TestContext transferConnected(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
-    tc = tc.trigger(connect(torrentId, fileId, seeder), triggerP); //1
+    tc = tc.trigger(connect(torrentId, fileId, seeder), fileDownloadCtrl); //1
     tc = transferSeederConnectSucc(tc, transferSeederP, transferSeederP); //2-3
     return tc;
   }
@@ -391,7 +396,7 @@ public class R1FileDownloadTest {
       }
     };
     tc = tc.answerRequest(R1TransferSeederEvents.Disconnect.class, transferSeederP, f);
-    tc = tc.expect(R1FileDownloadEvents.Disconnected.class, expectP, Direction.OUT);
+    tc = tc.expect(R1FileDownloadEvents.Disconnected.class, fileDownloadCtrl, Direction.OUT);
     tc = eFileIndication(tc, States.COMPLETED);
     tc = tc.trigger(f, transferSeederP);
     return tc;
@@ -399,14 +404,14 @@ public class R1FileDownloadTest {
 
   public TestContext eFileIndication(TestContext tc, States state) {
     Predicate p = fileIndication(state);
-    return tc.expect(R1FileDownloadEvents.Indication.class, p, expectP, Direction.OUT);
+    return tc.expect(R1FileDownloadEvents.Indication.class, p, fileDownloadCtrl, Direction.OUT);
   }
 
   public Predicate<R1FileDownloadEvents.Indication> fileIndication(States state) {
     return (R1FileDownloadEvents.Indication t) -> t.state.equals(state);
   }
 
-  public R1FileDownloadEvents.Start open(OverlayId torrentId, Identifier fileId) {
+  public R1FileDownloadEvents.Start download(OverlayId torrentId, Identifier fileId) {
     return new R1FileDownloadEvents.Start(torrentId, fileId);
   }
 

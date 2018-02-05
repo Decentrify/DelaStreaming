@@ -20,7 +20,10 @@ package se.sics.silk.r2torrent.torrent.util;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.TreeMap;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.util.MyStream;
 
@@ -28,27 +31,82 @@ import se.sics.nstream.storage.durable.util.MyStream;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1TorrentDetails {
+  public static class Mngr {
+    public final Map<OverlayId, R1TorrentDetails> torrents = new HashMap<>();
+    
+    public Optional<R1TorrentDetails> getTorrent(OverlayId torrentId) {
+      return Optional.ofNullable(torrents.get(torrentId));
+    }
+    
+    public void addTorrent(OverlayId torrentId, R1TorrentDetails torrentDetails) {
+      torrents.put(torrentId, torrentDetails);
+    }
+  }
+  
+  public static enum FileStatus {
+    INACTIVE,
+    DOWNLOAD,
+    UPLOAD
+  }
   public final String hashAlg;
   public final Map<Identifier, R1FileMetadata> metadata = new HashMap<>();
   public final Map<Identifier, R1FileStorage> storage = new HashMap<>();
-  
+  public final TreeMap<Identifier, FileStatus> status = new TreeMap<>();
+
   public R1TorrentDetails(String hashAlg) {
     this.hashAlg = hashAlg;
   }
-  
+
   public void addMetadata(Identifier fileId, R1FileMetadata m) {
     metadata.put(fileId, m);
   }
-  
-  public R1FileMetadata getMetadata(Identifier fileId) {
-    return metadata.get(fileId);
+
+  public Optional<R1FileMetadata> getMetadata(Identifier fileId) {
+    return Optional.ofNullable(metadata.get(fileId));
   }
-  
+
   public void addStorage(Identifier fileId, StreamId streamId, MyStream stream) {
     storage.put(fileId, new R1FileStorage(streamId, stream));
   }
+
+  public Optional<R1FileStorage> getStorage(Identifier fileId) {
+    return Optional.ofNullable(storage.get(fileId));
+  }
   
-  public R1FileStorage getStorage(Identifier fileId) {
-    return storage.get(fileId);
+  public void download() {
+    metadata.keySet().stream().forEach((f) -> status.put(f, FileStatus.INACTIVE));
+  }
+  
+  public void upload() {
+    metadata.keySet().stream().forEach((f) -> status.put(f, FileStatus.UPLOAD));
+  }
+  
+  public void download(Identifier fileId) {
+    status.put(fileId, FileStatus.DOWNLOAD);
+  }
+  
+  public void completed(Identifier fileId) {
+    status.put(fileId, FileStatus.UPLOAD);
+  }
+  public boolean isComplete() {
+    for(FileStatus fs : status.values()) {
+      if(!FileStatus.UPLOAD.equals(fs)) {
+        return false;
+      } 
+    }
+    return true;
+  }
+  
+  public boolean isComplete(Identifier fileId) {
+    return FileStatus.UPLOAD.equals(status.get(fileId));
+  }
+  
+  public Optional<Identifier> nextInactive() {
+    for(Map.Entry<Identifier, FileStatus> e : status.entrySet()) {
+      if(FileStatus.INACTIVE.equals(e.getValue())) {
+        return Optional.of(e.getKey());
+      }
+    }
+    return Optional.empty();
   }
 }

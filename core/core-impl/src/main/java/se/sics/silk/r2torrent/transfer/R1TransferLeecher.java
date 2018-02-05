@@ -57,13 +57,13 @@ import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
-import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
 import se.sics.silk.r2torrent.R2TorrentES;
-import se.sics.silk.r2torrent.conn.R2NodeLeecher;
 import se.sics.silk.r2torrent.torrent.R1FileUpload;
+import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
+import se.sics.silk.r2torrent.torrent.util.R1TorrentDetails;
 import se.sics.silk.r2torrent.transfer.R1TransferSeeder.HardCodedConfig;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherPing;
@@ -109,7 +109,7 @@ public class R1TransferLeecher {
     PingTracker pingTracker = new PingTracker();
     Component uploadComp;
     UUID pingTimeoutId;
-    
+
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
     }
@@ -139,7 +139,7 @@ public class R1TransferLeecher {
     }
 
     public boolean healthy() {
-      return missedPings < R2NodeLeecher.HardCodedConfig.deadPings;
+      return missedPings < HardCodedConfig.deadPings;
     }
   }
 
@@ -156,10 +156,11 @@ public class R1TransferLeecher {
     private ComponentProxy proxy;
     R2TorrentComp.Ports ports;
     KAddress selfAdr;
-    BlockDetails defaultBlock;
+    R1TorrentDetails.Mngr torrentDetailsMngr;
 
-    public ES(KAddress selfAdr, BlockDetails defaultBlock) {
+    public ES(KAddress selfAdr, R1TorrentDetails.Mngr torrentDetailsMngr) {
       this.selfAdr = selfAdr;
+      this.torrentDetailsMngr = torrentDetailsMngr;
     }
 
     @Override
@@ -282,7 +283,7 @@ public class R1TransferLeecher {
         schedulePing(es, is);
         return States.ACTIVE;
       };
-    
+
     static FSMBasicEventHandler connectRej
       = (FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.ConnectRej>) (FSMStateName state,
         ES es, IS is, R1TransferLeecherEvents.ConnectRej event) -> {
@@ -360,7 +361,7 @@ public class R1TransferLeecher {
     }
 
     private static void sendCtrl(ES es, IS is, R1FileUpload.ConnectEvent content) {
-      es.proxy.trigger(content, es.ports.transferLeecherCtrlPos);
+      es.proxy.trigger(content, es.ports.transferLeecherCtrlReq);
     }
 
     private static void schedulePing(ES es, IS is) {
@@ -379,18 +380,26 @@ public class R1TransferLeecher {
         is.pingTimeoutId = null;
       }
     }
-    
+
     static BiConsumer<ES, IS> createUploadComp = new BiConsumer<ES, IS>() {
 
       @Override
       public void accept(ES es, IS is) {
+        Optional<R1TorrentDetails> torrent = es.torrentDetailsMngr.getTorrent(is.torrentId);
+        if (!torrent.isPresent()) {
+          throw new RuntimeException("ups");
+        }
+        Optional<R1FileMetadata> fileMetadata = torrent.get().getMetadata(is.fileId);
+        if (!fileMetadata.isPresent()) {
+          throw new RuntimeException("ups");
+        }
         R1UploadComp.Init init = new R1UploadComp.Init(es.selfAdr, is.torrentId, is.fileId, is.leecherAdr,
-          es.defaultBlock);
+          fileMetadata.get().defaultBlock);
         Component uploadComp = es.proxy.create(R1UploadComp.class, init);
         Identifier uploadId = R1UploadComp.baseId(is.torrentId, is.fileId, is.leecherAdr.getId());
         es.proxy.connect(es.ports.timer, uploadComp.getNegative(Timer.class), Channel.TWO_WAY);
-        es.ports.uploadC.addChannel(uploadId, uploadComp.getPositive(R1UploadPort.class));
-        es.ports.netUploadC.addChannel(uploadId, uploadComp.getNegative(Network.class));
+        es.ports.transferUploadC.addChannel(uploadId, uploadComp.getPositive(R1UploadPort.class));
+        es.ports.netTransferUploadC.addChannel(uploadId, uploadComp.getNegative(Network.class));
         es.proxy.trigger(Start.event, uploadComp.control());
         is.uploadComp = uploadComp;
       }
@@ -403,8 +412,8 @@ public class R1TransferLeecher {
         Component uploadComp = is.uploadComp;
         es.proxy.trigger(Kill.event, uploadComp.control());
         es.proxy.disconnect(es.ports.timer, uploadComp.getNegative(Timer.class));
-        es.ports.uploadC.removeChannel(uploadId, uploadComp.getPositive(R1UploadPort.class));
-        es.ports.netUploadC.removeChannel(uploadId, uploadComp.getNegative(Network.class));
+        es.ports.transferUploadC.removeChannel(uploadId, uploadComp.getPositive(R1UploadPort.class));
+        es.ports.netTransferUploadC.removeChannel(uploadId, uploadComp.getNegative(Network.class));
         is.uploadComp = null;
       }
     };

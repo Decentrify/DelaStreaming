@@ -41,10 +41,6 @@ import se.sics.nstream.torrent.transfer.msg.DownloadPiece;
 import se.sics.nstream.torrent.transfer.msg.DownloadPieceSerializer;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockDetailsSerializer;
-import se.sics.silk.r2torrent.conn.msg.ConnMsgsSerializers;
-import se.sics.silk.r2torrent.conn.msg.R2NodeConnMsgs;
-import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgSerializers;
-import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -52,7 +48,7 @@ import se.sics.silk.r2torrent.torrent.msg.R1MetadataMsgs;
 public class GVoDSerializerSetup {
     //You may add up to max serializers without the need to recompile all the projects that use the serializer space after gvod
     public static int maxSerializers = 35;
-    public static int serializerIds = 26;
+    public static int serializerIds = 18;
     
     public static enum GVoDSerializers {
         FileIdentifier(FileId.class, "nStreamFileIdentifier"),
@@ -74,14 +70,7 @@ public class GVoDSerializerSetup {
         DownloadHashSuccess(DownloadHash.Success.class, "nstreamDownloadHashSuccess"),
         DownloadHashBadReq(DownloadHash.BadRequest.class, "nstreamDownloadHashBadReq"),
         
-        ConnMsgsConnectReq(R2NodeConnMsgs.ConnectReq.class, "silkConnMsgsConnect"),
-        ConnMsgsConnectAcc(R2NodeConnMsgs.ConnectAcc.class, "silkConnMsgsConnectAcc"),
-        ConnMsgsConnectRej(R2NodeConnMsgs.ConnectRej.class, "silkConnMsgsConnectRej"),
-        ConnMsgsDisconnect(R2NodeConnMsgs.Disconnect.class, "silkConnMsgsDisconnect"),
-        ConnMsgsPing(R2NodeConnMsgs.Ping.class, "silkConnMsgsPing"),
-        ConnMsgsPong(R2NodeConnMsgs.Pong.class, "silkConnMsgsPong"),
-        R1MetadataMsgsGet(R1MetadataMsgs.Get.class, "silkMetadataGet"),
-        R1MetadataMsgsServe(R1MetadataMsgs.Serve.class, "silkMetadataServe")
+        
         ;
         
         
@@ -181,37 +170,6 @@ public class GVoDSerializerSetup {
         Serializers.register(downloadHashBadRequestuestSerializer, GVoDSerializers.DownloadHashBadReq.serializerName);
         Serializers.register(GVoDSerializers.DownloadHashBadReq.serializedClass, GVoDSerializers.DownloadHashBadReq.serializerName);
         
-        ConnMsgsSerializers.ConnectReq connMsgsConnReqSerializer = new ConnMsgsSerializers.ConnectReq(currentId++);
-        Serializers.register(connMsgsConnReqSerializer, GVoDSerializers.ConnMsgsConnectReq.serializerName);
-        Serializers.register(GVoDSerializers.ConnMsgsConnectReq.serializedClass, GVoDSerializers.ConnMsgsConnectReq.serializerName);
-        
-        ConnMsgsSerializers.ConnectAcc connMsgsConnAccSerializer = new ConnMsgsSerializers.ConnectAcc(currentId++);
-        Serializers.register(connMsgsConnAccSerializer, GVoDSerializers.ConnMsgsConnectAcc.serializerName);
-        Serializers.register(GVoDSerializers.ConnMsgsConnectAcc.serializedClass, GVoDSerializers.ConnMsgsConnectAcc.serializerName);
-        
-        ConnMsgsSerializers.ConnectRej connMsgsConnRejSerializer = new ConnMsgsSerializers.ConnectRej(currentId++);
-        Serializers.register(connMsgsConnRejSerializer, GVoDSerializers.ConnMsgsConnectRej.serializerName);
-        Serializers.register(GVoDSerializers.ConnMsgsConnectRej.serializedClass, GVoDSerializers.ConnMsgsConnectRej.serializerName);
-        
-        ConnMsgsSerializers.Disconnect connMsgsDiscSerializer = new ConnMsgsSerializers.Disconnect(currentId++);
-        Serializers.register(connMsgsDiscSerializer, GVoDSerializers.ConnMsgsDisconnect.serializerName);
-        Serializers.register(GVoDSerializers.ConnMsgsDisconnect.serializedClass, GVoDSerializers.ConnMsgsDisconnect.serializerName);
-        
-        ConnMsgsSerializers.Ping connMsgsPingSerializer = new ConnMsgsSerializers.Ping(currentId++);
-        Serializers.register(connMsgsPingSerializer, GVoDSerializers.ConnMsgsPing.serializerName);
-        Serializers.register(GVoDSerializers.ConnMsgsPing.serializedClass, GVoDSerializers.ConnMsgsPing.serializerName);
-        
-        ConnMsgsSerializers.Pong connMsgsPongSerializer = new ConnMsgsSerializers.Pong(currentId++);
-        Serializers.register(connMsgsPongSerializer, GVoDSerializers.ConnMsgsPong.serializerName);
-        Serializers.register(GVoDSerializers.ConnMsgsPong.serializedClass, GVoDSerializers.ConnMsgsPong.serializerName);
-        
-        R1MetadataMsgSerializers.Get metadataGetSerializer = new R1MetadataMsgSerializers.Get(currentId++);
-        Serializers.register(metadataGetSerializer, GVoDSerializers.R1MetadataMsgsGet.serializerName);
-        Serializers.register(GVoDSerializers.R1MetadataMsgsGet.serializedClass, GVoDSerializers.R1MetadataMsgsGet.serializerName);
-        
-        R1MetadataMsgSerializers.Serve metadataServeSerializer = new R1MetadataMsgSerializers.Serve(currentId++);
-        Serializers.register(metadataServeSerializer, GVoDSerializers.R1MetadataMsgsServe.serializerName);
-        Serializers.register(GVoDSerializers.R1MetadataMsgsServe.serializedClass, GVoDSerializers.R1MetadataMsgsServe.serializerName);
         assert startingId + serializerIds == currentId;
         assert serializerIds <= maxSerializers;
         return startingId + maxSerializers;
