@@ -40,10 +40,13 @@ public interface R1TransferMsgs {
   public static class CacheHintReq extends SilkEvent.E4 implements R1TransferMsg.Upld {
 
     public final KHint.Summary cacheHint;
-
-    public CacheHintReq(OverlayId torrentId, Identifier fileId, KHint.Summary cacheHint) {
-      super(BasicIdentifiers.msgId(), torrentId, fileId);
+    CacheHintReq(Identifier eventId, OverlayId torrentId, Identifier fileId, KHint.Summary cacheHint) {
+      super(eventId, torrentId, fileId);
       this.cacheHint = cacheHint;
+    }
+    
+    public CacheHintReq(OverlayId torrentId, Identifier fileId, KHint.Summary cacheHint) {
+      this(BasicIdentifiers.msgId(), torrentId, fileId, cacheHint);
     }
 
     public CacheHintAcc accept() {
@@ -66,20 +69,23 @@ public interface R1TransferMsgs {
     public final int block;
     public final int nrPieces;
 
-    public BlockReq(OverlayId torrentId, Identifier fileId, int block, int nrPieces) {
-      super(BasicIdentifiers.msgId(), torrentId, fileId);
+    BlockReq(Identifier eventId, OverlayId torrentId, Identifier fileId, int block, int nrPieces) {
+      super(eventId, torrentId, fileId);
       this.block = block;
       this.nrPieces = nrPieces;
     }
-
-    public PieceResp success(int piece, byte[] val) {
-      return new PieceResp(eventId, torrentId, fileId, Pair.with(block, piece), Either.right(val));
+    public BlockReq(OverlayId torrentId, Identifier fileId, int block, int nrPieces) {
+      this(BasicIdentifiers.msgId(), torrentId, fileId, block, nrPieces);
     }
-
+    
     public void pieces(Consumer<PieceReq> consumer) {
       for (int piece = 0; piece < nrPieces; piece++) {
         consumer.accept(new PieceReq(eventId, torrentId, fileId, Pair.with(block, piece)));
       }
+    }
+    
+    public PieceResp piece(int pieceNr, byte[] pieceVal) {
+      return new PieceResp(eventId, torrentId, fileId, Pair.with(block, pieceNr), Either.right(pieceVal));
     }
   }
 
@@ -117,10 +123,13 @@ public interface R1TransferMsgs {
   public static class HashReq extends SilkEvent.E4 implements R1TransferMsg.Upld {
 
     public final Set<Integer> hashes;
-
-    public HashReq(OverlayId torrentId, Identifier fileId, Set<Integer> hashes) {
-      super(BasicIdentifiers.msgId(), torrentId, fileId);
+    HashReq(Identifier eventId, OverlayId torrentId, Identifier fileId, Set<Integer> hashes) {
+      super(eventId, torrentId, fileId);
       this.hashes = hashes;
+    }
+    
+    public HashReq(OverlayId torrentId, Identifier fileId, Set<Integer> hashes) {
+      this(BasicIdentifiers.msgId(), torrentId, fileId, hashes);
     }
 
     public HashResp accept(Map<Integer, byte[]> values) {
