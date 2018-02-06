@@ -168,14 +168,14 @@ public class R2TorrentComp extends ComponentDefinition {
 
   public static class Ports {
 
-    public final Negative<SelfPort> loopbackPos;
-    public final Positive<SelfPort> loopbackSubscribe;
-
+    //**************************************************EXTERNAL********************************************************
     public final Positive<Network> network;
     public final Positive<Timer> timer;
     public final Positive<DStreamControlPort> streamCtrl;
     public final Positive<DStoragePort> storage;
-
+    //**************************************************INTERNAL********************************************************
+    public final Negative<SelfPort> loopbackPos;
+    public final Positive<SelfPort> loopbackSubscribe;
     public final Negative<R1TorrentCtrlPort> torrentCtrl;
     public final Positive<R1TorrentConnPort> torrentConnReq;
     public final Positive<R1FileUploadCtrl> fileUploadCtrlReq;
