@@ -19,8 +19,11 @@
 package se.sics.silk.r2torrent.transfer;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,8 +56,8 @@ import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadEvents;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadTimeout;
 import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
-import se.sics.silk.r2torrent.transfer.util.R1DwnlCwnd;
 import se.sics.silk.r2torrent.transfer.util.R1DownloadBlockTracker;
+import se.sics.silk.r2torrent.transfer.util.R1DwnlCwnd;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -207,32 +210,45 @@ public class R1DownloadComp extends ComponentDefinition {
       R1TransferMsgs.CacheHintReq req = new R1TransferMsgs.CacheHintReq(torrentId, fileId, blockTracker.newHint());
       LOG.debug("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.cacheHint.lStamp,
         req.cacheHint.blocks});
-      bestEffortMsg(req);
+      bestEffortReq(req);
     }
     while (blockTracker.hasHashes() && cwnd.canSend()) {
       R1TransferMsgs.HashReq req = new R1TransferMsgs.HashReq(torrentId, fileId, blockTracker.nextHashes());
-      bestEffortMsg(req);
+      bestEffortReq(req);
     }
     int batch = 1 + HardCodedConfig.DWNL_INC_SPEED;
     while (blockTracker.hasMissedPiece() && cwnd.canSend() && batch > 0) {
       batch--;
       R1TransferMsgs.PieceReq req = new R1TransferMsgs.PieceReq(torrentId, fileId, blockTracker.nextMissedPiece());
-      bestEffortMsg(req);
+      bestEffortReq(req);
       cwnd.send(req.eventId, req.piece);
     }
-    if(blockTracker.hasBlock() && batch > 0 && cwnd.canSend()) {
+    if (blockTracker.hasBlock() && batch > 0 && cwnd.canSend()) {
       Pair<Integer, Integer> block = blockTracker.nextBlock();
-      R1TransferMsgs.BlockReq req 
+      R1TransferMsgs.BlockReq req
         = new R1TransferMsgs.BlockReq(torrentId, fileId, block.getValue0(), block.getValue1());
-      bestEffortMsg(req);
+      bestEffortBatchReq(req);
       cwnd.sendAll(req.eventId, block.getValue0(), block.getValue1());
     }
   }
 
-  private <C extends KompicsEvent & Identifiable> void bestEffortMsg(C content) {
+  private <C extends KompicsEvent & Identifiable> void bestEffortReq(C content) {
     KHeader header = new BasicHeader(selfAdr, seederAdr, Transport.UDP);
     BestEffortMsg.Request wrap
       = new BestEffortMsg.Request(content, HardCodedConfig.beRetries, HardCodedConfig.beRetryInterval);
+    KContentMsg msg = new BasicContentMsg(header, wrap);
+    trigger(msg, ports.network);
+  }
+
+  private <C extends KompicsEvent & Identifiable> void bestEffortBatchReq(R1TransferMsgs.BlockReq blockReq) {
+    Set<BestEffortMsg.Request> pieceRequests = new HashSet<>();
+    Consumer<R1TransferMsgs.PieceReq> accumulator = (R1TransferMsgs.PieceReq req) -> {
+      pieceRequests.add(new BestEffortMsg.Request(req, HardCodedConfig.beRetries, HardCodedConfig.beRetryInterval));
+    };
+    blockReq.pieces(accumulator);
+    KHeader header = new BasicHeader(selfAdr, seederAdr, Transport.UDP);
+    BestEffortMsg.BatchRequest wrap = new BestEffortMsg.BatchRequest(blockReq, HardCodedConfig.beRetries, 
+      HardCodedConfig.beRetryInterval, pieceRequests);
     KContentMsg msg = new BasicContentMsg(header, wrap);
     trigger(msg, ports.network);
   }

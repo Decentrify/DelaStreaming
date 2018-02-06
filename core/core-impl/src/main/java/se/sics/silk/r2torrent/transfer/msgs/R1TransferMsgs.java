@@ -84,7 +84,7 @@ public interface R1TransferMsgs {
       }
     }
     
-    public PieceResp piece(int pieceNr, byte[] pieceVal) {
+    public PieceResp pieceResp(int pieceNr, byte[] pieceVal) {
       return new PieceResp(eventId, torrentId, fileId, Pair.with(block, pieceNr), Either.right(pieceVal));
     }
   }
@@ -93,8 +93,8 @@ public interface R1TransferMsgs {
 
     public final Pair<Integer, Integer> piece;
 
-    public PieceReq(Identifier msgId, OverlayId torrentId, Identifier fileId, Pair<Integer, Integer> piece) {
-      super(msgId, torrentId, fileId);
+    public PieceReq(Identifier eventId, OverlayId torrentId, Identifier fileId, Pair<Integer, Integer> piece) {
+      super(eventId, torrentId, fileId);
       this.piece = piece;
     }
     
