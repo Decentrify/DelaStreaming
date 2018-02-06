@@ -73,7 +73,7 @@ import se.sics.silk.r2torrent.transfer.msgs.R1TransferConnMsgs;
  */
 public class R1TransferSeeder {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FSM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(R1TransferSeeder.class);
   public static final String NAME = "dela-r1-torrent-transfer-seeder-fsm";
 
   public static enum States implements FSMStateName {
@@ -262,6 +262,7 @@ public class R1TransferSeeder {
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferSeederEvents.Connect event)
         throws FSMException {
         is.init(event);
+        LOG.info("<{},{},{}>started", new Object[]{is.torrentId.baseId, is.fileId, is.seederAdr.getId()});
         bestEffortMsg(es, is, new R1TransferConnMsgs.Connect(is.torrentId, is.fileId));
         return States.CONNECT;
       }

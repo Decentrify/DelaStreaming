@@ -106,7 +106,7 @@ public class R1TorrentConnComp extends ComponentDefinition {
 
   public static class HardCodedConfig {
 
-    public static long timerPeriod = 1000;
+    public static long timerPeriod = 10000;
   }
 
   public static class ConnTimeout extends Timeout {

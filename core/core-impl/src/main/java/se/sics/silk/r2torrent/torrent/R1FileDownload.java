@@ -85,7 +85,7 @@ import se.sics.silk.r2torrent.transfer.events.R1TransferSeederEvents;
  */
 public class R1FileDownload {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FSM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(R1FileDownload.class);
   public static final String NAME = "dela-r1-torrent-file-download-fsm";
 
   public static enum States implements FSMStateName {
@@ -320,6 +320,7 @@ public class R1FileDownload {
           throw new RuntimeException("ups");
         }
         is.init(torrentDetails.get(), event);
+        LOG.info("<{},{}>start", new Object[]{is.torrentId.baseId, is.fileId});
         sendStorageConnect(es, is);
         return States.STORAGE_PENDING;
       };
@@ -342,6 +343,7 @@ public class R1FileDownload {
     //*******************************************************STORAGE_PENDING****************************************************
     static FSMBasicEventHandler streamOpened = (FSMBasicEventHandler<ES, IS, DStreamConnect.Success>) (
       FSMStateName state, ES es, IS is, DStreamConnect.Success resp) -> {
+        LOG.debug("<{},{}>stream opened", new Object[]{is.torrentId.baseId, is.fileId});
         is.startSeeders(es, resp);
         sendCtrlIndication(es, is, States.IDLE);
         return States.IDLE;
@@ -355,6 +357,7 @@ public class R1FileDownload {
     //*****************************************************SEEDERS******************************************************
     static FSMBasicEventHandler connect = (FSMBasicEventHandler<ES, IS, R1FileDownloadEvents.Connect>) (
       FSMStateName state, ES es, IS is, R1FileDownloadEvents.Connect event) -> {
+        LOG.debug("<{},{}>connect:{}", new Object[]{is.torrentId.baseId, is.fileId, event.seeder});
         is.seedersState.pending(event.seeder);
         sendTransferEvent(es, new R1TransferSeederEvents.Connect(is.torrentId, is.fileId, event.seeder, is.fileMetadata));
         return States.ACTIVE;

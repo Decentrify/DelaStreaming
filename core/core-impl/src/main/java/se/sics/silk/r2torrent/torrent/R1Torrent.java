@@ -65,7 +65,6 @@ public class R1Torrent {
   public static final String NAME = "dela-r1-torrent-fsm";
 
   public static enum States implements FSMStateName {
-
     DOWNLOAD,
     UPLOAD
   }
@@ -250,6 +249,7 @@ public class R1Torrent {
     static FSMBasicEventHandler upload = (FSMBasicEventHandler<ES, IS, R1TorrentCtrlEvents.Upload>) (
       FSMStateName state, ES es, IS is, R1TorrentCtrlEvents.Upload req) -> {
         is.init(req.torrentId, req.torrentDetails);
+        LOG.info("<{}>upload", req.torrentId.baseId);
         is.torrentDetails.upload();
         es.torrentDetailsMngr.addTorrent(req.torrentId, req.torrentDetails);
         return States.UPLOAD;
@@ -257,8 +257,8 @@ public class R1Torrent {
 
     static FSMBasicEventHandler download = (FSMBasicEventHandler<ES, IS, R1TorrentCtrlEvents.Download>) (
       FSMStateName state, ES es, IS is, R1TorrentCtrlEvents.Download req) -> {
-        LOG.info("{}torrent start", new Object[]{is.torrentId});
         is.init(req.torrentId, req.torrentDetails);
+        LOG.info("<{}>download with partners:{}", new Object[]{is.torrentId.baseId, req.bootstrap});
         is.torrentDetails.download();
         es.torrentDetailsMngr.addTorrent(req.torrentId, req.torrentDetails);
         sendTorrentConn(es, new R1TorrentConnEvents.Bootstrap(is.torrentId, req.bootstrap));
@@ -270,7 +270,7 @@ public class R1Torrent {
         LOG.info("{}download file:{} indication:{}", new Object[]{is.torrentId, req.fileId, req.state});
         switch (req.state) {
           case COMPLETED: {
-            LOG.info("{}download file:{} completed", new Object[]{is.torrentId, req.fileId});
+            LOG.info("<{}>download file:{} completed", new Object[]{is.torrentId.baseId, req.fileId});
             is.torrentDetails.completed(req.fileId);
             Optional<KAddress> seeder = is.fileSeeders.completed(req.fileId);
             if (is.torrentDetails.isComplete()) {
@@ -287,6 +287,7 @@ public class R1Torrent {
             if (!fileSeeder.isPresent()) {
               throw new RuntimeException("ups");
             }
+            LOG.info("<{}>download file:{} connect:{}", new Object[]{is.torrentId.baseId, req.fileId, fileSeeder.get()});
             sendDownloadCtrl(es, new R1FileDownloadEvents.Connect(is.torrentId, req.fileId, fileSeeder.get()));
             break;
           }
@@ -317,7 +318,7 @@ public class R1Torrent {
         LOG.info("{}seeders:{}", new Object[]{req.torrentId, req.seeders});
         Set<KAddress> newSeeders = Sets.difference(req.seeders, is.fileSeeders.activeSeeders);
         for (KAddress seeder : newSeeders) {
-          if(!startDownloadFile(es, is, seeder)) {
+          if (!startDownloadFile(es, is, seeder)) {
             break;
           }
         }
@@ -339,7 +340,7 @@ public class R1Torrent {
     static void sendDownloadCtrl(ES es, R1FileDownload.CtrlEvent event) {
       es.proxy.trigger(event, es.ports.fileDownloadCtrlReq);
     }
-    
+
     static void sendTorrentConn(ES es, KompicsEvent event) {
       es.proxy.trigger(event, es.ports.torrentConnReq);
     }

@@ -295,6 +295,7 @@ public class R1FileUpload {
           throw new RuntimeException("ups");
         }
         is.init(torrentDetails.get(), req);
+        LOG.info("<{},{}>started", new Object[]{is.torrentId.baseId, is.fileId});
         if (!is.torrentDetails.isComplete(req.fileId)) {
           throw new RuntimeException("ups");
         }
