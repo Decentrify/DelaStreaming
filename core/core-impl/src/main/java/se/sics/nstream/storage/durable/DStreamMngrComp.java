@@ -24,13 +24,16 @@ import java.util.UUID;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Kill;
 import se.sics.kompics.Killed;
 import se.sics.kompics.Negative;
+import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.StreamId;
@@ -46,6 +49,7 @@ public class DStreamMngrComp extends ComponentDefinition {
   private static final Logger LOG = LoggerFactory.getLogger(DStreamMngrComp.class);
   private final String logPrefix;
 
+  private final Positive<Timer> timerPort = requires(Timer.class);
   private final Negative<DStoragePort> storagePort = provides(DStoragePort.class);
   private final Negative<DStreamControlPort> streamControlPort = provides(DStreamControlPort.class);
   private final One2NChannel storageChannel;
@@ -93,7 +97,8 @@ public class DStreamMngrComp extends ComponentDefinition {
       Component streamStorageComp = create(storageProvider.getStorageDefinition(), init.getValue0());
 
       storageChannel.addChannel(req.stream.getValue0(), streamStorageComp.getPositive(DStoragePort.class));
-
+      connect(timerPort, streamStorageComp.getNegative(Timer.class), Channel.TWO_WAY);
+      
       compIdToStreamId.put(streamStorageComp.id(), req.stream.getValue0());
       streamStorage.put(req.stream.getValue0(), streamStorageComp);
 
@@ -113,6 +118,7 @@ public class DStreamMngrComp extends ComponentDefinition {
       compIdToStreamId.remove(streamStorageComp.id());
       
       storageChannel.removeChannel(req.streamId, streamStorageComp.getPositive(DStoragePort.class));
+      disconnect(timerPort, streamStorageComp.getNegative(Timer.class));
       
       trigger(Kill.event, streamStorageComp.control());
       answer(req, req.success());

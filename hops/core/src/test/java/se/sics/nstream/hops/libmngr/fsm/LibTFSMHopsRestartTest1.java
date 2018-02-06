@@ -31,6 +31,8 @@
 //import se.sics.kompics.fsm.FSMException;
 //import se.sics.kompics.testkit.Direction;
 //import se.sics.kompics.testkit.TestContext;
+//import se.sics.kompics.testing.Direction;
+//import se.sics.kompics.testing.TestContext;
 //import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 //import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 //import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
@@ -43,6 +45,8 @@
 //import se.sics.nstream.storage.durable.events.DEndpoint;
 //import se.sics.silk.torrent.TorrentMngrPort;
 //import se.sics.silk.torrentmngr.event.StartTorrent;
+//import se.sics.nstream.torrent.TorrentMngrPort;
+//import se.sics.nstream.torrent.event.StartTorrent;
 //import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 //import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
 //
@@ -53,6 +57,8 @@
 //
 //  private static Direction incoming = Direction.INCOMING;
 //  private static Direction outgoing = Direction.OUTGOING;
+//  private static Direction incoming = Direction.IN;
+//  private static Direction outgoing = Direction.OUT;
 //
 //  private static OverlayIdFactory torrentIdFactory;
 //  private TestContext<LibraryMngrComp> tc;
@@ -82,6 +88,7 @@
 //    tc.body()
 //      .expect(TorrentRestart.UpldReq.class, anyPredicate(TorrentRestart.UpldReq.class), port1, outgoing)
 //      .inspect(fsmState(LibTStates.PREPARE_MANIFEST_STORAGE))
+////      .inspect(fsmState(LibTStates.PREPARE_MANIFEST_STORAGE))
 //      .expectWithMapper()
 //        .expect(DEndpoint.Connect.class, port2, port2, successMapper(DEndpoint.Connect.class))
 //      .end()

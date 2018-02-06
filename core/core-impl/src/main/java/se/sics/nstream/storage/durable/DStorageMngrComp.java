@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Fault;
@@ -30,7 +31,9 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Kill;
 import se.sics.kompics.Killed;
 import se.sics.kompics.Negative;
+import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
@@ -46,6 +49,7 @@ public class DStorageMngrComp extends ComponentDefinition {
   private static final Logger LOG = LoggerFactory.getLogger(DStorageMngrComp.class);
   private final String logPrefix;
 
+  private final Positive<Timer> timerPort = requires(Timer.class);
   private final Negative<DStoragePort> storagePort = provides(DStoragePort.class);
   private final Negative<DStreamControlPort> streamControlPort = provides(DStreamControlPort.class);
   private final Negative<DEndpointCtrlPort> endpointControlPort = provides(DEndpointCtrlPort.class);
@@ -126,7 +130,8 @@ public class DStorageMngrComp extends ComponentDefinition {
         Component endpointComp = create(DStreamMngrComp.class, new DStreamMngrComp.Init(self, req.endpointProvider));
         streamControlChannel.addChannel(req.endpointId, endpointComp.getPositive(DStreamControlPort.class));
         storageChannel.addChannel(req.endpointId, endpointComp.getPositive(DStoragePort.class));
-
+        connect(timerPort, endpointComp.getNegative(Timer.class), Channel.TWO_WAY);
+        
         compIdToEndpointId.put(endpointComp.id(), req.endpointId);
         storageEndpoints.put(req.endpointId, endpointComp);
 
@@ -162,7 +167,8 @@ public class DStorageMngrComp extends ComponentDefinition {
       if (endpointClients.isEmpty()) {
         streamControlChannel.removeChannel(req.endpointId, endpointComp.getPositive(DStreamControlPort.class));
         storageChannel.removeChannel(req.endpointId, endpointComp.getPositive(DStoragePort.class));
-
+        disconnect(timerPort, endpointComp.getNegative(Timer.class));
+        
         clients.remove(req.endpointId);
         storageEndpoints.remove(req.endpointId);
         compIdToEndpointId.remove(endpointComp.id());

@@ -29,6 +29,8 @@
 //import se.sics.kompics.Port;
 //import se.sics.kompics.Promise;
 //import se.sics.kompics.fsm.FSMException;
+//import se.sics.kompics.testkit.Direction;
+//import se.sics.kompics.testkit.TestContext;
 //import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 //import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 //import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
@@ -41,6 +43,10 @@
 //import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
 //import se.sics.silk.torrent.TorrentMngrPort;
 //import se.sics.silk.torrentmngr.event.StartTorrent;
+//import se.sics.nstream.torrent.TorrentMngrPort;
+//import se.sics.nstream.torrent.event.StartTorrent;
+//import se.sics.nstream.torrent.transfer.TransferCtrlPort;
+//import se.sics.nstream.torrent.transfer.event.ctrl.SetupTransfer;
 //
 ///**
 // * @author Alex Ormenisan <aaor@kth.se>
