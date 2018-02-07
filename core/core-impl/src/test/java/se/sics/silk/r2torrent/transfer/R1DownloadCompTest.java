@@ -283,7 +283,7 @@ public class R1DownloadCompTest {
       public Msg get() {
         byte[] piece = Arrays.copyOfRange(block, i * blockDetails.defaultPieceSize, (i + 1)
           * blockDetails.defaultPieceSize);
-        return msg.answer(content.pieceResp(i++, piece));
+        return msg.answer(content.pieceResp(i++, piece, intIdFactory));
       }
     };
   }

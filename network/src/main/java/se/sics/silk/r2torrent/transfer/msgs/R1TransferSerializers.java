@@ -21,6 +21,7 @@ package se.sics.silk.r2torrent.transfer.msgs;
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -30,15 +31,18 @@ import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.Either;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.torrent.R1Torrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1TransferSerializers {
+  private static final IntIdFactory intIdFactory = new IntIdFactory(new Random(R1Torrent.HardCodedConfig.seed));
   public static abstract class Base implements Serializer {
 
     private final int id;
@@ -133,7 +137,7 @@ public class R1TransferSerializers {
   }
   
   public static class PieceReq extends Base {
-
+    
     public PieceReq(int id) {
       super(id);
     }
@@ -151,7 +155,8 @@ public class R1TransferSerializers {
       Triplet<Identifier, OverlayId, Identifier> base = fromBin(buf, hint);
       int blockNr = buf.readInt();
       int pieceNr = buf.readInt();
-      return new R1TransferMsgs.PieceReq(base.getValue0(), base.getValue1(), base.getValue2(), Pair.with(blockNr, pieceNr));
+      return new R1TransferMsgs.PieceReq(base.getValue0(), base.getValue1(), base.getValue2(), 
+        Pair.with(blockNr, pieceNr), intIdFactory);
     }
   }
   
@@ -185,8 +190,8 @@ public class R1TransferSerializers {
       int pieceSize = buf.readInt();
       byte[] pieceVal = new byte[pieceSize];
       buf.readBytes(pieceVal);
-      return new R1TransferMsgs.PieceResp(base.getValue0(), base.getValue1(), base.getValue2(), 
-        Pair.with(blockNr, pieceNr), Either.right(pieceVal));
+      return R1TransferMsgs.PieceResp.instance(base.getValue0(), base.getValue1(), base.getValue2(), 
+        Pair.with(blockNr, pieceNr), Either.right(pieceVal), intIdFactory);
     }
   }
   

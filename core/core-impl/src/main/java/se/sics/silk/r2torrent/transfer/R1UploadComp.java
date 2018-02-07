@@ -20,6 +20,7 @@ package se.sics.silk.r2torrent.transfer;
 
 import com.google.common.collect.Sets;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -40,6 +41,7 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -48,6 +50,7 @@ import se.sics.ktoolbox.util.network.KHeader;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nstream.util.BlockDetails;
+import se.sics.silk.r2torrent.torrent.R1Torrent;
 import se.sics.silk.r2torrent.transfer.events.R1UploadEvents;
 import se.sics.silk.r2torrent.transfer.events.R1UploadTimeout;
 import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
@@ -70,6 +73,7 @@ public class R1UploadComp extends ComponentDefinition {
 
   private KContentMsg<?, ?, R1TransferMsgs.CacheHintReq> pendingCacheReq;
   private final R1UpldCwnd cwnd;
+  private final IntIdFactory intIdFactory = new IntIdFactory(new Random(R1Torrent.HardCodedConfig.seed));
 
   public R1UploadComp(R1UploadComp.Init init) {
     ports = new Ports(proxy);
@@ -77,7 +81,7 @@ public class R1UploadComp extends ComponentDefinition {
     leecherAdr = init.leecherAdr;
     torrentId = init.torrentId;
     fileId = init.fileId;
-    cwnd = new R1UpldCwnd(init.defaultBlock, HardCodedConfig.cwndSize, sendMsg);
+    cwnd = new R1UpldCwnd(init.defaultBlock, HardCodedConfig.cwndSize, sendMsg, intIdFactory);
     subscribe(handleStart, control);
     subscribe(handleTimeout, ports.timer);
     subscribe(handleCache, ports.network);

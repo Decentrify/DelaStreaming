@@ -28,6 +28,7 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import org.javatuples.Pair;
 import se.sics.kompics.KompicsEvent;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.nstream.util.BlockDetails;
@@ -44,6 +45,7 @@ public class R1UpldCwnd {
 
   public final BlockDetails defaultBlock;
   public final int cwndSize;
+  public final IntIdFactory intIdFactory;
 
   private final Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
   private final Map<Integer, KReference<byte[]>> servedBlocks = new HashMap<>();
@@ -52,14 +54,15 @@ public class R1UpldCwnd {
   private final List<R1TransferMsgs.PieceReq> pendingPieces = new LinkedList<>();
   private final Consumer<KompicsEvent> sendMsg;
 
-  public R1UpldCwnd(BlockDetails defaultBlock, int cwndSize, Consumer<KompicsEvent> sendMsg) {
+  public R1UpldCwnd(BlockDetails defaultBlock, int cwndSize, Consumer<KompicsEvent> sendMsg, IntIdFactory intIdFactory) {
     this.defaultBlock = defaultBlock;
     this.cwndSize = cwndSize;
     this.sendMsg = sendMsg;
+    this.intIdFactory = intIdFactory;
   }
 
   public void pendingBlock(R1TransferMsgs.BlockReq req) {
-    req.pieces(addPending);
+    req.pieces(addPending, intIdFactory);
   }
 
   public void pendingPiece(R1TransferMsgs.PieceReq req) {

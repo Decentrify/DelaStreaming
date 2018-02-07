@@ -21,6 +21,7 @@ package se.sics.silk.r2torrent.transfer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -43,6 +44,7 @@ import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.kompics.util.PatternExtractorHelper;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -52,6 +54,7 @@ import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.basic.BasicHeader;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
+import se.sics.silk.r2torrent.torrent.R1Torrent;
 import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadEvents;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadTimeout;
@@ -76,6 +79,7 @@ public class R1DownloadComp extends ComponentDefinition {
   public final R1DwnlCwnd cwnd;
   private final R1FileMetadata fileMetadata;
   private UUID timerId;
+  private final IntIdFactory intIdFactory = new IntIdFactory(new Random(R1Torrent.HardCodedConfig.seed));
 
   public R1DownloadComp(Init init) {
     ports = new Ports(proxy);
@@ -220,7 +224,7 @@ public class R1DownloadComp extends ComponentDefinition {
     int batch = 1 + HardCodedConfig.DWNL_INC_SPEED;
     while (blockTracker.hasMissedPiece() && cwnd.canSend() && batch > 0) {
       batch--;
-      R1TransferMsgs.PieceReq req = new R1TransferMsgs.PieceReq(torrentId, fileId, blockTracker.nextMissedPiece());
+      R1TransferMsgs.PieceReq req = new R1TransferMsgs.PieceReq(torrentId, fileId, blockTracker.nextMissedPiece(), intIdFactory);
       bestEffortReq(req);
       cwnd.send(req.eventId, req.piece);
     }
@@ -246,7 +250,7 @@ public class R1DownloadComp extends ComponentDefinition {
     Consumer<R1TransferMsgs.PieceReq> accumulator = (R1TransferMsgs.PieceReq req) -> {
       pieceRequests.add(new BestEffortMsg.Request(req, HardCodedConfig.beRetries, HardCodedConfig.beRetryInterval));
     };
-    blockReq.pieces(accumulator);
+    blockReq.pieces(accumulator, intIdFactory);
     KHeader header = new BasicHeader(selfAdr, seederAdr, Transport.UDP);
     BestEffortMsg.BatchRequest wrap = new BestEffortMsg.BatchRequest(blockReq, HardCodedConfig.beRetries, 
       HardCodedConfig.beRetryInterval, pieceRequests);
