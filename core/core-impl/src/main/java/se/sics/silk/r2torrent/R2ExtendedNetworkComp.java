@@ -18,12 +18,16 @@
  */
 package se.sics.silk.r2torrent;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
+import se.sics.kompics.Handler;
 import se.sics.kompics.Kill;
 import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
+import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -33,23 +37,34 @@ import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R2ExtendedNetworkComp extends ComponentDefinition {
+  private static final Logger LOG = LoggerFactory.getLogger(R2ExtendedNetworkComp.class);
+  
   Positive<Timer> timer = requires(Timer.class);
   Positive<Network> baseNetwork = requires(Network.class);
   Negative<Network> extendedNetwork = provides(Network.class);
-  
+
   private Component beNetComp;
-  
+
   public R2ExtendedNetworkComp(Init init) {
     connectComp(init);
+    subscribe(handleStart, control);
   }
-  
+
+  Handler handleStart = new Handler<Start>() {
+
+    @Override
+    public void handle(Start event) {
+      LOG.info("starting");
+    }
+  };
+
   @Override
   public void tearDown() {
     trigger(Kill.event, beNetComp.control());
     disconnect(timer, beNetComp.getNegative(Timer.class));
     disconnect(baseNetwork, beNetComp.getNegative(Network.class));
   }
-  
+
   private void connectComp(Init init) {
     BestEffortNetworkComp.Init beNetCompInit = new BestEffortNetworkComp.Init(init.selfAdr, init.selfAdr.getId());
     beNetComp = create(BestEffortNetworkComp.class, beNetCompInit);
@@ -57,10 +72,11 @@ public class R2ExtendedNetworkComp extends ComponentDefinition {
     connect(baseNetwork, beNetComp.getNegative(Network.class), Channel.TWO_WAY);
     connect(extendedNetwork, beNetComp.getPositive(Network.class), Channel.TWO_WAY);
   }
-  
+
   public static class Init extends se.sics.kompics.Init<R2ExtendedNetworkComp> {
+
     public KAddress selfAdr;
-    
+
     public Init(KAddress selfAdr) {
       this.selfAdr = selfAdr;
     }
