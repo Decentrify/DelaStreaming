@@ -132,7 +132,8 @@ public class R1DownloadComp extends ComponentDefinition {
       @Override
       public void handle(R1TransferMsgs.CacheHintAcc content,
         KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.CacheHintAcc> context) {
-        LOG.debug("{}cache confirm ts:{}", logPrefix, content.cacheHint.lStamp);
+        LOG.debug("<{},{},{}>cache confirm ts:{}", 
+          new Object[]{torrentId.baseId, fileId, seederAdr.getId(), content.cacheHint.lStamp});
         blockTracker.cacheConfirmed(content.cacheHint.lStamp);
         tryDownload();
       }

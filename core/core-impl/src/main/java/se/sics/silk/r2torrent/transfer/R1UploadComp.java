@@ -58,7 +58,7 @@ import se.sics.silk.r2torrent.transfer.util.R1UpldCwnd;
  */
 public class R1UploadComp extends ComponentDefinition {
 
-  private static final Logger LOG = LoggerFactory.getLogger(R1DownloadComp.class);
+  private static final Logger LOG = LoggerFactory.getLogger(R1UploadComp.class);
   private String logPrefix;
 
   private final Ports ports;
@@ -145,10 +145,11 @@ public class R1UploadComp extends ComponentDefinition {
       @Override
       public void handle(R1TransferMsgs.CacheHintReq content,
         KContentMsg<KAddress, KHeader<KAddress>, R1TransferMsgs.CacheHintReq> msg) {
-        LOG.trace("{}received:{}", new Object[]{logPrefix, content});
+        LOG.trace("<{},{},{}>received:{}", 
+          new Object[]{torrentId.baseId, fileId, leecherAdr.getId(), content});
         if (pendingCacheReq == null) {
-          LOG.debug("{}cache:{} req - ts:{} blocks:{}",
-            new Object[]{logPrefix, content.getId(), content.cacheHint.lStamp, content.cacheHint.blocks});
+          LOG.debug("<{},{},{}>cache:{} req - ts:{} blocks:{}", new Object[]{torrentId.baseId, fileId, 
+            leecherAdr.getId(), content.getId(), content.cacheHint.lStamp, content.cacheHint.blocks});
           pendingCacheReq = msg;
           Set<Integer> servedBlocks = cwnd.servedBlocks();
           Set<Integer> newCache = Sets.difference(content.cacheHint.blocks, servedBlocks);

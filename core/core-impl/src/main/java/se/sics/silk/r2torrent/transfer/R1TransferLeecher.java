@@ -74,7 +74,7 @@ import se.sics.silk.r2torrent.transfer.msgs.R1TransferConnMsgs;
  */
 public class R1TransferLeecher {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FSM.class);
+  private static final Logger LOG = LoggerFactory.getLogger(R1TransferLeecher.class);
   public static final String NAME = "dela-r1-torrent-transfer-leecher-fsm";
 
   public static enum States implements FSMStateName {
@@ -109,6 +109,7 @@ public class R1TransferLeecher {
     PingTracker pingTracker = new PingTracker();
     Component uploadComp;
     UUID pingTimeoutId;
+    ReqTracker reqTracker = new ReqTracker();
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -123,7 +124,12 @@ public class R1TransferLeecher {
       this.leecherAdr = leecherAdr;
       this.torrentId = req.torrentId;
       this.fileId = req.fileId;
+      this.reqTracker.connect = req;
     }
+  }
+  
+  public static class ReqTracker {
+    R1TransferConnMsgs.Connect connect;
   }
 
   public static class PingTracker {
@@ -279,7 +285,7 @@ public class R1TransferLeecher {
       = (FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.ConnectAcc>) (FSMStateName state,
         ES es, IS is, R1TransferLeecherEvents.ConnectAcc event) -> {
         Handlers.createUploadComp.accept(es, is);
-        sendMsg(es, is, new R1TransferConnMsgs.ConnectAcc(is.torrentId, is.fileId));
+        sendMsg(es, is, is.reqTracker.connect.accept());
         schedulePing(es, is);
         return States.ACTIVE;
       };

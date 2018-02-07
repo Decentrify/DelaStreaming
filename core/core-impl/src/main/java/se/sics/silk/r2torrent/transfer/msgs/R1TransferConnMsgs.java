@@ -38,17 +38,13 @@ public class R1TransferConnMsgs {
     }
     
     public ConnectAcc accept() {
-      return new ConnectAcc(torrentId, fileId);
+      return new ConnectAcc(eventId, torrentId, fileId);
     }
   }
   
   public static class ConnectAcc extends SilkEvent.E4 implements R1TransferSeeder.Msg {
     ConnectAcc(Identifier eventId, OverlayId torrentId, Identifier fileId) {
       super(eventId, torrentId, fileId);
-    }
-    
-    public ConnectAcc(OverlayId torrentId, Identifier fileId) {
-      this(BasicIdentifiers.eventId(), torrentId, fileId);
     }
   }
   
