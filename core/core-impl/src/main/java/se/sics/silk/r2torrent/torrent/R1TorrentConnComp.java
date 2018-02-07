@@ -49,7 +49,8 @@ public class R1TorrentConnComp extends ComponentDefinition {
   public R1TorrentConnComp(Init init) {
     subscribe(handleStart, control);
     subscribe(handleConnTimeout, timer);
-    subscribe(handleConnBootstrap, connPort);
+    subscribe(handleStartSample, connPort);
+    subscribe(handleStopSample, connPort);
   }
 
   Handler handleStart = new Handler<Start>() {
@@ -75,12 +76,20 @@ public class R1TorrentConnComp extends ComponentDefinition {
     }
   };
 
-  Handler handleConnBootstrap = new Handler<R1TorrentConnEvents.Bootstrap>() {
+  Handler handleStartSample = new Handler<R1TorrentConnEvents.StartSample>() {
 
     @Override
-    public void handle(R1TorrentConnEvents.Bootstrap event) {
+    public void handle(R1TorrentConnEvents.StartSample event) {
       bootstrap.put(event.torrentId, event.boostrap);
       trigger(new R1TorrentConnEvents.Seeders(event.torrentId, event.boostrap), connPort);
+    }
+  };
+  
+  Handler handleStopSample = new Handler<R1TorrentConnEvents.StopSample>() {
+
+    @Override
+    public void handle(R1TorrentConnEvents.StopSample event) {
+      bootstrap.remove(event.torrentId);
     }
   };
 

@@ -236,7 +236,8 @@ public class R1Torrent {
       def = def
         .positivePort(R1TorrentConnPort.class)
         .basicEvent(R1TorrentConnEvents.Seeders.class)
-        .subscribe(Handlers.seeders, States.DOWNLOAD)
+        .subscribe(Handlers.seeders1, States.DOWNLOAD)
+        .subscribe(Handlers.seeders2, States.UPLOAD)
         .buildEvents();
       def = def
         .positivePort(DEndpointCtrlPort.class)
@@ -309,7 +310,7 @@ public class R1Torrent {
         LOG.info("<{}>endpoint connected", new Object[]{is.torrentId.baseId});
         if (is.state.isLeft()) {
           is.torrentDetails.download();
-          sendTorrentConn(es, new R1TorrentConnEvents.Bootstrap(is.torrentId, is.state.getLeft().bootstrap));
+          sendTorrentConn(es, new R1TorrentConnEvents.StartSample(is.torrentId, is.state.getLeft().bootstrap));
           return States.DOWNLOAD;
         } else {
           is.torrentDetails.upload();
@@ -327,6 +328,7 @@ public class R1Torrent {
             Optional<KAddress> seeder = is.fileSeeders.completed(req.fileId);
             if (is.torrentDetails.isComplete()) {
               LOG.info("{}torrent completed", new Object[]{is.torrentId});
+              sendOverlayStopSample(es, is);
               return States.UPLOAD;
             }
             if (seeder.isPresent()) {
@@ -365,7 +367,7 @@ public class R1Torrent {
         return States.UPLOAD;
       };
 
-    static FSMBasicEventHandler seeders = (FSMBasicEventHandler<ES, IS, R1TorrentConnEvents.Seeders>) (
+    static FSMBasicEventHandler seeders1 = (FSMBasicEventHandler<ES, IS, R1TorrentConnEvents.Seeders>) (
       FSMStateName state, ES es, IS is, R1TorrentConnEvents.Seeders req) -> {
         LOG.info("{}seeders:{}", new Object[]{req.torrentId, req.seeders});
         Set<KAddress> newSeeders = Sets.difference(req.seeders, is.fileSeeders.activeSeeders);
@@ -374,6 +376,11 @@ public class R1Torrent {
             break;
           }
         }
+        return state;
+      };
+    
+    static FSMBasicEventHandler seeders2 = (FSMBasicEventHandler<ES, IS, R1TorrentConnEvents.Seeders>) (
+      FSMStateName state, ES es, IS is, R1TorrentConnEvents.Seeders req) -> {
         return state;
       };
 
@@ -400,6 +407,10 @@ public class R1Torrent {
 
     static void sendTorrentConn(ES es, KompicsEvent event) {
       es.proxy.trigger(event, es.ports.torrentConnReq);
+    }
+    
+    static void sendOverlayStopSample(ES es, IS is) {
+      es.proxy.trigger(new R1TorrentConnEvents.StopSample(is.torrentId), es.ports.torrentConnReq);
     }
   }
 }

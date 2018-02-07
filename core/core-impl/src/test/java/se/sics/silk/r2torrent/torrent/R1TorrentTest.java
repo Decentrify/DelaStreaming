@@ -193,7 +193,7 @@ public class R1TorrentTest {
     tc = tc.body();
     tc = tc.trigger(download(torrent, torrentDetails), torrentCtrl);
     tc = setEndpoint(tc);
-    tc = tc.expect(R1TorrentConnEvents.Bootstrap.class, torrentConn, Direction.OUT);
+    tc = tc.expect(R1TorrentConnEvents.StartSample.class, torrentConn, Direction.OUT);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1Torrent.fsmBaseId(torrent);
@@ -205,7 +205,7 @@ public class R1TorrentTest {
     tc = tc.body();
     tc = tc.trigger(download(torrent, torrentDetails), torrentCtrl); //1
     tc = setEndpoint(tc);//2
-    tc = tc.expect(R1TorrentConnEvents.Bootstrap.class, torrentConn, Direction.OUT);///1
+    tc = tc.expect(R1TorrentConnEvents.StartSample.class, torrentConn, Direction.OUT);///1
     tc = connect2(tc, torrent, file1, file2, seeder1, seeder2);//13
     tc.repeat(1).body().end();
     assertTrue(tc.check());

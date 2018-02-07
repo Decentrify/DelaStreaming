@@ -329,7 +329,6 @@ public class R1TransferSeeder {
       public FSMStateName handle(FSMStateName state, ES es, IS is, R1TransferSeederEvents.Disconnect req)
         throws FSMException {
         killDownloadComp.accept(es, is);
-        sendCtrl(es, is, req.ack());
         msg(es, is, new R1TransferConnMsgs.Disconnect(is.torrentId, is.fileId));
         cancelPing(es, is);
         return FSMBasicStateNames.FINAL;

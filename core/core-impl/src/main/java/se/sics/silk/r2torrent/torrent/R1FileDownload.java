@@ -93,7 +93,7 @@ public class R1FileDownload {
     STORAGE_PENDING,
     ACTIVE,
     IDLE,
-    CLOSE, 
+    CLOSE,
     COMPLETED
   }
 
@@ -253,7 +253,7 @@ public class R1FileDownload {
       def = def
         .positivePort(DStoragePort.class)
         .basicEvent(DStorageWrite.Response.class)
-        .subscribe(StreamActions.written, States.ACTIVE, States.IDLE, States.COMPLETED)
+        .subscribe(Handlers.written, States.ACTIVE, States.IDLE, States.COMPLETED)
         .buildEvents();
       def = def
         .positivePort(R1DownloadPort.class)
@@ -312,11 +312,11 @@ public class R1FileDownload {
     static FSMBasicEventHandler fileStart = (FSMBasicEventHandler<ES, IS, R1FileDownloadEvents.Start>) (
       FSMStateName state, ES es, IS is, R1FileDownloadEvents.Start event) -> {
         Optional<R1TorrentDetails> torrentDetails = es.torrentDetailsMngr.getTorrent(event.torrentId);
-        if(!torrentDetails.isPresent()) {
+        if (!torrentDetails.isPresent()) {
           throw new RuntimeException("ups");
         }
-        if(!torrentDetails.get().getMetadata(event.fileId).isPresent() 
-          || !torrentDetails.get().getStorage(event.fileId).isPresent()) {
+        if (!torrentDetails.get().getMetadata(event.fileId).isPresent()
+        || !torrentDetails.get().getStorage(event.fileId).isPresent()) {
           throw new RuntimeException("ups");
         }
         is.init(torrentDetails.get(), event);
@@ -389,7 +389,7 @@ public class R1FileDownload {
         }
         return state;
       };
-    
+
     static FSMBasicEventHandler transferDisconnected2
       = (FSMBasicEventHandler<ES, IS, R1TransferSeederEvents.Disconnected>) (FSMStateName state, ES es, IS is,
         R1TransferSeederEvents.Disconnected event) -> {
@@ -407,11 +407,29 @@ public class R1FileDownload {
         Optional<R1FileDownloadSeederState> stateAux = is.seedersState.state(resp.nodeId);
         if (stateAux.isPresent()) {
           stateAux.get().complete(resp.block, resp.value, resp.hash);
+          LOG.debug("<{},{}>block:{} completed", new Object[]{is.torrentId.baseId, is.fileId, resp.block});
           if (is.seedersState.fileTracker.isComplete()) {
+            LOG.info("<{},{}>file download complete", new Object[]{is.torrentId.baseId, is.fileId});
             is.seedersState.completed();
             sendCtrlIndication(es, is, States.COMPLETED);
             return States.COMPLETED;
           }
+        }
+        return state;
+      };
+
+    //******************************************************STORAGE****************************************************
+    static FSMBasicEventHandler written = (FSMBasicEventHandler<ES, IS, DStorageWrite.Response>) (
+      FSMStateName state, ES es, IS is, DStorageWrite.Response resp) -> {
+        R1SinkWriteCallback callback = is.streamActions.callbacks.remove(resp.getId());
+        if (callback == null) {
+          throw new RuntimeException("logic issue");
+        }
+        callback.completed();
+        if (is.streamActions.callbacks.isEmpty() && is.seedersState.fileTracker.isComplete()) {
+          LOG.info("<{},{}>file write complete", new Object[]{is.torrentId.baseId, is.fileId});
+          sendStorageDisconnect(es, is);
+          return States.CLOSE;
         }
         return state;
       };
@@ -460,16 +478,6 @@ public class R1FileDownload {
       es.proxy.trigger(req, es.ports.storage);
       callbacks.put(req.getId(), callback);
     }
-
-    static FSMBasicEventHandler written = (FSMBasicEventHandler<ES, IS, DStorageWrite.Response>) (
-      FSMStateName state, ES es, IS is, DStorageWrite.Response resp) -> {
-        R1SinkWriteCallback callback = is.streamActions.callbacks.remove(resp.getId());
-        if (callback == null) {
-          throw new RuntimeException("logic issue");
-        }
-        callback.completed();
-        return state;
-      };
   }
 
   public static class SeederActions {

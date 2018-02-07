@@ -66,6 +66,7 @@ import se.sics.silk.r2torrent.transfer.R1UploadPort;
 import se.sics.silk.r2torrent.transfer.events.R1DownloadEvent;
 import se.sics.silk.r2torrent.transfer.events.R1TransferMsg;
 import se.sics.silk.r2torrent.transfer.events.R1UploadEvent;
+import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -278,7 +279,14 @@ public class R2TorrentComp extends ComponentDefinition {
             R1TransferMsg.Dwnl payload = (R1TransferMsg.Dwnl) be.content;
             return R1DownloadComp.baseId(payload.torrentId(), payload.fileId(), seeder.getId());
           }
+        } else if (msg.getContent() instanceof BestEffortMsg.Timeout) {
+          BestEffortMsg.Request be = ((BestEffortMsg.Timeout) msg.getContent()).req;
+          if (be.extractValue() instanceof R1TransferMsgs.PieceReq) {
+            R1TransferMsgs.PieceReq payload = (R1TransferMsgs.PieceReq) be.content;
+            return R1DownloadComp.baseId(payload.torrentId(), payload.fileId(), seeder.getId());
+          }
         }
+        
         return null;
       }
     };

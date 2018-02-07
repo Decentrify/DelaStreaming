@@ -29,9 +29,9 @@ import se.sics.silk.r2torrent.torrent.R1Torrent;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1TorrentConnEvents {
-  public static class Bootstrap extends SilkEvent.E3 {
+  public static class StartSample extends SilkEvent.E3 {
     public final Set<KAddress> boostrap;
-    public Bootstrap(OverlayId torrentId, Set<KAddress> boostrap) {
+    public StartSample(OverlayId torrentId, Set<KAddress> boostrap) {
       super(BasicIdentifiers.eventId(), torrentId);
       this.boostrap = boostrap;
     }
@@ -42,6 +42,12 @@ public class R1TorrentConnEvents {
     public Seeders(OverlayId torrentId, Set<KAddress> seeders) {
       super(BasicIdentifiers.eventId(), torrentId);
       this.seeders = seeders;
+    }
+  }
+  
+  public static class StopSample extends SilkEvent.E3 {
+    public StopSample(OverlayId torrentId) {
+      super(BasicIdentifiers.eventId(), torrentId);
     }
   }
 }

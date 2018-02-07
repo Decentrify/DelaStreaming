@@ -26,7 +26,8 @@ import se.sics.silk.r2torrent.torrent.event.R1TorrentConnEvents;
  */
 public class R1TorrentConnPort extends PortType {
   {
-    request(R1TorrentConnEvents.Bootstrap.class);
+    request(R1TorrentConnEvents.StartSample.class);
+    request(R1TorrentConnEvents.StopSample.class);
     indication(R1TorrentConnEvents.Seeders.class);
   }
 }

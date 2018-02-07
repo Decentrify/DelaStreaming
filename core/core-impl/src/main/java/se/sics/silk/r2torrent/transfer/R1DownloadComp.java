@@ -203,7 +203,7 @@ public class R1DownloadComp extends ComponentDefinition {
   private void checkComplete() {
     if (blockTracker.hasComplete()) {
       Map<Integer, Pair<byte[], byte[]>> completed = blockTracker.getComplete();
-      LOG.trace("{}completed blocks:{}", new Object[]{logPrefix, completed.keySet()});
+      LOG.info("{}completed blocks:{}", new Object[]{logPrefix, completed.keySet()});
       completed.entrySet().stream().forEach((entry) -> {
         trigger(new R1DownloadEvents.Completed(torrentId, fileId, seederAdr.getId(), entry), ports.ctrl);
       });

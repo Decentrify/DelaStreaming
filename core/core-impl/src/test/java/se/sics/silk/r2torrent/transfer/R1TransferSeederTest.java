@@ -242,7 +242,7 @@ public class R1TransferSeederTest {
   public void testActiveToLocalDisconnect() {
     tc = tc.body();
     tc = startToActive(tc); //5
-    tc = localDisconnect1(tc, torrent, file, seeder); //4
+    tc = localDisconnect1(tc, torrent, file, seeder); //3
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmId = R1TransferSeeder.fsmBasicId(torrent, file, seeder.getId());
@@ -273,16 +273,14 @@ public class R1TransferSeederTest {
 
   private TestContext localDisconnect1(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), seederCtrlP); //1
-    tc = tc.expect(R1TransferSeederEvents.Disconnected.class, seederCtrlP, Direction.OUT); //2
-    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //3
-    tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //4
+    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //2
+    tc = tc.expect(CancelPeriodicTimeout.class, timerP, Direction.OUT); //3
     return tc;
   }
 
   private TestContext localDisconnect2(TestContext tc, OverlayId torrentId, Identifier fileId, KAddress seeder) {
     tc = tc.trigger(localDisconnect(torrentId, fileId, seeder), seederCtrlP); //1
-    tc = tc.expect(R1TransferSeederEvents.Disconnected.class, seederCtrlP, Direction.OUT); //2
-    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //3
+    tc = eNetPayload(tc, R1TransferConnMsgs.Disconnect.class, networkP); //2
     return tc;
   }
 

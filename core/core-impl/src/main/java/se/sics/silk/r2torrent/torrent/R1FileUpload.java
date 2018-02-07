@@ -399,7 +399,6 @@ public class R1FileUpload {
         if (!resp.result.isSuccess()) {
           throw new RuntimeException("ups");
         }
-        LOG.info("<{},{}>blocks resp:{}", new Object[]{is.torrentId.baseId, is.fileId, resp.getStreamId()});
         sendBlockResp(es, is, resp);
         return state;
       };
@@ -421,6 +420,7 @@ public class R1FileUpload {
       if (!resp.result.isSuccess()) {
         throw new RuntimeException("ups");
       }
+      LOG.info("<{},{}>blocks resp:{}", new Object[]{is.torrentId.baseId, is.fileId, aux.getValue0()});
       KReference<byte[]> block = KReferenceFactory.getReference(resp.result.getValue());
       byte[] hash = HashUtil.makeHash(resp.result.getValue(), is.torrentDetails.hashAlg);
       Optional<BlockDetails> irregularBlock = Optional.empty();

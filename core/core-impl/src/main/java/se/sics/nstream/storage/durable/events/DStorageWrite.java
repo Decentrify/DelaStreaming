@@ -29,65 +29,73 @@ import se.sics.nstream.StreamId;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DStorageWrite {
-    public static class Request extends Direct.Request<Response> implements DStreamEvent {
-        public final Identifier eventId;
-        public final StreamId streamId;
-        public final long pos;
-        public final byte[] value;
-        
-        public Request(Identifier eventId, StreamId streamId, long pos, byte[] value) {
-            this.eventId = eventId;
-            this.streamId = streamId;
-            this.pos = pos;
-            this.value = value;
-        }
-        
-        public Request(StreamId streamId, long pos, byte[] value) {
-            this(BasicIdentifiers.eventId(), streamId, pos, value);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        public Response respond(Result<Boolean> result) {
-            return new Response(this, result);
-        }
 
-        @Override
-        public StreamId getStreamId() {
-            return streamId;
-        }
+  public static class Request extends Direct.Request<Response> implements DStreamEvent {
 
-        @Override
-        public Identifier getEndpointId() {
-            return streamId.endpointId;
-        }
+    public final Identifier eventId;
+    public final StreamId streamId;
+    public final long pos;
+    public final byte[] value;
+
+    public Request(Identifier eventId, StreamId streamId, long pos, byte[] value) {
+      this.eventId = eventId;
+      this.streamId = streamId;
+      this.pos = pos;
+      this.value = value;
+    }
+
+    public Request(StreamId streamId, long pos, byte[] value) {
+      this(BasicIdentifiers.eventId(), streamId, pos, value);
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    public Response respond(Result<Boolean> result) {
+      return new Response(this, result);
+    }
+
+    @Override
+    public StreamId getStreamId() {
+      return streamId;
+    }
+
+    @Override
+    public Identifier getEndpointId() {
+      return streamId.endpointId;
+    }
+  }
+
+  public static class Response implements Direct.Response, DStreamEvent, FSMEvent {
+
+    public final Request req;
+    public final Result<Boolean> result;
+
+    public Response(Request req, Result<Boolean> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public StreamId getStreamId() {
+      return req.getStreamId();
+    }
+
+    @Override
+    public Identifier getEndpointId() {
+      return req.getEndpointId();
     }
     
-    public static class Response implements Direct.Response, DStreamEvent, FSMEvent {
-        public final Request req;
-        public final Result<Boolean> result;
-        
-        public Response(Request req, Result<Boolean> result) {
-            this.req = req;
-            this.result = result;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
-
-        @Override
-        public StreamId getStreamId() {
-            return req.getStreamId();
-        }
-
-        @Override
-        public Identifier getEndpointId() {
-            return req.getEndpointId();
-        }
+    @Override
+    public String toString() {
+      return "DStorageWriteResp<" + req.streamId + ">";
     }
+  }
 }
