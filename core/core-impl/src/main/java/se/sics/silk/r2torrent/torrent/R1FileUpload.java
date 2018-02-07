@@ -256,7 +256,7 @@ public class R1FileUpload {
         .buildEvents();
 
       def = def
-        .negativePort(DStoragePort.class)
+        .positivePort(DStoragePort.class)
         .basicEvent(DStorageRead.Response.class)
         .subscribe(Handlers.blockResp, States.ACTIVE)
         .buildEvents();
@@ -276,6 +276,12 @@ public class R1FileUpload {
           return Optional.of(fsmBaseId(torrentId, fileId));
         } else if (event instanceof DStreamDisconnect.Success) {
           DStreamDisconnect.Success e = (DStreamDisconnect.Success) event;
+          OverlayId torrentId = e.req.streamId.fileId.torrentId;
+          Identifier fileId = es.fileIdFactory.
+            id(new BasicBuilders.IntBuilder(e.req.streamId.fileId.fileNr));
+          return Optional.of(fsmBaseId(torrentId, fileId));
+        } else if (event instanceof DStorageRead.Response) {
+          DStorageRead.Response e = (DStorageRead.Response) event;
           OverlayId torrentId = e.req.streamId.fileId.torrentId;
           Identifier fileId = es.fileIdFactory.
             id(new BasicBuilders.IntBuilder(e.req.streamId.fileId.fileNr));
@@ -406,22 +412,22 @@ public class R1FileUpload {
         es.proxy.trigger(r, es.ports.storage);
       }
     }
-    
+
     private static void sendBlockResp(ES es, IS is, DStorageRead.Response resp) {
       Pair<Integer, Identifier> aux = is.pendingBlocks.remove(resp.getId());
-      if(aux == null) {
+      if (aux == null) {
         throw new RuntimeException("ups");
       }
-      if(!resp.result.isSuccess()) {
+      if (!resp.result.isSuccess()) {
         throw new RuntimeException("ups");
       }
       KReference<byte[]> block = KReferenceFactory.getReference(resp.result.getValue());
       byte[] hash = HashUtil.makeHash(resp.result.getValue(), is.torrentDetails.hashAlg);
       Optional<BlockDetails> irregularBlock = Optional.empty();
-      if(is.fileMetadata.finalBlock == aux.getValue0()) {
+      if (is.fileMetadata.finalBlock == aux.getValue0()) {
         irregularBlock = Optional.of(is.fileMetadata.lastBlock);
       }
-      R1UploadEvents.BlockResp r = new R1UploadEvents.BlockResp(is.torrentId, is.fileId, aux.getValue1(), 
+      R1UploadEvents.BlockResp r = new R1UploadEvents.BlockResp(is.torrentId, is.fileId, aux.getValue1(),
         aux.getValue0(), block, hash, irregularBlock);
       es.proxy.trigger(r, es.ports.transferUpload);
     }

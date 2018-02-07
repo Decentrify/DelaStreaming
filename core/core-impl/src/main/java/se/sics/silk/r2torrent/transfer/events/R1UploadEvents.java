@@ -27,13 +27,14 @@ import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.event.SilkEvent;
+import se.sics.silk.r2torrent.torrent.R1FileUpload;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1UploadEvents {
 
-  public static class BlocksReq extends SilkEvent.E2 implements R1UploadEvent {
+  public static class BlocksReq extends SilkEvent.E2 implements R1FileUpload.UploadEvent {
 
     public final Set<Integer> blocks;
     public final KHint.Summary cacheHint;

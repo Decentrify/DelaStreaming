@@ -125,32 +125,15 @@ public class SilkEvent {
     }
   }
   
-  public static class E4 implements KompicsEvent, Identifiable, TorrentEvent, FileEvent {
-    public final Identifier eventId;
-    public final OverlayId torrentId;
-    public final Identifier fileId;
+  public static class E4 extends E5 implements Identifiable {
     
     public E4(Identifier eventId, OverlayId torrentId, Identifier fileId) {
-      this.eventId = eventId;
-      this.torrentId = torrentId;
-      this.fileId = fileId;
+      super(eventId, torrentId, fileId);
     }
     
-    @Override
     public Identifier getId() {
       return eventId;
     }
-
-    @Override
-    public OverlayId torrentId() {
-      return torrentId;
-    }
-
-    @Override
-    public Identifier fileId() {
-      return fileId;
-    }
-    
   }
   
   public static class E5 implements KompicsEvent, TorrentEvent, FileEvent {

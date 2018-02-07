@@ -448,7 +448,7 @@ public class R1FileDownload {
   public static class StreamActions implements R1SinkWriter {
 
     private final ES es;
-    private Map<StreamId, R1SinkWriteCallback> callbacks = new HashMap<>();
+    private Map<Identifier, R1SinkWriteCallback> callbacks = new HashMap<>();
 
     public StreamActions(ES es) {
       this.es = es;
@@ -456,13 +456,14 @@ public class R1FileDownload {
 
     @Override
     public void write(StreamId streamId, long pos, byte[] value, R1SinkWriteCallback callback) {
-      es.proxy.trigger(new DStorageWrite.Request(streamId, pos, value), es.ports.storage);
-      callbacks.put(streamId, callback);
+      DStorageWrite.Request req = new DStorageWrite.Request(streamId, pos, value);
+      es.proxy.trigger(req, es.ports.storage);
+      callbacks.put(req.getId(), callback);
     }
 
     static FSMBasicEventHandler written = (FSMBasicEventHandler<ES, IS, DStorageWrite.Response>) (
       FSMStateName state, ES es, IS is, DStorageWrite.Response resp) -> {
-        R1SinkWriteCallback callback = is.streamActions.callbacks.remove(resp.req.streamId);
+        R1SinkWriteCallback callback = is.streamActions.callbacks.remove(resp.getId());
         if (callback == null) {
           throw new RuntimeException("logic issue");
         }

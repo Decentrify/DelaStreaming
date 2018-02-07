@@ -57,7 +57,7 @@ public class R1TransferSerializers {
     }
 
     public void toBin(Object o, ByteBuf buf) {
-      SilkEvent.E4 obj = (SilkEvent.E4) o;
+      SilkEvent.E5 obj = (SilkEvent.E5) o;
       Serializers.toBinary(obj.eventId, buf);
       Serializers.toBinary(obj.torrentId, buf);
       Serializers.toBinary(obj.fileId, buf);
