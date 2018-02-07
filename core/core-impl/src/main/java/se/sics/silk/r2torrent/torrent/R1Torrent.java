@@ -42,9 +42,12 @@ import se.sics.kompics.fsm.handler.FSMBasicEventHandler;
 import se.sics.kompics.fsm.id.FSMIdentifier;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.nstream.storage.durable.DEndpointCtrlPort;
+import se.sics.nstream.storage.durable.events.DEndpoint;
 import se.sics.silk.DefaultHandlers;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
@@ -65,6 +68,8 @@ public class R1Torrent {
   public static final String NAME = "dela-r1-torrent-fsm";
 
   public static enum States implements FSMStateName {
+
+    ENDPOINT,
     DOWNLOAD,
     UPLOAD
   }
@@ -101,6 +106,7 @@ public class R1Torrent {
     OverlayId torrentId;
     R1TorrentDetails torrentDetails;
     FileSeeders fileSeeders = new FileSeeders();
+    Either<Download, Upload> state;
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -111,9 +117,30 @@ public class R1Torrent {
       return fsmId;
     }
 
-    public void init(OverlayId torrentId, R1TorrentDetails torrentDetails) {
+    public void upload(OverlayId torrentId, R1TorrentDetails torrentDetails) {
       this.torrentId = torrentId;
       this.torrentDetails = torrentDetails;
+      this.state = Either.right(new Upload());
+    }
+
+    public void download(OverlayId torrentId, R1TorrentDetails torrentDetails, 
+      Set<KAddress> bootstrap) {
+      this.torrentId = torrentId;
+      this.torrentDetails = torrentDetails;
+      this.state = Either.left(new Download(bootstrap));
+    }
+  }
+
+  static class Upload {
+
+  }
+
+  static class Download {
+
+    public Set<KAddress> bootstrap;
+
+    public Download(Set<KAddress> bootstrap) {
+      this.bootstrap = bootstrap;
     }
   }
 
@@ -181,6 +208,9 @@ public class R1Torrent {
     private static FSMBuilder.StructuralDefinition structuralDef() throws FSMException {
       return FSMBuilder.structuralDef()
         .onStart()
+        .nextStates(States.ENDPOINT)
+        .buildTransition()
+        .onState(States.ENDPOINT)
         .nextStates(States.DOWNLOAD, States.UPLOAD)
         .buildTransition()
         .onState(States.DOWNLOAD)
@@ -209,6 +239,11 @@ public class R1Torrent {
         .subscribe(Handlers.seeders, States.DOWNLOAD)
         .buildEvents();
       def = def
+        .positivePort(DEndpointCtrlPort.class)
+        .basicEvent(DEndpoint.Success.class)
+        .subscribe(Handlers.endpointConnected, States.ENDPOINT)
+        .buildEvents();
+      def = def
         .positivePort(R1FileDownloadCtrl.class)
         .basicEvent(R1FileDownloadEvents.Indication.class)
         .subscribe(Handlers.downloadInd, States.DOWNLOAD)
@@ -232,6 +267,9 @@ public class R1Torrent {
         if (event instanceof Event) {
           Event e = (Event) event;
           return Optional.of(fsmBaseId(e.torrentId()));
+        } else if (event instanceof DEndpoint.Indication) {
+          DEndpoint.Indication e = (DEndpoint.Indication)event;
+          return Optional.of(fsmBaseId(e.req.torrentId));
         }
         return Optional.empty();
       }
@@ -248,21 +286,35 @@ public class R1Torrent {
 
     static FSMBasicEventHandler upload = (FSMBasicEventHandler<ES, IS, R1TorrentCtrlEvents.Upload>) (
       FSMStateName state, ES es, IS is, R1TorrentCtrlEvents.Upload req) -> {
-        is.init(req.torrentId, req.torrentDetails);
-        LOG.info("<{}>upload", req.torrentId.baseId);
-        is.torrentDetails.upload();
+        is.upload(req.torrentId, req.torrentDetails);
         es.torrentDetailsMngr.addTorrent(req.torrentId, req.torrentDetails);
-        return States.UPLOAD;
+        LOG.info("<{}>upload", req.torrentId.baseId);
+        is.torrentDetails.setup();
+        sendEndpointConnect(es, is);
+        return States.ENDPOINT;
       };
 
     static FSMBasicEventHandler download = (FSMBasicEventHandler<ES, IS, R1TorrentCtrlEvents.Download>) (
       FSMStateName state, ES es, IS is, R1TorrentCtrlEvents.Download req) -> {
-        is.init(req.torrentId, req.torrentDetails);
-        LOG.info("<{}>download with partners:{}", new Object[]{is.torrentId.baseId, req.bootstrap});
-        is.torrentDetails.download();
+        is.download(req.torrentId, req.torrentDetails, req.bootstrap);
         es.torrentDetailsMngr.addTorrent(req.torrentId, req.torrentDetails);
-        sendTorrentConn(es, new R1TorrentConnEvents.Bootstrap(is.torrentId, req.bootstrap));
-        return States.DOWNLOAD;
+        LOG.info("<{}>download with partners:{}", new Object[]{is.torrentId.baseId, req.bootstrap});
+        is.torrentDetails.setup();
+        sendEndpointConnect(es, is);
+        return States.ENDPOINT;
+      };
+
+    static FSMBasicEventHandler endpointConnected = (FSMBasicEventHandler<ES, IS, DEndpoint.Success>) (
+      FSMStateName state, ES es, IS is, DEndpoint.Success req) -> {
+        LOG.info("<{}>endpoint connected", new Object[]{is.torrentId.baseId});
+        if (is.state.isLeft()) {
+          is.torrentDetails.download();
+          sendTorrentConn(es, new R1TorrentConnEvents.Bootstrap(is.torrentId, is.state.getLeft().bootstrap));
+          return States.DOWNLOAD;
+        } else {
+          is.torrentDetails.upload();
+          return States.UPLOAD;
+        }
       };
 
     static FSMBasicEventHandler downloadInd = (FSMBasicEventHandler<ES, IS, R1FileDownloadEvents.Indication>) (
@@ -337,6 +389,11 @@ public class R1Torrent {
       return true;
     }
 
+    static void sendEndpointConnect(ES es, IS is) {
+      es.proxy.trigger(new DEndpoint.Connect(is.torrentId, is.torrentDetails.endpointId, is.torrentDetails.endpoint), 
+        es.ports.endpointCtrl);
+    }
+    
     static void sendDownloadCtrl(ES es, R1FileDownload.CtrlEvent event) {
       es.proxy.trigger(event, es.ports.fileDownloadCtrlReq);
     }

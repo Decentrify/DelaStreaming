@@ -51,6 +51,7 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.DurableStorageProvider;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.FutureHelper;
 import se.sics.silk.MsgHelper;
@@ -119,9 +120,10 @@ public class R1TransferLeecherTest {
   
   private void torrentDetails() {
     torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA));
-
     Identifier endpointId = intIdFactory.id(new BasicBuilders.IntBuilder(0));
+    DurableStorageProvider endpoint = null;
+    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA), endpointId, endpoint);
+
     file1 = intIdFactory.id(new BasicBuilders.IntBuilder(1));
     StreamId file1StreamId = TorrentIdHelper.streamId(endpointId, torrent, file1);
 

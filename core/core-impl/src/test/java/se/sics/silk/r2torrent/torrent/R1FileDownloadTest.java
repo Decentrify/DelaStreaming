@@ -53,6 +53,7 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
+import se.sics.nstream.storage.durable.DurableStorageProvider;
 import se.sics.nstream.storage.durable.events.DStorageWrite;
 import se.sics.nstream.storage.durable.events.DStreamConnect;
 import se.sics.nstream.util.BlockDetails;
@@ -144,6 +145,7 @@ public class R1FileDownloadTest {
   
   private void torrentDetails() {
     endpointId = intIdFactory.id(new BasicBuilders.IntBuilder(0));
+    DurableStorageProvider endpoint = null;
     torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     file1 = intIdFactory.id(new BasicBuilders.IntBuilder(1));
     file2 = intIdFactory.id(new BasicBuilders.IntBuilder(2));
@@ -156,7 +158,7 @@ public class R1FileDownloadTest {
     int nrBlocks = 5;
     BlockDetails defaultBlock = new BlockDetails(pieceSize * nrPieces, nrPieces, pieceSize, pieceSize);
     R1FileMetadata fileMetadata = R1FileMetadata.instance(pieceSize * nrPieces * nrBlocks, defaultBlock);
-    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA));
+    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA), endpointId, endpoint);
     torrentDetails.addMetadata(file1, fileMetadata);
     torrentDetails.addMetadata(file2, fileMetadata);
     torrentDetails.addMetadata(file3, fileMetadata);

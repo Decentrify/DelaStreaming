@@ -48,6 +48,7 @@ import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.DStreamControlPort;
+import se.sics.nstream.storage.durable.DurableStorageProvider;
 import se.sics.nstream.storage.durable.events.DStreamConnect;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.FutureHelper;
@@ -114,6 +115,7 @@ public class R1FileUploadTest {
   
   private void torrentDetails() {
     Identifier endpointId = intIdFactory.id(new BasicBuilders.IntBuilder(0));
+    DurableStorageProvider endpoint = null;
     torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
     file = intIdFactory.id(new BasicBuilders.IntBuilder(1));
     StreamId fileStreamId = TorrentIdHelper.streamId(endpointId, torrent, file);
@@ -122,7 +124,7 @@ public class R1FileUploadTest {
     int nrBlocks = 10;
     BlockDetails defaultBlock = new BlockDetails(pieceSize * nrPieces, nrPieces, pieceSize, pieceSize);
     R1FileMetadata fileMetadata = R1FileMetadata.instance(pieceSize * nrPieces * nrBlocks, defaultBlock);
-    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA));
+    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA), endpointId, endpoint);
     torrentDetails.addMetadata(file, fileMetadata);
     torrentDetails.addStorage(file, fileStreamId, null);
     torrentDetailsMngr.addTorrent(torrent, torrentDetails);

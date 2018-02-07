@@ -25,6 +25,7 @@ import java.util.TreeMap;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.DurableStorageProvider;
 import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
@@ -44,17 +45,22 @@ public class R1TorrentDetails {
   }
   
   public static enum FileStatus {
-    INACTIVE,
+    SETUP,
+    DOWNLOAD_IDLE,
     DOWNLOAD,
     UPLOAD
   }
   public final String hashAlg;
+  public final Identifier endpointId;
+  public final DurableStorageProvider endpoint;
   public final Map<Identifier, R1FileMetadata> metadata = new HashMap<>();
   public final Map<Identifier, R1FileStorage> storage = new HashMap<>();
   public final TreeMap<Identifier, FileStatus> status = new TreeMap<>();
 
-  public R1TorrentDetails(String hashAlg) {
+  public R1TorrentDetails(String hashAlg, Identifier endpointId, DurableStorageProvider endpoint) {
     this.hashAlg = hashAlg;
+    this.endpointId = endpointId;
+    this.endpoint = endpoint;
   }
 
   public void addMetadata(Identifier fileId, R1FileMetadata m) {
@@ -73,8 +79,12 @@ public class R1TorrentDetails {
     return Optional.ofNullable(storage.get(fileId));
   }
   
+  public void setup() {
+    metadata.keySet().stream().forEach((f) -> status.put(f, FileStatus.SETUP));
+  }
+  
   public void download() {
-    metadata.keySet().stream().forEach((f) -> status.put(f, FileStatus.INACTIVE));
+    metadata.keySet().stream().forEach((f) -> status.put(f, FileStatus.DOWNLOAD_IDLE));
   }
   
   public void upload() {
@@ -103,7 +113,7 @@ public class R1TorrentDetails {
   
   public Optional<Identifier> nextInactive() {
     for(Map.Entry<Identifier, FileStatus> e : status.entrySet()) {
-      if(FileStatus.INACTIVE.equals(e.getValue())) {
+      if(FileStatus.DOWNLOAD_IDLE.equals(e.getValue())) {
         return Optional.of(e.getKey());
       }
     }

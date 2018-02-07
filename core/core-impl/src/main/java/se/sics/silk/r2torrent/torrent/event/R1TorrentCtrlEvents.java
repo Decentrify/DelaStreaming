@@ -42,11 +42,11 @@ public class R1TorrentCtrlEvents {
   }
 
   public static class Download extends SilkEvent.E3 implements R1Torrent.CtrlEvent {
-
     public final R1TorrentDetails torrentDetails;
     public final Set<KAddress> bootstrap;
 
-    public Download(OverlayId torrentId, R1TorrentDetails torrentDetails, Set<KAddress> bootstrap) {
+    public Download(OverlayId torrentId, R1TorrentDetails torrentDetails, 
+      Set<KAddress> bootstrap) {
       super(BasicIdentifiers.eventId(), torrentId);
       this.torrentDetails = torrentDetails;
       this.bootstrap = bootstrap;

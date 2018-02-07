@@ -41,6 +41,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
+import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
@@ -171,6 +172,7 @@ public class R2TorrentComp extends ComponentDefinition {
     //**************************************************EXTERNAL********************************************************
     public final Positive<Network> network;
     public final Positive<Timer> timer;
+    public final Positive<DEndpointCtrlPort> endpointCtrl;
     public final Positive<DStreamControlPort> streamCtrl;
     public final Positive<DStoragePort> storage;
     //**************************************************INTERNAL********************************************************
@@ -201,8 +203,9 @@ public class R2TorrentComp extends ComponentDefinition {
 
       network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
-      storage = proxy.requires(DStoragePort.class);
+      endpointCtrl = proxy.requires(DEndpointCtrlPort.class);
       streamCtrl = proxy.requires(DStreamControlPort.class);
+      storage = proxy.requires(DStoragePort.class);
 
       torrentCtrl = proxy.provides(R1TorrentCtrlPort.class);
       torrentConnReq = proxy.requires(R1TorrentConnPort.class);

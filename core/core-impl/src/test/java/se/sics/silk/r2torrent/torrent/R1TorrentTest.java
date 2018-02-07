@@ -45,7 +45,11 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.DEndpointCtrlPort;
+import se.sics.nstream.storage.durable.DurableStorageProvider;
+import se.sics.nstream.storage.durable.events.DEndpoint;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.silk.FutureHelper.BasicFuture;
 import se.sics.silk.SystemHelper;
@@ -72,6 +76,7 @@ public class R1TorrentTest {
   private TorrentWrapperComp compState;
   private Port<R1TorrentCtrlPort> torrentCtrl;
   private Port<R1TorrentConnPort> torrentConn;
+  private Port<DEndpointCtrlPort> endpointrCtrl;
   private Port<R1FileDownloadCtrl> fileDownloadCtrl;
   private Port<R1FileUploadCtrl> fileUploadCtrl;
   private KAddress selfAdr;
@@ -102,15 +107,17 @@ public class R1TorrentTest {
     compState = (TorrentWrapperComp) comp.getComponent();
     torrentCtrl = comp.getPositive(R1TorrentCtrlPort.class);
     torrentConn = comp.getNegative(R1TorrentConnPort.class);
+    endpointrCtrl = comp.getNegative(DEndpointCtrlPort.class);
     fileDownloadCtrl = comp.getNegative(R1FileDownloadCtrl.class);
     fileUploadCtrl = comp.getNegative(R1FileUploadCtrl.class);
   }
 
   private void torrentDetails() {
     torrent = torrentIdFactory.id(new BasicBuilders.IntBuilder(1));
-    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA));
-
     Identifier endpointId = intIdFactory.id(new BasicBuilders.IntBuilder(0));
+    DurableStorageProvider endpoint = null;
+    torrentDetails = new R1TorrentDetails(HashUtil.getAlgName(HashUtil.SHA), endpointId, endpoint);
+
     file1 = intIdFactory.id(new BasicBuilders.IntBuilder(1));
     StreamId file1StreamId = TorrentIdHelper.streamId(endpointId, torrent, file1);
     file2 = intIdFactory.id(new BasicBuilders.IntBuilder(2));
@@ -174,6 +181,7 @@ public class R1TorrentTest {
   public void testUpload() {
     tc = tc.body();
     tc = tc.trigger(upload(torrent, torrentDetails), torrentCtrl);
+    tc = setEndpoint(tc);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1Torrent.fsmBaseId(torrent);
@@ -184,6 +192,7 @@ public class R1TorrentTest {
   public void testDownload() {
     tc = tc.body();
     tc = tc.trigger(download(torrent, torrentDetails), torrentCtrl);
+    tc = setEndpoint(tc);
     tc = tc.expect(R1TorrentConnEvents.Bootstrap.class, torrentConn, Direction.OUT);
     tc.repeat(1).body().end();
     assertTrue(tc.check());
@@ -195,12 +204,26 @@ public class R1TorrentTest {
   public void testDownloadWithSeeders() {
     tc = tc.body();
     tc = tc.trigger(download(torrent, torrentDetails), torrentCtrl); //1
+    tc = setEndpoint(tc);//2
     tc = tc.expect(R1TorrentConnEvents.Bootstrap.class, torrentConn, Direction.OUT);///1
     tc = connect2(tc, torrent, file1, file2, seeder1, seeder2);//13
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1Torrent.fsmBaseId(torrent);
     assertEquals(R1Torrent.States.UPLOAD, compState.fsm.getFSMState(fsmBaseId));
+  }
+  
+  TestContext setEndpoint(TestContext tc) {
+    Future f = new BasicFuture<DEndpoint.Connect, DEndpoint.Indication>() {
+
+      @Override
+      public DEndpoint.Indication get() {
+        return event.success(Result.success(true));
+      }
+    };
+    tc = tc.answerRequest(DEndpoint.Connect.class, endpointrCtrl, f);
+    tc = tc.trigger(f, endpointrCtrl);
+    return tc;
   }
   
   TestContext connect2(TestContext tc, OverlayId torrent, Identifier file1, Identifier file2, 
