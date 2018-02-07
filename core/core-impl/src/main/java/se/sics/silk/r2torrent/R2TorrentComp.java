@@ -44,7 +44,6 @@ import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.nstream.storage.durable.DEndpointCtrlPort;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
-import se.sics.nutil.network.bestEffort.BestEffortNetworkComp;
 import se.sics.nutil.network.bestEffort.event.BestEffortMsg;
 import se.sics.silk.SelfPort;
 import se.sics.silk.r2torrent.torrent.R1FileDownload;
@@ -77,7 +76,6 @@ public class R2TorrentComp extends ComponentDefinition {
   private String logPrefix;
 
   private final Ports ports;
-  private Component beNetComp;
   private Component overlayComp;
   
   private MultiFSM torrents;
@@ -97,17 +95,10 @@ public class R2TorrentComp extends ComponentDefinition {
     ports = new Ports(proxy);
     subscribe(handleStart, control);
     setupComp(init);
-    ports.setNetwork(beNetComp);
     setupFSM(init);
   }
 
   private void setupComp(Init init) {
-    BestEffortNetworkComp.Init beNetCompInit 
-      = new BestEffortNetworkComp.Init(init.selfAdr, init.selfAdr.getId());
-    beNetComp = create(BestEffortNetworkComp.class, beNetCompInit);
-    connect(ports.timer, beNetComp.getNegative(Timer.class), Channel.TWO_WAY);
-    connect(ports.baseNetwork, beNetComp.getNegative(Network.class), Channel.TWO_WAY);
-    
     R1TorrentConnComp.Init overlayCompInit = new R1TorrentConnComp.Init();
     overlayComp = create(R1TorrentConnComp.class, overlayCompInit);
     connect(ports.timer, overlayComp.getNegative(Timer.class), Channel.TWO_WAY);
@@ -170,10 +161,6 @@ public class R2TorrentComp extends ComponentDefinition {
   }
   
   private void killComp() {
-    trigger(Kill.event, beNetComp.control());
-    disconnect(ports.timer, beNetComp.getNegative(Timer.class));
-    disconnect(ports.baseNetwork, beNetComp.getNegative(Network.class));
-    
     trigger(Kill.event, overlayComp.control());
     disconnect(ports.timer, overlayComp.getNegative(Timer.class));
     disconnect(ports.torrentConnReq.getPair(), overlayComp.getPositive(R1TorrentConnPort.class));
@@ -183,7 +170,7 @@ public class R2TorrentComp extends ComponentDefinition {
   public static class Ports {
 
     //**************************************************EXTERNAL********************************************************
-    private final Positive<Network> baseNetwork;
+    public final Positive<Network> network;
     public final Positive<Timer> timer;
     public final Positive<DEndpointCtrlPort> endpointCtrl;
     public final Positive<DStreamControlPort> streamCtrl;
@@ -206,17 +193,15 @@ public class R2TorrentComp extends ComponentDefinition {
 
     public final One2NChannel<R1UploadPort> transferUploadC;
     public final One2NChannel<R1DownloadPort> transferDownloadC;
-    
-    private Positive<Network> extendedNetwork;
-    public One2NChannel<Network> netTransferUploadC;
-    public One2NChannel<Network> netTransferDownloadC;
+    public final One2NChannel<Network> netTransferUploadC;
+    public final One2NChannel<Network> netTransferDownloadC;
 
     public Ports(ComponentProxy proxy) {
       loopbackPos = proxy.provides(SelfPort.class);
       loopbackSubscribe = proxy.requires(SelfPort.class);
       proxy.connect(proxy.getPositive(SelfPort.class), proxy.getNegative(SelfPort.class), Channel.TWO_WAY);
 
-      baseNetwork = proxy.requires(Network.class);
+      network = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
       endpointCtrl = proxy.requires(DEndpointCtrlPort.class);
       streamCtrl = proxy.requires(DStreamControlPort.class);
@@ -247,21 +232,13 @@ public class R2TorrentComp extends ComponentDefinition {
         (Negative) transferDownload.getPair(), downloadCompIdExtractor());
       transferUploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", 
         (Positive) transferUpload.getPair(), uploadCompIdExtractor());
-    }
-    
-    private void setNetwork(Component beNetComp) {
-      extendedNetwork = beNetComp.getPositive(Network.class);
-      netTransferDownloadC = One2NChannel.getChannel("r1-torrent-transfer-download-network", extendedNetwork, 
+      netTransferDownloadC = One2NChannel.getChannel("r1-torrent-transfer-download-network", network, 
         netDownloadCompIdExtractor());
-      netTransferUploadC = One2NChannel.getChannel("r1-torrent-transfer-upload-network", extendedNetwork, 
+      netTransferUploadC = One2NChannel.getChannel("r1-torrent-transfer-upload-network", network, 
         netUploadCompIdExtractor());
     }
-    
-    public Positive<Network> extendedNetwork() {
-      return extendedNetwork;
-    }
   }
-
+  
   public static class Init extends se.sics.kompics.Init<R2TorrentComp> {
 
     public final KAddress selfAdr;

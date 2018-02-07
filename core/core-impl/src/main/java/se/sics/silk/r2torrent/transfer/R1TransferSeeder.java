@@ -359,13 +359,13 @@ public class R1TransferSeeder {
       BestEffortMsg.Request wrap = new BestEffortMsg.Request(content, R1DownloadComp.HardCodedConfig.beRetries,
         R1DownloadComp.HardCodedConfig.beRetryInterval);
       KContentMsg msg = new BasicContentMsg(header, wrap);
-      es.proxy.trigger(msg, es.ports.extendedNetwork());
+      es.proxy.trigger(msg, es.ports.network);
     }
 
     private static <C extends KompicsEvent & Identifiable> void msg(ES es, IS is, C content) {
       KHeader header = new BasicHeader(es.selfAdr, is.seederAdr, Transport.UDP);
       KContentMsg msg = new BasicContentMsg(header, content);
-      es.proxy.trigger(msg, es.ports.extendedNetwork());
+      es.proxy.trigger(msg, es.ports.network);
     }
 
     private static void schedulePing(ES es, IS is) {

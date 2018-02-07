@@ -363,7 +363,7 @@ public class R1TransferLeecher {
     private static <C extends KompicsEvent & Identifiable> void sendMsg(ES es, IS is, C content) {
       KHeader header = new BasicHeader(es.selfAdr, is.leecherAdr, Transport.UDP);
       KContentMsg msg = new BasicContentMsg(header, content);
-      es.proxy.trigger(msg, es.ports.extendedNetwork());
+      es.proxy.trigger(msg, es.ports.network);
     }
 
     private static void sendCtrl(ES es, IS is, R1FileUpload.ConnectEvent content) {
