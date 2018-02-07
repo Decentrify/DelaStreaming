@@ -19,8 +19,8 @@
 package se.sics.silk.r2torrent.transfer;
 
 import com.google.common.base.Predicate;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.LinkedList;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -55,7 +55,6 @@ import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.nstream.storage.cache.KHint;
 import se.sics.nstream.util.BlockDetails;
-import se.sics.silk.FutureHelper.BasicFuture;
 import se.sics.silk.PredicateHelper;
 import se.sics.silk.PredicateHelper.ContentPredicate;
 import se.sics.silk.PredicateHelper.MsgPredicate;
@@ -125,7 +124,7 @@ public class R1UploadCompTest {
   }
 
   private TestContext<R1UploadComp> getContext() {
-    R1UploadComp.Init init = new R1UploadComp.Init(self, torrent, file, leecher, fileMetadata.defaultBlock);
+    R1UploadComp.Init init = new R1UploadComp.Init(self, torrent, file, leecher, fileMetadata);
     TestContext<R1UploadComp> context = TestContext.newInstance(R1UploadComp.class, init);
     return context;
   }
@@ -162,7 +161,7 @@ public class R1UploadCompTest {
     Set<Integer> blocks3 = new TreeSet<>();
     blocks3.add(2);
     Set<Integer> blocks4 = new TreeSet<>();
-    tc = cacheHint(tc, torrent, file, fileMetadata.defaultBlock, self, leecher, new KHint.Summary(0, blocks1));
+    tc = cacheHint(tc, torrent, file, fileMetadata.defaultBlock, self, leecher, new KHint.Summary(0, blocks1), 3);
     tc = hashReq(tc, torrent, file, self, self, blocks1);
     tc = blockReq(tc, torrent, file, fileMetadata.defaultBlock, 0, self, leecher);
     tc = clearCacheHint(tc, torrent, file, self, leecher, new KHint.Summary(1, blocks2));
@@ -173,7 +172,7 @@ public class R1UploadCompTest {
     return tc;
   }
 
-  public TestContext blockReq(TestContext tc, OverlayId torrentId, Identifier fileI, BlockDetails blockDetails, 
+  public TestContext blockReq(TestContext tc, OverlayId torrentId, Identifier fileI, BlockDetails blockDetails,
     int blockNr, KAddress src, KAddress dst) {
     Predicate p = new MsgPredicate(PredicateHelper.TRUE_P, new ContentPredicate(R1TransferMsgs.PieceResp.class));
     tc = tc.trigger(blockReq(torrentId, fileI, src, dst, blockDetails, blockNr), networkP);
@@ -195,14 +194,14 @@ public class R1UploadCompTest {
   }
 
   public TestContext cacheHint(TestContext tc, OverlayId torrentId, Identifier fileI, BlockDetails defaultDetails,
-    KAddress src, KAddress dst, KHint.Summary cacheHint) {
+    KAddress src, KAddress dst, KHint.Summary cacheHint, int nrBlocks) {
     Predicate p = new MsgPredicate(PredicateHelper.TRUE_P, new ContentPredicate(R1TransferMsgs.CacheHintAcc.class));
     tc = tc.trigger(cacheHintReq(torrentId, fileI, src, dst, cacheHint), networkP);
-    tc = serveBlocks(tc, defaultDetails, cacheHint.blocks);
+    tc = serveBlocks(tc, defaultDetails, nrBlocks);
     tc = tc.expect(Msg.class, p, networkP, Direction.OUT);
     return tc;
   }
-  
+
   public TestContext clearCacheHint(TestContext tc, OverlayId torrentId, Identifier fileI,
     KAddress src, KAddress dst, KHint.Summary cacheHint) {
     Predicate p = new MsgPredicate(PredicateHelper.TRUE_P, new ContentPredicate(R1TransferMsgs.CacheHintAcc.class));
@@ -211,26 +210,34 @@ public class R1UploadCompTest {
     return tc;
   }
 
-  private TestContext serveBlocks(TestContext tc, BlockDetails blockDetails, Set<Integer> blockNrs) {
-    Map<Integer, byte[]> hashes = new HashMap<>();
-    Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
-    Map<Integer, KReference<byte[]>> blocks = new HashMap<>();
-
-    for (Integer blockNr : blockNrs) {
-      byte[] blockVal = new byte[blockDetails.blockSize];
-      rand.nextBytes(blockVal);
-      blocks.put(blockNr, KReferenceFactory.getReference(blockVal));
-      byte[] hashVal = HashUtil.makeHash(blockVal, HashUtil.getAlgName(HashUtil.SHA));
-      hashes.put(blockNr, hashVal);
-    }
-    Future f = new BasicFuture<R1UploadEvents.BlocksReq, R1UploadEvents.BlocksResp>() {
+  private TestContext serveBlocks(TestContext tc, BlockDetails blockDetails, int nrBlocks) {
+    
+    Future f = new Future<R1UploadEvents.BlocksReq, R1UploadEvents.BlockResp>() {
+      R1UploadEvents.BlocksReq event;
+      LinkedList<Integer> aux = new LinkedList<>();
+      
       @Override
-      public R1UploadEvents.BlocksResp get() {
-        return event.accept(hashes, irregularBlocks, blocks);
+      public R1UploadEvents.BlockResp get() {
+        int blockNr = aux.pollFirst();
+        byte[] blockVal = new byte[blockDetails.blockSize];
+        rand.nextBytes(blockVal);
+        KReference<byte[]> block = KReferenceFactory.getReference(blockVal);
+        byte[] hashVal = HashUtil.makeHash(blockVal, HashUtil.getAlgName(HashUtil.SHA));
+        return new R1UploadEvents.BlockResp(event.torrentId, event.fileId, event.nodeId, blockNr, block,
+          hashVal, Optional.empty());
+      }
+
+      @Override
+      public boolean set(R1UploadEvents.BlocksReq request) {
+        this.event = request;
+        this.aux.addAll(request.blocks);
+        return true;
       }
     };
     tc = tc.answerRequest(R1UploadEvents.BlocksReq.class, uploadP, f);
+    tc = tc.repeat(nrBlocks).body();
     tc = tc.trigger(f, uploadP);
+    tc = tc.end();
     return tc;
   }
 
@@ -251,7 +258,7 @@ public class R1UploadCompTest {
     KHeader header = new BasicHeader(src, dst, Transport.UDP);
     return new BasicContentMsg(header, payload);
   }
-  
+
   public R1UploadTimeout uploadTimeout() {
     SchedulePeriodicTimeout spt = new SchedulePeriodicTimeout(HardCodedConfig.cwndSize, HardCodedConfig.cwndSize);
     return new R1UploadTimeout(spt);

@@ -18,14 +18,19 @@
  */
 package se.sics.silk.r2torrent.torrent.util;
 
+import se.sics.nstream.util.BlockDetails;
+import se.sics.nstream.util.range.KBlock;
+import se.sics.nstream.util.range.KBlockImpl;
+
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class R1BlockHelper {
+
   /**
    * @param pos - first unwritten byte in the file
    * @param fileMetadata
-   * @return 
+   * @return
    */
   public static int blockNrFromPos(long pos, R1FileMetadata fileMetadata) {
     int blockNr = (int) (pos / fileMetadata.defaultBlock.blockSize);
@@ -37,8 +42,15 @@ public class R1BlockHelper {
     }
     return blockNr;
   }
-  
+
   public static long posFromBlockNr(int blockNr, R1FileMetadata fileMetadata) {
     return blockNr * fileMetadata.defaultBlock.blockSize;
+  }
+
+  public static KBlock getBlockRange(int blockNr, R1FileMetadata fileMetadata) {
+    BlockDetails blockDetails = fileMetadata.blockDetails(blockNr);
+    long lower = blockNr * fileMetadata.defaultBlock.blockSize;
+    long higher = lower + blockDetails.blockSize - 1;
+    return new KBlockImpl(blockNr, lower, higher);
   }
 }

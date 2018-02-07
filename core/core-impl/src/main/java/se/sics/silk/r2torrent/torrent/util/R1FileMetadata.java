@@ -36,28 +36,35 @@ public class R1FileMetadata {
     this.nrBlocks = nrBlocks;
     this.defaultBlock = defaultBlock;
     this.lastBlock = lastBlock;
-    this.finalBlock = nrBlocks-1;
+    this.finalBlock = nrBlocks - 1;
   }
 
   public static R1FileMetadata instance(long fileLength, BlockDetails defaultBlock) {
     int nrBlocks;
-    int lastBlockSize = (int)(fileLength % defaultBlock.blockSize);
+    int lastBlockSize = (int) (fileLength % defaultBlock.blockSize);
     BlockDetails lastBlock;
-    if(lastBlockSize == 0) {
-      nrBlocks = (int)(fileLength / defaultBlock.blockSize); 
+    if (lastBlockSize == 0) {
+      nrBlocks = (int) (fileLength / defaultBlock.blockSize);
       lastBlock = defaultBlock;
-    } else{
-      nrBlocks = (int)(fileLength / defaultBlock.blockSize + 1);
+    } else {
+      nrBlocks = (int) (fileLength / defaultBlock.blockSize + 1);
       int lastPieceSize = lastBlockSize % defaultBlock.defaultPieceSize;
       int nrPieces;
-      if(lastPieceSize == 0) {
+      if (lastPieceSize == 0) {
         lastPieceSize = defaultBlock.defaultPieceSize;
-        nrPieces = (int)(lastBlockSize / defaultBlock.defaultPieceSize);
+        nrPieces = (int) (lastBlockSize / defaultBlock.defaultPieceSize);
       } else {
-        nrPieces = (int)(lastBlockSize / defaultBlock.defaultPieceSize) + 1;
+        nrPieces = (int) (lastBlockSize / defaultBlock.defaultPieceSize) + 1;
       }
       lastBlock = new BlockDetails(lastBlockSize, nrPieces, defaultBlock.defaultPieceSize, lastPieceSize);
     }
     return new R1FileMetadata(fileLength, nrBlocks, defaultBlock, lastBlock);
+  }
+
+  public BlockDetails blockDetails(int blockNr) {
+    if (blockNr == finalBlock) {
+      return lastBlock;
+    }
+    return defaultBlock;
   }
 }

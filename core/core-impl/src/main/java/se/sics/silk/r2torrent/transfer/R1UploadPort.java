@@ -27,6 +27,6 @@ import se.sics.silk.r2torrent.transfer.events.R1UploadEvents;
 public class R1UploadPort extends PortType {
   {
     request(R1UploadEvents.BlocksReq.class);
-    indication(R1UploadEvents.BlocksResp.class);
+    indication(R1UploadEvents.BlockResp.class);
   }
 }

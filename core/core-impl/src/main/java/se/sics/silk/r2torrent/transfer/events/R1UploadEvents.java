@@ -18,7 +18,7 @@
  */
 package se.sics.silk.r2torrent.transfer.events;
 
-import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
@@ -44,25 +44,22 @@ public class R1UploadEvents {
       this.blocks = blocks;
       this.cacheHint = cacheHint;
     }
-    
-    public BlocksResp accept(Map<Integer, byte[]> hashes, Map<Integer, BlockDetails> irregularBlocks, 
-      Map<Integer, KReference<byte[]>> blocks) {
-      return new BlocksResp(eventId, torrentId, fileId, nodeId, hashes, irregularBlocks, blocks);
-    }
-  }
+  }    
 
-  public static class BlocksResp extends SilkEvent.E2 implements R1UploadEvent {
+  public static class BlockResp extends SilkEvent.E2 implements R1UploadEvent {
 
-    public final Map<Integer, byte[]> hashes;
-    public final Map<Integer, BlockDetails> irregularBlocks;
-    public final Map<Integer, KReference<byte[]>> blocks;
+    public final int blockNr;
+    public final KReference<byte[]> block;
+    public final byte[] hash;
+    public final Optional<BlockDetails> irregularBlock;
 
-    public BlocksResp(Identifier eventId, OverlayId torrentId, Identifier fileId, Identifier nodeId,
-      Map<Integer, byte[]> hashes, Map<Integer, BlockDetails> irregularBlocks, Map<Integer, KReference<byte[]>> blocks) {
-      super(eventId, torrentId, fileId, nodeId);
-      this.hashes = hashes;
-      this.irregularBlocks = irregularBlocks;
-      this.blocks = blocks;
+    public BlockResp(OverlayId torrentId, Identifier fileId, Identifier nodeId, int blockNr, KReference<byte[]> block, 
+      byte[] hash, Optional<BlockDetails> irregularBlock) {
+      super(BasicIdentifiers.eventId(), torrentId, fileId, nodeId);
+      this.blockNr = blockNr;
+      this.block = block;
+      this.hash = hash;
+      this.irregularBlock = irregularBlock;
     }
   }
 }

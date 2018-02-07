@@ -48,15 +48,22 @@ import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.TorrentIds;
+import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.DStreamControlPort;
+import se.sics.nstream.storage.durable.events.DStorageRead;
 import se.sics.nstream.storage.durable.events.DStreamConnect;
 import se.sics.nstream.storage.durable.events.DStreamDisconnect;
 import se.sics.nstream.storage.durable.events.DStreamEvent;
 import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.util.BlockDetails;
+import se.sics.nstream.util.range.KBlock;
 import se.sics.silk.TorrentIdHelper;
 import se.sics.silk.event.SilkEvent;
 import se.sics.silk.r2torrent.R2TorrentComp;
@@ -64,12 +71,15 @@ import se.sics.silk.r2torrent.R2TorrentES;
 import static se.sics.silk.r2torrent.torrent.R1Torrent.HardCodedConfig.seed;
 import se.sics.silk.r2torrent.torrent.event.R1FileUploadEvents;
 import se.sics.silk.r2torrent.torrent.state.R1FileUploadLeechersState;
+import se.sics.silk.r2torrent.torrent.util.R1BlockHelper;
 import se.sics.silk.r2torrent.torrent.util.R1FileMetadata;
 import se.sics.silk.r2torrent.torrent.util.R1FileStorage;
 import se.sics.silk.r2torrent.torrent.util.R1TorrentDetails;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecher;
 import se.sics.silk.r2torrent.transfer.R1TransferLeecherCtrl;
+import se.sics.silk.r2torrent.transfer.R1UploadPort;
 import se.sics.silk.r2torrent.transfer.events.R1TransferLeecherEvents;
+import se.sics.silk.r2torrent.transfer.events.R1UploadEvents;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -80,6 +90,7 @@ public class R1FileUpload {
   public static final String NAME = "dela-r1-torrent-file-upload-fsm";
 
   public static enum States implements FSMStateName {
+
     STORAGE_PENDING,
     ACTIVE,
     CLOSE,
@@ -114,6 +125,7 @@ public class R1FileUpload {
     public R1FileMetadata fileMetadata;
     public R1FileStorage fileStorage;
     Map<Identifier, Component> comps = new HashMap<>();
+    Map<Identifier, Pair<Integer, Identifier>> pendingBlocks = new HashMap<>();
 
     public IS(FSMIdentifier fsmId) {
       this.fsmId = fsmId;
@@ -142,27 +154,29 @@ public class R1FileUpload {
   }
 
   public static class R1FileMngr {
+
     public final Identifier endpointId;
     public final OverlayId torrentId;
-    
+
     public R1FileMngr(Identifier endpointId, OverlayId torrentId) {
       this.endpointId = endpointId;
       this.torrentId = torrentId;
     }
+
     public boolean isComplete(Identifier fileId) {
       return true;
     }
-    
+
     public StreamId streamId(Identifier fileId) {
       FileId fi = TorrentIdHelper.fileId(torrentId, fileId);
       return TorrentIds.streamId(endpointId, fi);
     }
-    
+
     public MyStream stream(StreamId streamId) {
       return null;
     }
   }
-  
+
   public static class ES implements R2TorrentES {
 
     private ComponentProxy proxy;
@@ -234,6 +248,18 @@ public class R1FileUpload {
         .basicEvent(DStreamDisconnect.Success.class)
         .subscribe(Handlers.streamClosed, States.CLOSE)
         .buildEvents();
+
+      def = def
+        .negativePort(R1UploadPort.class)
+        .basicEvent(R1UploadEvents.BlocksReq.class)
+        .subscribe(Handlers.blockReq, States.ACTIVE)
+        .buildEvents();
+
+      def = def
+        .negativePort(DStoragePort.class)
+        .basicEvent(DStorageRead.Response.class)
+        .subscribe(Handlers.blockResp, States.ACTIVE)
+        .buildEvents();
       return def;
     }
 
@@ -287,11 +313,11 @@ public class R1FileUpload {
       = (FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.ConnectReq>) (FSMStateName state, ES es, IS is,
         R1TransferLeecherEvents.ConnectReq req) -> {
         Optional<R1TorrentDetails> torrentDetails = es.torrentDetailsMngr.getTorrent(req.torrentId);
-        if(!torrentDetails.isPresent()) {
+        if (!torrentDetails.isPresent()) {
           throw new RuntimeException("ups");
         }
-        if(!torrentDetails.get().getMetadata(req.fileId).isPresent() 
-          || !torrentDetails.get().getStorage(req.fileId).isPresent()) {
+        if (!torrentDetails.get().getMetadata(req.fileId).isPresent()
+        || !torrentDetails.get().getStorage(req.fileId).isPresent()) {
           throw new RuntimeException("ups");
         }
         is.init(torrentDetails.get(), req);
@@ -317,7 +343,7 @@ public class R1FileUpload {
         is.fileState.connected(req, sendConnectAcc(es, is));
         return state;
       };
-    
+
     static FSMBasicEventHandler connect3
       = (FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.ConnectReq>) (FSMStateName state, ES es, IS is,
         R1TransferLeecherEvents.ConnectReq req) -> {
@@ -336,7 +362,7 @@ public class R1FileUpload {
           return state;
         }
       };
-    
+
     static FSMBasicEventHandler disconnected2
       = (FSMBasicEventHandler<ES, IS, R1TransferLeecherEvents.Disconnected>) (FSMStateName state, ES es, IS is,
         R1TransferLeecherEvents.Disconnected req) -> {
@@ -349,10 +375,61 @@ public class R1FileUpload {
         }
       };
 
+    //
+    static FSMBasicEventHandler blockReq
+      = (FSMBasicEventHandler<ES, IS, R1UploadEvents.BlocksReq>) (FSMStateName state, ES es, IS is,
+        R1UploadEvents.BlocksReq req) -> {
+        //TODO Alex URGENT - cache
+        LOG.info("<{},{}>blocks req:{}", new Object[]{is.torrentId.baseId, is.fileId, req.blocks});
+        sendBlockReq(es, is, req);
+        return state;
+      };
+
+    //
+    static FSMBasicEventHandler blockResp
+      = (FSMBasicEventHandler<ES, IS, DStorageRead.Response>) (FSMStateName state, ES es, IS is,
+        DStorageRead.Response resp) -> {
+        //TODO Alex URGENT - cache
+        if (!resp.result.isSuccess()) {
+          throw new RuntimeException("ups");
+        }
+        LOG.info("<{},{}>blocks resp:{}", new Object[]{is.torrentId.baseId, is.fileId, resp.getStreamId()});
+        sendBlockResp(es, is, resp);
+        return state;
+      };
+
+    private static void sendBlockReq(ES es, IS is, R1UploadEvents.BlocksReq req) {
+      for (Integer block : req.blocks) {
+        KBlock readRange = R1BlockHelper.getBlockRange(block, is.fileMetadata);
+        DStorageRead.Request r = new DStorageRead.Request(is.fileStorage.streamId, readRange);
+        is.pendingBlocks.put(r.getId(), Pair.with(block, req.nodeId));
+        es.proxy.trigger(r, es.ports.storage);
+      }
+    }
+    
+    private static void sendBlockResp(ES es, IS is, DStorageRead.Response resp) {
+      Pair<Integer, Identifier> aux = is.pendingBlocks.remove(resp.getId());
+      if(aux == null) {
+        throw new RuntimeException("ups");
+      }
+      if(!resp.result.isSuccess()) {
+        throw new RuntimeException("ups");
+      }
+      KReference<byte[]> block = KReferenceFactory.getReference(resp.result.getValue());
+      byte[] hash = HashUtil.makeHash(resp.result.getValue(), is.torrentDetails.hashAlg);
+      Optional<BlockDetails> irregularBlock = Optional.empty();
+      if(is.fileMetadata.finalBlock == aux.getValue0()) {
+        irregularBlock = Optional.of(is.fileMetadata.lastBlock);
+      }
+      R1UploadEvents.BlockResp r = new R1UploadEvents.BlockResp(is.torrentId, is.fileId, aux.getValue1(), 
+        aux.getValue0(), block, hash, irregularBlock);
+      es.proxy.trigger(r, es.ports.transferUpload);
+    }
+
     private static void createStorageStream(ES es, IS is) {
       sendStreamEvent(es, new DStreamConnect.Request(Pair.with(is.fileStorage.streamId, is.fileStorage.stream)));
     }
-    
+
     private static void destroyStorageStream(ES es, IS is) {
       sendStreamEvent(es, new DStreamDisconnect.Request(is.fileStorage.streamId));
     }
@@ -375,4 +452,5 @@ public class R1FileUpload {
       };
     }
   }
+
 }

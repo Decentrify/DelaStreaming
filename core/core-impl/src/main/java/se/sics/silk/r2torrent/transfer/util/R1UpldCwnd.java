@@ -23,6 +23,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Consumer;
@@ -35,7 +36,6 @@ import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.range.KPiece;
 import se.sics.nstream.util.range.RangeKReference;
-import se.sics.silk.r2torrent.transfer.events.R1UploadEvents;
 import se.sics.silk.r2torrent.transfer.msgs.R1TransferMsgs;
 
 /**
@@ -68,7 +68,7 @@ public class R1UpldCwnd {
   public void pendingPiece(R1TransferMsgs.PieceReq req) {
     pendingPieces.add(req);
   }
-  
+
   public void send() {
     if (pendingPieces.isEmpty()) {
       return;
@@ -100,10 +100,12 @@ public class R1UpldCwnd {
     return servedBlocks.keySet();
   }
 
-  public void serveBlocks(R1UploadEvents.BlocksResp resp) {
-    servedBlocks.putAll(resp.blocks);
-    servedHashes.putAll(resp.hashes);
-    irregularBlocks.putAll(resp.irregularBlocks);
+  public void serveBlocks(int blockNr, KReference<byte[]> block, byte[] hash, Optional<BlockDetails> irregularBlock) {
+    servedBlocks.put(blockNr, block);
+    servedHashes.put(blockNr, hash);
+    if (irregularBlock.isPresent()) {
+      irregularBlocks.put(blockNr, irregularBlock.get());
+    }
   }
 
   public void releaseBlock(Set<Integer> blocks) {
@@ -144,7 +146,7 @@ public class R1UpldCwnd {
       = RangeKReference.createInstance(block, BlockHelper.getBlockPos(blockNr, defaultBlock), pieceRange);
     return pieceVal;
   }
-  
+
   private void silentRelease(KReference<byte[]> ref) {
     try {
       ref.release();

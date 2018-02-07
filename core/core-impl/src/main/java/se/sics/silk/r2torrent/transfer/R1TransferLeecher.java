@@ -400,7 +400,7 @@ public class R1TransferLeecher {
           throw new RuntimeException("ups");
         }
         R1UploadComp.Init init = new R1UploadComp.Init(es.selfAdr, is.torrentId, is.fileId, is.leecherAdr,
-          fileMetadata.get().defaultBlock);
+          fileMetadata.get());
         Component uploadComp = es.proxy.create(R1UploadComp.class, init);
         Identifier uploadId = R1UploadComp.baseId(is.torrentId, is.fileId, is.leecherAdr.getId());
         es.proxy.connect(es.ports.timer, uploadComp.getNegative(Timer.class), Channel.TWO_WAY);
