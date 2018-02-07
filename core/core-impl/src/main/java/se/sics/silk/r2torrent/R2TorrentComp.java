@@ -257,7 +257,7 @@ public class R2TorrentComp extends ComponentDefinition {
         netUploadCompIdExtractor());
     }
     
-    public Positive<Network> network() {
+    public Positive<Network> extendedNetwork() {
       return extendedNetwork;
     }
   }
