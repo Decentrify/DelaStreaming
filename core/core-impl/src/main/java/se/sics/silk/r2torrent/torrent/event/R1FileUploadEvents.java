@@ -22,7 +22,6 @@ import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.silk.event.SilkEvent;
-import se.sics.silk.r2torrent.torrent.R1FileUpload;
 import se.sics.silk.r2torrent.torrent.R1FileUpload.States;
 import se.sics.silk.r2torrent.torrent.R1Torrent;
 
@@ -38,7 +37,7 @@ public class R1FileUploadEvents {
     }
   }
   
-  public static class Disconnected extends SilkEvent.E4 implements R1FileUpload.CtrlEvent {
+  public static class Disconnected extends SilkEvent.E4 implements R1Torrent.UploadCtrl {
     public final Identifier leecherId;
     public Disconnected(OverlayId torrentId, Identifier fileId, Identifier leecherId) {
       super(BasicIdentifiers.eventId(), torrentId, fileId);

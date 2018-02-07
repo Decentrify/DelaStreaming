@@ -412,7 +412,7 @@ public class R1TransferLeecher {
         Component uploadComp = is.uploadComp;
         es.proxy.trigger(Kill.event, uploadComp.control());
         es.proxy.disconnect(es.ports.timer, uploadComp.getNegative(Timer.class));
-        es.ports.transferUploadC.removeChannel(uploadId, uploadComp.getPositive(R1UploadPort.class));
+        es.ports.transferUploadC.removeChannel(uploadId, uploadComp.getNegative(R1UploadPort.class));
         es.ports.netTransferUploadC.removeChannel(uploadId, uploadComp.getNegative(Network.class));
         is.uploadComp = null;
       }

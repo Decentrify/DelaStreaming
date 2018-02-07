@@ -253,9 +253,9 @@ public class R1Torrent {
       def = def
         .positivePort(R1FileUploadCtrl.class)
         .basicEvent(R1FileUploadEvents.Indication.class)
-        .subscribe(Handlers.uploadInd, States.DOWNLOAD)
+        .subscribe(Handlers.uploadInd, States.UPLOAD)
         .basicEvent(R1FileUploadEvents.Disconnected.class)
-        .subscribe(Handlers.uploadDisc, States.DOWNLOAD)
+        .subscribe(Handlers.uploadDisc, States.UPLOAD)
         .buildEvents();
       return def;
     }

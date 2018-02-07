@@ -243,11 +243,10 @@ public class R2TorrentComp extends ComponentDefinition {
       proxy.connect(proxy.getPositive(R1TransferLeecherCtrl.class), proxy.getNegative(R1TransferLeecherCtrl.class),
         Channel.TWO_WAY);
 
-      transferDownloadC = One2NChannel.
-        getChannel("r1-torrent-file-download-ctrl", (Negative) transferDownload.getPair(),
-          downloadCompIdExtractor());
-      transferUploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Positive) transferUpload.getPair(),
-        uploadCompIdExtractor());
+      transferDownloadC = One2NChannel.getChannel("r1-torrent-file-download-ctrl", 
+        (Negative) transferDownload.getPair(), downloadCompIdExtractor());
+      transferUploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", 
+        (Positive) transferUpload.getPair(), uploadCompIdExtractor());
     }
     
     private void setNetwork(Component beNetComp) {
