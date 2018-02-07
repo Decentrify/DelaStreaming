@@ -106,7 +106,7 @@ public class R2TorrentComp extends ComponentDefinition {
       = new BestEffortNetworkComp.Init(init.selfAdr, init.selfAdr.getId());
     beNetComp = create(BestEffortNetworkComp.class, beNetCompInit);
     connect(ports.timer, beNetComp.getNegative(Timer.class), Channel.TWO_WAY);
-    connect(ports.network, beNetComp.getNegative(Network.class), Channel.TWO_WAY);
+    connect(ports.baseNetwork, beNetComp.getNegative(Network.class), Channel.TWO_WAY);
     
     R1TorrentConnComp.Init overlayCompInit = new R1TorrentConnComp.Init();
     overlayComp = create(R1TorrentConnComp.class, overlayCompInit);
@@ -172,7 +172,7 @@ public class R2TorrentComp extends ComponentDefinition {
   private void killComp() {
     trigger(Kill.event, beNetComp.control());
     disconnect(ports.timer, beNetComp.getNegative(Timer.class));
-    disconnect(ports.network, beNetComp.getNegative(Network.class));
+    disconnect(ports.baseNetwork, beNetComp.getNegative(Network.class));
     
     trigger(Kill.event, overlayComp.control());
     disconnect(ports.timer, overlayComp.getNegative(Timer.class));
@@ -183,7 +183,7 @@ public class R2TorrentComp extends ComponentDefinition {
   public static class Ports {
 
     //**************************************************EXTERNAL********************************************************
-    public final Positive<Network> network;
+    private final Positive<Network> baseNetwork;
     public final Positive<Timer> timer;
     public final Positive<DEndpointCtrlPort> endpointCtrl;
     public final Positive<DStreamControlPort> streamCtrl;
@@ -198,7 +198,7 @@ public class R2TorrentComp extends ComponentDefinition {
     public final Positive<R1FileDownloadCtrl> fileDownloadCtrlReq;
     public final Negative<R1FileDownloadCtrl> fileDownloadCtrlProv;
     public final Positive<R1DownloadPort> transferDownload;
-    public final Positive<R1UploadPort> transferUpload;
+    public final Negative<R1UploadPort> transferUpload;
     public final Positive<R1TransferSeederCtrl> transferSeederCtrlReq;
     public final Negative<R1TransferSeederCtrl> transferSeederCtrlProv;
     public final Positive<R1TransferLeecherCtrl> transferLeecherCtrlReq;
@@ -206,6 +206,8 @@ public class R2TorrentComp extends ComponentDefinition {
 
     public final One2NChannel<R1UploadPort> transferUploadC;
     public final One2NChannel<R1DownloadPort> transferDownloadC;
+    
+    private Positive<Network> extendedNetwork;
     public One2NChannel<Network> netTransferUploadC;
     public One2NChannel<Network> netTransferDownloadC;
 
@@ -214,7 +216,7 @@ public class R2TorrentComp extends ComponentDefinition {
       loopbackSubscribe = proxy.requires(SelfPort.class);
       proxy.connect(proxy.getPositive(SelfPort.class), proxy.getNegative(SelfPort.class), Channel.TWO_WAY);
 
-      network = proxy.requires(Network.class);
+      baseNetwork = proxy.requires(Network.class);
       timer = proxy.requires(Timer.class);
       endpointCtrl = proxy.requires(DEndpointCtrlPort.class);
       streamCtrl = proxy.requires(DStreamControlPort.class);
@@ -231,7 +233,7 @@ public class R2TorrentComp extends ComponentDefinition {
       proxy.connect(proxy.getPositive(R1FileDownloadCtrl.class), proxy.getNegative(R1FileDownloadCtrl.class),
         Channel.TWO_WAY);
       transferDownload = proxy.requires(R1DownloadPort.class);
-      transferUpload = proxy.requires(R1UploadPort.class);
+      transferUpload = proxy.provides(R1UploadPort.class);
       transferSeederCtrlReq = proxy.requires(R1TransferSeederCtrl.class);
       transferSeederCtrlProv = proxy.provides(R1TransferSeederCtrl.class);
       proxy.connect(proxy.getPositive(R1TransferSeederCtrl.class), proxy.getNegative(R1TransferSeederCtrl.class),
@@ -244,15 +246,20 @@ public class R2TorrentComp extends ComponentDefinition {
       transferDownloadC = One2NChannel.
         getChannel("r1-torrent-file-download-ctrl", (Negative) transferDownload.getPair(),
           downloadCompIdExtractor());
-      transferUploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Negative) transferUpload.getPair(),
+      transferUploadC = One2NChannel.getChannel("r1-torrent-file-upload-ctrl", (Positive) transferUpload.getPair(),
         uploadCompIdExtractor());
     }
     
-    public void setNetwork(Component beNetComp) {
-      netTransferDownloadC = One2NChannel.getChannel("r1-torrent-transfer-download-network", 
-        beNetComp.getPositive(Network.class), netDownloadCompIdExtractor());
-      netTransferUploadC = One2NChannel.getChannel("r1-torrent-transfer-upload-network",
-        beNetComp.getPositive(Network.class), netUploadCompIdExtractor());
+    private void setNetwork(Component beNetComp) {
+      extendedNetwork = beNetComp.getPositive(Network.class);
+      netTransferDownloadC = One2NChannel.getChannel("r1-torrent-transfer-download-network", extendedNetwork, 
+        netDownloadCompIdExtractor());
+      netTransferUploadC = One2NChannel.getChannel("r1-torrent-transfer-upload-network", extendedNetwork, 
+        netUploadCompIdExtractor());
+    }
+    
+    public Positive<Network> network() {
+      return extendedNetwork;
     }
   }
 

@@ -357,7 +357,7 @@ public class R1TransferLeecher {
     private static <C extends KompicsEvent & Identifiable> void sendMsg(ES es, IS is, C content) {
       KHeader header = new BasicHeader(es.selfAdr, is.leecherAdr, Transport.UDP);
       KContentMsg msg = new BasicContentMsg(header, content);
-      es.proxy.trigger(msg, es.ports.network);
+      es.proxy.trigger(msg, es.ports.network());
     }
 
     private static void sendCtrl(ES es, IS is, R1FileUpload.ConnectEvent content) {
@@ -398,7 +398,7 @@ public class R1TransferLeecher {
         Component uploadComp = es.proxy.create(R1UploadComp.class, init);
         Identifier uploadId = R1UploadComp.baseId(is.torrentId, is.fileId, is.leecherAdr.getId());
         es.proxy.connect(es.ports.timer, uploadComp.getNegative(Timer.class), Channel.TWO_WAY);
-        es.ports.transferUploadC.addChannel(uploadId, uploadComp.getPositive(R1UploadPort.class));
+        es.ports.transferUploadC.addChannel(uploadId, uploadComp.getNegative(R1UploadPort.class));
         es.ports.netTransferUploadC.addChannel(uploadId, uploadComp.getNegative(Network.class));
         es.proxy.trigger(Start.event, uploadComp.control());
         is.uploadComp = uploadComp;
