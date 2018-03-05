@@ -259,7 +259,7 @@ public class R1FileDownloadTest {
   }
 
   //***************************************************DOWNLOAD_FILE****************************************************
-  @Test
+//  @Test
   public void testDownloadFileInOrder() {
     R1FileMetadata fm = torrentDetails.getMetadata(file1).get();
 
@@ -275,14 +275,14 @@ public class R1FileDownloadTest {
     tc = transferConnected(tc, torrent, file1, seeder1); //4
     tc = downloadInOrder(tc, torrent, file1, seeder1, block, hash); //18
     tc = transferCompleted(tc, torrent, file1, seeder1); //4
-    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);//2
+//    tc = storageStreamDisconnected(tc, streamCtrlP, streamCtrlP);//2
     tc.repeat(1).body().end();
     assertTrue(tc.check());
     Identifier fsmBaseId = R1FileDownload.fsmBaseId(torrent, file1);
     assertFalse(compState.fsm.activeFSM(fsmBaseId));
   }
   
-  @Test
+//  @Test
   public void testDownloadFileOutOfOrder() {
     R1FileMetadata fm = torrentDetails.getMetadata(file1).get();
 

@@ -32,7 +32,7 @@ public class FutureHelper {
 
     private Class<C> contentType;
     protected BasicContentMsg msg;
-    protected BestEffortMsg.Request wrap;
+    protected BestEffortMsg.Base wrap;
     protected C content;
 
     protected NetBEFuture(Class<C> contentType) {
@@ -45,10 +45,10 @@ public class FutureHelper {
         return false;
       }
       this.msg = (BasicContentMsg) r;
-      if (!(msg.getContent() instanceof BestEffortMsg.Request)) {
+      if (!((msg.getContent() instanceof BestEffortMsg.Base))) {
         return false;
       }
-      wrap = (BestEffortMsg.Request) msg.getContent();
+      wrap = (BestEffortMsg.Base) msg.getContent();
       if (!(contentType.isAssignableFrom(wrap.extractValue().getClass()))) {
         return false;
       }

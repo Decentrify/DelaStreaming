@@ -253,7 +253,8 @@ public class R1FileDownload {
       def = def
         .positivePort(DStoragePort.class)
         .basicEvent(DStorageWrite.Response.class)
-        .subscribe(Handlers.written, States.ACTIVE, States.IDLE, States.COMPLETED)
+        .subscribe(Handlers.written1, States.ACTIVE, States.IDLE)
+        .subscribe(Handlers.written2, States.COMPLETED)
         .buildEvents();
       def = def
         .positivePort(R1DownloadPort.class)
@@ -419,7 +420,17 @@ public class R1FileDownload {
       };
 
     //******************************************************STORAGE****************************************************
-    static FSMBasicEventHandler written = (FSMBasicEventHandler<ES, IS, DStorageWrite.Response>) (
+    static FSMBasicEventHandler written1 = (FSMBasicEventHandler<ES, IS, DStorageWrite.Response>) (
+      FSMStateName state, ES es, IS is, DStorageWrite.Response resp) -> {
+        R1SinkWriteCallback callback = is.streamActions.callbacks.remove(resp.getId());
+        if (callback == null) {
+          throw new RuntimeException("logic issue");
+        }
+        callback.completed();
+        return state;
+      };
+    
+    static FSMBasicEventHandler written2 = (FSMBasicEventHandler<ES, IS, DStorageWrite.Response>) (
       FSMStateName state, ES es, IS is, DStorageWrite.Response resp) -> {
         R1SinkWriteCallback callback = is.streamActions.callbacks.remove(resp.getId());
         if (callback == null) {

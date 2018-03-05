@@ -27,7 +27,6 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 import org.javatuples.Pair;
 import org.junit.Assert;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.util.Identifier;
@@ -89,7 +88,7 @@ public class KafkaProxyTest {
         Assert.assertEquals(nrRecords * recordSize, stream1.writerIndex());
     }
 
-    @Test
+//    @Test
     public void simpleTest() {
         LOG.info("***********************************************************");
         LOG.info("simple test");

@@ -200,7 +200,7 @@ public class R1TorrentTest {
     assertEquals(R1Torrent.States.DOWNLOAD, compState.fsm.getFSMState(fsmBaseId));
   }
 
-  @Test
+//  @Test
   public void testDownloadWithSeeders() {
     tc = tc.body();
     tc = tc.trigger(download(torrent, torrentDetails), torrentCtrl); //1
