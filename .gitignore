@@ -19,5 +19,4 @@
 /hops/mysql/target/
 
 .DS_Store
-/core/core-impl/src/test/resources
 /manager/src/test/resources/
