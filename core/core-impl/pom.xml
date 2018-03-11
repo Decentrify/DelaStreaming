@@ -1,45 +1,50 @@
 <?xml version="1.0"?>
 <project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>se.sics.gvod</groupId>
-        <artifactId>core</artifactId>
-        <version>0.0.10-SNAPSHOT</version>
-    </parent>
-    <groupId>se.sics.gvod.core</groupId>
-    <artifactId>core-impl</artifactId>
-    <name>GVoD Core Impl</name>
-    <url>http://maven.apache.org</url>
-    <dependencies>
-        <dependency>
-            <groupId>se.sics.gvod.core</groupId>
-            <artifactId>core-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>se.sics.gvod</groupId>
+    <artifactId>core</artifactId>
+    <version>0.0.10-SNAPSHOT</version>
+  </parent>
+  <groupId>se.sics.gvod.core</groupId>
+  <artifactId>core-impl</artifactId>
+  <name>GVoD Core Impl</name>
+  <url>http://maven.apache.org</url>
+  <dependencies>
+    <dependency>
+      <groupId>se.sics.gvod.core</groupId>
+      <artifactId>core-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
         
-        <dependency> 
-            <groupId>se.sics.ktoolbox.util</groupId>
-            <artifactId>kcore</artifactId>
-            <version>${ktoolbox.version}</version>
-        </dependency>
+    <dependency> 
+      <groupId>se.sics.ktoolbox.util</groupId>
+      <artifactId>kcore</artifactId>
+      <version>${ktoolbox.version}</version>
+    </dependency>
         
-        <dependency> 
-            <groupId>se.sics.ledbat</groupId>
-            <artifactId>core</artifactId>
-            <version>${ktoolbox.version}</version>
-        </dependency>
+    <dependency> 
+      <groupId>se.sics.ledbat</groupId>
+      <artifactId>core</artifactId>
+      <version>${ktoolbox.version}</version>
+    </dependency>
         
-        <dependency>
-            <groupId>se.sics.ktoolbox.croupier</groupId>
-            <artifactId>api</artifactId>
-            <version>${ktoolbox.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>${logger.version}</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
+    <dependency>
+      <groupId>se.sics.ktoolbox.croupier</groupId>
+      <artifactId>api</artifactId>
+      <version>${ktoolbox.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-server</artifactId>
+      <version>${jersey.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>${logger.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 </project>

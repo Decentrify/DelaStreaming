@@ -35,6 +35,7 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.FileId;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.torrent.core.DataReport;
@@ -42,6 +43,11 @@ import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
 import se.sics.nstream.torrent.status.event.TorrentStatus;
 import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.tracking.event.TorrentTracking;
+import se.sics.nstream.torrent.tracking.tracker.ClientWrapper;
+import se.sics.nstream.torrent.tracking.tracker.DataReportDTO;
+import se.sics.nstream.torrent.tracking.tracker.DelaReportDTO;
+import se.sics.nstream.torrent.tracking.tracker.DownloadReportDTO;
+import se.sics.nstream.torrent.tracking.tracker.Hopssite;
 import se.sics.nstream.torrent.transfer.tracking.DownloadReport;
 import se.sics.nstream.util.TorrentExtendedStatus;
 
@@ -58,10 +64,11 @@ public class TorrentTrackingComp extends ComponentDefinition {
   Positive<TorrentTrackingPort> trackingPort = requires(TorrentTrackingPort.class);
   Negative<TorrentStatusPort> statusPort = provides(TorrentStatusPort.class);
   //**************************************************************************
-
+  private final KAddress selfAdr;
   private final OverlayId torrentId;
+  private final Long reportTId;
+  private int reportLine = 0;
   private final long reportDelay;
-  private static final int pieceSize = 1024;
 
   private TorrentState status = TorrentState.UPLOADING;
   private long startingTime;
@@ -71,22 +78,23 @@ public class TorrentTrackingComp extends ComponentDefinition {
   private final TorrentTrackingConfig reportConfig;
   private BufferedWriter dataFile;
   private BufferedWriter downloadFile;
-  private int fileCounter = 0;
+  private boolean writeToFile = false;
+  private boolean writeToTracker = false;
   //**************************************************************************
   private TorrentTracking.DownloadedManifest pendingAdvance;
 
   public TorrentTrackingComp(Init init) {
+    selfAdr = init.selfAdr;
     torrentId = init.torrentId;
+    reportTId = System.currentTimeMillis();
     logPrefix = "<tid:" + torrentId.toString() + ">";
     LOG.debug("{}initiating...", logPrefix);
 
     reportDelay = init.reportDelay;
 
     reportConfig = new TorrentTrackingConfig(config());
-    LOG.debug("reporting in:{}", reportConfig.reportDir);
-    if (reportConfig.reportDir == null) {
-      fileCounter = -1;
-    } else {
+    LOG.info("reporting in:{} and to:{}", new Object[]{reportConfig.reportDir, reportConfig.reportTracker});
+    if (reportConfig.reportDir != null) {
       try {
         File tf = new File(reportConfig.reportDir + File.separator + torrentId.toString() + ".data.csv");
         if (tf.exists()) {
@@ -100,12 +108,15 @@ public class TorrentTrackingComp extends ComponentDefinition {
           lf.createNewFile();
         }
         downloadFile = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(lf)));
-        fileCounter = 1000 * 1000;
+        writeToFile = true;
       } catch (FileNotFoundException ex) {
         throw new RuntimeException("file report error");
       } catch (IOException ex) {
         throw new RuntimeException("file report error");
       }
+    }
+    if (reportConfig.reportTracker != null) {
+      writeToTracker = true;
     }
 
     subscribe(handleStart, control);
@@ -127,10 +138,12 @@ public class TorrentTrackingComp extends ComponentDefinition {
   @Override
   public void tearDown() {
     LOG.warn("{}tearing down", logPrefix);
-    if (reportConfig.reportDir != null) {
+    if (dataFile != null && downloadFile != null) {
       try {
         dataFile.close();
+        dataFile = null;
         downloadFile.close();
+        downloadFile = null;
       } catch (IOException ex) {
         throw new RuntimeException("file report error");
       }
@@ -163,13 +176,22 @@ public class TorrentTrackingComp extends ComponentDefinition {
       LOG.info("{}download:{} done", logPrefix, event.overlayId);
       long transferTime = System.currentTimeMillis() - startingTime;
       dataReport = event.dataReport;
-      LOG.debug("{}download completed in:{} avg dwnl speed:{} B/s", new Object[]{logPrefix, transferTime,
+      LOG.info("{}download completed in:{} avg dwnl speed:{} B/s", new Object[]{logPrefix, transferTime,
         (double) dataReport.totalSize.getValue1() / transferTime});
       trigger(new DownloadSummaryEvent(torrentId, dataReport.totalSize.getValue1(), transferTime), statusPort);
       status = TorrentState.UPLOADING;
-      if (fileCounter > 0) {
-        fileCounter = 0;
+      if (writeToFile) {
+        try {
+          dataFile.close();
+          dataFile = null;
+          downloadFile.close();
+          downloadFile = null;
+        } catch (IOException ex) {
+          throw new RuntimeException("file report error");
+        }
+        writeToFile = false;
       }
+      writeToTracker = false;
     }
   };
 
@@ -179,22 +201,60 @@ public class TorrentTrackingComp extends ComponentDefinition {
       LOG.debug("{}reporting", logPrefix);
       dataReport = resp.dataReport;
       downloadReport = resp.downloadReport;
-      if (fileCounter > 0) {
-        dataValues(resp.dataReport);
-        downloadValues(resp.downloadReport);
-        fileCounter--;
+      reportLine++;
+      DataReportDTO dataValues = dataValues(dataReport);
+      DownloadReportDTO downloadValues = downloadValues(downloadReport);
+      if (writeToFile) {
+        fileWrite(dataFile, dataValues.toString());
+        fileWrite(downloadFile, downloadValues.toString());
       }
-      if (fileCounter == 0) {
-        try {
-          dataFile.close();
-          downloadFile.close();
-        } catch (IOException ex) {
-          throw new RuntimeException("file report error");
-        }
-        fileCounter--;
+      if (writeToTracker) {
+        trackerDataValues(dataValues);
+        trackerDownloadValues(downloadValues);
       }
     }
   };
+
+  private void fileWrite(BufferedWriter writer, String report) {
+    try {
+      writer.write(report);
+      writer.write("\n");
+    } catch (IOException ex) {
+      throw new RuntimeException("file report error");
+    }
+  }
+
+  private String trackerDataValues(DataReportDTO reportVal) {
+    ClientWrapper client = ClientWrapper.httpInstance(String.class)
+      .setTarget(reportConfig.reportTracker)
+      .setPath(Hopssite.dataValues());
+    DelaReportDTO report = new DelaReportDTO(selfAdr.getId().toString(), torrentId.baseId.toString(),
+      reportTId.toString(), reportVal.toJson());
+    client.setPayload(report);
+    try {
+      return (String) client.doPost();
+    } catch (IllegalStateException ex) {
+      return "fail";
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  private String trackerDownloadValues(DownloadReportDTO reportVal) {
+    ClientWrapper client = ClientWrapper.httpInstance(String.class)
+      .setTarget(reportConfig.reportTracker)
+      .setPath(Hopssite.downloadValues());
+    DelaReportDTO report = new DelaReportDTO(selfAdr.getId().toString(), torrentId.baseId.toString(),
+      reportTId.toString(), reportVal.toJson());
+    client.setPayload(report);
+    try {
+      return (String) client.doPost();
+    } catch (IllegalStateException ex) {
+      return "fail";
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
+  }
 
   private void dataHeader(TreeMap<Integer, String> files) {
     try {
@@ -208,35 +268,33 @@ public class TorrentTrackingComp extends ComponentDefinition {
     }
   }
 
-  private void dataValues(DataReport report) {
-    try {
-      dataFile.write("" + 100 * ((double) report.totalSize.getValue1()) / report.totalSize.getValue0());
-      for (FileId fileId : report.torrent.base.keySet()) {
-        if (report.pending.contains(fileId)) {
-          dataFile.write(",0");
-          continue;
-        }
-        if (report.completed.contains(fileId)) {
-          dataFile.write(",100");
-          continue;
-        }
-        Pair<Long, Long> progress = report.ongoing.get(fileId);
-        dataFile.write("," + 100 * ((double) progress.getValue1()) / progress.getValue0());
+  private DataReportDTO dataValues(DataReport report) {
+    DataReportDTO r = new DataReportDTO();
+    r.addValue("" + reportLine);
+    r.addValue("" + 100 * ((double) report.totalSize.getValue1()) / report.totalSize.getValue0());
+    for (FileId fileId : report.torrent.base.keySet()) {
+      if (report.pending.contains(fileId)) {
+        r.addValue("0");
+        continue;
       }
-      dataFile.write("\n");
-    } catch (IOException ex) {
-      throw new RuntimeException("file report error");
+      if (report.completed.contains(fileId)) {
+        r.addValue(",100");
+        continue;
+      }
+      Pair<Long, Long> progress = report.ongoing.get(fileId);
+      r.addValue("" + 100 * ((double) progress.getValue1()) / progress.getValue0());
     }
+    return r;
   }
 
-  private void downloadValues(DownloadReport report) {
-    try {
-      downloadFile.write(report.total.throughput.inTimeThroughput / 1024 + ","
-        + report.total.throughput.timedOutThroughput / 1024 + ","
-        + report.total.ongoingBlocks + "," + report.total.cwnd + "\n");
-    } catch (IOException ex) {
-      throw new RuntimeException("file report error");
-    }
+  private DownloadReportDTO downloadValues(DownloadReport report) {
+    DownloadReportDTO r = new DownloadReportDTO();
+    r.addValue("" + reportLine);
+    r.addValue("" + report.total.throughput.inTimeThroughput / 1024);
+    r.addValue("" + report.total.throughput.timedOutThroughput / 1024);
+    r.addValue("" + report.total.ongoingBlocks);
+    r.addValue("" + report.total.cwnd);
+    return r;
   }
 
   Handler handleStatusSummaryRequest = new Handler<StatusSummaryEvent.Request>() {
@@ -257,10 +315,12 @@ public class TorrentTrackingComp extends ComponentDefinition {
 
   public static class Init extends se.sics.kompics.Init<TorrentTrackingComp> {
 
+    public final KAddress selfAdr;
     public final OverlayId torrentId;
     public final long reportDelay;
 
-    public Init(OverlayId torrentId, long reportDelay) {
+    public Init(KAddress selfAdr, OverlayId torrentId, long reportDelay) {
+      this.selfAdr = selfAdr;
       this.torrentId = torrentId;
       this.reportDelay = reportDelay;
     }

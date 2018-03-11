@@ -16,26 +16,39 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.tracking;
+package se.sics.nstream.torrent.tracking.tracker;
 
-import se.sics.kompics.config.Config;
+import com.google.gson.Gson;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentTrackingConfig {
+public class DownloadReportDTO {
 
-  public static class Names {
+  private List<String> values = new LinkedList<>();
 
-    public static String REPORT_DIR = "report.dir";
-    public static String REPORT_TRACKER = "report.tracker"; 
+  public void addValue(String val) {
+    values.add(val);
   }
 
-  public final String reportDir;
-  public final String reportTracker;
+  public String toJson() {
+    Gson gson = new Gson();
+    return gson.toJson(this);
+  }
 
-  public TorrentTrackingConfig(Config config) {
-    reportDir = config.getValue(Names.REPORT_DIR, String.class);
-    reportTracker = config.getValue(Names.REPORT_TRACKER, String.class);
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    Iterator<String> it = values.iterator();
+    if (it.hasNext()) {
+      sb.append(it.next());
+    }
+    while (it.hasNext()) {
+      sb.append(",").append(it.next());
+    }
+    return sb.toString();
   }
 }

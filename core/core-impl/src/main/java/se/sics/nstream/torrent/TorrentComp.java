@@ -100,7 +100,7 @@ public class TorrentComp extends ComponentDefinition {
         connect(transferComp.getNegative(DStoragePort.class), storagePort, Channel.TWO_WAY);
         connect(transferComp.getPositive(TransferCtrlPort.class), transferCtrlPort, Channel.TWO_WAY);
 
-        reportComp = create(TorrentTrackingComp.class, new TorrentTrackingComp.Init(torrentId, REPORT_DELAY));
+        reportComp = create(TorrentTrackingComp.class, new TorrentTrackingComp.Init(selfAdr, torrentId, REPORT_DELAY));
         connect(reportComp.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
         connect(reportComp.getNegative(TorrentTrackingPort.class), transferComp.getPositive(TorrentTrackingPort.class), Channel.TWO_WAY);
 

@@ -16,26 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.tracking;
-
-import se.sics.kompics.config.Config;
+package se.sics.nstream.torrent.tracking.tracker;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentTrackingConfig {
-
-  public static class Names {
-
-    public static String REPORT_DIR = "report.dir";
-    public static String REPORT_TRACKER = "report.tracker"; 
+public class Hopssite {
+  public static String dataValues() {
+    return "public/cluster/report/data";
   }
-
-  public final String reportDir;
-  public final String reportTracker;
-
-  public TorrentTrackingConfig(Config config) {
-    reportDir = config.getValue(Names.REPORT_DIR, String.class);
-    reportTracker = config.getValue(Names.REPORT_TRACKER, String.class);
+  
+  public static String downloadValues() {
+    return "public/cluster/report/download";
   }
 }
