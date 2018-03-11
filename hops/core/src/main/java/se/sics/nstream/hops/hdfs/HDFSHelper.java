@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.hops.hdfs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
@@ -68,12 +69,14 @@ public class HDFSHelper {
       Result<Long> result = ugi.doAs(new PrivilegedExceptionAction<Result<Long>>() {
         @Override
         public Result<Long> run() {
+          long length = -1;
           try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig)) {
-            long length = -1;
             FileStatus status = fs.getFileStatus(new Path(filePath));
             if (status.isFile()) {
               length = status.getLen();
             }
+            return Result.success(length);
+          } catch (FileNotFoundException ex) {
             return Result.success(length);
           } catch (IOException ex) {
             LOG.warn("{}could not get size of file:{}", logPrefix, ex.getMessage());
