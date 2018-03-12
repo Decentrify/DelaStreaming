@@ -509,7 +509,8 @@ public class LibTHandlers {
     MyStream manifestStream = is.getSetupState().getManifestStream();
     Result<ManifestJSON> manifestJSON = readManifestFromStorage(es, manifestStream);
     if (!manifestJSON.isSuccess()) {
-      throw new RuntimeException("todo deal with failure");
+      LOG.error("could not read manifest file:{}", new Object[]{manifestStream.resource});
+      throw new RuntimeException("could not read manifest file:" + manifestStream.resource);
     }
     Either<MyTorrent.Manifest, ManifestJSON> manifestResult = Either.right(manifestJSON.getValue());
     is.getSetupState().setManifest(manifestResult);

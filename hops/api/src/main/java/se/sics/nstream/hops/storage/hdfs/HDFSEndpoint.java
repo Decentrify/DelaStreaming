@@ -64,7 +64,7 @@ public class HDFSEndpoint implements StreamEndpoint {
     Configuration hdfsConfig = new Configuration();
     File confFile = new File(hdfsXMLPath);
     if (!confFile.exists()) {
-      throw new RuntimeException("conf file does not exist");
+      throw new RuntimeException("conf file does not exist:" + hdfsXMLPath);
     }
     hdfsConfig.addResource(new Path(hdfsXMLPath));
     return new HDFSEndpoint(hdfsConfig, user);
