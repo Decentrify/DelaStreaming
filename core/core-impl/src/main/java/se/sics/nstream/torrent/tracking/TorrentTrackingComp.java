@@ -34,6 +34,8 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.httpsclient.WebClient;
+import se.sics.ktoolbox.httpsclient.WebResponse;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.FileId;
@@ -43,11 +45,9 @@ import se.sics.nstream.torrent.status.event.DownloadSummaryEvent;
 import se.sics.nstream.torrent.status.event.TorrentStatus;
 import se.sics.nstream.torrent.tracking.event.StatusSummaryEvent;
 import se.sics.nstream.torrent.tracking.event.TorrentTracking;
-import se.sics.nstream.torrent.tracking.tracker.ClientWrapper;
-import se.sics.nstream.torrent.tracking.tracker.DataReportDTO;
 import se.sics.nstream.torrent.tracking.tracker.DelaReportDTO;
-import se.sics.nstream.torrent.tracking.tracker.DownloadReportDTO;
 import se.sics.nstream.torrent.tracking.tracker.Hopssite;
+import se.sics.nstream.torrent.tracking.tracker.ReportDTO;
 import se.sics.nstream.torrent.transfer.tracking.DownloadReport;
 import se.sics.nstream.util.TorrentExtendedStatus;
 
@@ -202,15 +202,15 @@ public class TorrentTrackingComp extends ComponentDefinition {
       dataReport = resp.dataReport;
       downloadReport = resp.downloadReport;
       reportLine++;
-      DataReportDTO dataValues = dataValues(dataReport);
-      DownloadReportDTO downloadValues = downloadValues(downloadReport);
+      ReportDTO dataValues = dataValues(dataReport);
+      ReportDTO downloadValues = downloadValues(downloadReport);
       if (writeToFile) {
         fileWrite(dataFile, dataValues.toString());
         fileWrite(downloadFile, downloadValues.toString());
       }
       if (writeToTracker) {
-        trackerDataValues(dataValues);
-        trackerDownloadValues(downloadValues);
+        trackerDataValues(dataValues.toString());
+        trackerDownloadValues(downloadValues.toString());
       }
     }
   };
@@ -224,15 +224,17 @@ public class TorrentTrackingComp extends ComponentDefinition {
     }
   }
 
-  private String trackerDataValues(DataReportDTO reportVal) {
-    ClientWrapper client = ClientWrapper.httpInstance(String.class)
-      .setTarget(reportConfig.reportTracker)
-      .setPath(Hopssite.dataValues());
+  private String trackerDataValues(String reportVal) {
     DelaReportDTO report = new DelaReportDTO(selfAdr.getId().toString(), torrentId.baseId.toString(),
-      reportTId.toString(), reportVal.toJson());
-    client.setPayload(report);
+      reportTId.toString(), reportVal);
     try {
-      return (String) client.doPost();
+      WebResponse webResp = WebClient.httpsInstance()
+        .setTarget(reportConfig.reportTracker)
+        .setPath(Hopssite.dataValues())
+        .setPayload(report)
+        .doPost();
+      String resp = webResp.readContent(String.class);
+      return resp;
     } catch (IllegalStateException ex) {
       return "fail";
     } catch (Exception ex) {
@@ -240,15 +242,18 @@ public class TorrentTrackingComp extends ComponentDefinition {
     }
   }
 
-  private String trackerDownloadValues(DownloadReportDTO reportVal) {
-    ClientWrapper client = ClientWrapper.httpInstance(String.class)
-      .setTarget(reportConfig.reportTracker)
-      .setPath(Hopssite.downloadValues());
+  private String trackerDownloadValues(String reportVal) {
+
     DelaReportDTO report = new DelaReportDTO(selfAdr.getId().toString(), torrentId.baseId.toString(),
-      reportTId.toString(), reportVal.toJson());
-    client.setPayload(report);
+      reportTId.toString(), reportVal);
     try {
-      return (String) client.doPost();
+      WebResponse webResp = WebClient.httpsInstance()
+        .setTarget(reportConfig.reportTracker)
+        .setPath(Hopssite.downloadValues())
+        .setPayload(report)
+        .doPost();
+      String resp = webResp.readContent(String.class);
+      return resp;
     } catch (IllegalStateException ex) {
       return "fail";
     } catch (Exception ex) {
@@ -268,8 +273,8 @@ public class TorrentTrackingComp extends ComponentDefinition {
     }
   }
 
-  private DataReportDTO dataValues(DataReport report) {
-    DataReportDTO r = new DataReportDTO();
+  private ReportDTO dataValues(DataReport report) {
+    ReportDTO r = new ReportDTO();
     r.addValue("" + reportLine);
     r.addValue("" + 100 * ((double) report.totalSize.getValue1()) / report.totalSize.getValue0());
     for (FileId fileId : report.torrent.base.keySet()) {
@@ -287,8 +292,8 @@ public class TorrentTrackingComp extends ComponentDefinition {
     return r;
   }
 
-  private DownloadReportDTO downloadValues(DownloadReport report) {
-    DownloadReportDTO r = new DownloadReportDTO();
+  private ReportDTO downloadValues(DownloadReport report) {
+    ReportDTO r = new ReportDTO();
     r.addValue("" + reportLine);
     r.addValue("" + report.total.throughput.inTimeThroughput / 1024);
     r.addValue("" + report.total.throughput.timedOutThroughput / 1024);

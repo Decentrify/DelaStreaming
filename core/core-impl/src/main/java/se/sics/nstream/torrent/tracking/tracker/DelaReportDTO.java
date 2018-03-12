@@ -18,10 +18,13 @@
  */
 package se.sics.nstream.torrent.tracking.tracker;
 
+import javax.xml.bind.annotation.XmlRootElement;
+
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 
+@XmlRootElement
 public class DelaReportDTO {
 
   private String delaId;
@@ -29,14 +32,14 @@ public class DelaReportDTO {
   private String reportId;
   private String reportVal;
 
+  public DelaReportDTO() {
+  }
+  
   public DelaReportDTO(String delaId, String torrentId, String reportId, String reportVal) {
     this.delaId = delaId;
     this.torrentId = torrentId;
     this.reportId = reportId;
     this.reportVal = reportVal;
-  }
-
-  public DelaReportDTO() {
   }
 
   public String getDelaId() {

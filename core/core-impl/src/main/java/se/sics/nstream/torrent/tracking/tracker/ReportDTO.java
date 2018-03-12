@@ -18,7 +18,6 @@
  */
 package se.sics.nstream.torrent.tracking.tracker;
 
-import com.google.gson.Gson;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,18 +26,13 @@ import java.util.List;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DataReportDTO {
+public class ReportDTO {
   private List<String> values = new LinkedList<>();
   
   public void addValue(String val) {
     values.add(val);
   }
   
-  public String toJson() {
-    Gson gson = new Gson();
-    return gson.toJson(this);
-  }
-
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
