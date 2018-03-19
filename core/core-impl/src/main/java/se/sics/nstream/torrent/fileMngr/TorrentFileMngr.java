@@ -197,10 +197,13 @@ public class TorrentFileMngr {
         long totalMaxSize = 0;
         long totalCurrentSize = 0;
         Map<FileId, Pair<Long, Long>> ongoingReport = new HashMap<>();
-        for (TFileComplete completedFile : completed.values()) {
-            Pair<Long, Long> size = completedFile.report();
+        Map<FileId, Long> completedReport = new TreeMap<>();
+        
+        for (Map.Entry<FileId, TFileComplete> completedFile : completed.entrySet()) {
+            Pair<Long, Long> size = completedFile.getValue().report();
             totalMaxSize += size.getValue0();
             totalCurrentSize += size.getValue1();
+            completedReport.put(completedFile.getKey(), size.getValue1());
         }
         for (Map.Entry<FileId, TFileIncomplete> file : ongoing.entrySet()) {
             Pair<Long, Long> size = file.getValue().report();
@@ -213,6 +216,6 @@ public class TorrentFileMngr {
             totalMaxSize += size.getValue0();
             totalCurrentSize += size.getValue1();
         }
-        return new DataReport(torrent, Pair.with(totalMaxSize, totalCurrentSize), new HashSet<>(completed.keySet()), ongoingReport, new HashSet<>(pending.keySet()));
+        return new DataReport(torrent, Pair.with(totalMaxSize, totalCurrentSize), new HashMap<>(completedReport), ongoingReport, new HashSet<>(pending.keySet()));
     }
 }

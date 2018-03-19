@@ -23,10 +23,14 @@ package se.sics.nstream.torrent.tracking.tracker;
  */
 public class Hopssite {
   public static String dataValues() {
-    return "public/cluster/report/data";
+    return "public/report/data";
   }
   
   public static String downloadValues() {
-    return "public/cluster/report/download";
+    return "public/report/download";
+  }
+  
+  public static String transferValues() {
+    return "public/report/transfer";
   }
 }

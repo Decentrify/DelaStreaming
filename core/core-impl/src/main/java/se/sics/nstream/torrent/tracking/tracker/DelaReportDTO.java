@@ -29,13 +29,13 @@ public class DelaReportDTO {
 
   private String delaId;
   private String torrentId;
-  private String reportId;
+  private long reportId;
   private String reportVal;
 
   public DelaReportDTO() {
   }
   
-  public DelaReportDTO(String delaId, String torrentId, String reportId, String reportVal) {
+  public DelaReportDTO(String delaId, String torrentId, long reportId, String reportVal) {
     this.delaId = delaId;
     this.torrentId = torrentId;
     this.reportId = reportId;
@@ -58,11 +58,11 @@ public class DelaReportDTO {
     this.torrentId = torrentId;
   }
 
-  public String getReportId() {
+  public long getReportId() {
     return reportId;
   }
 
-  public void setReportId(String reportId) {
+  public void setReportId(long reportId) {
     this.reportId = reportId;
   }
 
@@ -72,6 +72,12 @@ public class DelaReportDTO {
 
   public void setReportVal(String data) {
     this.reportVal = data;
+  }
+
+  @Override
+  public String toString() {
+    return "DelaReportDTO{" + "delaId=" + delaId + ", torrentId=" + torrentId + ", reportId=" + reportId + ", reportVal=" +
+      reportVal + '}';
   }
 }
 

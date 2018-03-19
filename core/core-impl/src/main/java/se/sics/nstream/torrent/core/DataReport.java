@@ -33,10 +33,10 @@ public class DataReport {
     //<MaxSize, CurrentSize>
     public final Pair<Long, Long> totalSize;
     public final Map<FileId, Pair<Long, Long>> ongoing;
-    public final Set<FileId> completed;
+    public final Map<FileId, Long> completed;
     public final Set<FileId> pending;
     
-    public DataReport(MyTorrent torrent, Pair<Long, Long> totalSize, Set<FileId> completed, Map<FileId, Pair<Long, Long>> ongoing, Set<FileId> pending) {
+    public DataReport(MyTorrent torrent, Pair<Long, Long> totalSize, Map<FileId, Long> completed, Map<FileId, Pair<Long, Long>> ongoing, Set<FileId> pending) {
         this.torrent = torrent;
         this.totalSize = totalSize;
         this.completed = completed;
