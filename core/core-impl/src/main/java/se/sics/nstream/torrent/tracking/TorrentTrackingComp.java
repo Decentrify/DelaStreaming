@@ -145,7 +145,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
       status = TorrentState.DOWNLOADING;
       dataReport = event.dataReport;
       reportOrder(event.dataReport);
-      prepareReport();
+      prepareReportAction();
       writeHeaders();
     }
   };
@@ -160,7 +160,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         (double) dataReport.totalSize.getValue1() / transferTime});
       trigger(new DownloadSummaryEvent(torrentId, dataReport.totalSize.getValue1(), transferTime), statusPort);
       status = TorrentState.UPLOADING;
-      finalizeReport(transferTime);
+      finalizeReportAction(transferTime);
     }
   };
 
@@ -177,7 +177,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     }
   };
 
-  private void prepareReport() {
+  private void prepareReportAction() {
     if (reportConfig.reportDir != null) {
       try {
         File tf = new File(reportConfig.reportDir + File.separator + torrentId.toString() + ".data.csv");
@@ -205,7 +205,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     }
   }
 
-  private void finalizeReport(long transferTime) {
+  private void finalizeReportAction(long transferTime) {
     ReportDTO dataValues = dataValues(dataReport);
     if (writeToFile) {
       try {
@@ -297,8 +297,6 @@ public class TorrentTrackingComp extends ComponentDefinition {
           .doPost();
         String resp = webResp.readContent(String.class);
         return resp;
-      } catch (IllegalStateException ex) {
-        return "fail";
       } catch (ProcessingException ex) {
         if (!sslHandshakeFixed) {
           sslHandshakeFixed = true;
@@ -306,7 +304,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         }
         return "fail";
       } catch (Exception ex) {
-        throw new RuntimeException(ex);
+        return "fail";
       }
     }
 
@@ -323,8 +321,6 @@ public class TorrentTrackingComp extends ComponentDefinition {
           .doPost();
         String resp = webResp.readContent(String.class);
         return resp;
-      } catch (IllegalStateException ex) {
-        return "fail";
       } catch (ProcessingException ex) {
         if (!sslHandshakeFixed) {
           sslHandshakeFixed = true;
@@ -332,7 +328,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         }
         return "fail";
       } catch (Exception ex) {
-        throw new RuntimeException(ex);
+        return "fail";
       }
     }
 
@@ -348,8 +344,6 @@ public class TorrentTrackingComp extends ComponentDefinition {
           .doPost();
         String resp = webResp.readContent(String.class);
         return resp;
-      } catch (IllegalStateException ex) {
-        return "fail";
       } catch (ProcessingException ex) {
         if (!sslHandshakeFixed) {
           sslHandshakeFixed = true;
@@ -357,7 +351,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         }
         return "fail";
       } catch (Exception ex) {
-        throw new RuntimeException(ex);
+        return "fail";
       }
     }
   }
