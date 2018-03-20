@@ -16,31 +16,33 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.core;
+package se.sics.nstream.torrent.tracking.tracker;
 
-import java.util.Map;
-import java.util.Set;
-import org.javatuples.Pair;
-import se.sics.nstream.FileId;
-import se.sics.nstream.transfer.MyTorrent;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DataReport {
-    public final MyTorrent torrent;
-    //<MaxSize, CurrentSize>
-    public final Pair<Long, Long> totalSize;
-    public final Map<FileId, Pair<Long, Long>> ongoing;
-    public final Map<FileId, Long> completed;
-    public final Set<FileId> pending;
-    
-    public DataReport(MyTorrent torrent, Pair<Long, Long> totalSize, Map<FileId, Long> completed, Map<FileId, Pair<Long, Long>> ongoing, Set<FileId> pending) {
-        this.torrent = torrent;
-        this.totalSize = totalSize;
-        this.completed = completed;
-        this.ongoing = ongoing;
-        this.pending = pending;
+public class ReportDTO {
+  private List<String> values = new LinkedList<>();
+  
+  public void addValue(String val) {
+    values.add(val);
+  }
+  
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    Iterator<String> it = values.iterator();
+    if(it.hasNext()) {
+      sb.append(it.next());
     }
+    while(it.hasNext()) {
+      sb.append(",").append(it.next());
+    }
+    return sb.toString();
+  }
 }

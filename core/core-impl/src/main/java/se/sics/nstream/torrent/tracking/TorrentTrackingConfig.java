@@ -28,11 +28,14 @@ public class TorrentTrackingConfig {
   public static class Names {
 
     public static String REPORT_DIR = "report.dir";
+    public static String REPORT_TRACKER = "report.tracker"; 
   }
 
   public final String reportDir;
+  public final String reportTracker;
 
   public TorrentTrackingConfig(Config config) {
     reportDir = config.getValue(Names.REPORT_DIR, String.class);
+    reportTracker = config.getValue(Names.REPORT_TRACKER, String.class);
   }
 }

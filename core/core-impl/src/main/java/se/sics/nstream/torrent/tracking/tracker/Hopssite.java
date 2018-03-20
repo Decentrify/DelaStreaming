@@ -16,31 +16,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.core;
-
-import java.util.Map;
-import java.util.Set;
-import org.javatuples.Pair;
-import se.sics.nstream.FileId;
-import se.sics.nstream.transfer.MyTorrent;
+package se.sics.nstream.torrent.tracking.tracker;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DataReport {
-    public final MyTorrent torrent;
-    //<MaxSize, CurrentSize>
-    public final Pair<Long, Long> totalSize;
-    public final Map<FileId, Pair<Long, Long>> ongoing;
-    public final Map<FileId, Long> completed;
-    public final Set<FileId> pending;
-    
-    public DataReport(MyTorrent torrent, Pair<Long, Long> totalSize, Map<FileId, Long> completed, Map<FileId, Pair<Long, Long>> ongoing, Set<FileId> pending) {
-        this.torrent = torrent;
-        this.totalSize = totalSize;
-        this.completed = completed;
-        this.ongoing = ongoing;
-        this.pending = pending;
-    }
+public class Hopssite {
+  public static String dataValues() {
+    return "public/report/data";
+  }
+  
+  public static String downloadValues() {
+    return "public/report/download";
+  }
+  
+  public static String transferValues() {
+    return "public/report/transfer";
+  }
 }
