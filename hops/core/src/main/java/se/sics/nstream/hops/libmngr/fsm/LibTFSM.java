@@ -120,7 +120,7 @@ public class LibTFSM {
       .fallback(LibTHandlers.fallbackUploadStart)
       .basicEvent(HopsTorrentDownloadEvent.StartRequest.class)
       .subscribeOnStart(LibTHandlers.initDownload)
-      .fallback(LibTHandlers.fallbackUploadStart)
+      .fallback(LibTHandlers.fallbackDownloadStart)
       .basicEvent(HopsTorrentDownloadEvent.AdvanceRequest.class)
       .subscribe(LibTHandlers.extendedDetails, LibTStates.EXTENDED_DETAILS)
       .buildEvents()
