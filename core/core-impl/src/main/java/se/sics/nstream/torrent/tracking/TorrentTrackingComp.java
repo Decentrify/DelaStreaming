@@ -36,8 +36,8 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.httpsclient.AsyncWebResponse;
 import se.sics.ktoolbox.httpsclient.WebClient;
-import se.sics.ktoolbox.httpsclient.WebResponse;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.FileId;
@@ -285,73 +285,67 @@ public class TorrentTrackingComp extends ComponentDefinition {
       this.reportConfig = reportConfig;
     }
 
-    public String trackerDataValues(String reportVal) {
+    public void trackerDataValues(String reportVal) {
       DelaReportDTO report = new DelaReportDTO(selfId.toString(), torrentId.baseId.toString(),
         reportId, reportVal);
       LOG.debug("data:{}", report.toString());
       try (WebClient client = WebClient.httpsInstance()) {
-        WebResponse webResp = client
+        AsyncWebResponse webResp = client
           .setTarget(reportConfig.reportTracker)
           .setPath(Hopssite.dataValues())
           .setPayload(report)
-          .doPost();
-        String resp = webResp.readContent(String.class);
-        return resp;
+          .doAsyncPost();
+        //eventually maybe retry failures - check future
       } catch (ProcessingException ex) {
         if (!sslHandshakeFixed) {
           sslHandshakeFixed = true;
-          return trackerDataValues(reportVal);
+          trackerDataValues(reportVal);
         }
-        return "fail";
       } catch (Exception ex) {
-        return "fail";
+        //not much to do now
       }
     }
 
-    public String trackerDownloadValues(String reportVal) {
+    public void trackerDownloadValues(String reportVal) {
 
       DelaReportDTO report = new DelaReportDTO(selfId.toString(), torrentId.baseId.toString(),
         reportId, reportVal);
       LOG.debug("download:{}", report.toString());
       try (WebClient client = WebClient.httpsInstance()) {
-        WebResponse webResp = client
+        AsyncWebResponse webResp = client
           .setTarget(reportConfig.reportTracker)
           .setPath(Hopssite.downloadValues())
           .setPayload(report)
-          .doPost();
-        String resp = webResp.readContent(String.class);
-        return resp;
+          .doAsyncPost();
+        //eventually maybe retry failures - check future
       } catch (ProcessingException ex) {
         if (!sslHandshakeFixed) {
           sslHandshakeFixed = true;
-          return trackerDownloadValues(reportVal);
+          trackerDownloadValues(reportVal);
         }
-        return "fail";
       } catch (Exception ex) {
-        return "fail";
+        //not much to do now
       }
     }
 
-    public String trackerTransferValues(String reportVal) {
+    public void trackerTransferValues(String reportVal) {
 
       DelaReportDTO report = new DelaReportDTO(selfId.toString(), torrentId.baseId.toString(),
         reportId, reportVal);
       try (WebClient client = WebClient.httpsInstance()) {
-        WebResponse webResp = client
+        AsyncWebResponse webResp = client
           .setTarget(reportConfig.reportTracker)
           .setPath(Hopssite.transferValues())
           .setPayload(report)
-          .doPost();
-        String resp = webResp.readContent(String.class);
-        return resp;
+          .doAsyncPost();
+        //eventually maybe retry failures - check future
       } catch (ProcessingException ex) {
         if (!sslHandshakeFixed) {
           sslHandshakeFixed = true;
-          return trackerTransferValues(reportVal);
+          trackerTransferValues(reportVal);
         }
-        return "fail";
       } catch (Exception ex) {
-        return "fail";
+        //not much to do now
       }
     }
   }
