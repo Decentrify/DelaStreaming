@@ -19,7 +19,7 @@
     
   <properties>
     <hops.version>2.4.0</hops.version>
-    <hopsutil.version>0.1</hopsutil.version>
+    <hopsutil.version>0.5.0</hopsutil.version>
     <avro.version>1.8.1</avro.version>
   </properties>
 </project>

@@ -18,9 +18,9 @@
  */
 package se.sics.nstream.hops.kafka;
 
-import io.hops.util.SchemaNotFoundException;
+import io.hops.util.exceptions.SchemaNotFoundException;
 import io.hops.util.dela.DelaConsumer;
-import io.hops.util.dela.DelaHelper;
+import io.hops.util.DelaHelper;
 import io.hops.util.dela.DelaProducer;
 import org.apache.avro.Schema;
 import org.slf4j.Logger;
