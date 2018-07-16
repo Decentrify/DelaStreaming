@@ -21,7 +21,7 @@ package se.sics.gvod.core.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.videostream.VideoStreamManager;
+//import se.sics.ktoolbox.videostream.VideoStreamManager;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
@@ -30,13 +30,14 @@ public class PlayReady implements GVoDEvent {
     public final Identifier id;
     public final String videoName;
     public final Identifier overlayId;
-    public final VideoStreamManager vsMngr;
+//    public final VideoStreamManager vsMngr;
     
-    public PlayReady(Identifier id, String videoName, Identifier overlayId, VideoStreamManager vsMngr) {
+    public PlayReady(Identifier id, String videoName, Identifier overlayId) {
+//    public PlayReady(Identifier id, String videoName, Identifier overlayId, VideoStreamManager vsMngr) {
         this.id = id;
         this.videoName = videoName;
         this.overlayId = overlayId;
-        this.vsMngr = vsMngr;
+//        this.vsMngr = vsMngr;
     }
     
     @Override
