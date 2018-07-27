@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project 
+  xmlns="http://maven.apache.org/POM/4.0.0" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  
   <modelVersion>4.0.0</modelVersion>
+  <prerequisites>
+    <maven>3.0.0</maven>
+  </prerequisites>
   <groupId>se.sics</groupId>
   <artifactId>gvod</artifactId>
   <name>GVoD</name>
@@ -36,6 +43,7 @@
     <junit.version>4.5</junit.version>
     <netty.version>5.0.0.Alpha3</netty.version>
     <guava.version>[18.0,24.0-jre]</guava.version>
+    <hibernate.version>5.2.15.Final</hibernate.version>
   </properties>
     
   <dependencies>
@@ -97,8 +105,7 @@
       <version>${junit.version}</version>
       <scope>test</scope>
     </dependency>
-  </dependencies>
-    
+  </dependencies> 
   <repositories>
     <repository>
       <id>sics-release</id>
