@@ -25,7 +25,7 @@
     </dependency>
     
     <dependency> 
-      <groupId>se.sics.ktoolbox.httpsclient</groupId>
+      <groupId>se.sics.ktoolbox.webclient</groupId>
       <artifactId>core</artifactId>
       <version>${ktoolbox.version}</version>
     </dependency>
