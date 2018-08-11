@@ -295,7 +295,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         AsyncWebResponse webResp = client
           .setTarget(reportConfig.reportTracker)
           .setPath(Hopssite.dataValues())
-          .setPayload(new Gson().toJson(report), MediaType.TEXT_PLAIN_TYPE)
+          .setPayload(report, MediaType.APPLICATION_JSON_TYPE)
           .doAsyncPost();
         //eventually maybe retry failures - check future
       } catch (ProcessingException ex) {
@@ -321,7 +321,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         AsyncWebResponse webResp = client
           .setTarget(reportConfig.reportTracker)
           .setPath(Hopssite.downloadValues())
-          .setPayload(new Gson().toJson(report), MediaType.TEXT_PLAIN_TYPE)
+          .setPayload(report, MediaType.APPLICATION_JSON_TYPE)
           .doAsyncPost();
         //eventually maybe retry failures - check future
       } catch (ProcessingException ex) {
@@ -344,7 +344,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
         AsyncWebResponse webResp = client
           .setTarget(reportConfig.reportTracker)
           .setPath(Hopssite.transferValues())
-          .setPayload(new Gson().toJson(report), MediaType.TEXT_PLAIN_TYPE)
+          .setPayload(report, MediaType.APPLICATION_JSON_TYPE)
           .doAsyncPost();
         //eventually maybe retry failures - check future
       } catch (ProcessingException ex) {
