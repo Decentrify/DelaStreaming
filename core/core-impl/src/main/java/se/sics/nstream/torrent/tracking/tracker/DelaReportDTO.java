@@ -23,7 +23,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-
 @XmlRootElement
 public class DelaReportDTO {
 
@@ -76,8 +75,8 @@ public class DelaReportDTO {
 
   @Override
   public String toString() {
-    return "DelaReportDTO{" + "delaId=" + delaId + ", torrentId=" + torrentId + ", reportId=" + reportId + ", reportVal=" +
-      reportVal + '}';
+    return "{" + "delaId=" + delaId + ", torrentId=" + torrentId + ", reportId=" + reportId + ", reportVal=" +
+      reportVal + "}";
   }
 }
 

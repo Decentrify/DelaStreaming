@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.torrent.tracking;
 
+import com.google.gson.Gson;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -26,6 +27,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.TreeMap;
 import javax.ws.rs.ProcessingException;
+import javax.ws.rs.core.MediaType;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,7 +97,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     reportDelay = init.reportDelay;
 
     reportConfig = new TorrentTrackingConfig(config());
-    LOG.info("reporting in:{} and to:{}", new Object[]{reportConfig.reportDir, reportConfig.reportTracker});
+    LOG.info("reporting in:{} and/or to:{}", new Object[]{reportConfig.reportDir, reportConfig.reportTracker});
 
     subscribe(handleStart, control);
     subscribe(handleDownloadedManifest, trackingPort);
@@ -167,7 +169,6 @@ public class TorrentTrackingComp extends ComponentDefinition {
   Handler handleTorrentTrackingIndication = new Handler<TorrentTracking.Indication>() {
     @Override
     public void handle(TorrentTracking.Indication resp) {
-      LOG.debug("{}reporting", logPrefix);
       dataReport = resp.dataReport;
       downloadReport = resp.downloadReport;
       if (TorrentState.DOWNLOADING.equals(status)) {
@@ -288,21 +289,25 @@ public class TorrentTrackingComp extends ComponentDefinition {
     public void trackerDataValues(String reportVal) {
       DelaReportDTO report = new DelaReportDTO(selfId.toString(), torrentId.baseId.toString(),
         reportId, reportVal);
-      LOG.debug("data:{}", report.toString());
+      LOG.debug("reporting to:{}/{} with data:{}", 
+        new Object[]{reportConfig.reportTracker, Hopssite.dataValues(), new Gson().toJson(report)});
       try (WebClient client = WebClient.httpsInstance()) {
         AsyncWebResponse webResp = client
           .setTarget(reportConfig.reportTracker)
           .setPath(Hopssite.dataValues())
-          .setPayload(report)
+          .setPayload(new Gson().toJson(report), MediaType.TEXT_PLAIN_TYPE)
           .doAsyncPost();
         //eventually maybe retry failures - check future
       } catch (ProcessingException ex) {
         if (!sslHandshakeFixed) {
           sslHandshakeFixed = true;
           trackerDataValues(reportVal);
+        } else {
+          LOG.warn("problem reporting to tracker:{}", ex);
         }
       } catch (Exception ex) {
         //not much to do now
+        LOG.warn("problem reporting to tracker:{}", ex);
       }
     }
 
@@ -310,12 +315,13 @@ public class TorrentTrackingComp extends ComponentDefinition {
 
       DelaReportDTO report = new DelaReportDTO(selfId.toString(), torrentId.baseId.toString(),
         reportId, reportVal);
-      LOG.debug("download:{}", report.toString());
+      LOG.debug("reporting to:{}/{} with download:{}", 
+        new Object[]{reportConfig.reportTracker, Hopssite.dataValues(), new Gson().toJson(report)});
       try (WebClient client = WebClient.httpsInstance()) {
         AsyncWebResponse webResp = client
           .setTarget(reportConfig.reportTracker)
           .setPath(Hopssite.downloadValues())
-          .setPayload(report)
+          .setPayload(new Gson().toJson(report), MediaType.TEXT_PLAIN_TYPE)
           .doAsyncPost();
         //eventually maybe retry failures - check future
       } catch (ProcessingException ex) {
@@ -332,11 +338,13 @@ public class TorrentTrackingComp extends ComponentDefinition {
 
       DelaReportDTO report = new DelaReportDTO(selfId.toString(), torrentId.baseId.toString(),
         reportId, reportVal);
+      LOG.debug("reporting to:{}/{} with transfer:{}", 
+        new Object[]{reportConfig.reportTracker, Hopssite.dataValues(), new Gson().toJson(report)});
       try (WebClient client = WebClient.httpsInstance()) {
         AsyncWebResponse webResp = client
           .setTarget(reportConfig.reportTracker)
           .setPath(Hopssite.transferValues())
-          .setPayload(report)
+          .setPayload(new Gson().toJson(report), MediaType.TEXT_PLAIN_TYPE)
           .doAsyncPost();
         //eventually maybe retry failures - check future
       } catch (ProcessingException ex) {
