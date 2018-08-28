@@ -20,12 +20,16 @@ package se.sics.nstream.hops.library;
 
 import com.google.common.base.Optional;
 import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.nstream.hops.storage.gcp.GCPConfig;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsLibraryKConfig {
+
   public static class Names {
+
     public static final String STORAGE_TYPE = "hops.storage.type";
     public static final String LIBRARY_TYPE = "hops.library.type";
   }
@@ -33,18 +37,38 @@ public class HopsLibraryKConfig {
   public final Config configCore;
   public final Details.Types storageType;
   public final LibraryType libraryType;
+  public final Optional<GCPConfig> gcpConfig;
 
-  public HopsLibraryKConfig(Config config) {
+  private HopsLibraryKConfig(Config config, Details.Types storageType, LibraryType libraryType, 
+    Optional<GCPConfig> gcpConfig) {
     this.configCore = config;
+    this.storageType = storageType;
+    this.libraryType = libraryType;
+    this.gcpConfig = gcpConfig;
+  }
+
+  public static Try<HopsLibraryKConfig> read(Config config) {
+    Optional<GCPConfig> gcpConfig;
     Optional<String> storageTypeString = config.readValue(Names.STORAGE_TYPE, String.class);
-    if(!storageTypeString.isPresent()) {
-      throw new RuntimeException("storage type undefined");
+    if (!storageTypeString.isPresent()) {
+      return new Try.Failure(new IllegalStateException("storage type undefined"));
     }
-    storageType = Details.Types.valueOf(storageTypeString.get());
+    Details.Types storageType = Details.Types.valueOf(storageTypeString.get());
+    if (Details.Types.GCP.equals(storageType)) {
+      Try<GCPConfig> gcpC = GCPConfig.read(config);
+      if (gcpC.isSuccess()) {
+        gcpConfig = Optional.of(gcpC.get());
+      } else {
+        return (Try.Failure)gcpC;
+      }
+    } else {
+      gcpConfig = Optional.absent();
+    }
     Optional<String> libraryTypeString = config.readValue(Names.LIBRARY_TYPE, String.class);
-    if(!libraryTypeString.isPresent()) {
-      throw new RuntimeException("library type undefined");
+    if (!libraryTypeString.isPresent()) {
+      return new Try.Failure(new IllegalStateException("library type undefined"));
     }
-    libraryType = LibraryType.valueOf(libraryTypeString.get());
+    LibraryType libraryType = LibraryType.valueOf(libraryTypeString.get());
+    return new Try.Success(new HopsLibraryKConfig(config, storageType, libraryType, gcpConfig));
   }
 }

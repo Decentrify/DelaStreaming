@@ -26,6 +26,8 @@ import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
 import se.sics.nstream.hops.storage.disk.DiskEndpoint;
 import se.sics.nstream.hops.storage.disk.DiskResource;
+import se.sics.nstream.hops.storage.gcp.GCPEndpoint;
+import se.sics.nstream.hops.storage.gcp.GCPResource;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 
@@ -34,19 +36,21 @@ import se.sics.nstream.hops.storage.hdfs.HDFSResource;
  */
 public class Details {
     public static enum Types {
-        HDFS, DISK;
+        HDFS, DISK, GCP;
     }
     
     public static class Endpoints {
         public final Pair<Identifier, DiskEndpoint> diskEndpoint;
         public final Pair<Identifier, HDFSEndpoint> hdfsEndpoint;
         public final Pair<Identifier, KafkaEndpoint> kafkaEndpoint;
+        public final Pair<Identifier, GCPEndpoint> gcpEndpoint;
         
         public Endpoints(Pair<Identifier, DiskEndpoint> diskEndpoint, Pair<Identifier, HDFSEndpoint> hdfsEndpoint, 
-                Pair<Identifier, KafkaEndpoint> kafkaEndpoint) {
+                Pair<Identifier, KafkaEndpoint> kafkaEndpoint, Pair<Identifier, GCPEndpoint> gcpEndpoint) {
             this.diskEndpoint = diskEndpoint;
             this.hdfsEndpoint = hdfsEndpoint;
             this.kafkaEndpoint = kafkaEndpoint;
+            this.gcpEndpoint = gcpEndpoint;
         }
     }
     
@@ -54,12 +58,14 @@ public class Details {
         public final Map<String, DiskResource> diskDetails;
         public final Map<String, HDFSResource> hdfsDetails;
         public final Map<String, KafkaResource> kafkaDetails;
+        public final Map<String, GCPResource> gcpDetails;
         
         public ExtendedDetails(Map<String, DiskResource> diskDetails, Map<String, HDFSResource> hdfsDetails, 
-                Map<String, KafkaResource> kafkaDetails) {
+                Map<String, KafkaResource> kafkaDetails, Map<String, GCPResource> gcpDetails) {
             this.diskDetails = diskDetails;
             this.hdfsDetails = hdfsDetails;
             this.kafkaDetails = kafkaDetails;
+            this.gcpDetails = gcpDetails;
         }
         
         public static ExtendedDetails getDisk(Map<String, HDFSResource> diskResources) {
@@ -67,11 +73,15 @@ public class Details {
             for(Map.Entry<String, HDFSResource> r : diskResources.entrySet()) {
                 converted.put(r.getKey(), new DiskResource(r.getValue().dirPath, r.getValue().fileName));
             }
-            return new ExtendedDetails(converted, null, null);
+            return new ExtendedDetails(converted, null, null, null);
         }
         
         public static ExtendedDetails getHDFS(Map<String, HDFSResource> hdfsResources, Map<String, KafkaResource> kafkaResource) {
-            return new ExtendedDetails(null, hdfsResources, kafkaResource);
+            return new ExtendedDetails(null, hdfsResources, kafkaResource, null);
+        }
+        
+        public static ExtendedDetails getGCP(Map<String, GCPResource> gcpResource) {
+          return new ExtendedDetails(null, null, null, gcpResource);
         }
      }
 }

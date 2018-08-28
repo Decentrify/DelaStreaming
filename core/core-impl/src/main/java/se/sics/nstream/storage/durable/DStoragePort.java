@@ -29,7 +29,9 @@ public class DStoragePort extends PortType {
     {
         request(DStorageRead.Request.class);
         indication(DStorageRead.Response.class);
+        request(DStorageRead.Complete.class);
         request(DStorageWrite.Request.class);
         indication(DStorageWrite.Response.class);
+        request(DStorageWrite.Complete.class);
     }
 }

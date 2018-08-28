@@ -20,6 +20,7 @@ package se.sics.nstream.hops.library.util;
 
 import org.junit.Assert;
 import org.junit.Test;
+import se.sics.kompics.config.TypesafeConfig;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.storage.durable.util.MyStream;
@@ -31,10 +32,11 @@ import se.sics.nstream.storage.durable.util.MyStream;
 public class LibrarySummaryHelperTest {
   @Test
   public void hdfsTest() {
-    MyStream writeStream = new MyStream(HDFSEndpoint.getBasic("http://bbc1.sics.se:12345", "user1"), new HDFSResource("/my/directory", "manifest.json"));
-    String s = LibrarySummaryHelper.streamToJSON(writeStream);
+    MyStream writeStream = new MyStream(HDFSEndpoint.getBasic("http://bbc1.sics.se:12345", "user1"), 
+      new HDFSResource("/my/directory", "manifest.json"));
+    String s = LibrarySummaryHelper.streamToJSON(writeStream, TypesafeConfig.load());
     System.out.println(s);
-    MyStream readStream  = LibrarySummaryHelper.streamFromJSON(s);
+    MyStream readStream  = LibrarySummaryHelper.streamFromJSON(s, TypesafeConfig.load());
     Assert.assertTrue(true);
   }
 }

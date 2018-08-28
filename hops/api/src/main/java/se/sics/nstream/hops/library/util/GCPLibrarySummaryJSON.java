@@ -27,8 +27,9 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.hops.library.Torrent;
-import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.nstream.hops.storage.gcp.GCPConfig;
+import se.sics.nstream.hops.storage.gcp.GCPEndpoint;
+import se.sics.nstream.hops.storage.gcp.GCPResource;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.util.MyStream;
 import se.sics.nstream.transfer.MyTorrent;
@@ -38,7 +39,7 @@ import se.sics.nstream.util.TorrentExtendedStatus;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSLibrarySummaryJSON {
+public class GCPLibrarySummaryJSON {
 
   private List<TorrentJSON> torrents = new ArrayList<>();
 
@@ -58,72 +59,71 @@ public class HDFSLibrarySummaryJSON {
     return torrents.isEmpty();
   }
 
-  public static class HDFSEndpointJSON implements EndpointJSON {
+  public static class GCPEndpointJSON implements EndpointJSON {
+    private String project;
 
-    private String url;
-    private String user;
-
-    public HDFSEndpointJSON() {
+    public GCPEndpointJSON() {
+    }
+    
+    public GCPEndpointJSON(String project) {
+      this.project = project;
+    }
+    
+    public String getProject() {
+      return project;
     }
 
-    public HDFSEndpointJSON(String url, String user) {
-      this.url = url;
-      this.user = user;
+    public void setProject(String project) {
+      this.project = project;
     }
 
-    public String getUrl() {
-      return url;
+    public GCPEndpoint fromJSON(GCPConfig gcpConfig) {
+      return new GCPEndpoint(gcpConfig.credentials, project);
     }
-
-    public void setUrl(String url) {
-      this.url = url;
-    }
-
-    public String getUser() {
-      return user;
-    }
-
-    public void setUser(String user) {
-      this.user = user;
-    }
-
-    public HDFSEndpoint fromJSON() {
-      return HDFSEndpoint.getBasic(url, user);
-    }
-
-    public static EndpointJSON toJSON(HDFSEndpoint endpoint) {
-      return new HDFSEndpointJSON(endpoint.hopsURL, endpoint.user);
+    
+    public static GCPEndpointJSON toJSON(GCPEndpoint endpoint) {
+      return new GCPEndpointJSON(endpoint.projectName);
     }
   }
 
-  public static class HDFSResourceJSON implements ResourceJSON {
+  public static class GCPResourceJSON implements ResourceJSON {
 
-    private String dir;
+    private String libDir;
+    private String relativePath;
 
-    public HDFSResourceJSON() {
+    public GCPResourceJSON() {
     }
 
-    public HDFSResourceJSON(String dir) {
-      this.dir = dir;
+    public GCPResourceJSON(String libDir, String relativePath) {
+      this.libDir = libDir;
+      this.relativePath = relativePath;
     }
 
-    public String getDir() {
-      return dir;
+    public String getLibDir() {
+      return libDir;
     }
 
-    public void setDir(String dir) {
-      this.dir = dir;
+    public void setLibDir(String libDir) {
+      this.libDir = libDir;
     }
 
-    public HDFSResource fromJSON() {
-      return new HDFSResource(dir, MyTorrent.MANIFEST_NAME);
+    public String getRelativePath() {
+      return relativePath;
     }
 
-    public static ResourceJSON toJSON(HDFSResource resource) {
-      return new HDFSResourceJSON(resource.dirPath);
+    public void setRelativePath(String relativePath) {
+      this.relativePath = relativePath;
+    }
+
+    public GCPResource fromJSON(String file) {
+      return new GCPResource(libDir, relativePath, file);
+    }
+
+    public static GCPResourceJSON toJSON(GCPResource resource) {
+      return new GCPResourceJSON(resource.libDir, resource.relativePath);
     }
   }
-
+  
   public static class TorrentJSON {
 
     private Integer projectId;
@@ -131,13 +131,13 @@ public class HDFSLibrarySummaryJSON {
     private String torrentName;
     private String torrentStatus;
     private String baseId;
-    private HDFSEndpointJSON endpoint;
-    private String dirPath;
+    private GCPEndpointJSON endpoint;
+    private GCPResourceJSON resource;
     private List<AddressJSON> partners;
 
     public TorrentJSON() {
     }
-
+    
     public TorrentJSON(Integer projectId, Integer datasetId, String torrentName, String torrentStatus, String baseId) {
       this.projectId = projectId;
       this.datasetId = datasetId;
@@ -161,7 +161,7 @@ public class HDFSLibrarySummaryJSON {
     public void setDatasetId(Integer datasetId) {
       this.datasetId = datasetId;
     }
-
+    
     public String getTorrentName() {
       return torrentName;
     }
@@ -178,14 +178,14 @@ public class HDFSLibrarySummaryJSON {
       this.torrentStatus = torrentStatus;
     }
 
-    public String getDirPath() {
-      return dirPath;
+    public GCPResourceJSON getResource() {
+      return resource;
     }
 
-    public void setDirPath(String dirPath) {
-      this.dirPath = dirPath;
+    public void setResource(GCPResourceJSON resource) {
+      this.resource = resource;
     }
-
+    
     public String getBaseId() {
       return baseId;
     }
@@ -194,11 +194,11 @@ public class HDFSLibrarySummaryJSON {
       this.baseId = baseId;
     }
 
-    public HDFSEndpointJSON getEndpoint() {
+    public GCPEndpointJSON getEndpoint() {
       return endpoint;
     }
 
-    public void setEndpoint(HDFSEndpointJSON endpoint) {
+    public void setEndpoint(GCPEndpointJSON endpoint) {
       this.endpoint = endpoint;
     }
 
@@ -211,15 +211,15 @@ public class HDFSLibrarySummaryJSON {
     }
 
     public static TorrentJSON toJSON(OverlayId tId, Torrent t) {
-      HDFSLibrarySummaryJSON.TorrentJSON torrentJSON = new HDFSLibrarySummaryJSON.TorrentJSON(t.projectId, t.datasetId,
+      GCPLibrarySummaryJSON.TorrentJSON torrentJSON = new GCPLibrarySummaryJSON.TorrentJSON(t.projectId, t.datasetId,
         t.torrentName, t.getTorrentStatus().toString(), tId.baseId.toString());
       //endpoint
-      HDFSEndpoint hdfsEndpoint = (HDFSEndpoint) t.getManifestStream().endpoint;
-      HDFSEndpointJSON endpoint = new HDFSEndpointJSON(hdfsEndpoint.hopsURL, hdfsEndpoint.user);
+      GCPEndpoint gcpEndpoint = (GCPEndpoint) t.getManifestStream().endpoint;
+      GCPEndpointJSON endpoint = new GCPEndpointJSON(gcpEndpoint.projectName);
       torrentJSON.setEndpoint(endpoint);
       //resource
-      HDFSResource hdfsResource = (HDFSResource) t.getManifestStream().resource;
-      torrentJSON.setDirPath(hdfsResource.dirPath);
+      GCPResource gcpResource = (GCPResource) t.getManifestStream().resource;
+      torrentJSON.setResource(GCPResourceJSON.toJSON(gcpResource));
       List<AddressJSON> partners = new LinkedList<>();
       for (KAddress p : t.getPartners()) {
         partners.add(AddressJSON.toJSON(p));
@@ -228,17 +228,17 @@ public class HDFSLibrarySummaryJSON {
       return torrentJSON;
     }
 
-    public Pair<OverlayId, Torrent> fromJSON(OverlayIdFactory torrentIdFactory) {
+    public Pair<OverlayId, Torrent> fromJSON(OverlayIdFactory torrentIdFactory, GCPConfig config) {
       OverlayId tId = torrentIdFactory.id(new BasicBuilders.StringBuilder(baseId));
       TorrentState status = TorrentState.valueOf(torrentStatus);
       TorrentExtendedStatus extendedStatus = new TorrentExtendedStatus(tId, status, 0, 0);
       Torrent t = new Torrent(projectId, datasetId, torrentName, extendedStatus);
-
-      HDFSEndpoint hdfsEndpoint = HDFSEndpoint.getBasic(endpoint.getUrl(), endpoint.getUser());
-      HDFSResource manifestResource = new HDFSResource(dirPath, MyTorrent.MANIFEST_NAME);
-      MyStream manifestStream = new MyStream(hdfsEndpoint, manifestResource);
+      
+      GCPEndpoint gcpEndpoint = new GCPEndpoint(config.credentials, endpoint.project);
+      GCPResource manifestResource = resource.fromJSON(MyTorrent.MANIFEST_NAME);
+      MyStream manifestStream = new MyStream(gcpEndpoint, manifestResource);
       t.setManifestStream(manifestStream);
-
+      
       List<KAddress> p = new LinkedList<>();
       for (AddressJSON e : partners) {
         p.add(e.fromJSON());

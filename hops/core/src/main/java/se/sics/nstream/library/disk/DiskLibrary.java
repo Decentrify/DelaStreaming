@@ -39,38 +39,40 @@ import se.sics.nstream.util.TorrentExtendedStatus;
  */
 public class DiskLibrary implements LibraryCtrl {
 
-  private final DiskLibraryConfig config;
   private final OverlayIdFactory torrentIdFactory;
+  private final Config config;
+  private final DiskLibraryConfig diskLibraryConfig;
 
   private Map<OverlayId, Torrent> torrents = new HashMap<>();
 
   public DiskLibrary(OverlayIdFactory torrentIdFactory, Config config) {
     this.torrentIdFactory = torrentIdFactory;
-    this.config = new DiskLibraryConfig(config);
+    this.config = config;
+    this.diskLibraryConfig = new DiskLibraryConfig(config);
   }
-  
+
   @Override
   public Map<OverlayId, Torrent> start() {
-    return readTorrents();
+    return readTorrents(config);
   }
 
   @Override
   public void stop() {
   }
-  
-  private Map<OverlayId, Torrent> readTorrents() {
-     Result<LibrarySummaryJSON> librarySummary = LibrarySummaryHelper.readTorrentList(config.librarySummary);
-      if (!librarySummary.isSuccess()) {
-        throw new RuntimeException("TODO fix me - corrupted library");
-      }
-      return LibrarySummaryHelper.fromSummary(librarySummary.getValue(), torrentIdFactory);
+
+  private Map<OverlayId, Torrent> readTorrents(Config config) {
+    Result<LibrarySummaryJSON> librarySummary = LibrarySummaryHelper.readTorrentList(diskLibraryConfig.librarySummary);
+    if (!librarySummary.isSuccess()) {
+      throw new RuntimeException("TODO fix me - corrupted library");
+    }
+    return LibrarySummaryHelper.fromSummary(librarySummary.getValue(), torrentIdFactory, config);
   }
 
   @Override
   public Map<OverlayId, Torrent> getTorrents() {
     return torrents;
   }
-  
+
   @Override
   public boolean containsTorrent(OverlayId tId) {
     return torrents.containsKey(tId);
@@ -114,7 +116,8 @@ public class DiskLibrary implements LibraryCtrl {
   }
 
   @Override
-  public void prepareDownload(OverlayId torrentId, Integer projectId, Integer datasetId, String torrentName, List<KAddress> partners) {
+  public void prepareDownload(OverlayId torrentId, Integer projectId, Integer datasetId, String torrentName,
+    List<KAddress> partners) {
     TorrentExtendedStatus extendedStatus = new TorrentExtendedStatus(torrentId, TorrentState.PREPARE_DOWNLOAD, 0, 0);
     Torrent torrent = new Torrent(projectId, datasetId, torrentName, extendedStatus);
     torrent.setPartners(partners);
@@ -138,7 +141,8 @@ public class DiskLibrary implements LibraryCtrl {
 
   private void updateSummary() {
     LibrarySummaryJSON summaryResult = LibrarySummaryHelper.toSummary(torrents);
-    Result<Boolean> writeResult = LibrarySummaryHelper.writeTorrentList(config.librarySummary, summaryResult);
+    Result<Boolean> writeResult 
+      = LibrarySummaryHelper.writeTorrentList(diskLibraryConfig.librarySummary, summaryResult);
     if (!writeResult.isSuccess()) {
       //TODO - try again next time?
     }

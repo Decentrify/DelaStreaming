@@ -16,36 +16,40 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library.util;
+package se.sics.nstream.hops.storage.gcp;
 
-import se.sics.nstream.hops.storage.hdfs.HDFSResource;
-import se.sics.nstream.transfer.MyTorrent;
+import com.google.cloud.storage.BlobId;
+import se.sics.nstream.storage.durable.util.StreamResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSResourceJSON implements ResourceJSON {
-  private String dir;
-  
-  public HDFSResourceJSON() {}
+public class GCPResource implements StreamResource {
 
-  public HDFSResourceJSON(String dir) {
-    this.dir = dir;
+  public final String libDir;
+  public final String relativePath;
+  public final String file;
+
+  public GCPResource(String libDir, String relativePath, String file) {
+    this.libDir = libDir;
+    this.relativePath = relativePath;
+    this.file = file;
   }
 
-  public String getDir() {
-    return dir;
+  @Override
+  public String getSinkName() {
+    return "gcp:/" + libDir + "/" + relativePath + "/" + file;
   }
 
-  public void setDir(String dir) {
-    this.dir = dir;
+  public String getBlobName() {
+    return libDir + "/" + relativePath + "/" + file;
   }
-  
-  public HDFSResource fromJSON() {
-    return new HDFSResource(dir, MyTorrent.MANIFEST_NAME);
+
+  public BlobId getBlobId() {
+    return BlobId.of(libDir, relativePath + "/" + file);
   }
-  
-  public static ResourceJSON toJSON(HDFSResource resource) {
-    return new HDFSResourceJSON(resource.dirPath);
+
+  public GCPResource withFile(String file) {
+    return new GCPResource(libDir, relativePath, file);
   }
 }

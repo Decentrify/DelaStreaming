@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.hops.libmngr;
 
+import com.google.common.base.Optional;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ import se.sics.nstream.hops.library.HopsTorrentPort;
 import se.sics.nstream.hops.library.LibraryCtrl;
 import se.sics.nstream.hops.library.LibraryType;
 import se.sics.nstream.hops.library.Torrent;
+import se.sics.nstream.hops.storage.gcp.GCPConfig;
 import se.sics.nstream.library.disk.DiskLibrary;
 import se.sics.nstream.library.endpointmngr.EndpointIdRegistry;
 import se.sics.nstream.library.event.torrent.HopsContentsEvent;
@@ -80,7 +82,11 @@ public class HopsLibraryMngr {
     this.selfAdr = selfAdr;
     this.restart = new Restart(proxy);
 
-    hopsLibraryConfig = new HopsLibraryKConfig(config);
+    try {
+      hopsLibraryConfig = HopsLibraryKConfig.read(config).checkedGet();
+    } catch (Throwable ex) {
+      throw new RuntimeException(ex);
+    }
 
     OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory();
     if (LibraryType.DISK.equals(hopsLibraryConfig.libraryType)) {
@@ -97,6 +103,7 @@ public class HopsLibraryMngr {
       FSMIdentifierFactory fsmIdFactory = config.getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
       LibTExternal es = new LibTExternal(selfAdr, library, new EndpointIdRegistry(), hopsLibraryConfig.storageType);
       es.setProxy(proxy);
+      es.setConfig(config);
       fsm = LibTFSM.multifsm(fsmIdFactory, es, oexa);
     } catch (FSMException ex) {
       throw new RuntimeException(ex);
@@ -109,7 +116,7 @@ public class HopsLibraryMngr {
     //TODO Alex - might lose some msg between Start and process of Start
     fsm.setupHandlers();
     restart.setup();
-    restart.start(library);
+    restart.start(library, hopsLibraryConfig.gcpConfig);
     libraryDetails.setup();
 
   }
@@ -139,7 +146,7 @@ public class HopsLibraryMngr {
       proxy.subscribe(handleUploadRestartFail, restartPort);
     }
 
-    public void start(LibraryCtrl library) {
+    public void start(LibraryCtrl library, Optional<GCPConfig> config) {
       LOG.info("{}restart start", logPrefix);
       Map<OverlayId, Torrent> torrents = library.start();
 

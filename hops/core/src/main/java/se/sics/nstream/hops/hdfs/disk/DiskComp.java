@@ -92,7 +92,7 @@ public class DiskComp extends ComponentDefinition {
             byte[] readVal = new byte[readLength];
             int readPos = (int) req.readRange.lowerAbsEndpoint();
             try {
-                LOG.debug("{}reading at pos:{} amount:{}", new Object[]{logPrefix, readPos, readLength, raf.length()});
+                LOG.debug("{}reading at pos:{} amount:{}", new Object[]{logPrefix, readPos, readLength});
                 raf.seek(readPos);
                 raf.readFully(readVal);
             } catch (IOException ex) {

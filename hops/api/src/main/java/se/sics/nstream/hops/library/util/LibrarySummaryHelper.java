@@ -34,17 +34,23 @@ import java.util.Scanner;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import se.sics.kompics.config.Config;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.hops.library.Torrent;
 import se.sics.nstream.hops.storage.disk.DiskResource;
+import se.sics.nstream.hops.storage.gcp.GCPConfig;
+import se.sics.nstream.hops.storage.gcp.GCPEndpoint;
+import se.sics.nstream.hops.storage.gcp.GCPResource;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 import se.sics.nstream.library.util.TorrentState;
 import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.transfer.MyTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -59,6 +65,8 @@ public class LibrarySummaryHelper {
     library.setDiskLibrary(disk);
     HDFSLibrarySummaryJSON hdfs = new HDFSLibrarySummaryJSON();
     library.setHdfsLibrary(hdfs);
+    GCPLibrarySummaryJSON gcp = new GCPLibrarySummaryJSON();
+    library.setGcpLibrary(gcp);
 
     for (Map.Entry<OverlayId, Torrent> torrent : torrents.entrySet()) {
       if (!(torrent.getValue().getTorrentStatus().equals(TorrentState.DOWNLOADING)
@@ -71,13 +79,15 @@ public class LibrarySummaryHelper {
         disk.addTorrent(DiskLibrarySummaryJSON.TorrentJSON.toJSON(torrent.getKey(), torrent.getValue()));
       } else if (manifestStream.resource instanceof HDFSResource) {
         hdfs.addTorrent(HDFSLibrarySummaryJSON.TorrentJSON.toJSON(torrent.getKey(), torrent.getValue()));
+      } else if (manifestStream.resource instanceof GCPResource) {
+        gcp.addTorrent(GCPLibrarySummaryJSON.TorrentJSON.toJSON(torrent.getKey(), torrent.getValue()));
       }
     }
     return library;
   }
 
   public static Map<OverlayId, Torrent> fromSummary(LibrarySummaryJSON summary,
-    OverlayIdFactory torrentIdFactory) {
+    OverlayIdFactory torrentIdFactory, Config config) {
     Map<OverlayId, Torrent> library = new HashMap<>();
     for (DiskLibrarySummaryJSON.TorrentJSON t : summary.getDiskLibrary().getTorrents()) {
       Pair<OverlayId, Torrent> torrent = t.fromJSON(torrentIdFactory);
@@ -86,6 +96,18 @@ public class LibrarySummaryHelper {
     for (HDFSLibrarySummaryJSON.TorrentJSON t : summary.getHdfsLibrary().getTorrents()) {
       Pair<OverlayId, Torrent> torrent = t.fromJSON(torrentIdFactory);
       library.put(torrent.getValue0(), torrent.getValue1());
+    }
+    Try<GCPConfig> gcpConfig = GCPConfig.read(config);
+    if (gcpConfig.isSuccess()) {
+      for (GCPLibrarySummaryJSON.TorrentJSON t : summary.getGcpLibrary().getTorrents()) {
+        Pair<OverlayId, Torrent> torrent;
+        try {
+          torrent = t.fromJSON(torrentIdFactory, gcpConfig.checkedGet());
+        } catch (Throwable ex) {
+          throw new RuntimeException(ex);
+        }
+        library.put(torrent.getValue0(), torrent.getValue1());
+      }
     }
     return library;
   }
@@ -128,6 +150,7 @@ public class LibrarySummaryHelper {
     LibrarySummaryJSON emptyContent = new LibrarySummaryJSON();
     emptyContent.setDiskLibrary(new DiskLibrarySummaryJSON());
     emptyContent.setHdfsLibrary(new HDFSLibrarySummaryJSON());
+    emptyContent.setGcpLibrary(new GCPLibrarySummaryJSON());
 
     Gson gson = new Gson();
     String jsonContent = gson.toJson(emptyContent);
@@ -138,24 +161,52 @@ public class LibrarySummaryHelper {
     return Result.success(emptyContent);
   }
 
-  public static MyStream streamFromJSON(String val) {
+  public static MyStream streamFromJSON(String val, Config config) {
     Gson gson = new Gson();
     MyStreamJSON.Read readVal = gson.fromJson(val, MyStreamJSON.Read.class);
     if (readVal.getType().equals("hdfs")) {
-      HDFSEndpointJSON endpoint = gson.fromJson(readVal.getEndpoint(), HDFSEndpointJSON.class);
-      HDFSResourceJSON resource = gson.fromJson(readVal.getResource(), HDFSResourceJSON.class);
+      HDFSLibrarySummaryJSON.HDFSEndpointJSON endpoint
+        = gson.fromJson(readVal.getEndpoint(), HDFSLibrarySummaryJSON.HDFSEndpointJSON.class);
+      HDFSLibrarySummaryJSON.HDFSResourceJSON resource
+        = gson.fromJson(readVal.getResource(), HDFSLibrarySummaryJSON.HDFSResourceJSON.class);
       return new MyStream(endpoint.fromJSON(), resource.fromJSON());
+    } else if (readVal.getType().equals("gcp")) {
+      GCPConfig gcpConfig;
+      try {
+        gcpConfig = GCPConfig.read(config).checkedGet();
+      } catch (Throwable ex) {
+        throw new RuntimeException(ex);
+      }
+      GCPLibrarySummaryJSON.GCPEndpointJSON endpoint
+        = gson.fromJson(readVal.getEndpoint(), GCPLibrarySummaryJSON.GCPEndpointJSON.class);
+      GCPLibrarySummaryJSON.GCPResourceJSON resource
+        = gson.fromJson(readVal.getResource(), GCPLibrarySummaryJSON.GCPResourceJSON.class);
+      return new MyStream(endpoint.fromJSON(gcpConfig), resource.fromJSON(MyTorrent.MANIFEST_NAME));
     } else {
       throw new RuntimeException("incomplete");
     }
   }
 
-  public static String streamToJSON(MyStream stream) {
+  public static String streamToJSON(MyStream stream, Config config) {
     Gson gson = new Gson();
     if (stream.endpoint instanceof HDFSEndpoint) {
-      MyStreamJSON.Write writeVal = new MyStreamJSON.Write("hdfs", HDFSEndpointJSON.toJSON(
-        (HDFSEndpoint) stream.endpoint), HDFSResourceJSON.toJSON((HDFSResource) stream.resource));
+      MyStreamJSON.Write writeVal
+        = new MyStreamJSON.Write("hdfs",
+          HDFSLibrarySummaryJSON.HDFSEndpointJSON.toJSON((HDFSEndpoint) stream.endpoint),
+          HDFSLibrarySummaryJSON.HDFSResourceJSON.toJSON((HDFSResource) stream.resource));
       return gson.toJson(writeVal);
+    } else if (stream.endpoint instanceof GCPEndpoint) {
+      GCPConfig gcpConfig;
+      try {
+        gcpConfig = GCPConfig.read(config).checkedGet();
+      } catch (Throwable ex) {
+        throw new RuntimeException(ex);
+      }
+      MyStreamJSON.Write writeVal
+        = new MyStreamJSON.Write("gcp",
+          GCPLibrarySummaryJSON.GCPEndpointJSON.toJSON((GCPEndpoint) stream.endpoint),
+          GCPLibrarySummaryJSON.GCPResourceJSON.toJSON((GCPResource) stream.resource));
+       return gson.toJson(writeVal);
     } else {
       throw new RuntimeException("incomplete");
     }

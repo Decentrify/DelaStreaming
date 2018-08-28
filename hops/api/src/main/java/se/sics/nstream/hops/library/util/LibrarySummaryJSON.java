@@ -23,22 +23,32 @@ package se.sics.nstream.hops.library.util;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LibrarySummaryJSON {
-    private DiskLibrarySummaryJSON diskLibrary;
-    private HDFSLibrarySummaryJSON hdfsLibrary;
 
-    public DiskLibrarySummaryJSON getDiskLibrary() {
-        return diskLibrary;
-    }
+  private DiskLibrarySummaryJSON diskLibrary;
+  private HDFSLibrarySummaryJSON hdfsLibrary;
+  private GCPLibrarySummaryJSON gcpLibrary;
 
-    public void setDiskLibrary(DiskLibrarySummaryJSON diskLibrary) {
-        this.diskLibrary = diskLibrary;
-    }
+  public DiskLibrarySummaryJSON getDiskLibrary() {
+    return diskLibrary;
+  }
 
-    public HDFSLibrarySummaryJSON getHdfsLibrary() {
-        return hdfsLibrary;
-    }
+  public void setDiskLibrary(DiskLibrarySummaryJSON diskLibrary) {
+    this.diskLibrary = diskLibrary;
+  }
 
-    public void setHdfsLibrary(HDFSLibrarySummaryJSON hdfsLibrary) {
-        this.hdfsLibrary = hdfsLibrary;
-    }
+  public HDFSLibrarySummaryJSON getHdfsLibrary() {
+    return hdfsLibrary;
+  }
+
+  public void setHdfsLibrary(HDFSLibrarySummaryJSON hdfsLibrary) {
+    this.hdfsLibrary = hdfsLibrary;
+  }
+
+  public GCPLibrarySummaryJSON getGcpLibrary() {
+    return gcpLibrary;
+  }
+
+  public void setGcpLibrary(GCPLibrarySummaryJSON gcpLibrary) {
+    this.gcpLibrary = gcpLibrary;
+  }
 }

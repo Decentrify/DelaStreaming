@@ -29,63 +29,92 @@ import se.sics.nstream.util.range.KBlock;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DStorageRead {
-    public static class Request extends Direct.Request<Response> implements DStreamEvent {
-        public final Identifier eventId;
-        public final StreamId streamId;
-        public final KBlock readRange;
-        
-        protected Request(Identifier eventId, StreamId streamId, KBlock readRange) {
-            this.eventId = eventId;
-            this.streamId = streamId;
-            this.readRange = readRange;
-        }
-        
-        public Request(StreamId streamId, KBlock readRange) {
-            this(BasicIdentifiers.eventId(), streamId, readRange);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        @Override
-        public StreamId getStreamId() {
-            return streamId;
-        }
 
-        @Override
-        public Identifier getEndpointId() {
-            return streamId.endpointId;
-        }
+  public static class Request extends Direct.Request<Response> implements DStreamEvent {
 
-        public Response respond(Result<byte[]> result) {
-            return new Response(this, result);
-        }
+    public final Identifier eventId;
+    public final StreamId streamId;
+    public final KBlock readRange;
+
+    protected Request(Identifier eventId, StreamId streamId, KBlock readRange) {
+      this.eventId = eventId;
+      this.streamId = streamId;
+      this.readRange = readRange;
     }
-    
-    public static class Response implements Direct.Response, DStreamEvent {
-        public final Request req;
-        public final Result<byte[]> result;
-        
-        public Response(Request req, Result<byte[]> result) {
-            this.req = req;
-            this.result = result;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
 
-        @Override
-        public StreamId getStreamId() {
-            return req.getStreamId();
-        }
-
-        @Override
-        public Identifier getEndpointId() {
-            return req.getEndpointId();
-        }
+    public Request(StreamId streamId, KBlock readRange) {
+      this(BasicIdentifiers.eventId(), streamId, readRange);
     }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    @Override
+    public StreamId getStreamId() {
+      return streamId;
+    }
+
+    @Override
+    public Identifier getEndpointId() {
+      return streamId.endpointId;
+    }
+
+    public Response respond(Result<byte[]> result) {
+      return new Response(this, result);
+    }
+  }
+
+  public static class Response implements Direct.Response, DStreamEvent {
+
+    public final Request req;
+    public final Result<byte[]> result;
+
+    public Response(Request req, Result<byte[]> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public StreamId getStreamId() {
+      return req.getStreamId();
+    }
+
+    @Override
+    public Identifier getEndpointId() {
+      return req.getEndpointId();
+    }
+  }
+
+  public static class Complete implements DStreamEvent {
+
+    public final Identifier eventId;
+    public final StreamId streamId;
+
+    public Complete(StreamId streamId) {
+      this.eventId = BasicIdentifiers.eventId();
+      this.streamId = streamId;
+    }
+
+    @Override
+    public StreamId getStreamId() {
+      return streamId;
+    }
+
+    @Override
+    public Identifier getEndpointId() {
+      return streamId.endpointId;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+  }
 }

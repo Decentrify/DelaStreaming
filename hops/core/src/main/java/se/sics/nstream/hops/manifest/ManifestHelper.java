@@ -20,12 +20,19 @@ package se.sics.nstream.hops.manifest;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 import org.javatuples.Pair;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
+import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.FileId;
 import se.sics.nstream.TorrentIds;
 import se.sics.nstream.transfer.MyTorrent;
@@ -38,46 +45,90 @@ import se.sics.nstream.util.FileBaseDetails;
  */
 public class ManifestHelper {
 
-    public static ManifestJSON getManifestJSON(byte[] jsonByte) {
-        String jsonString;
-        try {
-            jsonString = new String(jsonByte, "UTF-8");
-        } catch (UnsupportedEncodingException ex) {
-            throw new RuntimeException(ex);
-        }
-        Gson gson = new GsonBuilder().create();
-        ManifestJSON manifest = gson.fromJson(jsonString, ManifestJSON.class);
-        return manifest;
-    }
-    
-    public static MyTorrent.Manifest getManifest(ManifestJSON manifestJSON) {
-        return MyTorrent.buildDefinition(getManifestByte(manifestJSON));
-    }
+  public static ManifestJSON dummyManifest() {
+    ManifestJSON manifest = new ManifestJSON();
+    manifest.setCreatorDate("Mon Aug 27 17:35:13 CEST 2018");
+    manifest.setCreatorEmail("dummy@somemail.com");
+    manifest.setDatasetDescription("this is not a description");
+    manifest.setDatasetName("dataset");
+    manifest.setKafkaSupport(false);
+    List<FileInfoJSON> fileInfos = new ArrayList<>();
+    FileInfoJSON file1Info = new FileInfoJSON();
+    file1Info.setFileName("file1");
+    file1Info.setLength(1024);
+    file1Info.setSchema("");
+    fileInfos.add(file1Info);
+    manifest.setFileInfos(fileInfos);
+    List<String> metadata = new ArrayList();
+    metadata.add("metadata");
+    manifest.setMetaDataJsons(metadata);
+    return manifest;
+  }
 
-    public static byte[] getManifestByte(ManifestJSON manifest) {
-        Gson gson = new GsonBuilder().create();
-        String jsonString = gson.toJson(manifest);
-        byte[] jsonByte;
-        try {
-            jsonByte = jsonString.getBytes("UTF-8");
-        } catch (UnsupportedEncodingException ex) {
-            throw new RuntimeException(ex);
-        }
-        return jsonByte;
-    }
+  public static BiFunction<byte[], Throwable, Try<ManifestJSON>> tryGetManifestJSON() {
+    return TryHelper.tryFSucc1((byte[] jsonBytes) -> {
+      return tryGetManifestJSON(jsonBytes);
+    });
+  }
 
-    public static Pair<Map<String, FileId>, Map<FileId, FileBaseDetails>> getBaseDetails(OverlayId torrentId, ManifestJSON manifest, BlockDetails defaultBlock) {
-        Map<String, FileId> nameToId = new HashMap<>();
-        Map<FileId, FileBaseDetails> baseDetails = new HashMap<>();
-        int fileNr = 1; //start from 1 - 0 is for the definition of the torrent
-        for (FileInfoJSON fileInfo : manifest.getFileInfos()) {
-            FileId fileId = TorrentIds.fileId(torrentId, fileNr++);
-            nameToId.put(fileInfo.getFileName(), fileId);
-            String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
-            Pair<Integer, BlockDetails> fileDetails = BlockHelper.getFileDetails(fileInfo.getLength(), defaultBlock);
-            FileBaseDetails fbd = new FileBaseDetails(fileInfo.getLength(), fileDetails.getValue0(), defaultBlock, fileDetails.getValue1(), hashAlg);
-            baseDetails.put(fileId, fbd);
-        }
-        return Pair.with(nameToId, baseDetails);
+  public static Try<ManifestJSON> tryGetManifestJSON(byte[] jsonBytes) {
+    Gson gson = new GsonBuilder().create();
+    try {
+      String jsonString = new String(jsonBytes, "UTF-8");
+      ManifestJSON manifest = gson.fromJson(jsonString, ManifestJSON.class);
+      return new Try.Success(manifest);
+    } catch (UnsupportedEncodingException | JsonSyntaxException ex) {
+      return new Try.Failure(ex);
     }
+  }
+
+  public static ManifestJSON getManifestJSON(byte[] jsonByte) {
+    try {
+      ManifestJSON manifest = tryGetManifestJSON(jsonByte).checkedGet();
+      return manifest;
+    } catch (Throwable ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  public static MyTorrent.Manifest getManifest(ManifestJSON manifestJSON) {
+    return MyTorrent.buildDefinition(getManifestByte(manifestJSON));
+  }
+
+  public static Try<byte[]> tryGetManifestBytes(ManifestJSON manifest) {
+    Gson gson = new GsonBuilder().create();
+    String jsonString = gson.toJson(manifest);
+    byte[] jsonBytes;
+    try {
+      jsonBytes = jsonString.getBytes("UTF-8");
+      return new Try.Success(jsonBytes);
+    } catch (UnsupportedEncodingException ex) {
+      return new Try.Failure(ex);
+    }
+  }
+  public static byte[] getManifestByte(ManifestJSON manifest) {
+    try {
+      byte[] jsonBytes = tryGetManifestBytes(manifest).checkedGet();
+      return jsonBytes;
+    } catch (Throwable ex) {
+      throw new RuntimeException(ex);
+    }
+  }
+
+  public static Pair<Map<String, FileId>, Map<FileId, FileBaseDetails>> getBaseDetails(OverlayId torrentId,
+    ManifestJSON manifest, BlockDetails defaultBlock) {
+    Map<String, FileId> nameToId = new HashMap<>();
+    Map<FileId, FileBaseDetails> baseDetails = new HashMap<>();
+    int fileNr = 1; //start from 1 - 0 is for the definition of the torrent
+    for (FileInfoJSON fileInfo : manifest.getFileInfos()) {
+      FileId fileId = TorrentIds.fileId(torrentId, fileNr++);
+      nameToId.put(fileInfo.getFileName(), fileId);
+      String hashAlg = HashUtil.getAlgName(HashUtil.SHA);
+      Pair<Integer, BlockDetails> fileDetails = BlockHelper.getFileDetails(fileInfo.getLength(), defaultBlock);
+      FileBaseDetails fbd = new FileBaseDetails(fileInfo.getLength(), fileDetails.getValue0(), defaultBlock,
+        fileDetails.getValue1(), hashAlg);
+      baseDetails.put(fileId, fbd);
+    }
+    return Pair.with(nameToId, baseDetails);
+  }
 }

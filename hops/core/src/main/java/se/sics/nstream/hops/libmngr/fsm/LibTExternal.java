@@ -20,6 +20,7 @@ package se.sics.nstream.hops.libmngr.fsm;
 
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Positive;
+import se.sics.kompics.config.Config;
 import se.sics.kompics.fsm.FSMExternalState;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.hops.library.Details;
@@ -36,6 +37,7 @@ import se.sics.nstream.torrent.transfer.TransferCtrlPort;
 public class LibTExternal implements FSMExternalState {
 
   private ComponentProxy proxy;
+  private Config config;
   public final KAddress selfAdr;
   public final LibraryCtrl library;
   public final EndpointIdRegistry endpointIdRegistry;
@@ -53,7 +55,15 @@ public class LibTExternal implements FSMExternalState {
   public void setProxy(ComponentProxy proxy) {
     this.proxy = proxy;
   }
+  
+  public void setConfig(Config config) {
+    this.config = config;
+  }
 
+  public Config getConfig() {
+    return config;
+  }
+  
   @Override
   public ComponentProxy getProxy() {
     return proxy;

@@ -16,19 +16,31 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.storage.disk;
+package se.sics.nstream.hops.storage.gcp;
 
+import com.google.auth.oauth2.GoogleCredentials;
 import se.sics.nstream.storage.durable.util.StreamEndpoint;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DiskEndpoint implements StreamEndpoint {
-    public static String DISK_ENDPOINT_NAME = "disk";
-    
-    @Override
-    public String getEndpointName() {
-        return DISK_ENDPOINT_NAME;
-    }
+public class GCPEndpoint implements StreamEndpoint {
+  public final GoogleCredentials credentials;
+  public final String projectName;
+  
+  public GCPEndpoint(GoogleCredentials credentials, String projectName) {
+    this.credentials = credentials;
+    this.projectName = projectName;
+  }
+
+  @Override
+  public String getEndpointName() {
+    return "gcp_" + projectName;
+  }
+
+  @Override
+  public String toString() {
+    return getEndpointName();
+  }
 }

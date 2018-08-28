@@ -74,7 +74,7 @@ public class MysqlLibrary implements LibraryCtrl {
         TorrentExtendedStatus extendedDetails = new TorrentExtendedStatus(tId, TorrentState.valueOf(t.getStatus()), 0,
           TorrentState.UPLOADING.equals(TorrentState.valueOf(t.getStatus())) ? 100 : 0);
         Torrent tt = new Torrent(t.getPid(), t.getDid(), t.getName(), extendedDetails);
-        tt.setManifestStream(LibrarySummaryHelper.streamFromJSON(t.getStream()));
+        tt.setManifestStream(LibrarySummaryHelper.streamFromJSON(t.getStream(), config));
         tt.setPartners(LibrarySummaryHelper.partnersFromJSON(t.getPartners()));
         readTorrents.put(tId, tt);
         tdaos.put(tId, t);
@@ -150,7 +150,7 @@ public class MysqlLibrary implements LibraryCtrl {
 
     TorrentDAO tdao = tdaos.get(torrentId);
     tdao.setStatus(TorrentState.UPLOADING.name());
-    tdao.setStream(LibrarySummaryHelper.streamToJSON(manifestStream));
+    tdao.setStream(LibrarySummaryHelper.streamToJSON(manifestStream, config));
     tdao = merge(tdao);
     tdaos.put(torrentId, tdao);
   }
@@ -182,7 +182,7 @@ public class MysqlLibrary implements LibraryCtrl {
 
     TorrentDAO tdao = tdaos.get(torrentId);
     tdao.setStatus(TorrentState.DOWNLOADING.name());
-    tdao.setStream(LibrarySummaryHelper.streamToJSON(manifestStream));
+    tdao.setStream(LibrarySummaryHelper.streamToJSON(manifestStream, config));
   }
 
   @Override

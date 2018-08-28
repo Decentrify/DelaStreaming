@@ -26,76 +26,83 @@ import java.util.List;
  */
 public class ManifestJSON {
 
-    private String datasetName;
+  private String datasetName;
 
-    private String datasetDescription;
+  private String datasetDescription;
 
-    private String creatorEmail;
+  private String creatorEmail;
 
-    private String creatorDate;
+  private String creatorDate;
 
-    private boolean kafkaSupport;
+  private boolean kafkaSupport;
 
-    private List<FileInfoJSON> fileInfos;
+  private List<FileInfoJSON> fileInfos;
 
-    private List<String> metaDataJsons;
+  private List<String> metaDataJsons;
 
-    public ManifestJSON() {
-    }
+  public ManifestJSON() {
+  }
 
-    public String getDatasetName() {
-        return datasetName;
-    }
+  public String getDatasetName() {
+    return datasetName;
+  }
 
-    public void setDatasetName(String datasetName) {
-        this.datasetName = datasetName;
-    }
+  public void setDatasetName(String datasetName) {
+    this.datasetName = datasetName;
+  }
 
-    public String getDatasetDescription() {
-        return datasetDescription;
-    }
+  public String getDatasetDescription() {
+    return datasetDescription;
+  }
 
-    public void setDatasetDescription(String datasetDescription) {
-        this.datasetDescription = datasetDescription;
-    }
+  public void setDatasetDescription(String datasetDescription) {
+    this.datasetDescription = datasetDescription;
+  }
 
-    public String getCreatorEmail() {
-        return creatorEmail;
-    }
+  public String getCreatorEmail() {
+    return creatorEmail;
+  }
 
-    public void setCreatorEmail(String creatorEmail) {
-        this.creatorEmail = creatorEmail;
-    }
+  public void setCreatorEmail(String creatorEmail) {
+    this.creatorEmail = creatorEmail;
+  }
 
-    public String getCreatorDate() {
-        return creatorDate;
-    }
+  public String getCreatorDate() {
+    return creatorDate;
+  }
 
-    public void setCreatorDate(String creatorDate) {
-        this.creatorDate = creatorDate;
-    }
+  public void setCreatorDate(String creatorDate) {
+    this.creatorDate = creatorDate;
+  }
 
-    public boolean isKafkaSupport() {
-        return kafkaSupport;
-    }
+  public boolean isKafkaSupport() {
+    return kafkaSupport;
+  }
 
-    public void setKafkaSupport(boolean kafkaSupport) {
-        this.kafkaSupport = kafkaSupport;
-    }
+  public void setKafkaSupport(boolean kafkaSupport) {
+    this.kafkaSupport = kafkaSupport;
+  }
 
-    public List<FileInfoJSON> getFileInfos() {
-        return fileInfos;
-    }
+  public List<FileInfoJSON> getFileInfos() {
+    return fileInfos;
+  }
 
-    public void setFileInfos(List<FileInfoJSON> fileInfos) {
-        this.fileInfos = fileInfos;
-    }
+  public void setFileInfos(List<FileInfoJSON> fileInfos) {
+    this.fileInfos = fileInfos;
+  }
 
-    public List<String> getMetaDataJsons() {
-        return metaDataJsons;
-    }
+  public List<String> getMetaDataJsons() {
+    return metaDataJsons;
+  }
 
-    public void setMetaDataJsons(List<String> metaDataJsons) {
-        this.metaDataJsons = metaDataJsons;
-    }
+  public void setMetaDataJsons(List<String> metaDataJsons) {
+    this.metaDataJsons = metaDataJsons;
+  }
+
+  @Override
+  public String toString() {
+    return "ManifestJSON{" + "datasetName=" + datasetName + ", datasetDescription=" + datasetDescription
+      + ", creatorEmail=" + creatorEmail + ", creatorDate=" + creatorDate + ", kafkaSupport=" + kafkaSupport
+      + ", fileInfos=" + fileInfos + ", metaDataJsons=" + metaDataJsons + '}';
+  }
 }

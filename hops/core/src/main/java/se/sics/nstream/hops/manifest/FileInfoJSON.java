@@ -23,34 +23,40 @@ package se.sics.nstream.hops.manifest;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class FileInfoJSON {
-    private String fileName;
-    private long length;
-    private String schema;
-    
-    public FileInfoJSON() {
-    }
 
-    public String getFileName() {
-        return fileName;
-    }
+  private String fileName;
+  private long length;
+  private String schema;
 
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
+  public FileInfoJSON() {
+  }
 
-    public String getSchema() {
-        return schema;
-    }
+  public String getFileName() {
+    return fileName;
+  }
 
-    public void setSchema(String schema) {
-        this.schema = schema;
-    }
+  public void setFileName(String fileName) {
+    this.fileName = fileName;
+  }
 
-    public long getLength() {
-        return length;
-    }
+  public String getSchema() {
+    return schema;
+  }
 
-    public void setLength(long length) {
-        this.length = length;
-    }
+  public void setSchema(String schema) {
+    this.schema = schema;
+  }
+
+  public long getLength() {
+    return length;
+  }
+
+  public void setLength(long length) {
+    this.length = length;
+  }
+
+  @Override
+  public String toString() {
+    return "FileInfoJSON{" + "fileName=" + fileName + ", length=" + length + ", schema=" + schema + '}';
+  }
 }

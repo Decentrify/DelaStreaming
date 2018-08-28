@@ -16,47 +16,35 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.library.util;
+package se.sics.nstream.gcp;
 
-import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
+import java.util.ArrayList;
+import java.util.List;
+import org.javatuples.Pair;
+import se.sics.nstream.StreamId;
+import se.sics.nstream.storage.durable.util.FileExtendedDetails;
+import se.sics.nstream.storage.durable.util.MyStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSEndpointJSON implements EndpointJSON {
+public class GCPFED implements FileExtendedDetails {
 
-  private String url;
-  private String user;
+  public final StreamId streamId;
+  public final MyStream stream;
 
-  public HDFSEndpointJSON() {
+  public GCPFED(StreamId streamId, MyStream stream) {
+    this.streamId = streamId;
+    this.stream = stream;
   }
 
-  public HDFSEndpointJSON(String url, String user) {
-    this.url = url;
-    this.user = user;
+  @Override
+  public Pair<StreamId, MyStream> getMainStream() {
+    return Pair.with(streamId, stream);
   }
 
-  public String getUrl() {
-    return url;
-  }
-
-  public void setUrl(String url) {
-    this.url = url;
-  }
-
-  public String getUser() {
-    return user;
-  }
-
-  public void setUser(String user) {
-    this.user = user;
-  }
-  
-  public HDFSEndpoint fromJSON() {
-    return HDFSEndpoint.getBasic(url, user);
-  }
-  
-  public static EndpointJSON toJSON(HDFSEndpoint endpoint) {
-    return new HDFSEndpointJSON(endpoint.hopsURL, endpoint.user);
+  @Override
+  public List<Pair<StreamId, MyStream>> getSecondaryStreams() {
+    return new ArrayList<>();
   }
 }
