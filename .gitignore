@@ -21,3 +21,8 @@
 .DS_Store
 /core/core-impl/src/test/resources
 /manager/src/test/resources/
+/storage/api/target/
+/storage/impl/api/target/
+/storage/core/target/
+/storage/impl/core/target/
+/storage/example/target/

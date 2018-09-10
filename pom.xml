@@ -24,7 +24,7 @@
     <!--<module>system</module>-->
     <!--        <module>simulation</module>-->
     <!--<module>simulator</module>-->
-        
+    <module>storage</module>
   </modules>
     
   <properties>
