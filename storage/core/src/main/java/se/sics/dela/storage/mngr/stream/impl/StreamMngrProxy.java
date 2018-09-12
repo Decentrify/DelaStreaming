@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.mngr.stream.StreamMngrPort;
 import se.sics.dela.storage.mngr.stream.events.StreamMngrConnect;
+import se.sics.dela.storage.mngr.stream.events.StreamMngrDisconnect;
 import se.sics.dela.storage.remove.Converter;
 import se.sics.dela.util.ResultCallback;
 import se.sics.kompics.ComponentProxy;
@@ -44,26 +45,35 @@ import se.sics.nstream.transfer.MyTorrent;
  */
 public class StreamMngrProxy {
 
-  private final String logPrefix = "";
-
-  private final ComponentProxy proxy;
-  private final Logger logger;
-  private final Positive<StreamMngrPort> streamMngr;
+  private ComponentProxy proxy;
+  private Logger logger;
+  private Positive<StreamMngrPort> streamMngr;
 
   private final Map<FileId, ResultCallback<Boolean>> fileCallbacks = new HashMap<>();
-  private final Map<FileId, Set<Identifier>> fileToStream = new HashMap<>();
-  private final Map<Identifier, FileId> streamToFile = new HashMap<>();
+  //<fileId, set<streamId>>
+  private final Map<FileId, Set<Identifier>> pendingConnect = new HashMap<>();
+  //<streamId, fileId>
+  private final Map<Identifier, FileId> pendingConnectRev = new HashMap<>();
+  //<fileId, set<streamId>>
+  private final Map<FileId, Set<Identifier>> pendingDisconnect = new HashMap<>();
+  //<streamId, fileId>
+  private final Map<Identifier, FileId> pendingDisconnectRev = new HashMap<>();
 
-  public StreamMngrProxy(ComponentProxy proxy, Logger logger) {
+  public StreamMngrProxy() {
+  }
+  
+  public StreamMngrProxy setup(ComponentProxy proxy, Logger logger) {
     this.proxy = proxy;
     this.logger = logger;
     streamMngr = proxy.getPositive(StreamMngrPort.class);
     proxy.subscribe(handleStreamConnected, streamMngr);
+    proxy.subscribe(handleStreamConnected, streamMngr);
+    return this;
   }
 
   public void prepareFile(Identifier clientId, FileId fileId, Pair<StreamId, StreamStorage> mainStream,
     Set<Pair<StreamId, StreamStorage>> secondaryStreams, ResultCallback<Boolean> callback) {
-    fileToStream.put(fileId, new HashSet<>());
+    pendingConnect.put(fileId, new HashSet<>());
     fileCallbacks.put(fileId, callback);
     prepareStream(clientId, fileId, mainStream);
     secondaryStreams.forEach((stream) -> prepareStream(clientId, fileId, stream));
@@ -71,20 +81,20 @@ public class StreamMngrProxy {
 
   private void prepareStream(Identifier clientId, FileId fileId, Pair<StreamId, StreamStorage> stream) {
     StreamMngrConnect.Request req = new StreamMngrConnect.Request(clientId, stream.getValue0(), stream.getValue1());
-    fileToStream.get(fileId).add(req.getId());
-    streamToFile.put(req.getId(), fileId);
+    pendingConnect.get(fileId).add(req.getId());
+    pendingConnectRev.put(req.getId(), fileId);
     proxy.trigger(req, streamMngr);
   }
 
   Handler handleStreamConnected = new Handler<StreamMngrConnect.Success>() {
     @Override
     public void handle(StreamMngrConnect.Success resp) {
-      logger.info("{}prepared:{}", logPrefix, resp.req.streamId);
-      FileId fileId = streamToFile.remove(resp.getId());
-      Set<Identifier> pendingStreams = fileToStream.get(fileId);
+      logger.info("prepared:{}", resp.req.streamId);
+      FileId fileId = pendingConnectRev.remove(resp.getId());
+      Set<Identifier> pendingStreams = pendingConnect.get(fileId);
       pendingStreams.remove(resp.getId());
       if(pendingStreams.isEmpty()) {
-        fileToStream.remove(fileId);
+        pendingConnect.remove(fileId);
         ResultCallback<Boolean> fileCallback = fileCallbacks.remove(fileId);
         fileCallback.complete(new Try.Success(true));
       } 
@@ -95,8 +105,8 @@ public class StreamMngrProxy {
 
     private final Set<FileId> pendingFiles = new HashSet<>();
 
-    public Old(ComponentProxy proxy, Logger logger) {
-      super(proxy, logger);
+    public Old() {
+      super();
     }
 
     public void prepare(OverlayId torrentId, MyTorrent torrent, ResultCallback<Boolean> callback) {

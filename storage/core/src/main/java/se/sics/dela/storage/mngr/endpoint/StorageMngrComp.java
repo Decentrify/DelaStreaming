@@ -46,7 +46,7 @@ import se.sics.ktoolbox.util.result.Result;
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class EndpointMngrComp extends ComponentDefinition {
+public class StorageMngrComp extends ComponentDefinition {
 
   private final String logPrefix;
 
@@ -63,7 +63,7 @@ public class EndpointMngrComp extends ComponentDefinition {
   private final Map<Identifier, Map<Identifier, EndpointMngrConnect.Request>> clients = new HashMap<>();
   private final Map<Identifier, Component> endpoints = new HashMap<>();
 
-  public EndpointMngrComp(Init init) {
+  public StorageMngrComp(Init init) {
     self = init.self;
     logPrefix = "<nid:" + self + ">";
     logger.info("{}initiating...", logPrefix);
@@ -184,7 +184,7 @@ public class EndpointMngrComp extends ComponentDefinition {
     clients.remove(endpointId);
   }
 
-  public static class Init extends se.sics.kompics.Init<EndpointMngrComp> {
+  public static class Init extends se.sics.kompics.Init<StorageMngrComp> {
 
     public final Identifier self;
 

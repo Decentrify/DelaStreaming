@@ -59,11 +59,12 @@ public class BaseStreamMngrProxy {
   public BaseStreamMngrProxy() {
   }
   
-  public void subscribe(ComponentProxy proxy) {
+  public BaseStreamMngrProxy setup(ComponentProxy proxy) {
     this.proxy = proxy;
-    streamMngr = proxy.getPositive(StreamMngrPort.class);
+    streamMngr = proxy.getNegative(StreamMngrPort.class).getPair();
     proxy.subscribe(handleConnected, streamMngr);
     proxy.subscribe(handleDisconnected, streamMngr);
+    return this;
   }
 
   public void prepareFile(Identifier torrentId, FileId fileId, Map<StreamId, StreamStorage> readWrite, 

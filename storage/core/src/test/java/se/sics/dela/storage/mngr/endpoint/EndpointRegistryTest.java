@@ -25,10 +25,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.function.Consumer;
 import junit.framework.Assert;
 import org.javatuples.Pair;
-import org.javatuples.Triplet;
 import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -48,7 +46,7 @@ public class EndpointRegistryTest {
   IntIdFactory idFactory = new IntIdFactory(new Random(123));
   List<Pair<States, Identifier>> timeline = new ArrayList<>();
   Map<Identifier, Identifier> endpointProxyClients = new HashMap<>();
-  Consumer<Triplet<Identifier, Identifier, StorageProvider>> connectAction
+  TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider> connectAction
     = new TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider>() {
     @Override
     public void accept(Identifier clientId, Identifier endpointId, StorageProvider provider) {
@@ -56,7 +54,7 @@ public class EndpointRegistryTest {
       endpointProxyClients.put(endpointId, clientId);
     }
   };
-  Consumer<Pair<Identifier, Identifier>> disconnectAction
+  TupleHelper.PairConsumer<Identifier, Identifier> disconnectAction
     = new TupleHelper.PairConsumer<Identifier, Identifier>() {
     @Override
     public void accept(Identifier clientId, Identifier endpointId) {
@@ -71,10 +69,11 @@ public class EndpointRegistryTest {
 
   String endpoint1Name = "provider1";
   List<StorageProvider> providers = new ArrayList<>();
+
   {
     providers.add(storageProvider(endpoint1Name));
   }
-  
+
   @After
   public void afterTest() {
     timeline.clear();
@@ -86,14 +85,15 @@ public class EndpointRegistryTest {
     Identifier endpoint1Id = registry.idRegistry.lookup(endpoint1Name);
 
     ResultCallback connected1 = new ResultCallback();
-    EndpointRegistry.Client client1_1 = newClient(client1Id, endpoint1Id, connected1);
-    ResultCallback connected2 = new ResultCallback();
-    EndpointRegistry.Client client2_1 = newClient(client2Id, endpoint1Id, connected2);
-    ResultCallback connected3 = new ResultCallback();
-    EndpointRegistry.Client client3_1 = newClient(client3Id, endpoint1Id, connected3);
     ResultCallback disconnected1 = new ResultCallback();
+    EndpointRegistry.Client client1_1 = newClient(client1Id, endpoint1Id, connected1, disconnected1);
+    ResultCallback connected2 = new ResultCallback();
     ResultCallback disconnected2 = new ResultCallback();
+    EndpointRegistry.Client client2_1 = newClient(client2Id, endpoint1Id, connected2, disconnected2);
+    ResultCallback connected3 = new ResultCallback();
     ResultCallback disconnected3 = new ResultCallback();
+    EndpointRegistry.Client client3_1 = newClient(client3Id, endpoint1Id, connected3, disconnected3);
+    
     Pair[] expectedTimeline;
 
     delayedConnect(registry, client1_1, connected1);
@@ -108,7 +108,7 @@ public class EndpointRegistryTest {
     autoConnect(registry, client3_1, connected3);
     autoDisconnect(registry, client2_1, disconnected2);
     delayedDisconnect(registry, client3_1, disconnected3);
-    disconnected(registry, endpointProxyClients.remove(endpoint1Id), endpoint1Id, disconnected3);
+    disconnected(registry, endpoint1Id, disconnected3);
     expectedTimeline = new Pair[]{
       Pair.with(States.CONNECT, endpoint1Id),
       Pair.with(States.DISCONNECT, endpoint1Id)
@@ -116,33 +116,33 @@ public class EndpointRegistryTest {
     sameTimeline(expectedTimeline, timeline);
     checkCleanRegistry(registry);
   }
-  
+
   @Test
   public void test2() {
     EndpointRegistry registry = new EndpointRegistry(idFactory, providers, connectAction, disconnectAction);
     Identifier endpoint1Id = registry.idRegistry.lookup(endpoint1Name);
 
     ResultCallback connected1 = new ResultCallback();
-    EndpointRegistry.Client client1_1 = newClient(client1Id, endpoint1Id, connected1);
-    ResultCallback connected2 = new ResultCallback();
-    EndpointRegistry.Client client2_1 = newClient(client2Id, endpoint1Id, connected2);
-    ResultCallback connected3 = new ResultCallback();
-    EndpointRegistry.Client client3_1 = newClient(client3Id, endpoint1Id, connected3);
     ResultCallback disconnected1 = new ResultCallback();
+    EndpointRegistry.Client client1_1 = newClient(client1Id, endpoint1Id, connected1, disconnected1);
+    ResultCallback connected2 = new ResultCallback();
     ResultCallback disconnected2 = new ResultCallback();
+    EndpointRegistry.Client client2_1 = newClient(client2Id, endpoint1Id, connected2, disconnected2);
+    ResultCallback connected3 = new ResultCallback();
     ResultCallback disconnected3 = new ResultCallback();
-    Pair[] expectedTimeline;
+    EndpointRegistry.Client client3_1 = newClient(client3Id, endpoint1Id, connected3, disconnected3);
     
+    Pair[] expectedTimeline;
+
     delayedConnect(registry, client1_1, connected1);
     delayedConnect(registry, client2_1, connected2);
     connected(registry, endpoint1Id, connected1, connected2);
     autoDisconnect(registry, client1_1, disconnected1);
     delayedDisconnect(registry, client2_1, disconnected2);
-    disconnected(registry, endpointProxyClients.remove(endpoint1Id), endpoint1Id, disconnected2);
+    disconnected(registry, endpoint1Id, disconnected2);
     expectedTimeline = new Pair[]{
       Pair.with(States.CONNECT, endpoint1Id),
-      Pair.with(States.DISCONNECT, endpoint1Id),
-    };
+      Pair.with(States.DISCONNECT, endpoint1Id),};
     sameTimeline(expectedTimeline, timeline);
     checkCleanRegistry(registry);
   }
@@ -151,10 +151,11 @@ public class EndpointRegistryTest {
     Assert.assertTrue(registry.appClients.isEmpty());
     Assert.assertTrue(registry.connecting.isEmpty());
     Assert.assertTrue(registry.disconnecting.isEmpty());
-    Assert.assertTrue(registry.disconnectedCallbacks.isEmpty());
+    Assert.assertTrue(registry.slowDiscClients.isEmpty());
     Assert.assertTrue(registry.postponedConnect.isEmpty());
-    Assert.assertTrue(registry.proxyClients.isEmpty());
+    Assert.assertTrue(registry.clientProxies.isEmpty());
   }
+
   private void delayedConnect(EndpointRegistry registry, EndpointRegistry.Client client, ResultCallback connected) {
     Assert.assertFalse(connected.completed);
     registry.connect(client);
@@ -175,19 +176,19 @@ public class EndpointRegistryTest {
   private void delayedDisconnect(EndpointRegistry registry, EndpointRegistry.Client client,
     ResultCallback disconnected) {
     Assert.assertFalse(disconnected.completed);
-    registry.disconnect(client.clientId, client.endpointId, disconnected);
+    registry.disconnect(client.clientId, client.endpointId);
     Assert.assertFalse(disconnected.completed);
   }
 
   private void autoDisconnect(EndpointRegistry registry, EndpointRegistry.Client client, ResultCallback disconnected) {
     Assert.assertFalse(disconnected.completed);
-    registry.disconnect(client.clientId, client.endpointId, disconnected);
+    registry.disconnect(client.clientId, client.endpointId);
     Assert.assertTrue(disconnected.completed);
   }
 
-  private void disconnected(EndpointRegistry registry, Identifier proxyId, Identifier endpointId,
-    ResultCallback disconnected) {
-    registry.disconnected(proxyId, endpointId);
+  private void disconnected(EndpointRegistry registry, Identifier endpointId, ResultCallback disconnected) {
+    endpointProxyClients.remove(endpointId);
+    registry.disconnected(endpointId);
     Assert.assertTrue(disconnected.completed);
   }
 
@@ -201,9 +202,10 @@ public class EndpointRegistryTest {
   }
 
   private EndpointRegistry.Client newClient(Identifier clientId, Identifier endpointId,
-    ResultCallback connectedCallback) {
-    EndpointRegistry.Client client = new EndpointRegistry.ClientBuilder(clientId, connectedCallback, null)
-      .build(endpointId);
+    ResultCallback connectedCallback, ResultCallback disconnectedCallback) {
+    EndpointRegistry.Client client
+      = new EndpointRegistry.ClientBuilder(clientId, connectedCallback, null, disconnectedCallback)
+        .build(endpointId);
     return client;
   }
 

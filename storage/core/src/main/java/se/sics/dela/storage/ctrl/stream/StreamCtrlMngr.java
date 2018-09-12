@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.javatuples.Pair;
-import org.slf4j.Logger;
 import se.sics.dela.storage.mngr.stream.impl.StreamMngrProxy;
 import se.sics.dela.util.ResultCallback;
 import se.sics.kompics.ComponentProxy;
@@ -73,8 +72,7 @@ public class StreamCtrlMngr {
   }
 
   public static StreamCtrlMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
-    ComponentLoadTracking loadTracker, OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo,
-    Logger logger) {
+    ComponentLoadTracking loadTracker, OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo) {
     Map<FileId, StreamComplete> completed = new HashMap<>();
     Map<FileId, StreamOngoing> ongoing = new HashMap<>();
     TreeMap<FileId, StreamOngoing> pending = new TreeMap<>();
@@ -109,7 +107,7 @@ public class StreamCtrlMngr {
         pending.put(entry.getKey(), new StreamOngoing(fileMngr, fileDetails));
       }
     }
-    StreamMngrProxy.Old streamCtrlMngrProxy = new StreamMngrProxy.Old(proxy, logger);
+    StreamMngrProxy.Old streamCtrlMngrProxy = new StreamMngrProxy.Old();
     return new StreamCtrlMngr(torrentId, torrent, streamCtrlMngrProxy, completed, ongoing, pending);
   }
 

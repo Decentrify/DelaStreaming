@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <property name="DELA_HOME" value="./src/main/resources" />
+
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- encoders are assigned the type
+         ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+    <encoder>
+      <!--<pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %logger{1} [%thread] %X %n    - %msg%n</pattern>-->
+      <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %logger{1} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <appender name="FILE"
+            class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <file>${DELA_HOME}/example/logs/storage.log</file>
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+      <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %logger{1} [%thread] %X %n    - %msg%n</pattern>
+    </encoder>
+
+    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+      <!-- rollover daily -->
+      <fileNamePattern>${DELA_HOME}/example/logs/archived/storage.%d{yyyy-MM-dd}.%i.log
+      </fileNamePattern>
+      <timeBasedFileNamingAndTriggeringPolicy
+        class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+        <maxFileSize>10MB</maxFileSize>
+      </timeBasedFileNamingAndTriggeringPolicy>
+    </rollingPolicy>
+
+  </appender>
+
+  <logger name="se.sics.dela.storage" level="debug" additivity="false">
+    <appender-ref ref="CONSOLE" />
+  </logger>
+
+  <root level="error">
+    <appender-ref ref="CONSOLE" />
+  </root>
+
+</configuration>

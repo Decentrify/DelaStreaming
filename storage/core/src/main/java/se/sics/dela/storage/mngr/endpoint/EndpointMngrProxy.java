@@ -21,9 +21,6 @@ package se.sics.dela.storage.mngr.endpoint;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import java.util.List;
-import java.util.function.Consumer;
-import org.javatuples.Pair;
-import org.javatuples.Triplet;
 import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.mngr.endpoint.EndpointRegistry.ClientBuilder;
 import se.sics.dela.storage.mngr.endpoint.events.EndpointMngrConnect;
@@ -40,23 +37,23 @@ import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
  */
 public class EndpointMngrProxy {
 
-
   private ComponentProxy proxy;
   private Positive<EndpointMngrPort> mngrPort;
 
-  private final EndpointRegistry registry;
+  public final EndpointRegistry registry;
   private final BiMap<Identifier, Identifier> eventToEndpoint = HashBiMap.create();
 
   public EndpointMngrProxy(IdentifierFactory idFactory, List<StorageProvider> providers) {
     this.registry = new EndpointRegistry(idFactory, providers, connectAction, disconnectAction);
   }
 
-  private void setup(ComponentProxy proxy) {
+  public EndpointMngrProxy setup(ComponentProxy proxy) {
     this.proxy = proxy;
-    this.mngrPort = proxy.getPositive(EndpointMngrPort.class);
+    this.mngrPort = proxy.getNegative(EndpointMngrPort.class).getPair();
     proxy.subscribe(handleConnected, mngrPort);
     proxy.subscribe(handleConnectFail, mngrPort);
     proxy.subscribe(handleDisconnected, mngrPort);
+    return this;
   }
 
   public void connectEndpoint(String endpointName, ClientBuilder client) {
@@ -64,12 +61,11 @@ public class EndpointMngrProxy {
     registry.connect(client.build(endpointId));
   }
 
-  public void disconnectEndpoint(Identifier clientId, Identifier endpointId,
-    Consumer<Pair<Identifier, Identifier>> callback) {
-    registry.disconnect(clientId, endpointId, callback);
+  public void disconnectEndpoint(Identifier clientId, Identifier endpointId) {
+    registry.disconnect(clientId, endpointId);
   }
 
-  Consumer<Triplet<Identifier, Identifier, StorageProvider>> connectAction
+  TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider> connectAction
     = new TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider>() {
     @Override
     public void accept(Identifier clientId, Identifier endpointId, StorageProvider provider) {
@@ -78,8 +74,9 @@ public class EndpointMngrProxy {
       eventToEndpoint.put(req.getId(), endpointId);
     }
   };
-  
-  Consumer<Pair<Identifier, Identifier>> disconnectAction = new TupleHelper.PairConsumer<Identifier, Identifier>() {
+
+  TupleHelper.PairConsumer<Identifier, Identifier> disconnectAction
+    = new TupleHelper.PairConsumer<Identifier, Identifier>() {
     @Override
     public void accept(Identifier clientId, Identifier endpointId) {
       EndpointMngrDisconnect.Request req = new EndpointMngrDisconnect.Request(clientId, endpointId);
@@ -105,7 +102,7 @@ public class EndpointMngrProxy {
   Handler handleDisconnected = new Handler<EndpointMngrDisconnect.Success>() {
     @Override
     public void handle(EndpointMngrDisconnect.Success resp) {
-      registry.disconnected(resp.getClientId(), resp.getEndpointId());
+      registry.disconnected(resp.getEndpointId());
     }
   };
 }
