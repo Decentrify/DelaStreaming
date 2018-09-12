@@ -20,9 +20,11 @@ package se.sics.dela.storage.op;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Consumer;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
@@ -33,80 +35,80 @@ import se.sics.nstream.util.range.KRange;
  */
 public class CompleteFileMngr implements StreamControl, FileMngr.Reader {
 
-    private final FileBaseDetails fileDetails;
-    private final AsyncCompleteStorage file;
-    private final AsyncOnDemandHashStorage hash;
+  private final FileBaseDetails fileDetails;
+  private final AsyncCompleteStorage file;
+  private final AsyncOnDemandHashStorage hash;
 
-    public CompleteFileMngr(FileBaseDetails fileDetails, AsyncCompleteStorage file, AsyncOnDemandHashStorage hash) {
-        this.fileDetails = fileDetails;
-        this.file = file;
-        this.hash = hash;
-    }
+  public CompleteFileMngr(FileBaseDetails fileDetails, AsyncCompleteStorage file, AsyncOnDemandHashStorage hash) {
+    this.fileDetails = fileDetails;
+    this.file = file;
+    this.hash = hash;
+  }
 
-    //*******************************CONTROL************************************
-    @Override
-    public void start() {
-        file.start();
-        hash.start();
-    }
+  //*******************************CONTROL************************************
+  @Override
+  public void start() {
+    file.start();
+    hash.start();
+  }
 
-    @Override
-    public boolean isIdle() {
-        return file.isIdle() && hash.isIdle();
-    }
+  @Override
+  public boolean isIdle() {
+    return file.isIdle() && hash.isIdle();
+  }
 
-    @Override
-    public void close() {
-        file.close();
-        hash.close();
-    }
-    
-    public CompleteFMReport report() {
-        return new CompleteFMReport(file.report());
-    }
+  @Override
+  public void close() {
+    file.close();
+    hash.close();
+  }
 
-    //*****************************BASIC_READ***********************************
-    @Override
-    public void read(KRange readRange, ReadCallback delayedResult) {
-        file.read(readRange, delayedResult);
-    }
+  public CompleteFMReport report() {
+    return new CompleteFMReport(file.report());
+  }
 
-    //**************************CACHE_HINT_READ******************************
-    @Override
-    public void clean(Identifier reader) {
-        file.clean(reader);
-        hash.clean(reader);
-    }
+  //*****************************BASIC_READ***********************************
+  @Override
+  public void read(KRange readRange, Consumer<Try<KReference<byte[]>>> callback) {
+    file.read(readRange, callback);
+  }
 
-    @Override
-    public void setFutureReads(Identifier reader, KHint.Expanded hint) {
-        file.setFutureReads(reader, hint);
-        hash.setFutureReads(reader, hint);
-    }
+  //**************************CACHE_HINT_READ******************************
+  @Override
+  public void clean(Identifier reader) {
+    file.clean(reader);
+    hash.clean(reader);
+  }
 
-    //*********************************READER***********************************
-    @Override
-    public boolean hasBlock(int blockNr) {
-        return true;
-    }
+  @Override
+  public void setFutureReads(Identifier reader, KHint.Expanded hint) {
+    file.setFutureReads(reader, hint);
+    hash.setFutureReads(reader, hint);
+  }
 
-    @Override
-    public boolean hasHash(int blockNr) {
-        return true;
-    }
+  //*********************************READER***********************************
+  @Override
+  public boolean hasBlock(int blockNr) {
+    return true;
+  }
 
-    @Override
-    public void readHash(KBlock readRange, HashReadCallback delayedResult) {
-        hash.read(readRange, delayedResult);
-    }
+  @Override
+  public boolean hasHash(int blockNr) {
+    return true;
+  }
 
-    @Override
-    public Set<Integer> nextBlocksMissing(int fromBlock, int nrBlocks, Set<Integer> except) {
-        return new HashSet<>();
-    }
+  @Override
+  public void readHash(KBlock readRange, Consumer<Try<KReference<byte[]>>> callback) {
+    hash.read(readRange, callback);
+  }
 
-    @Override
-    public Set<Integer> nextHashesMissing(int fromBlock, int nrBlocks, Set<Integer> except) {
-        return new HashSet<>();
-    }
+  @Override
+  public Set<Integer> nextBlocksMissing(int fromBlock, int nrBlocks, Set<Integer> except) {
+    return new HashSet<>();
+  }
+
+  @Override
+  public Set<Integer> nextHashesMissing(int fromBlock, int nrBlocks, Set<Integer> except) {
+    return new HashSet<>();
+  }
 }

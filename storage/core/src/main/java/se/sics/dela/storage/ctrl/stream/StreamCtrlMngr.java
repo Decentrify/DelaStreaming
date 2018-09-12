@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.javatuples.Pair;
+import org.slf4j.Logger;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.buffer.KBuffer;
 import se.sics.dela.storage.buffer.append.SimpleAppendKBuffer;
@@ -72,7 +73,7 @@ public class StreamCtrlMngr {
   }
 
   public static StreamCtrlMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
-    OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo) {
+    OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo, Logger logger) {
     Map<FileId, StreamComplete> completed = new HashMap<>();
     Map<FileId, StreamOngoing> ongoing = new HashMap<>();
     TreeMap<FileId, StreamOngoing> pending = new TreeMap<>();
@@ -86,10 +87,10 @@ public class StreamCtrlMngr {
       SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, mainStream);
 
       List<KBuffer> bufs = new ArrayList<>();
-      bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, mainStream, 0));
+      bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, mainStream, 0, logger));
       entry.getValue().getSecondaryStreams().forEach((stream) -> {
         fileStreams.put(stream.getValue0(), streamsInfo.get(stream.getValue0()));
-        bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, Converter.stream(stream), 0));
+        bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, Converter.stream(stream), 0, logger));
       });
       KBuffer buffer = new MultiKBuffer(bufs);
       AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);

@@ -19,10 +19,11 @@
 package se.sics.dela.storage.ctrl.stream;
 
 import java.util.Map;
+import java.util.function.Consumer;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
-import se.sics.dela.storage.op.HashReadCallback;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.BlockDetails;
 
 /**
@@ -37,7 +38,7 @@ public interface StreamRead extends StreamCtrl {
     //**************************************************************************
     public boolean hasBlock(int blockNr);
     public boolean hasHash(int blockNr);
-    public void readHash(int blockNr, HashReadCallback delayedResult);
-    public void readBlock(int blockNr, ReadCallback delayedResult);
+    public void readHash(int blockNr, Consumer<Try<KReference<byte[]>>> callback);
+    public void readBlock(int blockNr, Consumer<Try<KReference<byte[]>>> callback);
     public Map<Integer, BlockDetails> getIrregularBlocks();
 }

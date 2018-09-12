@@ -16,24 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.buffer;
+package se.sics.dela.storage.op;
 
-import org.javatuples.Pair;
-import se.sics.dela.storage.StreamStorage;
-import se.sics.nstream.StreamId;
+import java.util.function.Consumer;
+import se.sics.ktoolbox.util.trysf.Try;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class WriteResult {
-
-  public final Pair<StreamId, StreamStorage> stream;
-  public final long fromPos;
-  public final int written;
-
-  public WriteResult(Pair<StreamId, StreamStorage> stream, long fromPos, int written) {
-    this.stream = stream;
-    this.fromPos = fromPos;
-    this.written = written;
-  }
+public interface HashedBlockWriteCallback extends Consumer<Try<Boolean>> {
+    public void hash(Try<Boolean> hashCheck);
 }

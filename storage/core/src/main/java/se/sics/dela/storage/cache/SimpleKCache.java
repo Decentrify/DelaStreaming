@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,7 @@ import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.DStoragePort;
 import se.sics.nstream.storage.durable.events.DStorageRead;
@@ -79,7 +81,7 @@ public class SimpleKCache implements KCache {
     //**************************************************************************
     //<readPos, <readRange, list<readerHeads>>
     final TreeMap<Long, Pair<KBlock, List<Identifier>>> pendingCacheFetch = new TreeMap<>();
-    final Map<Long, List<Pair<KRange, ReadCallback>>> delayedReads = new HashMap<>();
+    final Map<Long, List<Pair<KRange, Consumer<Try<KReference<byte[]>>>>>> delayedReads = new HashMap<>();
     //**************************************************************************
     private UUID extendedCacheCleanTid;
 
@@ -237,7 +239,7 @@ public class SimpleKCache implements KCache {
      *
      */
     @Override
-    public void read(KRange readRange, ReadCallback delayedResult) {
+    public void read(KRange readRange, Consumer<Try<KReference<byte[]>>> callback) {
         if (!(readRange instanceof KBlock || readRange instanceof KPiece)) {
             RuntimeException crashingException = new IllegalArgumentException("only blocks or pieces are allowed");
             fail(Result.internalFailure(crashingException));
@@ -256,7 +258,7 @@ public class SimpleKCache implements KCache {
             if (blockRange.encloses(readRange)) {
                 KReference<byte[]> base = cRef.value();
                 //being enclosed by a valid cRef, base will remain valid
-                readFromBlock(blockPos, readRange, base, delayedResult);
+                readFromBlock(blockPos, readRange, base, callback);
                 return;
             }
             if (blockRange.isConnected(readRange)) {
@@ -287,12 +289,12 @@ public class SimpleKCache implements KCache {
         }
         long blockPos = blockRange.lowerAbsEndpoint();
         //add read to pending until external resource read completes
-        List<Pair<KRange, ReadCallback>> pendingReads = delayedReads.get(blockPos);
+        List<Pair<KRange, Consumer<Try<KReference<byte[]>>>>> pendingReads = delayedReads.get(blockPos);
         if (pendingReads == null) {
             pendingReads = new LinkedList<>();
             delayedReads.put(blockPos, pendingReads);
         }
-        pendingReads.add(Pair.with(readRange, delayedResult));
+        pendingReads.add(Pair.with(readRange, callback));
     }
 
     Handler handleExtendedCacheClean = new Handler<ExtendedCacheClean>() {
@@ -337,9 +339,9 @@ public class SimpleKCache implements KCache {
                 }
 
                 //checking waiting reads
-                List<Pair<KRange, ReadCallback>> waitingReads = delayedReads.remove(blockPos);
+                List<Pair<KRange, Consumer<Try<KReference<byte[]>>>>> waitingReads = delayedReads.remove(blockPos);
                 if (waitingReads != null) {
-                    for (Pair<KRange, ReadCallback> wR : waitingReads) {
+                    for (Pair<KRange, Consumer<Try<KReference<byte[]>>>> wR : waitingReads) {
                         //we check correct range enclosing when we add to waiting reads
                         readFromBlock(blockPos, wR.getValue0(), base, wR.getValue1());
                     }
@@ -420,13 +422,14 @@ public class SimpleKCache implements KCache {
         return Result.success(true);
     }
 
-    private void readFromBlock(long blockPos, KRange readRange, KReference<byte[]> base, ReadCallback delayedResult) {
+    private void readFromBlock(long blockPos, KRange readRange, KReference<byte[]> base, 
+      Consumer<Try<KReference<byte[]>>> callback) {
         if (readRange instanceof KBlock) {
             //base is enclosed by a cRef - so it is valid
-            delayedResult.success(Result.success(base));
+            callback.accept(new Try.Success(base));
         } else if (readRange instanceof KPiece) {
             KReference<byte[]> piece = RangeKReference.createInstance(base, blockPos, (KPiece) readRange);
-            delayedResult.success(Result.success(piece));
+            callback.accept(new Try.Success(piece));
             silentRelease(piece);
         }
     }

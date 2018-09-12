@@ -20,12 +20,13 @@ package se.sics.dela.storage.ctrl.stream;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import org.javatuples.Pair;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
 import se.sics.dela.storage.op.CompleteFileMngr;
-import se.sics.dela.storage.op.HashReadCallback;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
@@ -37,73 +38,73 @@ import se.sics.nstream.util.range.KBlock;
  */
 public class StreamComplete implements StreamRead {
 
-    private final FileBaseDetails fileDetails;
-    private final CompleteFileMngr file;
+  private final FileBaseDetails fileDetails;
+  private final CompleteFileMngr file;
 
-    public StreamComplete(CompleteFileMngr file, FileBaseDetails fileDetails) {
-        this.fileDetails = fileDetails;
-        this.file = file;
-    }
+  public StreamComplete(CompleteFileMngr file, FileBaseDetails fileDetails) {
+    this.fileDetails = fileDetails;
+    this.file = file;
+  }
 
-    //********************************TFileMngr*********************************
-    @Override
-    public void start() {
-        file.start();
-    }
+  //********************************TFileMngr*********************************
+  @Override
+  public void start() {
+    file.start();
+  }
 
-    @Override
-    public boolean isIdle() {
-        return file.isIdle();
-    }
+  @Override
+  public boolean isIdle() {
+    return file.isIdle();
+  }
 
-    @Override
-    public void close() {
-        file.close();
-    }
+  @Override
+  public void close() {
+    file.close();
+  }
 
-    //*******************************CACHE_HINT*********************************
-    @Override
-    public void clean(Identifier reader) {
-        file.clean(reader);
-    }
+  //*******************************CACHE_HINT*********************************
+  @Override
+  public void clean(Identifier reader) {
+    file.clean(reader);
+  }
 
-    @Override
-    public void setCacheHint(Identifier reader, KHint.Summary hint) {
-        file.setFutureReads(reader, hint.expand(fileDetails));
-    }
+  @Override
+  public void setCacheHint(Identifier reader, KHint.Summary hint) {
+    file.setFutureReads(reader, hint.expand(fileDetails));
+  }
 
-    //********************************READ_DATA*********************************
-    @Override
-    public boolean hasBlock(int blockNr) {
-        return true;
-    }
+  //********************************READ_DATA*********************************
+  @Override
+  public boolean hasBlock(int blockNr) {
+    return true;
+  }
 
-    @Override
-    public boolean hasHash(int blockNr) {
-        return true;
-    }
+  @Override
+  public boolean hasHash(int blockNr) {
+    return true;
+  }
 
-    @Override
-    public void readHash(int blockNr, HashReadCallback delayedResult) {
-        KBlock hashRange = BlockHelper.getHashRange(blockNr, fileDetails);
-        file.readHash(hashRange, delayedResult);
-    }
+  @Override
+  public void readHash(int blockNr, Consumer<Try<KReference<byte[]>>> callback) {
+    KBlock hashRange = BlockHelper.getHashRange(blockNr, fileDetails);
+    file.readHash(hashRange, callback);
+  }
 
-    @Override
-    public void readBlock(int blockNr, ReadCallback delayedResult) {
-        KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
-        file.read(blockRange, delayedResult);
-    }
+  @Override
+  public void readBlock(int blockNr, Consumer<Try<KReference<byte[]>>> callback) {
+    KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
+    file.read(blockRange, callback);
+  }
 
-    @Override
-    public Map<Integer, BlockDetails> getIrregularBlocks() {
-        Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
-        irregularBlocks.put(fileDetails.nrBlocks-1, fileDetails.lastBlock);
-        return irregularBlocks;
-    }
-    
-    // <totalSize, currentSize>
-    public Pair<Long, Long> report() {
-        return Pair.with(fileDetails.length, fileDetails.length);
-    }
+  @Override
+  public Map<Integer, BlockDetails> getIrregularBlocks() {
+    Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
+    irregularBlocks.put(fileDetails.nrBlocks - 1, fileDetails.lastBlock);
+    return irregularBlocks;
+  }
+
+  // <totalSize, currentSize>
+  public Pair<Long, Long> report() {
+    return Pair.with(fileDetails.length, fileDetails.length);
+  }
 }

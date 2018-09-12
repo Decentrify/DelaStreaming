@@ -18,12 +18,12 @@
  */
 package se.sics.dela.storage.op;
 
-import se.sics.dela.storage.buffer.WriteCallback;
+import java.util.function.Consumer;
 import se.sics.dela.storage.cache.KCache;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
 
@@ -32,50 +32,50 @@ import se.sics.nstream.util.range.KRange;
  */
 public class AsyncCompleteStorage implements AsyncStorage {
 
-    private final KCache cache;
+  private final KCache cache;
 
-    public AsyncCompleteStorage(KCache cache) {
-        this.cache = cache;
-    }
-    
-    @Override
-    public void start() {
-        cache.start();
-    }
+  public AsyncCompleteStorage(KCache cache) {
+    this.cache = cache;
+  }
 
-    @Override
-    public boolean isIdle() {
-        return cache.isIdle();
-    }
+  @Override
+  public void start() {
+    cache.start();
+  }
 
-    @Override
-    public void close() {
-        cache.close();
-    }
-    
-    //**************************************************************************
-    @Override
-    public void clean(Identifier reader) {
-        cache.clean(reader);
-    }
+  @Override
+  public boolean isIdle() {
+    return cache.isIdle();
+  }
 
-    @Override
-    public void setFutureReads(Identifier reader, KHint.Expanded hint) {
-        cache.setFutureReads(reader, hint);
-    }
+  @Override
+  public void close() {
+    cache.close();
+  }
 
-    //**************************************************************************
-    @Override
-    public void read(KRange readRange, ReadCallback delayedResult) {
-        cache.read(readRange, delayedResult);
-    }
-    
-    @Override
-    public void write(KBlock writeRange, KReference<byte[]> val, WriteCallback delayedResult) {
-        throw new UnsupportedOperationException("Not supported"); 
-    }
-    
-    public KStorageReport report() {
-        return new KStorageReport(null, cache.report());
-    }
+  //**************************************************************************
+  @Override
+  public void clean(Identifier reader) {
+    cache.clean(reader);
+  }
+
+  @Override
+  public void setFutureReads(Identifier reader, KHint.Expanded hint) {
+    cache.setFutureReads(reader, hint);
+  }
+
+  //**************************************************************************
+  @Override
+  public void read(KRange readRange, Consumer<Try<KReference<byte[]>>> callback) {
+    cache.read(readRange, callback);
+  }
+
+  @Override
+  public void write(KBlock writeRange, KReference<byte[]> val, Consumer<Try<Boolean>> callback) {
+    throw new UnsupportedOperationException("Not supported");
+  }
+
+  public KStorageReport report() {
+    return new KStorageReport(null, cache.report());
+  }
 }

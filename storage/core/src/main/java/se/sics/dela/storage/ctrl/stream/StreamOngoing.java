@@ -24,245 +24,242 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import org.javatuples.Pair;
-import se.sics.dela.storage.buffer.WriteResult;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
 import se.sics.dela.storage.op.AppendFileMngr;
-import se.sics.dela.storage.op.FileBWC;
-import se.sics.dela.storage.op.HashReadCallback;
-import se.sics.dela.storage.op.HashWriteCallback;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
-import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
+import se.sics.dela.storage.op.HashedBlockWriteCallback;
+import se.sics.ktoolbox.util.trysf.Try;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class StreamOngoing implements StreamWrite, StreamRead {
 
-    private static final int NEXT_BATCH_SIZE = 20;
-    private static final int HASH_BATCH_SIZE = 20;
-    //**************************************************************************
-    private final FileBaseDetails fileDetails;
-    //**************************************************************************
-    private final AppendFileMngr file;
-    //**************************************************************************
-    private final Set<Integer> ongoingHashes = new TreeSet<>();
-    private final Set<Integer> nextHashes = new TreeSet<>();
-    private final TreeSet<Integer> ongoingBlocks = new TreeSet<>();
-    private final TreeSet<Integer> nextBlocks = new TreeSet<>();
-    private final Map<Integer, FileBWC> pendingStorageWrites = new HashMap<>();
+  private static final int NEXT_BATCH_SIZE = 20;
+  private static final int HASH_BATCH_SIZE = 20;
+  //**************************************************************************
+  private final FileBaseDetails fileDetails;
+  //**************************************************************************
+  private final AppendFileMngr file;
+  //**************************************************************************
+  private final Set<Integer> ongoingHashes = new TreeSet<>();
+  private final Set<Integer> nextHashes = new TreeSet<>();
+  private final TreeSet<Integer> ongoingBlocks = new TreeSet<>();
+  private final TreeSet<Integer> nextBlocks = new TreeSet<>();
+  private final Map<Integer, HashedBlockWriteCallback> pendingStorageWrites = new HashMap<>();
 
-    public StreamOngoing(AppendFileMngr file, FileBaseDetails fileDetails) {
-        this.file = file;
-        this.fileDetails = fileDetails;
+  public StreamOngoing(AppendFileMngr file, FileBaseDetails fileDetails) {
+    this.file = file;
+    this.fileDetails = fileDetails;
+  }
+
+  //******************************TFileMngr***********************************
+  @Override
+  public void start() {
+    file.start();
+    newNextBlocks();
+  }
+
+  @Override
+  public boolean isIdle() {
+    return file.isIdle();
+  }
+
+  @Override
+  public void close() {
+    file.close();
+  }
+
+  //*******************************CACHE_HINT*********************************
+  @Override
+  public void clean(Identifier reader) {
+    file.clean(reader);
+  }
+
+  @Override
+  public void setCacheHint(Identifier reader, KHint.Summary hint) {
+    file.setFutureReads(reader, hint.expand(fileDetails));
+  }
+
+  //********************************READ_DATA*********************************
+  @Override
+  public boolean hasBlock(int blockNr) {
+    return file.hasBlock(blockNr);
+  }
+
+  @Override
+  public boolean hasHash(int blockNr) {
+    return file.hasHash(blockNr);
+  }
+
+  @Override
+  public void readHash(int blockNr, Consumer delayedResult) {
+    KBlock hashRange = BlockHelper.getHashRange(blockNr, fileDetails);
+    file.readHash(hashRange, delayedResult);
+  }
+
+  @Override
+  public void readBlock(int blockNr, Consumer<Try<KReference<byte[]>>> callback) {
+    KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
+    file.read(blockRange, callback);
+  }
+
+  @Override
+  public Map<Integer, BlockDetails> getIrregularBlocks() {
+    Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
+    irregularBlocks.put(fileDetails.nrBlocks - 1, fileDetails.lastBlock);
+    return irregularBlocks;
+  }
+
+  //*******************************WRITE_DATA*********************************
+  @Override
+  public boolean isComplete() {
+    return file.isComplete();
+  }
+
+  @Override
+  public StreamComplete complete() {
+    return new StreamComplete(file.complete(), fileDetails);
+  }
+
+  @Override
+  public boolean hasHashes() {
+    if (nextBlocks.isEmpty()) {
+      newNextBlocks();
     }
+    return !nextHashes.isEmpty();
+  }
 
-    //******************************TFileMngr***********************************
-    @Override
-    public void start() {
-        file.start();
-        newNextBlocks();
+  @Override
+  public boolean hasBlocks() {
+    if (nextBlocks.isEmpty()) {
+      newNextBlocks();
     }
+    return !nextBlocks.isEmpty();
+  }
 
-    @Override
-    public boolean isIdle() {
-        return file.isIdle();
+  @Override
+  public Set<Integer> requestHashes() {
+    Set<Integer> hashes = new TreeSet<>();
+    Iterator<Integer> it = nextHashes.iterator();
+    while (it.hasNext() && hashes.size() < HASH_BATCH_SIZE) {
+      int hIdx = it.next();
+      hashes.add(hIdx);
+      ongoingHashes.add(hIdx);
+      it.remove();
     }
+    return hashes;
+  }
 
-    @Override
-    public void close() {
-        file.close();
-    }
-
-    //*******************************CACHE_HINT*********************************
-    @Override
-    public void clean(Identifier reader) {
-        file.clean(reader);
-    }
-
-    @Override
-    public void setCacheHint(Identifier reader, KHint.Summary hint) {
-        file.setFutureReads(reader, hint.expand(fileDetails));
-    }
-
-    //********************************READ_DATA*********************************
-    @Override
-    public boolean hasBlock(int blockNr) {
-        return file.hasBlock(blockNr);
-    }
-
-    @Override
-    public boolean hasHash(int blockNr) {
-        return file.hasHash(blockNr);
-    }
-
-    @Override
-    public void readHash(int blockNr, HashReadCallback delayedResult) {
-        KBlock hashRange = BlockHelper.getHashRange(blockNr, fileDetails);
-        file.readHash(hashRange, delayedResult);
-    }
-
-    @Override
-    public void readBlock(int blockNr, ReadCallback delayedResult) {
-        KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
-        file.read(blockRange, delayedResult);
-    }
-
-    @Override
-    public Map<Integer, BlockDetails> getIrregularBlocks() {
-        Map<Integer, BlockDetails> irregularBlocks = new HashMap<>();
-        irregularBlocks.put(fileDetails.nrBlocks - 1, fileDetails.lastBlock);
-        return irregularBlocks;
-    }
-
-    //*******************************WRITE_DATA*********************************
-    @Override
-    public boolean isComplete() {
-        return file.isComplete();
-    }
-
-    @Override
-    public StreamComplete complete() {
-        return new StreamComplete(file.complete(), fileDetails);
-    }
-
-    @Override
-    public boolean hasHashes() {
-        if (nextBlocks.isEmpty()) {
-            newNextBlocks();
-        }
-        return !nextHashes.isEmpty();
-    }
-
-    @Override
-    public boolean hasBlocks() {
-        if (nextBlocks.isEmpty()) {
-            newNextBlocks();
-        }
-        return !nextBlocks.isEmpty();
-    }
-
-    @Override
-    public Set<Integer> requestHashes() {
-        Set<Integer> hashes = new TreeSet<>();
-        Iterator<Integer> it = nextHashes.iterator();
-        while (it.hasNext() && hashes.size() < HASH_BATCH_SIZE) {
-            int hIdx = it.next();
-            hashes.add(hIdx);
-            ongoingHashes.add(hIdx);
-            it.remove();
-        }
-        return hashes;
-    }
-
-    @Override
-    public void hashes(Map<Integer, byte[]> hashes, Set<Integer> missingHashes) {
-        nextHashes.removeAll(hashes.keySet()); //if we do not use the file hash request management
-        nextHashes.addAll(missingHashes);
-        ongoingHashes.removeAll(missingHashes);
-        ongoingHashes.removeAll(hashes.keySet());
-        for (Map.Entry<Integer, byte[]> hash : hashes.entrySet()) {
-            final KReference<byte[]> hashRef = KReferenceFactory.getReference(hash.getValue());
-            KBlock hashRange = BlockHelper.getHashRange(hash.getKey(), fileDetails);
-            HashWriteCallback hashWC = new HashWriteCallback() {
-
-                @Override
-                public boolean fail(Result<WriteResult> result) {
-                    throw new RuntimeException(result.getException());
-                }
-
-                @Override
-                public boolean success(Result<WriteResult> result) {
-                    silentRelease(hashRef);
-                    return true;
-                }
-            };
-            file.writeHash(hashRange, hashRef, hashWC);
-        }
-    }
-
-    @Override
-    public Pair<Integer, Optional<BlockDetails>> requestBlock() {
-        int blockNr = nextBlocks.pollFirst();
-        Optional<BlockDetails> irregularBlock = Optional.absent();
-        if (blockNr == fileDetails.nrBlocks - 1) {
-            irregularBlock = Optional.of(fileDetails.lastBlock);
-        }
-        ongoingBlocks.add(blockNr);
-        return Pair.with(blockNr, irregularBlock);
-    }
-
-    @Override
-    public void block(final int blockNr, final KReference<byte[]> block) {
-        final KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
-        block.retain();
-        FileBWC fileBWC = new FileBWC() {
-            @Override
-            public void hashResult(Result<Boolean> result) {
-                if (result.isSuccess()) {
-                    //nothing - we write it
-                } else {
-                    //didn't hash - redownload;
-                    ongoingBlocks.remove(blockNr);
-                    silentRelease(block);
-                    nextBlocks.add(blockNr);
-                    //TODO Alex remove
-                    throw new RuntimeException("hash mismatch");
-                }
-            }
-
-            @Override
-            public boolean fail(Result<WriteResult> result) {
-                throw new RuntimeException("failed to write into storage - " + result.getException().getMessage());
-            }
-
-            @Override
-            public boolean success(Result<WriteResult> result) {
-                ongoingBlocks.remove(blockNr);
-                silentRelease(block);
-                return true;
-            }
-        };
-        file.writeBlock(blockRange, block, fileBWC);
-    }
-
-    @Override
-    public void resetBlock(int blockNr) {
-        ongoingBlocks.remove(blockNr);
-        nextBlocks.add(blockNr);
-    }
-
-    //**************************************************************************
-    private void newNextBlocks() {
-        Set<Integer> nb = file.nextBlocksMissing(0, NEXT_BATCH_SIZE, ongoingBlocks);
-        nextBlocks.addAll(nb);
-        nextHashes.addAll(nb);
-    }
-
-    private void silentRelease(KReference<byte[]> ref) {
-        try {
-            ref.release();
-        } catch (KReferenceException ex) {
-            throw new RuntimeException("ref logic");
-        }
-    }
-
-    // <totalSize, currentSize>
-    public Pair<Long, Long> report() {
-        long currentSize;
-        if (!file.isComplete()) {
-            currentSize = (long) file.filePos() * fileDetails.defaultBlock.blockSize;
+  @Override
+  public void hashes(Map<Integer, byte[]> hashes, Set<Integer> missingHashes) {
+    nextHashes.removeAll(hashes.keySet()); //if we do not use the file hash request management
+    nextHashes.addAll(missingHashes);
+    ongoingHashes.removeAll(missingHashes);
+    ongoingHashes.removeAll(hashes.keySet());
+    for (Map.Entry<Integer, byte[]> hash : hashes.entrySet()) {
+      final KReference<byte[]> hashRef = KReferenceFactory.getReference(hash.getValue());
+      KBlock hashRange = BlockHelper.getHashRange(hash.getKey(), fileDetails);
+      Consumer<Try<Boolean>> hashWriteCallback = (result) -> {
+        if(result.isSuccess()) {
+          silentRelease(hashRef);
         } else {
-            currentSize = fileDetails.length;
+          try {
+            result.checkedGet();
+          } catch (Throwable ex) {
+            throw new RuntimeException(ex);
+          }
         }
-        return Pair.with(fileDetails.length, currentSize);
+      };
+      file.writeHash(hashRange, hashRef, hashWriteCallback);
     }
+  }
+
+  @Override
+  public Pair<Integer, Optional<BlockDetails>> requestBlock() {
+    int blockNr = nextBlocks.pollFirst();
+    Optional<BlockDetails> irregularBlock = Optional.absent();
+    if (blockNr == fileDetails.nrBlocks - 1) {
+      irregularBlock = Optional.of(fileDetails.lastBlock);
+    }
+    ongoingBlocks.add(blockNr);
+    return Pair.with(blockNr, irregularBlock);
+  }
+
+  @Override
+  public void block(final int blockNr, final KReference<byte[]> block) {
+    final KBlock blockRange = BlockHelper.getBlockRange(blockNr, fileDetails);
+    block.retain();
+    HashedBlockWriteCallback fileBWC = new HashedBlockWriteCallback() {
+      @Override
+      public void hash(Try<Boolean> hashCheck) {
+        if (hashCheck.isSuccess()) {
+          //nothing - we write it
+        } else {
+          //didn't hash - redownload;
+          ongoingBlocks.remove(blockNr);
+          silentRelease(block);
+          nextBlocks.add(blockNr);
+          //TODO Alex remove
+          throw new RuntimeException("hash mismatch");
+        }
+      }
+
+      @Override
+      public void accept(Try<Boolean> writeResult) {
+        if (writeResult.isFailure()) {
+          try {
+            writeResult.checkedGet();
+          } catch (Throwable ex) {
+            throw new RuntimeException("failed to write into storage", ex);
+          }
+        } else {
+          ongoingBlocks.remove(blockNr);
+          silentRelease(block);
+        }
+      }
+    };
+    file.writeBlock(blockRange, block, fileBWC);
+  }
+
+  @Override
+  public void resetBlock(int blockNr) {
+    ongoingBlocks.remove(blockNr);
+    nextBlocks.add(blockNr);
+  }
+
+  //**************************************************************************
+  private void newNextBlocks() {
+    Set<Integer> nb = file.nextBlocksMissing(0, NEXT_BATCH_SIZE, ongoingBlocks);
+    nextBlocks.addAll(nb);
+    nextHashes.addAll(nb);
+  }
+
+  private void silentRelease(KReference<byte[]> ref) {
+    try {
+      ref.release();
+    } catch (KReferenceException ex) {
+      throw new RuntimeException("ref logic");
+    }
+  }
+
+  // <totalSize, currentSize>
+  public Pair<Long, Long> report() {
+    long currentSize;
+    if (!file.isComplete()) {
+      currentSize = (long) file.filePos() * fileDetails.defaultBlock.blockSize;
+    } else {
+      currentSize = fileDetails.length;
+    }
+    return Pair.with(fileDetails.length, currentSize);
+  }
 }

@@ -20,12 +20,10 @@ package se.sics.dela.storage.op;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 import org.javatuples.Pair;
 import se.sics.dela.storage.StreamStorage;
-import se.sics.dela.storage.buffer.WriteCallback;
-import se.sics.dela.storage.buffer.WriteResult;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.reference.KReference;
@@ -33,6 +31,7 @@ import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
@@ -92,36 +91,31 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
 
   //**************************************************************************
   @Override
-  public void read(final KRange readRange, final ReadCallback delayedResult) {
+  public void read(final KRange readRange, Consumer<Try<KReference<byte[]>>> callback) {
     KReference<byte[]> hash = hashes.get(readRange.parentBlock());
     if (hash != null) {
-      delayedResult.success(Result.success(hash));
+      callback.accept(new Try.Success(hash));
     } else {
-      ReadCallback blockResult = new ReadCallback() {
-
-        @Override
-        public boolean fail(Result<KReference<byte[]>> result) {
-          return delayedResult.fail(result);
-        }
-
-        @Override
-        public boolean success(Result<KReference<byte[]>> result) {
-          byte[] block = result.getValue().getValue().get();
-          KReference<byte[]> hash = KReferenceFactory.getReference(HashUtil.makeHash(block, fileDetails.hashAlg));
-          hashes.put(readRange.parentBlock(), hash);
-          return delayedResult.success(Result.success(hash));
+      Consumer<Try<KReference<byte[]>>> readBlockCallback = (result) -> {
+        if (result.isSuccess()) {
+          byte[] block = result.get().getValue().get();
+          KReference<byte[]> computedHash 
+            = KReferenceFactory.getReference(HashUtil.makeHash(block, fileDetails.hashAlg));
+          hashes.put(readRange.parentBlock(), computedHash);
+          callback.accept(new Try.Success(computedHash));
+        } else {
+          callback.accept(result);
         }
       };
       KBlock blockRange = BlockHelper.getBlockRange(readRange.parentBlock(), fileDetails);
-      storage.read(blockRange, blockResult);
+      storage.read(blockRange, readBlockCallback);
     }
   }
 
   @Override
-  public void write(KBlock writeRange, KReference<byte[]> val, WriteCallback writeResult) {
+  public void write(KBlock writeRange, KReference<byte[]> val, Consumer<Try<Boolean>> callback) {
     val.retain();
     hashes.put(writeRange.parentBlock(), val);
-    writeResult.success(Result.success(new WriteResult(stream, writeRange.lowerAbsEndpoint(),
-      val.getValue().get().length)));
+    callback.accept(new Try.Success(true));
   }
 }

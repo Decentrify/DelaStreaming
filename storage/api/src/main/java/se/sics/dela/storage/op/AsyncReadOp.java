@@ -18,12 +18,14 @@
  */
 package se.sics.dela.storage.op;
 
-import se.sics.dela.storage.cache.ReadCallback;
+import java.util.function.Consumer;
+import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.range.KRange;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface AsyncReadOp<R extends KRange> {
-    public void read(KRange readRange, ReadCallback delayedResult);
+    public void read(KRange readRange, Consumer<Try<KReference<byte[]>>> callback);
 }

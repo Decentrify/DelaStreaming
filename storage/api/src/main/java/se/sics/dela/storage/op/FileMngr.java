@@ -19,9 +19,10 @@
 package se.sics.dela.storage.op;
 
 import java.util.Set;
-import se.sics.dela.storage.buffer.WriteCallback;
+import java.util.function.Consumer;
 import se.sics.dela.storage.cache.CacheHint;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
 
@@ -34,12 +35,12 @@ public class FileMngr {
         public boolean hasHash(int blockNr);
         public Set<Integer> nextBlocksMissing(int fromBlock, int nrBlocks, Set<Integer> except);
         public Set<Integer> nextHashesMissing(int fromBlock, int nrBlocks, Set<Integer> except);
-        public void readHash(KBlock readRange, HashReadCallback delayedResult);
+        public void readHash(KBlock readRange, Consumer<Try<KReference<byte[]>>> callback);
     }
     
     public static interface Writer {
-        public void writeHash(KBlock writeRange, KReference<byte[]> val, WriteCallback delayedResult);
-        public void writeBlock(KBlock writeRange, KReference<byte[]> val, FileBWC blockWC);
+        public void writeHash(KBlock writeRange, KReference<byte[]> val, Consumer<Try<Boolean>> delayedResult);
+        public void writeBlock(KBlock writeRange, KReference<byte[]> val, HashedBlockWriteCallback blockWC);
         public boolean isComplete();
         public int filePos();
         public int hashPos();

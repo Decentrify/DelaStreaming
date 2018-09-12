@@ -18,13 +18,14 @@
  */
 package se.sics.dela.storage.op;
 
-import se.sics.dela.storage.buffer.WriteCallback;
+import java.util.function.Consumer;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.range.KRange;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface AsyncWriteOp<R extends KRange> {
-    public void write(R writeRange, KReference<byte[]> val, WriteCallback delayedResult);
+    public void write(R writeRange, KReference<byte[]> val, Consumer<Try<Boolean>> callback);
 }

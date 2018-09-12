@@ -18,13 +18,13 @@
  */
 package se.sics.dela.storage.op;
 
+import java.util.function.Consumer;
 import se.sics.dela.storage.buffer.KBuffer;
 import se.sics.dela.storage.cache.KCache;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
-import se.sics.dela.storage.buffer.WriteCallback;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
 
@@ -33,65 +33,65 @@ import se.sics.nstream.util.range.KRange;
  */
 public class AsyncIncompleteStorage implements AsyncStorage {
 
-    private final KCache cache;
-    private final KBuffer buffer;
+  private final KCache cache;
+  private final KBuffer buffer;
 
-    public AsyncIncompleteStorage(KCache cache, KBuffer buffer) {
-        this.cache = cache;
-        this.buffer = buffer;
-    }
+  public AsyncIncompleteStorage(KCache cache, KBuffer buffer) {
+    this.cache = cache;
+    this.buffer = buffer;
+  }
 
-    @Override
-    public void start() {
-        cache.start();
-        buffer.start();
-    }
+  @Override
+  public void start() {
+    cache.start();
+    buffer.start();
+  }
 
-    @Override
-    public boolean isIdle() {
-        return cache.isIdle() && buffer.isIdle();
-    }
+  @Override
+  public boolean isIdle() {
+    return cache.isIdle() && buffer.isIdle();
+  }
 
-    @Override
-    public void close() {
-        buffer.close();
-        cache.close();
-    }
-    
-    public AsyncCompleteStorage complete() {
-        buffer.close();
-        return new AsyncCompleteStorage(cache);
-    }
+  @Override
+  public void close() {
+    buffer.close();
+    cache.close();
+  }
 
-    //**************************************************************************
-    @Override
-    public void clean(Identifier reader) {
-        cache.clean(reader);
-    }
+  public AsyncCompleteStorage complete() {
+    buffer.close();
+    return new AsyncCompleteStorage(cache);
+  }
 
-    @Override
-    public void setFutureReads(Identifier reader, KHint.Expanded hint) {
-        cache.setFutureReads(reader, hint);
-    }
+  //**************************************************************************
+  @Override
+  public void clean(Identifier reader) {
+    cache.clean(reader);
+  }
 
-    //**************************************************************************
-    @Override
-    public void read(KRange readRange, ReadCallback readResult) {
-        cache.read(readRange, readResult);
-    }
+  @Override
+  public void setFutureReads(Identifier reader, KHint.Expanded hint) {
+    cache.setFutureReads(reader, hint);
+  }
 
-    @Override
-    public void write(KBlock writeRange, KReference<byte[]> val, WriteCallback writeResult) {
-        cache.buffered(writeRange, val);
-        buffer.write(writeRange, val, writeResult);
-    }
-    
-    public KStorageReport report() {
-        KStorageReport report = new KStorageReport(buffer.report(), cache.report());
-        return report;
-    }
-    
-    public boolean pendingBlocks() {
-        return buffer.isIdle();
-    }
+  //**************************************************************************
+  @Override
+  public void read(KRange readRange, Consumer<Try<KReference<byte[]>>> callback) {
+    cache.read(readRange, callback);
+  }
+
+  @Override
+  public void write(KBlock writeRange, KReference<byte[]> val, Consumer<Try<Boolean>> writeResult) {
+    cache.buffered(writeRange, val);
+    buffer.write(writeRange, val, writeResult);
+  }
+
+  public KStorageReport report() {
+    KStorageReport report = new KStorageReport(buffer.report(), cache.report());
+    return report;
+  }
+
+  public boolean pendingBlocks() {
+    return buffer.isIdle();
+  }
 }
