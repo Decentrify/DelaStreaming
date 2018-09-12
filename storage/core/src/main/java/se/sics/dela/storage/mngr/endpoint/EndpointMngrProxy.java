@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.function.Consumer;
 import org.javatuples.Pair;
 import org.javatuples.Triplet;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.mngr.endpoint.EndpointRegistry.ClientBuilder;
 import se.sics.dela.storage.mngr.endpoint.events.EndpointMngrConnect;
@@ -42,8 +40,6 @@ import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
  */
 public class EndpointMngrProxy {
 
-  private static final Logger LOG = LoggerFactory.getLogger(EndpointMngrProxy.class);
-  private final String logPrefix = "";
 
   private ComponentProxy proxy;
   private Positive<EndpointMngrPort> mngrPort;

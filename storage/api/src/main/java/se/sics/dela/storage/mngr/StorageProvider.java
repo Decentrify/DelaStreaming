@@ -19,6 +19,7 @@
 package se.sics.dela.storage.mngr;
 
 import org.javatuples.Pair;
+import org.slf4j.Logger;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Init;
 import se.sics.dela.storage.StorageEndpoint;
@@ -36,5 +37,5 @@ public interface StorageProvider<D extends ComponentDefinition> {
 
   public Class<D> getStorageDefinition();
 
-  public <I extends Init<D>> Pair<I, Long> initiate(StorageResource resource);
+  public <I extends Init<D>> Pair<I, Long> initiate(StorageResource resource, Logger logger);
 }

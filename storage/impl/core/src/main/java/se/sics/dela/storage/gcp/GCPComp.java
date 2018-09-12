@@ -27,7 +27,6 @@ import com.google.cloud.storage.Storage;
 import java.io.IOException;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import se.sics.dela.storage.operation.StreamOpPort;
 import se.sics.dela.storage.operation.events.StorageStreamOpRead;
 import se.sics.dela.storage.operation.events.StorageStreamOpWrite;
@@ -40,7 +39,6 @@ import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
-import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 
@@ -49,7 +47,6 @@ import se.sics.dela.storage.StorageResource;
  */
 public class GCPComp extends ComponentDefinition {
 
-  private final static Logger LOG = LoggerFactory.getLogger(GCPComp.class);
   private String logPrefix = "";
 
   Positive<Timer> timerPort = requires(Timer.class);
@@ -73,7 +70,7 @@ public class GCPComp extends ComponentDefinition {
     reader = GCPHelper.readChannel(credentials, projectName, blobId);
 
     logPrefix = "<nid:" + self.toString() + ">gcp:" + projectName + "/" + init.blobId + " ";
-    LOG.info("{}init", logPrefix);
+    logger.info("{}init", logPrefix);
 
     subscribe(handleStart, control);
     subscribe(handleRead, storagePort);
@@ -85,13 +82,13 @@ public class GCPComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      LOG.info("{}starting", logPrefix);
+      logger.info("{}starting", logPrefix);
     }
   };
 
   @Override
   public void tearDown() {
-    LOG.info("{}tearing down", logPrefix);
+    logger.info("{}tearing down", logPrefix);
     if (reader.isOpen()) {
       reader.close();
     }
@@ -110,10 +107,10 @@ public class GCPComp extends ComponentDefinition {
       if (!reader.isOpen()) {
         reader = GCPHelper.readChannel(credentials, projectName, blobId);
       }
-      LOG.debug("{}read:{}", logPrefix, req);
+      logger.debug("{}read:{}", logPrefix, req);
       int readLength = (int) (req.readRange.upperAbsEndpoint() - req.readRange.lowerAbsEndpoint() + 1);
       int readPos = (int) req.readRange.lowerAbsEndpoint();
-      LOG.debug("{}reading at pos:{} amount:{}", new Object[]{logPrefix, readPos, readLength});
+      logger.debug("{}reading at pos:{} amount:{}", new Object[]{logPrefix, readPos, readLength});
       Try<byte[]> read = new Try.Success(true)
         .flatMap(GCPHelper.readFromBlob(reader, readPos, readLength));
       try {
@@ -136,13 +133,13 @@ public class GCPComp extends ComponentDefinition {
   Handler handleWrite = new Handler<StorageStreamOpWrite.Request>() {
     @Override
     public void handle(StorageStreamOpWrite.Request req) {
-      LOG.debug("{}write:{}", logPrefix, req);
+      logger.debug("{}write:{}", logPrefix, req);
       Try<Integer> write = skipExistingBytes(req)
         .flatMap(GCPHelper.writeToBlob(writer));
       try {
         long fromWritePos = writePos;
         writePos += write.checkedGet();
-        LOG.debug("{}write from:{} to:{}", new Object[]{logPrefix, fromWritePos, writePos});
+        logger.debug("{}write from:{} to:{}", new Object[]{logPrefix, fromWritePos, writePos});
         answer(req, req.respond(Result.success(true)));
       } catch (Throwable t) {
         answer(req, req.respond(Result.internalFailure((Exception) t)));
@@ -152,7 +149,7 @@ public class GCPComp extends ComponentDefinition {
 
   private Try<byte[]> skipExistingBytes(StorageStreamOpWrite.Request req) {
     if (writePos >= req.pos + req.value.length) {
-      LOG.debug("{}write with pos:{} skipped", logPrefix, req.pos);
+      logger.debug("{}write with pos:{} skipped", logPrefix, req.pos);
       answer(req, req.respond(Result.success(true)));
       return new Try.Success(new byte[0]);
     } else if (writePos > req.pos) {
@@ -161,7 +158,7 @@ public class GCPComp extends ComponentDefinition {
       int writeAmount = req.value.length - sourcePos;
       byte[] writeValue = new byte[writeAmount];
       System.arraycopy(req.value, sourcePos, writeValue, 0, writeAmount);
-      LOG.debug("{}convert write pos from:{} to:{} write amount from:{} to:{}",
+      logger.debug("{}convert write pos from:{} to:{} write amount from:{} to:{}",
         new Object[]{logPrefix, req.pos, pos, req.value.length, writeAmount});
       return new Try.Success(writeValue);
     } else if (writePos == req.pos) {
@@ -213,7 +210,7 @@ public class GCPComp extends ComponentDefinition {
     }
 
     @Override
-    public Pair<GCPComp.Init, Long> initiate(StorageResource resource) {
+    public Pair<GCPComp.Init, Long> initiate(StorageResource resource, Logger logger) {
       GCPResource gcpResource = (GCPResource) resource;
       BlobId blobId = gcpResource.getBlobId();
       Blob blob = checkCreateBlob(blobId);

@@ -26,7 +26,6 @@ import java.util.UUID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import se.sics.dela.storage.operation.StreamOpPort;
 import se.sics.dela.storage.operation.events.StorageStreamOpRead;
 import se.sics.dela.storage.operation.events.StorageStreamOpWrite;
@@ -51,7 +50,6 @@ import se.sics.dela.storage.StorageResource;
  */
 public class HDFSComp extends ComponentDefinition {
 
-  private final static Logger LOG = LoggerFactory.getLogger(HDFSComp.class);
   private String logPrefix = "";
 
   Positive<Timer> timerPort = requires(Timer.class);
@@ -70,7 +68,7 @@ public class HDFSComp extends ComponentDefinition {
   private int forceFlushCounter;
 
   public HDFSComp(Init init) {
-    LOG.info("{}init", logPrefix);
+    logger.info("{}init", logPrefix);
 
     hdfsEndpoint = init.endpoint;
     hdfsResource = init.resource;
@@ -85,7 +83,7 @@ public class HDFSComp extends ComponentDefinition {
   }
 
   private int forceFlushCounter() {
-    Result<Long> hdfsBlockSize = HDFSHelper.blockSize(ugi, hdfsEndpoint, hdfsResource);
+    Result<Long> hdfsBlockSize = HDFSHelper.blockSize(ugi, hdfsEndpoint, hdfsResource, logger);
     long forceFlushDataSize
       = Math.max(HardCodedConfig.minForceFlushDataSize, (hdfsBlockSize.isSuccess() ? hdfsBlockSize.getValue() : 0));
     int counter = (int) (forceFlushDataSize / HardCodedConfig.delaBlockSize);
@@ -96,7 +94,7 @@ public class HDFSComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      LOG.info("{}starting", logPrefix);
+      logger.info("{}starting", logPrefix);
       schedulePeriodicCheck();
     }
   };
@@ -109,10 +107,10 @@ public class HDFSComp extends ComponentDefinition {
   Handler handleReadRequest = new Handler<StorageStreamOpRead.Request>() {
     @Override
     public void handle(StorageStreamOpRead.Request req) {
-      LOG.trace("{}received:{}", logPrefix, req);
-      Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, hdfsResource, req.readRange);
+      logger.trace("{}received:{}", logPrefix, req);
+      Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, hdfsResource, req.readRange, logger);
       StorageStreamOpRead.Response resp = req.respond(readResult);
-      LOG.trace("{}answering:{}", logPrefix, resp);
+      logger.trace("{}answering:{}", logPrefix, resp);
       answer(req, resp);
     }
   };
@@ -120,9 +118,9 @@ public class HDFSComp extends ComponentDefinition {
   Handler handleWriteRequest = new Handler<StorageStreamOpWrite.Request>() {
     @Override
     public void handle(StorageStreamOpWrite.Request req) {
-      LOG.info("{}write:{}", logPrefix, req);
+      logger.info("{}write:{}", logPrefix, req);
       if (writePos >= req.pos + req.value.length) {
-        LOG.info("{}write with pos:{} skipped", logPrefix, req.pos);
+        logger.info("{}write with pos:{} skipped", logPrefix, req.pos);
         answer(req, req.respond(Result.success(true)));
         return;
       }
@@ -134,13 +132,13 @@ public class HDFSComp extends ComponentDefinition {
         int writeAmount = req.value.length - sourcePos;
         writeValue = new byte[writeAmount];
         System.arraycopy(req.value, sourcePos, writeValue, 0, writeAmount);
-        LOG.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
+        logger.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
           new Object[]{logPrefix, req.pos, pos, req.value.length, writeAmount});
       } else {
         writeValue = req.value;
       }
 
-      Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, hdfsResource, writeValue);
+      Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, hdfsResource, writeValue, logger);
       if (writeResult.isSuccess()) {
         writePos += writeValue.length;
         pending.put(writePos, req);
@@ -162,14 +160,14 @@ public class HDFSComp extends ComponentDefinition {
         progressed = false;
         return;
       }
-      HDFSHelper.flush(ugi, hdfsEndpoint, hdfsResource);
+      HDFSHelper.flush(ugi, hdfsEndpoint, hdfsResource, logger);
       inspectHDFSFile();
       progressed = false;
     }
   };
 
   private void inspectHDFSFile() {
-    Result<Long> currentFilePos = HDFSHelper.length(ugi, hdfsEndpoint, hdfsResource);
+    Result<Long> currentFilePos = HDFSHelper.length(ugi, hdfsEndpoint, hdfsResource, logger);
     if (!currentFilePos.isSuccess()) {
       return;
     }
@@ -232,15 +230,15 @@ public class HDFSComp extends ComponentDefinition {
     }
 
     @Override
-    public Pair<HDFSComp.Init, Long> initiate(StorageResource resource) {
+    public Pair<HDFSComp.Init, Long> initiate(StorageResource resource, Logger logger) {
       HDFSResource hdfsResource = (HDFSResource) resource;
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-      Result<Long> streamPos = HDFSHelper.length(ugi, endpoint, hdfsResource);
+      Result<Long> streamPos = HDFSHelper.length(ugi, endpoint, hdfsResource, logger);
       if (!streamPos.isSuccess()) {
         throw new RuntimeException(streamPos.getException());
       }
       if (streamPos.getValue() == -1) {
-        HDFSHelper.simpleCreate(ugi, endpoint, hdfsResource);
+        HDFSHelper.simpleCreate(ugi, endpoint, hdfsResource, logger);
       }
       HDFSComp.Init init = new HDFSComp.Init(endpoint, hdfsResource, ugi, streamPos.getValue());
       return Pair.with(init, streamPos.getValue());

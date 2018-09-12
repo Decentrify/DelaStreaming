@@ -18,7 +18,6 @@
  */
 package se.sics.dela.storage.mngr.stream.events;
 
-import org.javatuples.Pair;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;

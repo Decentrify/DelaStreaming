@@ -27,7 +27,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.manifest.ManifestHelper;
 import se.sics.nstream.hops.manifest.ManifestJSON;
@@ -37,20 +36,17 @@ import se.sics.nstream.hops.manifest.ManifestJSON;
  */
 public class DelaHDFSHelper {
 
-  private final static Logger LOG = LoggerFactory.getLogger(DelaHDFSHelper.class);
-  private static String logPrefix = "";
-  
   public static Result<ManifestJSON> readManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint,
-    HDFSResource hdfsResource) {
+    HDFSResource hdfsResource, Logger logger) {
     final String filePath = hdfsResource.dirPath + Path.SEPARATOR + hdfsResource.fileName;
-    LOG.debug("{}reading manifest:{}", new Object[]{logPrefix, filePath});
+    logger.debug("reading manifest:{}", new Object[]{filePath});
     try {
       Result<ManifestJSON> result = ugi.doAs(new PrivilegedExceptionAction<Result<ManifestJSON>>() {
         @Override
         public Result<ManifestJSON> run() {
           try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig)) {
             if (!fs.isFile(new Path(filePath))) {
-              LOG.warn("{}file does not exist", new Object[]{logPrefix, filePath});
+              logger.warn("file does not exist", new Object[]{filePath});
               return Result.externalSafeFailure(new HDFSException("hdfs file read"));
             }
             try (FSDataInputStream in = fs.open(new Path(filePath))) {
@@ -61,23 +57,23 @@ public class DelaHDFSHelper {
               return Result.success(manifest);
             }
           } catch (IOException ex) {
-            LOG.warn("{}could not read file:{} ex:{}", new Object[]{logPrefix, filePath, ex.getMessage()});
+            logger.warn("could not read file:{} ex:{}", new Object[]{filePath, ex.getMessage()});
             return Result.externalSafeFailure(new HDFSException("hdfs file read", ex));
           }
         }
       });
-      LOG.trace("{}op completed", new Object[]{logPrefix});
+      logger.trace("op completed");
       return result;
     } catch (IOException | InterruptedException ex) {
-      LOG.error("{}unexpected exception:{}", logPrefix, ex);
+      logger.error("unexpected exception:{}", ex);
       return Result.externalSafeFailure(new HDFSException("hdfs file read", ex));
     }
   }
 
   public static Result<Boolean> writeManifest(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint,
-    final HDFSResource hdfsResource, final ManifestJSON manifest) {
+    final HDFSResource hdfsResource, final ManifestJSON manifest, Logger logger) {
     final String filePath = hdfsResource.dirPath + Path.SEPARATOR + hdfsResource.fileName;
-    LOG.debug("{}writing manifest:{}", new Object[]{logPrefix, filePath});
+    logger.debug("writing manifest:{}", new Object[]{filePath});
     try {
       Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
         @Override
@@ -96,15 +92,15 @@ public class DelaHDFSHelper {
               return Result.success(true);
             }
           } catch (IOException ex) {
-            LOG.warn("{}could not create file:{}", logPrefix, ex.getMessage());
+            logger.warn("could not create file:{}", ex.getMessage());
             return Result.externalUnsafeFailure(new HDFSException("hdfs file createWithLength", ex));
           }
         }
       });
-      LOG.trace("{}op completed", new Object[]{logPrefix});
+      logger.trace("op completed");
       return result;
     } catch (IOException | InterruptedException ex) {
-      LOG.error("{}unexpected exception:{}", logPrefix, ex);
+      logger.error("unexpected exception:{}", ex);
       return Result.externalUnsafeFailure(new HDFSException("hdfs file createWithLength", ex));
     }
   }

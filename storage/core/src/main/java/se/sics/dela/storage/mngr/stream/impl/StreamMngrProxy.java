@@ -24,7 +24,6 @@ import java.util.Map;
 import java.util.Set;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.mngr.stream.StreamMngrPort;
 import se.sics.dela.storage.mngr.stream.events.StreamMngrConnect;
@@ -45,18 +44,19 @@ import se.sics.nstream.transfer.MyTorrent;
  */
 public class StreamMngrProxy {
 
-  private static final Logger LOG = LoggerFactory.getLogger(StreamMngrProxy.class);
   private final String logPrefix = "";
 
   private final ComponentProxy proxy;
+  private final Logger logger;
   private final Positive<StreamMngrPort> streamMngr;
 
   private final Map<FileId, ResultCallback<Boolean>> fileCallbacks = new HashMap<>();
   private final Map<FileId, Set<Identifier>> fileToStream = new HashMap<>();
   private final Map<Identifier, FileId> streamToFile = new HashMap<>();
 
-  public StreamMngrProxy(ComponentProxy proxy) {
+  public StreamMngrProxy(ComponentProxy proxy, Logger logger) {
     this.proxy = proxy;
+    this.logger = logger;
     streamMngr = proxy.getPositive(StreamMngrPort.class);
     proxy.subscribe(handleStreamConnected, streamMngr);
   }
@@ -79,7 +79,7 @@ public class StreamMngrProxy {
   Handler handleStreamConnected = new Handler<StreamMngrConnect.Success>() {
     @Override
     public void handle(StreamMngrConnect.Success resp) {
-      LOG.info("{}prepared:{}", logPrefix, resp.req.streamId);
+      logger.info("{}prepared:{}", logPrefix, resp.req.streamId);
       FileId fileId = streamToFile.remove(resp.getId());
       Set<Identifier> pendingStreams = fileToStream.get(fileId);
       pendingStreams.remove(resp.getId());
@@ -95,8 +95,8 @@ public class StreamMngrProxy {
 
     private final Set<FileId> pendingFiles = new HashSet<>();
 
-    public Old(ComponentProxy proxy) {
-      super(proxy);
+    public Old(ComponentProxy proxy, Logger logger) {
+      super(proxy, logger);
     }
 
     public void prepare(OverlayId torrentId, MyTorrent torrent, ResultCallback<Boolean> callback) {

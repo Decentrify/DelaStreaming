@@ -22,8 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import org.javatuples.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.mngr.stream.events.StreamMngrConnect;
 import se.sics.dela.storage.mngr.stream.events.StreamMngrDisconnect;
@@ -47,7 +45,6 @@ import se.sics.nstream.StreamId;
  */
 public class StreamMngrComp extends ComponentDefinition {
 
-  private static final Logger LOG = LoggerFactory.getLogger(StreamMngrComp.class);
   private final String logPrefix;
 
   private final Positive<Timer> timerPort = requires(Timer.class);
@@ -64,7 +61,7 @@ public class StreamMngrComp extends ComponentDefinition {
   public StreamMngrComp(Init init) {
     self = init.self;
     logPrefix = "<nid:" + self + ">";
-    LOG.info("{}initiating...", logPrefix);
+    logger.info("{}initiating...", logPrefix);
 
     storageProvider = init.storageProvider;
 
@@ -79,22 +76,22 @@ public class StreamMngrComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      LOG.info("{}starting", logPrefix);
+      logger.info("{}starting", logPrefix);
     }
   };
 
   Handler handleKilled = new Handler<Killed>() {
     @Override
     public void handle(Killed event) {
-      LOG.info("{}killed stream comp:{}", logPrefix, event.component.id());
+      logger.info("{}killed stream comp:{}", logPrefix, event.component.id());
     }
   };
 
   Handler handleConnect = new Handler<StreamMngrConnect.Request>() {
     @Override
     public void handle(StreamMngrConnect.Request req) {
-      Pair<Init, Long> init = storageProvider.initiate(req.stream.resource);
-      LOG.info("{}connecting stream:{} pos:{}", logPrefix, req.streamId, init.getValue1());
+      Pair<Init, Long> init = storageProvider.initiate(req.stream.resource, logger);
+      logger.info("{}connecting stream:{} pos:{}", logPrefix, req.streamId, init.getValue1());
       Component streamStorageComp = create(storageProvider.getStorageDefinition(), init.getValue0());
 
       storageChannel.addChannel(req.streamId, streamStorageComp.getPositive(StreamOpPort.class));
@@ -111,7 +108,7 @@ public class StreamMngrComp extends ComponentDefinition {
   Handler handleDisconnect = new Handler<StreamMngrDisconnect.Request>() {
     @Override
     public void handle(StreamMngrDisconnect.Request req) {
-      LOG.info("{}disconnecting stream:{}", logPrefix, req.streamId);
+      logger.info("{}disconnecting stream:{}", logPrefix, req.streamId);
       Component streamStorageComp = streamStorage.remove(req.streamId);
       if (streamStorageComp == null) {
         throw new RuntimeException("TODO Alex - probbably mismatch between things keeping track of resources");

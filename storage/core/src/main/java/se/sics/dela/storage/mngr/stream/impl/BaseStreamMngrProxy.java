@@ -23,8 +23,6 @@ import com.google.common.collect.Table;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.mngr.stream.StreamMngrPort;
 import se.sics.dela.storage.mngr.stream.events.StreamMngrConnect;
@@ -46,9 +44,6 @@ import se.sics.nstream.StreamId;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class BaseStreamMngrProxy {
-
-  private static final Logger LOG = LoggerFactory.getLogger(StreamMngrProxy.class);
-  private final String logPrefix = "";
 
   private ComponentProxy proxy;
   private Positive<StreamMngrPort> streamMngr;

@@ -31,6 +31,7 @@ import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.junit.After;
 import org.junit.Test;
+import org.slf4j.Logger;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 import se.sics.dela.storage.mngr.StorageProvider;
@@ -230,7 +231,7 @@ public class EndpointRegistryTest {
       }
 
       @Override
-      public Pair initiate(StorageResource resource) {
+      public Pair initiate(StorageResource resource, Logger logger) {
         throw new UnsupportedOperationException("Not supported yet.");
       }
     };
