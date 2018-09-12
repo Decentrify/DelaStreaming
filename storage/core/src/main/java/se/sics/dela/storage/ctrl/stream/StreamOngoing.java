@@ -25,22 +25,22 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import org.javatuples.Pair;
+import se.sics.dela.storage.buffer.WriteResult;
+import se.sics.dela.storage.cache.KHint;
+import se.sics.dela.storage.cache.ReadCallback;
+import se.sics.dela.storage.op.AppendFileMngr;
+import se.sics.dela.storage.op.FileBWC;
+import se.sics.dela.storage.op.HashReadCallback;
+import se.sics.dela.storage.op.HashWriteCallback;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.storage.buffer.WriteResult;
-import se.sics.nstream.storage.cache.KHint;
-import se.sics.nstream.storage.managed.AppendFileMngr;
-import se.sics.nstream.storage.managed.FileBWC;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
-import se.sics.nstream.util.result.HashReadCallback;
-import se.sics.nstream.util.result.HashWriteCallback;
-import se.sics.nstream.util.result.ReadCallback;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

@@ -16,28 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.ctrl.stream;
+package se.sics.dela.storage.buffer.nx;
 
-import java.util.Map;
-import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
-import se.sics.dela.storage.op.HashReadCallback;
-import se.sics.kompics.util.Identifier;
-import se.sics.nstream.util.BlockDetails;
+import java.util.List;
+import se.sics.dela.storage.buffer.KBufferReport;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StreamRead extends StreamCtrl {
-
-    public void clean(Identifier reader);
-
-    public void setCacheHint(Identifier reader, KHint.Summary hint);
-
-    //**************************************************************************
-    public boolean hasBlock(int blockNr);
-    public boolean hasHash(int blockNr);
-    public void readHash(int blockNr, HashReadCallback delayedResult);
-    public void readBlock(int blockNr, ReadCallback delayedResult);
-    public Map<Integer, BlockDetails> getIrregularBlocks();
+public class MultiKBufferReport implements KBufferReport {
+    public final List<KBufferReport> report;
+    
+    public MultiKBufferReport(List<KBufferReport> report) {
+        this.report = report;
+    }
+    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for(KBufferReport b : report) {
+            sb.append(report.toString()).append("\n");
+        }
+        return sb.toString();
+    }
 }

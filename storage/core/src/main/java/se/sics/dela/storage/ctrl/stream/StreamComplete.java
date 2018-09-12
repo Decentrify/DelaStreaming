@@ -21,15 +21,15 @@ package se.sics.dela.storage.ctrl.stream;
 import java.util.HashMap;
 import java.util.Map;
 import org.javatuples.Pair;
+import se.sics.dela.storage.cache.KHint;
+import se.sics.dela.storage.cache.ReadCallback;
+import se.sics.dela.storage.op.CompleteFileMngr;
+import se.sics.dela.storage.op.HashReadCallback;
 import se.sics.kompics.util.Identifier;
-import se.sics.nstream.storage.cache.KHint;
-import se.sics.nstream.storage.managed.CompleteFileMngr;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
-import se.sics.nstream.util.result.HashReadCallback;
-import se.sics.nstream.util.result.ReadCallback;
 
 /**
  *

@@ -16,28 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.ctrl.stream;
-
-import java.util.Map;
-import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
-import se.sics.dela.storage.op.HashReadCallback;
-import se.sics.kompics.util.Identifier;
-import se.sics.nstream.util.BlockDetails;
+package se.sics.dela.storage.op;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StreamRead extends StreamCtrl {
-
-    public void clean(Identifier reader);
-
-    public void setCacheHint(Identifier reader, KHint.Summary hint);
-
-    //**************************************************************************
-    public boolean hasBlock(int blockNr);
-    public boolean hasHash(int blockNr);
-    public void readHash(int blockNr, HashReadCallback delayedResult);
-    public void readBlock(int blockNr, ReadCallback delayedResult);
-    public Map<Integer, BlockDetails> getIrregularBlocks();
+public class AppendFMReport {
+    public final int blockPos;
+    public final int hashPos;
+    public final KStorageReport storage;
+    
+    public AppendFMReport(int blockPos, int hashPos, KStorageReport storage) {
+        this.blockPos = blockPos;
+        this.hashPos = hashPos;
+        this.storage = storage;
+    }
+    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("report file bpos:").append(blockPos).append(" hpos:").append(hashPos).append("\n");
+        sb.append(storage.toString());
+        return sb.toString();
+    }
 }

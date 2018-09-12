@@ -21,15 +21,12 @@ package se.sics.dela.storage.gcp;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import java.util.function.BiFunction;
+import se.sics.dela.storage.gcp.GCPHelper.BlobException;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.hops.manifest.ManifestHelper;
 import se.sics.nstream.hops.manifest.ManifestJSON;
-import se.sics.nstream.hops.storage.gcp.GCPEndpoint;
-import se.sics.nstream.hops.storage.gcp.GCPHelper;
-import se.sics.nstream.hops.storage.gcp.GCPHelper.BlobException;
-import se.sics.nstream.hops.storage.gcp.GCPResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

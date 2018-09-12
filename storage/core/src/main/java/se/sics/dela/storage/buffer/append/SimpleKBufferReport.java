@@ -16,28 +16,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.ctrl.stream;
+package se.sics.dela.storage.buffer.append;
 
-import java.util.Map;
-import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
-import se.sics.dela.storage.op.HashReadCallback;
-import se.sics.kompics.util.Identifier;
-import se.sics.nstream.util.BlockDetails;
+import se.sics.dela.storage.buffer.KBufferReport;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StreamRead extends StreamCtrl {
-
-    public void clean(Identifier reader);
-
-    public void setCacheHint(Identifier reader, KHint.Summary hint);
-
-    //**************************************************************************
-    public boolean hasBlock(int blockNr);
-    public boolean hasHash(int blockNr);
-    public void readHash(int blockNr, HashReadCallback delayedResult);
-    public void readBlock(int blockNr, ReadCallback delayedResult);
-    public Map<Integer, BlockDetails> getIrregularBlocks();
+public class SimpleKBufferReport implements KBufferReport {
+    public final long blockPos;
+    public final long bufferPos;
+    public final int bufferLength;
+    
+    public SimpleKBufferReport(int blockPos, long bufferPos, int bufferLength) {
+        this.blockPos = blockPos;
+        this.bufferPos = bufferPos;
+        this.bufferLength = bufferLength;
+    }
+    
+    @Override
+    public String toString() {
+        return "report buffer bpos:" + blockPos + " abspos:" + bufferPos + " length:" + bufferLength;
+    }
 }

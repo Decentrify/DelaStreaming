@@ -26,7 +26,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.javatuples.Pair;
+import se.sics.dela.storage.StreamStorage;
+import se.sics.dela.storage.buffer.KBuffer;
+import se.sics.dela.storage.buffer.append.SimpleAppendKBuffer;
+import se.sics.dela.storage.buffer.nx.MultiKBuffer;
+import se.sics.dela.storage.cache.SimpleKCache;
 import se.sics.dela.storage.mngr.stream.impl.StreamMngrProxy;
+import se.sics.dela.storage.op.AppendFileMngr;
+import se.sics.dela.storage.op.AsyncIncompleteStorage;
+import se.sics.dela.storage.op.AsyncOnDemandHashStorage;
+import se.sics.dela.storage.remove.Converter;
 import se.sics.dela.util.ResultCallback;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.config.Config;
@@ -34,20 +43,11 @@ import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
-import se.sics.nstream.storage.AsyncIncompleteStorage;
-import se.sics.nstream.storage.AsyncOnDemandHashStorage;
-import se.sics.nstream.storage.buffer.KBuffer;
-import se.sics.nstream.storage.buffer.MultiKBuffer;
-import se.sics.nstream.storage.buffer.SimpleAppendKBuffer;
-import se.sics.nstream.storage.cache.SimpleKCache;
 import se.sics.nstream.storage.durable.util.FileExtendedDetails;
-import se.sics.nstream.storage.durable.util.MyStream;
-import se.sics.nstream.storage.managed.AppendFileMngr;
 import se.sics.nstream.torrent.core.DataReport;
 import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
-import se.sics.nstream.util.actuator.ComponentLoadTracking;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -60,8 +60,8 @@ public class StreamCtrlMngr {
   private final TreeMap<FileId, StreamOngoing> pending;
   private final Map<FileId, StreamOngoing> ongoing;
   private final Map<FileId, StreamComplete> completed;
-  
-  public StreamCtrlMngr(OverlayId torrentId, MyTorrent torrent, StreamMngrProxy.Old proxy, 
+
+  public StreamCtrlMngr(OverlayId torrentId, MyTorrent torrent, StreamMngrProxy.Old proxy,
     Map<FileId, StreamComplete> completed, Map<FileId, StreamOngoing> ongoing, TreeMap<FileId, StreamOngoing> pending) {
     this.proxy = proxy;
     this.torrentId = torrentId;
@@ -72,7 +72,7 @@ public class StreamCtrlMngr {
   }
 
   public static StreamCtrlMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
-    ComponentLoadTracking loadTracker, OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo) {
+    OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo) {
     Map<FileId, StreamComplete> completed = new HashMap<>();
     Map<FileId, StreamOngoing> ongoing = new HashMap<>();
     TreeMap<FileId, StreamOngoing> pending = new TreeMap<>();
@@ -81,16 +81,16 @@ public class StreamCtrlMngr {
       Map<StreamId, Long> fileStreams = new HashMap<>();
 
       FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
-      Pair<StreamId, MyStream> mainStream = entry.getValue().getMainStream();
+      Pair<StreamId, StreamStorage> mainStream = Converter.stream(entry.getValue().getMainStream());
       fileStreams.put(mainStream.getValue0(), streamsInfo.get(mainStream.getValue0()));
-      SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream);
+      SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, mainStream);
 
       List<KBuffer> bufs = new ArrayList<>();
-      bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainStream, 0));
-      for (Pair<StreamId, MyStream> secondaryStream : entry.getValue().getSecondaryStreams()) {
-        fileStreams.put(secondaryStream.getValue0(), streamsInfo.get(secondaryStream.getValue0()));
-        bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, secondaryStream, 0));
-      }
+      bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, mainStream, 0));
+      entry.getValue().getSecondaryStreams().forEach((stream) -> {
+        fileStreams.put(stream.getValue0(), streamsInfo.get(stream.getValue0()));
+        bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, Converter.stream(stream), 0));
+      });
       KBuffer buffer = new MultiKBuffer(bufs);
       AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);
       AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, mainStream);
@@ -173,24 +173,25 @@ public class StreamCtrlMngr {
     return ongoing.get(fileId);
   }
 
-  public Pair<FileId, Map<StreamId, MyStream>> nextPending() {
+  public Pair<FileId, Map<StreamId, StreamStorage>> nextPending() {
     Map.Entry<FileId, StreamOngoing> next = pending.pollFirstEntry();
     ongoing.put(next.getKey(), next.getValue());
-    Map<StreamId, MyStream> resources = resources(next.getKey());
+    Map<StreamId, StreamStorage> resources = resources(next.getKey());
     return Pair.with(next.getKey(), resources);
   }
 
-  public Map<StreamId, MyStream> resources(FileId fileId) {
+  public Map<StreamId, StreamStorage> resources(FileId fileId) {
     FileExtendedDetails details = torrent.extended.get(fileId);
     if (details == null) {
       throw new RuntimeException("ups");
     }
-    Map<StreamId, MyStream> result = new HashMap<>();
-    Pair<StreamId, MyStream> mainStream = details.getMainStream();
+    Map<StreamId, StreamStorage> result = new HashMap<>();
+    Pair<StreamId, StreamStorage> mainStream = Converter.stream(details.getMainStream());
     result.put(mainStream.getValue0(), mainStream.getValue1());
-    for (Pair<StreamId, MyStream> secondaryStream : details.getSecondaryStreams()) {
-      result.put(secondaryStream.getValue0(), secondaryStream.getValue1());
-    }
+    details.getSecondaryStreams().forEach((stream)->{
+      Pair<StreamId, StreamStorage> s = Converter.stream(stream);
+      result.put(s.getValue0(), s.getValue1());
+    });
     return result;
   }
 

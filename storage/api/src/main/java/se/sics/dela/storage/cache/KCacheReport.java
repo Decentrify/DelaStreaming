@@ -16,28 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.ctrl.stream;
-
-import java.util.Map;
-import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.cache.ReadCallback;
-import se.sics.dela.storage.op.HashReadCallback;
-import se.sics.kompics.util.Identifier;
-import se.sics.nstream.util.BlockDetails;
+package se.sics.dela.storage.cache;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StreamRead extends StreamCtrl {
-
-    public void clean(Identifier reader);
-
-    public void setCacheHint(Identifier reader, KHint.Summary hint);
-
-    //**************************************************************************
-    public boolean hasBlock(int blockNr);
-    public boolean hasHash(int blockNr);
-    public void readHash(int blockNr, HashReadCallback delayedResult);
-    public void readBlock(int blockNr, ReadCallback delayedResult);
-    public Map<Integer, BlockDetails> getIrregularBlocks();
+public interface KCacheReport {
 }
