@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.op;
+package se.sics.dela.storage.operation;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -24,9 +24,9 @@ import java.util.function.Consumer;
 import se.sics.dela.storage.cache.KHint;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.FileBaseDetails;
-import se.sics.nstream.util.StreamControl;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;
 
@@ -58,7 +58,7 @@ public class CompleteFileMngr implements StreamControl, FileMngr.Reader {
   }
 
   @Override
-  public void close() {
+  public void close() throws KReferenceException {
     file.close();
     hash.close();
   }

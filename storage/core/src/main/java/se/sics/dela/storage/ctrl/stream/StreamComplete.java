@@ -23,9 +23,10 @@ import java.util.Map;
 import java.util.function.Consumer;
 import org.javatuples.Pair;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.op.CompleteFileMngr;
+import se.sics.dela.storage.operation.CompleteFileMngr;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
@@ -58,7 +59,7 @@ public class StreamComplete implements StreamRead {
   }
 
   @Override
-  public void close() {
+  public void close() throws KReferenceException {
     file.close();
   }
 

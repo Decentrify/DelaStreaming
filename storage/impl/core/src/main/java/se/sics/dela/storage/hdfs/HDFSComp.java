@@ -26,9 +26,9 @@ import java.util.UUID;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
-import se.sics.dela.storage.operation.StreamOpPort;
-import se.sics.dela.storage.operation.events.StorageStreamOpRead;
-import se.sics.dela.storage.operation.events.StorageStreamOpWrite;
+import se.sics.dela.storage.operation.StreamStorageOpPort;
+import se.sics.dela.storage.operation.events.StreamStorageOpRead;
+import se.sics.dela.storage.operation.events.StreamStorageOpWrite;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -53,7 +53,7 @@ public class HDFSComp extends ComponentDefinition {
   private String logPrefix = "";
 
   Positive<Timer> timerPort = requires(Timer.class);
-  Negative<StreamOpPort> resourcePort = provides(StreamOpPort.class);
+  Negative<StreamStorageOpPort> resourcePort = provides(StreamStorageOpPort.class);
   One2NChannel resourceChannel;
 
   private Map<Identifier, Component> components = new HashMap<>();
@@ -61,7 +61,7 @@ public class HDFSComp extends ComponentDefinition {
   private final HDFSResource hdfsResource;
   private final UserGroupInformation ugi;
   private long writePos;
-  private final TreeMap<Long, StorageStreamOpWrite.Request> pending = new TreeMap<>();
+  private final TreeMap<Long, StreamStorageOpWrite.Request> pending = new TreeMap<>();
   //
   private boolean progressed = false;
   private UUID flushTimer;
@@ -104,20 +104,20 @@ public class HDFSComp extends ComponentDefinition {
     cancelPeriodicCheck();
   }
   //**************************************************************************
-  Handler handleReadRequest = new Handler<StorageStreamOpRead.Request>() {
+  Handler handleReadRequest = new Handler<StreamStorageOpRead.Request>() {
     @Override
-    public void handle(StorageStreamOpRead.Request req) {
+    public void handle(StreamStorageOpRead.Request req) {
       logger.trace("{}received:{}", logPrefix, req);
       Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, hdfsResource, req.readRange, logger);
-      StorageStreamOpRead.Response resp = req.respond(readResult);
+      StreamStorageOpRead.Response resp = req.respond(readResult);
       logger.trace("{}answering:{}", logPrefix, resp);
       answer(req, resp);
     }
   };
 
-  Handler handleWriteRequest = new Handler<StorageStreamOpWrite.Request>() {
+  Handler handleWriteRequest = new Handler<StreamStorageOpWrite.Request>() {
     @Override
-    public void handle(StorageStreamOpWrite.Request req) {
+    public void handle(StreamStorageOpWrite.Request req) {
       logger.info("{}write:{}", logPrefix, req);
       if (writePos >= req.pos + req.value.length) {
         logger.info("{}write with pos:{} skipped", logPrefix, req.pos);
@@ -146,7 +146,7 @@ public class HDFSComp extends ComponentDefinition {
           inspectHDFSFile();
         }
       } else {
-        StorageStreamOpWrite.Response resp = req.respond(writeResult);
+        StreamStorageOpWrite.Response resp = req.respond(writeResult);
         answer(req, req.respond(Result.success(true)));
       }
     }
@@ -171,9 +171,9 @@ public class HDFSComp extends ComponentDefinition {
     if (!currentFilePos.isSuccess()) {
       return;
     }
-    Iterator<Map.Entry<Long, StorageStreamOpWrite.Request>> it = pending.entrySet().iterator();
+    Iterator<Map.Entry<Long, StreamStorageOpWrite.Request>> it = pending.entrySet().iterator();
     while (it.hasNext()) {
-      Map.Entry<Long, StorageStreamOpWrite.Request> next = it.next();
+      Map.Entry<Long, StreamStorageOpWrite.Request> next = it.next();
       if (next.getKey() <= currentFilePos.getValue()) {
         answer(next.getValue(), next.getValue().respond(Result.success(true)));
         it.remove();

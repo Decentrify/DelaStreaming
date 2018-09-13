@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.op;
+package se.sics.dela.storage.operation;
 
 import java.util.Set;
 import java.util.function.Consumer;
@@ -24,6 +24,7 @@ import se.sics.dela.storage.cache.KHint;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.tracker.ComponentTracker;
 import se.sics.nstream.tracker.IncompleteTracker;
@@ -64,13 +65,14 @@ public class AppendFileMngr implements StreamControl, FileMngr.Reader, FileMngr.
   }
 
   @Override
-  public void close() {
+  public void close() throws KReferenceException {
     file.close();
     hash.close();
   }
 
-  public CompleteFileMngr complete() {
-    return new CompleteFileMngr(fileDetails, file.complete(), hash);
+  public CompleteFileMngr complete() throws KReferenceException {
+    AsyncCompleteStorage completeFile = file.complete();
+    return new CompleteFileMngr(fileDetails, completeFile, hash);
   }
 
   //*******************************BASIC_READ*********************************

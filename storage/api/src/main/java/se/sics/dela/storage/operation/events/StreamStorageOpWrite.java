@@ -18,19 +18,19 @@
  */
 package se.sics.dela.storage.operation.events;
 
-import se.sics.dela.storage.operation.events.StorageStreamOpEvent;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamId;
+import se.sics.dela.storage.operation.events.StreamStorageOpEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class StorageStreamOpWrite {
+public class StreamStorageOpWrite {
 
-  public static class Request extends Direct.Request<Response> implements StorageStreamOpEvent {
+  public static class Request extends Direct.Request<Response> implements StreamStorageOpEvent {
 
     public final Identifier eventId;
     public final StreamId streamId;
@@ -68,7 +68,7 @@ public class StorageStreamOpWrite {
     }
   }
 
-  public static class Response implements Direct.Response, StorageStreamOpEvent {
+  public static class Response implements Direct.Response, StreamStorageOpEvent {
 
     public final Request req;
     public final Result<Boolean> result;
@@ -94,7 +94,7 @@ public class StorageStreamOpWrite {
     }
   }
 
-  public static class Complete implements StorageStreamOpEvent {
+  public static class Complete implements StreamStorageOpEvent {
     public final Identifier eventId;
     public final StreamId streamId;
     

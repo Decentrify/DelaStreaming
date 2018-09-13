@@ -16,15 +16,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.op;
+package se.sics.dela.storage.operation;
 
-import java.util.function.Consumer;
-import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.reference.KReferenceException;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface HashedBlockWriteCallback extends Consumer<Try<Boolean>> {
-    public void hash(Try<Boolean> hashCheck);
+public interface StreamControl {
+    public void start();
+    public boolean isIdle();
+    public void close() throws KReferenceException;
 }

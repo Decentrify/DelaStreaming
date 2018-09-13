@@ -26,21 +26,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.javatuples.Pair;
-import org.slf4j.Logger;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.buffer.KBuffer;
-import se.sics.dela.storage.buffer.append.SimpleAppendKBuffer;
+import se.sics.dela.storage.buffer.append.SimpleAppendBuffer;
 import se.sics.dela.storage.buffer.nx.MultiKBuffer;
 import se.sics.dela.storage.cache.SimpleKCache;
 import se.sics.dela.storage.mngr.stream.impl.StreamMngrProxy;
-import se.sics.dela.storage.op.AppendFileMngr;
-import se.sics.dela.storage.op.AsyncIncompleteStorage;
-import se.sics.dela.storage.op.AsyncOnDemandHashStorage;
+import se.sics.dela.storage.operation.AppendFileMngr;
+import se.sics.dela.storage.operation.AsyncIncompleteStorage;
+import se.sics.dela.storage.operation.AsyncOnDemandHashStorage;
+import se.sics.dela.storage.operation.StreamStorageOpProxy;
 import se.sics.dela.storage.remove.Converter;
 import se.sics.dela.util.ResultCallback;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
@@ -73,7 +74,7 @@ public class StreamCtrlMngr {
   }
 
   public static StreamCtrlMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
-    OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo, Logger logger) {
+    OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo) throws KReferenceException {
     Map<FileId, StreamComplete> completed = new HashMap<>();
     Map<FileId, StreamOngoing> ongoing = new HashMap<>();
     TreeMap<FileId, StreamOngoing> pending = new TreeMap<>();
@@ -87,10 +88,11 @@ public class StreamCtrlMngr {
       SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, mainStream);
 
       List<KBuffer> bufs = new ArrayList<>();
-      bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, mainStream, 0, logger));
+      StreamStorageOpProxy ssProxy = new StreamStorageOpProxy().setup(proxy);
+      bufs.add(new SimpleAppendBuffer(config, ssProxy, mainStream, 0));
       entry.getValue().getSecondaryStreams().forEach((stream) -> {
         fileStreams.put(stream.getValue0(), streamsInfo.get(stream.getValue0()));
-        bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, Converter.stream(stream), 0, logger));
+        bufs.add(new SimpleAppendBuffer(config, ssProxy, Converter.stream(stream), 0));
       });
       KBuffer buffer = new MultiKBuffer(bufs);
       AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);
@@ -136,17 +138,23 @@ public class StreamCtrlMngr {
     return idle;
   }
 
-  public void close() {
-    completed.values().forEach((e) -> e.close());
-    ongoing.values().forEach((e) -> e.close());
-    pending.values().forEach((e) -> e.close());
+  public void close() throws KReferenceException {
+    for (StreamComplete stream : completed.values()) {
+      stream.close();
+    }
+    for (StreamOngoing stream : ongoing.values()) {
+      stream.close();
+    }
+    for (StreamOngoing stream : pending.values()) {
+      stream.close();
+    }
   }
 
   public boolean complete() {
     return pending.isEmpty() && ongoing.isEmpty();
   }
 
-  public void complete(FileId fileId) {
+  public void complete(FileId fileId) throws KReferenceException {
     StreamWrite fileWriter = ongoing.remove(fileId);
     if (fileWriter == null || !fileWriter.isComplete()) {
       throw new RuntimeException("ups");
@@ -189,7 +197,7 @@ public class StreamCtrlMngr {
     Map<StreamId, StreamStorage> result = new HashMap<>();
     Pair<StreamId, StreamStorage> mainStream = Converter.stream(details.getMainStream());
     result.put(mainStream.getValue0(), mainStream.getValue1());
-    details.getSecondaryStreams().forEach((stream)->{
+    details.getSecondaryStreams().forEach((stream) -> {
       Pair<StreamId, StreamStorage> s = Converter.stream(stream);
       result.put(s.getValue0(), s.getValue1());
     });

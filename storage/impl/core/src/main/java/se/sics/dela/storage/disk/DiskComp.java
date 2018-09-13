@@ -24,9 +24,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
-import se.sics.dela.storage.operation.StreamOpPort;
-import se.sics.dela.storage.operation.events.StorageStreamOpRead;
-import se.sics.dela.storage.operation.events.StorageStreamOpWrite;
+import se.sics.dela.storage.operation.StreamStorageOpPort;
+import se.sics.dela.storage.operation.events.StreamStorageOpRead;
+import se.sics.dela.storage.operation.events.StreamStorageOpWrite;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -46,7 +46,7 @@ public class DiskComp extends ComponentDefinition {
   private String logPrefix = "";
 
   Positive<Timer> timerPort = requires(Timer.class);
-  private final Negative storagePort = provides(StreamOpPort.class);
+  private final Negative storagePort = provides(StreamStorageOpPort.class);
   //**************************************************************************
   private final Identifier self;
   //**************************************************************************
@@ -78,9 +78,9 @@ public class DiskComp extends ComponentDefinition {
     logger.info("{}tearing down", logPrefix);
   }
 
-  Handler handleRead = new Handler<StorageStreamOpRead.Request>() {
+  Handler handleRead = new Handler<StreamStorageOpRead.Request>() {
     @Override
-    public void handle(StorageStreamOpRead.Request req) {
+    public void handle(StreamStorageOpRead.Request req) {
       logger.debug("{}read:{}", logPrefix, req);
       int readLength = (int) (req.readRange.upperAbsEndpoint() - req.readRange.lowerAbsEndpoint() + 1);
       byte[] readVal = new byte[readLength];
@@ -96,9 +96,9 @@ public class DiskComp extends ComponentDefinition {
     }
   };
 
-  Handler handleWrite = new Handler<StorageStreamOpWrite.Request>() {
+  Handler handleWrite = new Handler<StreamStorageOpWrite.Request>() {
     @Override
-    public void handle(StorageStreamOpWrite.Request req) {
+    public void handle(StreamStorageOpWrite.Request req) {
       logger.debug("{}write:{}", logPrefix, req);
       if (writePos >= req.pos + req.value.length) {
         logger.debug("{}write with pos:{} skipped", logPrefix, req.pos);

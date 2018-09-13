@@ -18,11 +18,11 @@
  */
 package se.sics.dela.storage.mngr.stream.events;
 
-import se.sics.dela.storage.StorageStreamEvent;
 import se.sics.dela.storage.mngr.endpoint.events.EndpointMngrEvent;
+import se.sics.dela.storage.StreamStorageEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StreamMngrEvent extends StorageStreamEvent, EndpointMngrEvent {
+public interface StreamMngrEvent extends StreamStorageEvent, EndpointMngrEvent {
 }

@@ -18,21 +18,25 @@
  */
 package se.sics.dela.storage.operation;
 
-import se.sics.dela.storage.operation.events.StorageStreamOpRead;
-import se.sics.dela.storage.operation.events.StorageStreamOpWrite;
-import se.sics.kompics.PortType;
-
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class StreamOpPort extends PortType {
-
-  {
-    request(StorageStreamOpRead.Request.class);
-    indication(StorageStreamOpRead.Response.class);
-    request(StorageStreamOpRead.Complete.class);
-    request(StorageStreamOpWrite.Request.class);
-    indication(StorageStreamOpWrite.Response.class);
-    request(StorageStreamOpWrite.Complete.class);
-  }
+public class AppendFMReport {
+    public final int blockPos;
+    public final int hashPos;
+    public final KStorageReport storage;
+    
+    public AppendFMReport(int blockPos, int hashPos, KStorageReport storage) {
+        this.blockPos = blockPos;
+        this.hashPos = hashPos;
+        this.storage = storage;
+    }
+    
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("report file bpos:").append(blockPos).append(" hpos:").append(hashPos).append("\n");
+        sb.append(storage.toString());
+        return sb.toString();
+    }
 }

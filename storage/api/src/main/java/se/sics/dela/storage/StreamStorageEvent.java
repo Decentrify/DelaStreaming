@@ -16,27 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.op;
+package se.sics.dela.storage;
+
+import se.sics.nstream.StreamId;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class AppendFMReport {
-    public final int blockPos;
-    public final int hashPos;
-    public final KStorageReport storage;
-    
-    public AppendFMReport(int blockPos, int hashPos, KStorageReport storage) {
-        this.blockPos = blockPos;
-        this.hashPos = hashPos;
-        this.storage = storage;
-    }
-    
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("report file bpos:").append(blockPos).append(" hpos:").append(hashPos).append("\n");
-        sb.append(storage.toString());
-        return sb.toString();
-    }
+public interface StreamStorageEvent extends StorageEndpointEvent {
+    public StreamId getStreamId();
 }

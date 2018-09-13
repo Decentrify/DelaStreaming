@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.op;
+package se.sics.dela.storage.operation;
 
 import se.sics.dela.storage.cache.CacheHint;
 import se.sics.nstream.util.range.KBlock;

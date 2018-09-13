@@ -27,7 +27,6 @@ import org.slf4j.Logger;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.mngr.stream.StreamMngrPort;
 import se.sics.dela.storage.mngr.stream.events.StreamMngrConnect;
-import se.sics.dela.storage.mngr.stream.events.StreamMngrDisconnect;
 import se.sics.dela.storage.remove.Converter;
 import se.sics.dela.util.ResultCallback;
 import se.sics.kompics.ComponentProxy;

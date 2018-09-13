@@ -28,7 +28,7 @@ import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.mngr.endpoint.StorageMngrComp;
 import se.sics.dela.storage.mngr.endpoint.EndpointMngrPort;
 import se.sics.dela.storage.mngr.stream.StreamMngrPort;
-import se.sics.dela.storage.operation.StreamOpPort;
+import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
@@ -70,7 +70,7 @@ public class HostComp extends ComponentDefinition {
     connect(storageMngr.getPositive(EndpointMngrPort.class), driver.getNegative(EndpointMngrPort.class),
       Channel.TWO_WAY);
     connect(storageMngr.getPositive(StreamMngrPort.class), driver.getNegative(StreamMngrPort.class), Channel.TWO_WAY);
-    connect(storageMngr.getPositive(StreamOpPort.class), driver.getNegative(StreamOpPort.class), Channel.TWO_WAY);
+    connect(storageMngr.getPositive(StreamStorageOpPort.class), driver.getNegative(StreamStorageOpPort.class), Channel.TWO_WAY);
   }
   
   private DriverComp.Init driverInit(long seed, Identifier selfId) {

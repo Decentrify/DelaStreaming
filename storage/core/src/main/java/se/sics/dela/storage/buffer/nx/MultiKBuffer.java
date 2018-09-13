@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import se.sics.dela.storage.buffer.KBuffer;
 import se.sics.dela.storage.buffer.KBufferReport;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.util.range.KBlock;
@@ -54,8 +55,10 @@ public class MultiKBuffer implements KBuffer {
   }
 
   @Override
-  public void close() {
-    buffers.forEach((buffer) -> buffer.close());
+  public void close() throws KReferenceException {
+    for (KBuffer buffer : buffers) {
+      buffer.close();
+    }
   }
 
   @Override
@@ -63,7 +66,7 @@ public class MultiKBuffer implements KBuffer {
     TryHelper.SimpleCollector<Boolean> collector = new TryHelper.SimpleCollector<>(buffers.size());
     Consumer<Try<Boolean>> resultConsumer = (writeResult) -> {
       collector.collect(writeResult);
-      if(collector.completed()) {
+      if (collector.completed()) {
         callback.accept(collector.getResult());
       }
     };

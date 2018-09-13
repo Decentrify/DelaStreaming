@@ -2,7 +2,7 @@
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
  *
- * KompicsToolbox is free software; you can redistribute it and/or
+ * GVoD is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
@@ -16,16 +16,15 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.op;
-
-import java.util.function.Consumer;
-import se.sics.ktoolbox.util.reference.KReference;
-import se.sics.ktoolbox.util.trysf.Try;
-import se.sics.nstream.util.range.KRange;
+package se.sics.dela.storage.operation;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface AsyncReadOp<R extends KRange> {
-    public void read(KRange readRange, Consumer<Try<KReference<byte[]>>> callback);
+public class CompleteFMReport {
+    public final KStorageReport storage;
+    
+    public CompleteFMReport(KStorageReport storage) {
+        this.storage = storage;
+    }
 }

@@ -22,18 +22,20 @@ import com.google.common.base.Optional;
 import java.util.Map;
 import java.util.Set;
 import org.javatuples.Pair;
+import se.sics.dela.storage.operation.StreamControl;
 import se.sics.ktoolbox.util.reference.KReference;
+import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.nstream.util.BlockDetails;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StreamWrite extends StreamCtrl {
+public interface StreamWrite extends StreamControl {
 
     public boolean isComplete();
 
-    public StreamComplete complete();
+    public StreamComplete complete() throws KReferenceException;
 
     public boolean hasHashes();
 

@@ -18,21 +18,21 @@
  */
 package se.sics.dela.storage.mngr.stream;
 
-import se.sics.dela.storage.StorageStreamEvent;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
+import se.sics.dela.storage.StreamStorageEvent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class StreamIdExtractor extends ChannelIdExtractor<StorageStreamEvent, Identifier> {
+public class StreamIdExtractor extends ChannelIdExtractor<StreamStorageEvent, Identifier> {
 
     public StreamIdExtractor() {
-        super(StorageStreamEvent.class);
+        super(StreamStorageEvent.class);
     }
 
     @Override
-    public Identifier getValue(StorageStreamEvent event) {
+    public Identifier getValue(StreamStorageEvent event) {
         return event.getStreamId();
     }
 }

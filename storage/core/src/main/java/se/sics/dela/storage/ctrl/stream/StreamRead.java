@@ -21,6 +21,7 @@ package se.sics.dela.storage.ctrl.stream;
 import java.util.Map;
 import java.util.function.Consumer;
 import se.sics.dela.storage.cache.KHint;
+import se.sics.dela.storage.operation.StreamControl;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.trysf.Try;
@@ -29,7 +30,7 @@ import se.sics.nstream.util.BlockDetails;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StreamRead extends StreamCtrl {
+public interface StreamRead extends StreamControl {
 
     public void clean(Identifier reader);
 

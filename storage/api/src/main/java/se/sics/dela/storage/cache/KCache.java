@@ -18,8 +18,8 @@
  */
 package se.sics.dela.storage.cache;
 
-import se.sics.dela.storage.op.AsyncReadOp;
-import se.sics.dela.storage.op.StreamControl;
+import se.sics.dela.storage.operation.AsyncReadOp;
+import se.sics.dela.storage.operation.StreamControl;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.util.range.KBlock;
 import se.sics.nstream.util.range.KRange;

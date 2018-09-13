@@ -26,7 +26,7 @@ import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.mngr.endpoint.events.EndpointMngrConnect;
 import se.sics.dela.storage.mngr.endpoint.events.EndpointMngrDisconnect;
 import se.sics.dela.storage.mngr.stream.StreamMngrComp;
-import se.sics.dela.storage.operation.StreamOpPort;
+import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
@@ -51,7 +51,7 @@ public class StorageMngrComp extends ComponentDefinition {
   private final String logPrefix;
 
   private final Positive<Timer> timerPort = requires(Timer.class);
-  private final Negative<StreamOpPort> streamOpPort = provides(StreamOpPort.class);
+  private final Negative<StreamStorageOpPort> streamOpPort = provides(StreamStorageOpPort.class);
   private final Negative<StreamMngrPort> streamMngrPort = provides(StreamMngrPort.class);
   private final Negative<EndpointMngrPort> endpointMngrPort = provides(EndpointMngrPort.class);
   private final One2NChannel streamMngrChannel;
@@ -149,13 +149,13 @@ public class StorageMngrComp extends ComponentDefinition {
     }
     endpointClients.remove(req.getClientId());
     streamMngrChannel.removeChannel(req.endpointId, endpoint.getPositive(StreamMngrPort.class));
-    streamOpChannel.removeChannel(req.endpointId, endpoint.getPositive(StreamOpPort.class));
+    streamOpChannel.removeChannel(req.endpointId, endpoint.getPositive(StreamStorageOpPort.class));
   }
 
   private void setupClient(EndpointMngrConnect.Request req) {
     Component endpoint = endpoints.get(req.endpointId);
     streamMngrChannel.addChannel(req.clientId, endpoint.getPositive(StreamMngrPort.class));
-    streamOpChannel.addChannel(req.clientId, endpoint.getPositive(StreamOpPort.class));
+    streamOpChannel.addChannel(req.clientId, endpoint.getPositive(StreamStorageOpPort.class));
     Map<Identifier, EndpointMngrConnect.Request> endpointClients = clients.get(req.endpointId);
     endpointClients.put(req.getClientId(), req);
     answer(req, req.success(Result.success(true)));
@@ -163,7 +163,7 @@ public class StorageMngrComp extends ComponentDefinition {
 
   private void cleanupClient(Identifier endpointId, Component endpoint) {
     streamMngrChannel.removeChannel(endpointId, endpoint.getPositive(StreamMngrPort.class));
-    streamOpChannel.removeChannel(endpointId, endpoint.getPositive(StreamOpPort.class));
+    streamOpChannel.removeChannel(endpointId, endpoint.getPositive(StreamStorageOpPort.class));
   }
 
   private Component setupEndpoint(Identifier endpointId, StorageProvider provider) {

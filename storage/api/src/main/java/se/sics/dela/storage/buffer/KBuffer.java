@@ -18,8 +18,8 @@
  */
 package se.sics.dela.storage.buffer;
 
-import se.sics.dela.storage.op.AsyncWriteOp;
-import se.sics.dela.storage.op.StreamControl;
+import se.sics.dela.storage.operation.AsyncWriteOp;
+import se.sics.dela.storage.operation.StreamControl;
 import se.sics.nstream.util.range.KBlock;
 
 /**

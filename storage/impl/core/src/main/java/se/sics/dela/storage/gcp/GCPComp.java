@@ -27,9 +27,9 @@ import com.google.cloud.storage.Storage;
 import java.io.IOException;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
-import se.sics.dela.storage.operation.StreamOpPort;
-import se.sics.dela.storage.operation.events.StorageStreamOpRead;
-import se.sics.dela.storage.operation.events.StorageStreamOpWrite;
+import se.sics.dela.storage.operation.StreamStorageOpPort;
+import se.sics.dela.storage.operation.events.StreamStorageOpRead;
+import se.sics.dela.storage.operation.events.StreamStorageOpWrite;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
@@ -50,7 +50,7 @@ public class GCPComp extends ComponentDefinition {
   private String logPrefix = "";
 
   Positive<Timer> timerPort = requires(Timer.class);
-  private final Negative storagePort = provides(StreamOpPort.class);
+  private final Negative storagePort = provides(StreamStorageOpPort.class);
   //**************************************************************************
   private final Identifier self;
   private final String projectName;
@@ -101,9 +101,9 @@ public class GCPComp extends ComponentDefinition {
     }
   }
 
-  Handler handleRead = new Handler<StorageStreamOpRead.Request>() {
+  Handler handleRead = new Handler<StreamStorageOpRead.Request>() {
     @Override
-    public void handle(StorageStreamOpRead.Request req) {
+    public void handle(StreamStorageOpRead.Request req) {
       if (!reader.isOpen()) {
         reader = GCPHelper.readChannel(credentials, projectName, blobId);
       }
@@ -121,18 +121,18 @@ public class GCPComp extends ComponentDefinition {
     }
   };
 
-  Handler handleReadComplete = new Handler<StorageStreamOpRead.Complete>() {
+  Handler handleReadComplete = new Handler<StreamStorageOpRead.Complete>() {
     @Override
-    public void handle(StorageStreamOpRead.Complete event) {
+    public void handle(StreamStorageOpRead.Complete event) {
       if (reader.isOpen()) {
         reader.close();
       }
     }
   };
 
-  Handler handleWrite = new Handler<StorageStreamOpWrite.Request>() {
+  Handler handleWrite = new Handler<StreamStorageOpWrite.Request>() {
     @Override
-    public void handle(StorageStreamOpWrite.Request req) {
+    public void handle(StreamStorageOpWrite.Request req) {
       logger.debug("{}write:{}", logPrefix, req);
       Try<Integer> write = skipExistingBytes(req)
         .flatMap(GCPHelper.writeToBlob(writer));
@@ -147,7 +147,7 @@ public class GCPComp extends ComponentDefinition {
     }
   };
 
-  private Try<byte[]> skipExistingBytes(StorageStreamOpWrite.Request req) {
+  private Try<byte[]> skipExistingBytes(StreamStorageOpWrite.Request req) {
     if (writePos >= req.pos + req.value.length) {
       logger.debug("{}write with pos:{} skipped", logPrefix, req.pos);
       answer(req, req.respond(Result.success(true)));
@@ -171,9 +171,9 @@ public class GCPComp extends ComponentDefinition {
     }
   }
 
-  Handler handleWriteComplete = new Handler<StorageStreamOpWrite.Complete>() {
+  Handler handleWriteComplete = new Handler<StreamStorageOpWrite.Complete>() {
     @Override
-    public void handle(StorageStreamOpWrite.Complete event) {
+    public void handle(StreamStorageOpWrite.Complete event) {
       if (writer.isOpen()) {
         try {
           writer.close();

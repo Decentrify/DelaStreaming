@@ -32,7 +32,7 @@ import se.sics.dela.storage.mngr.endpoint.EndpointMngrProxy;
 import se.sics.dela.storage.mngr.endpoint.EndpointRegistry;
 import se.sics.dela.storage.mngr.stream.StreamMngrPort;
 import se.sics.dela.storage.mngr.stream.impl.BaseStreamMngrProxy;
-import se.sics.dela.storage.operation.StreamOpPort;
+import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
@@ -50,7 +50,7 @@ import se.sics.nstream.TorrentIds;
  */
 public class DriverComp extends ComponentDefinition {
 
-  private final Positive<StreamOpPort> streamOpPort = requires(StreamOpPort.class);
+  private final Positive<StreamStorageOpPort> streamOpPort = requires(StreamStorageOpPort.class);
   private final Positive<EndpointMngrPort> endpointMngrPort = requires(EndpointMngrPort.class);
   private final Positive<StreamMngrPort> streamMngrPort = requires(StreamMngrPort.class);
   private final EndpointMngrProxy endpointMngrProxy;

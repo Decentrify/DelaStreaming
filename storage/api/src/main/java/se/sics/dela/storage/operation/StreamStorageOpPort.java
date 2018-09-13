@@ -16,14 +16,23 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage;
+package se.sics.dela.storage.operation;
 
-import se.sics.nstream.StreamId;
+import se.sics.dela.storage.operation.events.StreamStorageOpRead;
+import se.sics.dela.storage.operation.events.StreamStorageOpWrite;
+import se.sics.kompics.PortType;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface StorageStreamEvent extends StorageEndpointEvent {
-    public StreamId getStreamId();
+public class StreamStorageOpPort extends PortType {
+
+  {
+    request(StreamStorageOpRead.Request.class);
+    indication(StreamStorageOpRead.Response.class);
+    request(StreamStorageOpRead.Complete.class);
+    request(StreamStorageOpWrite.Request.class);
+    indication(StreamStorageOpWrite.Response.class);
+    request(StreamStorageOpWrite.Complete.class);
+  }
 }

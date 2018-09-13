@@ -25,7 +25,7 @@ import org.javatuples.Pair;
 import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.mngr.stream.events.StreamMngrConnect;
 import se.sics.dela.storage.mngr.stream.events.StreamMngrDisconnect;
-import se.sics.dela.storage.operation.StreamOpPort;
+import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
@@ -48,7 +48,7 @@ public class StreamMngrComp extends ComponentDefinition {
   private final String logPrefix;
 
   private final Positive<Timer> timerPort = requires(Timer.class);
-  private final Negative<StreamOpPort> storagePort = provides(StreamOpPort.class);
+  private final Negative<StreamStorageOpPort> storagePort = provides(StreamStorageOpPort.class);
   private final Negative<StreamMngrPort> streamControlPort = provides(StreamMngrPort.class);
   private final One2NChannel storageChannel;
   //**************************************************************************
@@ -94,7 +94,7 @@ public class StreamMngrComp extends ComponentDefinition {
       logger.info("{}connecting stream:{} pos:{}", logPrefix, req.streamId, init.getValue1());
       Component streamStorageComp = create(storageProvider.getStorageDefinition(), init.getValue0());
 
-      storageChannel.addChannel(req.streamId, streamStorageComp.getPositive(StreamOpPort.class));
+      storageChannel.addChannel(req.streamId, streamStorageComp.getPositive(StreamStorageOpPort.class));
       connect(timerPort, streamStorageComp.getNegative(Timer.class), Channel.TWO_WAY);
       
       compIdToStreamId.put(streamStorageComp.id(), req.streamId);
@@ -115,7 +115,7 @@ public class StreamMngrComp extends ComponentDefinition {
       }
       compIdToStreamId.remove(streamStorageComp.id());
       
-      storageChannel.removeChannel(req.streamId, streamStorageComp.getPositive(StreamOpPort.class));
+      storageChannel.removeChannel(req.streamId, streamStorageComp.getPositive(StreamStorageOpPort.class));
       disconnect(timerPort, streamStorageComp.getNegative(Timer.class));
       
       trigger(Kill.event, streamStorageComp.control());

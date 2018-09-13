@@ -27,7 +27,7 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import org.javatuples.Pair;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.op.AppendFileMngr;
+import se.sics.dela.storage.operation.AppendFileMngr;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
@@ -36,7 +36,7 @@ import se.sics.nstream.util.BlockDetails;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
-import se.sics.dela.storage.op.HashedBlockWriteCallback;
+import se.sics.dela.storage.operation.HashedBlockWriteCallback;
 import se.sics.ktoolbox.util.trysf.Try;
 
 /**
@@ -75,7 +75,7 @@ public class StreamOngoing implements StreamWrite, StreamRead {
   }
 
   @Override
-  public void close() {
+  public void close() throws KReferenceException {
     file.close();
   }
 
@@ -127,7 +127,7 @@ public class StreamOngoing implements StreamWrite, StreamRead {
   }
 
   @Override
-  public StreamComplete complete() {
+  public StreamComplete complete() throws KReferenceException {
     return new StreamComplete(file.complete(), fileDetails);
   }
 
