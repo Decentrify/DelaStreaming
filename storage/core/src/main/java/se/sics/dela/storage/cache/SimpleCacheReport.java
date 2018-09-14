@@ -21,11 +21,11 @@ package se.sics.dela.storage.cache;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class SimpleKCacheReport implements KCacheReport {
+public class SimpleCacheReport implements KCacheReport {
     public final int cacheSize;
     public final int extendedCacheSize;
     
-    public SimpleKCacheReport(int cacheSize, int extendedCacheSize) {
+    public SimpleCacheReport(int cacheSize, int extendedCacheSize) {
         this.cacheSize = cacheSize;
         this.extendedCacheSize = extendedCacheSize;
     }

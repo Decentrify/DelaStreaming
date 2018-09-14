@@ -26,11 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.javatuples.Pair;
+import org.slf4j.Logger;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.buffer.KBuffer;
 import se.sics.dela.storage.buffer.append.SimpleAppendBuffer;
 import se.sics.dela.storage.buffer.nx.MultiKBuffer;
-import se.sics.dela.storage.cache.SimpleKCache;
+import se.sics.dela.storage.cache.SimpleCache;
 import se.sics.dela.storage.mngr.stream.impl.StreamMngrProxy;
 import se.sics.dela.storage.operation.AppendFileMngr;
 import se.sics.dela.storage.operation.AsyncIncompleteStorage;
@@ -38,6 +39,7 @@ import se.sics.dela.storage.operation.AsyncOnDemandHashStorage;
 import se.sics.dela.storage.operation.StreamStorageOpProxy;
 import se.sics.dela.storage.remove.Converter;
 import se.sics.dela.util.ResultCallback;
+import se.sics.dela.util.TimerProxy;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -74,7 +76,7 @@ public class StreamCtrlMngr {
   }
 
   public static StreamCtrlMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
-    OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo) throws KReferenceException {
+    OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo, Logger logger) throws KReferenceException {
     Map<FileId, StreamComplete> completed = new HashMap<>();
     Map<FileId, StreamOngoing> ongoing = new HashMap<>();
     TreeMap<FileId, StreamOngoing> pending = new TreeMap<>();
@@ -82,17 +84,20 @@ public class StreamCtrlMngr {
     for (Map.Entry<FileId, FileExtendedDetails> entry : torrent.extended.entrySet()) {
       Map<StreamId, Long> fileStreams = new HashMap<>();
 
+      StreamStorageOpProxy storageProxy = new StreamStorageOpProxy().setup(proxy);
+      TimerProxy timerProxy = new TimerProxy().setup(proxy);
+      
       FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
       Pair<StreamId, StreamStorage> mainStream = Converter.stream(entry.getValue().getMainStream());
       fileStreams.put(mainStream.getValue0(), streamsInfo.get(mainStream.getValue0()));
-      SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, mainStream);
+      SimpleCache cache = new SimpleCache(config, storageProxy, timerProxy, mainStream, logger);
 
       List<KBuffer> bufs = new ArrayList<>();
-      StreamStorageOpProxy ssProxy = new StreamStorageOpProxy().setup(proxy);
-      bufs.add(new SimpleAppendBuffer(config, ssProxy, mainStream, 0));
+      
+      bufs.add(new SimpleAppendBuffer(config, storageProxy, mainStream, 0));
       entry.getValue().getSecondaryStreams().forEach((stream) -> {
         fileStreams.put(stream.getValue0(), streamsInfo.get(stream.getValue0()));
-        bufs.add(new SimpleAppendBuffer(config, ssProxy, Converter.stream(stream), 0));
+        bufs.add(new SimpleAppendBuffer(config, storageProxy, Converter.stream(stream), 0));
       });
       KBuffer buffer = new MultiKBuffer(bufs);
       AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);

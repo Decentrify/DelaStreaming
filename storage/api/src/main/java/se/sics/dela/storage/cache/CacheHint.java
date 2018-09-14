@@ -19,6 +19,7 @@
 package se.sics.dela.storage.cache;
 
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.trysf.Try;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
