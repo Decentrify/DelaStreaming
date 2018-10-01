@@ -22,6 +22,6 @@ package se.sics.dela.storage.mngr.stream.util;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface StreamStorageConnected {
-  public void connected();
+  public void connected(long streamPos);
   public String name();
 }

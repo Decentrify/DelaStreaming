@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.ctrl.stream;
+package se.sics.dela.storage.op;
 
 import com.google.common.base.Optional;
 import java.util.HashMap;
@@ -27,7 +27,7 @@ import java.util.TreeSet;
 import java.util.function.Consumer;
 import org.javatuples.Pair;
 import se.sics.dela.storage.cache.KHint;
-import se.sics.dela.storage.operation.AppendFileMngr;
+import se.sics.dela.storage.op.util.AppendFileMngr;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;

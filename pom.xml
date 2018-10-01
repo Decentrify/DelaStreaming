@@ -40,7 +40,7 @@
     <logger.version>1.7.5</logger.version>
     <config.version>1.2.1</config.version>
     <tuples.version>1.2</tuples.version>
-    <junit.version>4.5</junit.version>
+    <junit.version>4.11</junit.version>
     <netty.version>5.0.0.Alpha3</netty.version>
     <guava.version>20.0</guava.version>
     <hibernate.version>5.2.15.Final</hibernate.version>

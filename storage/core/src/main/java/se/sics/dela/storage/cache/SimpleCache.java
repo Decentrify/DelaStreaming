@@ -68,11 +68,11 @@ public class SimpleCache implements KCache {
   private final Logger logger;
 
   public SimpleCache(Config config, StreamStorageOpProxy opProxy, TimerProxy timerProxy,
-    Pair<StreamId, StreamStorage> stream, Logger logger) {
+    StreamId streamId, Logger logger) {
     this.cacheConfig = new KCacheConfig(config);
     this.opProxy = opProxy;
     this.timerProxy = timerProxy;
-    this.streamId = stream.getValue0();
+    this.streamId = streamId;
     this.logger = logger;
   }
 

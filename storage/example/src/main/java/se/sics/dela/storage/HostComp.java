@@ -21,6 +21,7 @@ package se.sics.dela.storage;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
 import se.sics.dela.storage.disk.DiskComp;
@@ -39,7 +40,6 @@ import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.timer.java.JavaTimer;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
@@ -77,7 +77,7 @@ public class HostComp extends ComponentDefinition {
     IdentifierFactory endpointIdFactory = new IntIdFactory(new Random(seed+2));
     List<StorageProvider> storageProviders = new ArrayList<>();
     storageProviders.add(new DiskComp.StorageProvider(selfId));
-    return new DriverComp.Init(selfId, endpointIdFactory, storageProviders, testPath);
+    return new DriverComp.Init(selfId, endpointIdFactory, storageProviders, testPath, new HashMap<>());
   }
 
   Handler<Start> handleStart = new Handler<Start>() {

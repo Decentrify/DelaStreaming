@@ -19,6 +19,8 @@
 package se.sics.dela.storage.mngr.stream.util;
 
 import se.sics.dela.storage.StreamStorage;
+import se.sics.dela.storage.mngr.stream.util.StreamHandlerImpl.ConnectCollector;
+import se.sics.dela.storage.mngr.stream.util.StreamHandlerImpl.DisconnectCollector;
 import se.sics.ktoolbox.util.TupleHelper;
 import se.sics.nstream.StreamId;
 
@@ -29,17 +31,18 @@ public class StreamStorageHandler implements StreamStorageConnected, StreamStora
 
   private final StreamId streamId;
   private final StreamStorage storage;
-  private final StreamHandlerImpl parent;
   private final TupleHelper.TripletConsumer<StreamId, StreamStorage, StreamStorageConnected> connect;
   private final TupleHelper.PairConsumer<StreamId, StreamStorageDisconnected> disconnect;
   private StreamStorageState state;
+  
+  private ConnectCollector connectC;
+  private DisconnectCollector disconnectC;
 
-  public StreamStorageHandler(StreamId streamId, StreamStorage streamStorage, StreamHandlerImpl parent,
+  public StreamStorageHandler(StreamId streamId, StreamStorage streamStorage,
     TupleHelper.TripletConsumer<StreamId, StreamStorage, StreamStorageConnected> connect,
     TupleHelper.PairConsumer<StreamId, StreamStorageDisconnected> disconnect) {
     this.streamId = streamId;
     this.storage = streamStorage;
-    this.parent = parent;
     this.connect = connect;
     this.disconnect = disconnect;
     this.state = StreamStorageState.DISCONNECTED;
@@ -50,29 +53,31 @@ public class StreamStorageHandler implements StreamStorageConnected, StreamStora
     return storage.getName();
   }
 
-  public void connect() {
+  public void connect(ConnectCollector collector) {
+    this.connectC = collector;
     state = StreamStorageState.PENDING_CONNECT;
     connect.accept(streamId, storage, this);
   }
 
   @Override
-  public void connected() {
+  public void connected(long streamPos) {
     state = StreamStorageState.CONNECTED;
-    parent.connected(storage.getName());
+    connectC.collect(storage.getName(), streamPos);
   }
 
-  public void disconect() {
+  public void disconnect(DisconnectCollector collector) {
     if (StreamStorageState.CONNECTED.equals(state)) {
+      disconnectC = collector;
       state = StreamStorageState.PENDING_DISCONNECT;
       disconnect.accept(streamId, this);
     } else {
-      parent.disconnected(storage.getName());
+      collector.collect(storage.getName());
     }
   }
 
   @Override
   public void disconnected() {
     state = StreamStorageState.DISCONNECTED;
-    parent.disconnected(storage.getName());
+    disconnectC.collect(storage.getName());
   }
 }

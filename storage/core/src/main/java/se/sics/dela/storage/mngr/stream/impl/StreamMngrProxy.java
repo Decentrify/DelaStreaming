@@ -18,26 +18,28 @@
  */
 package se.sics.dela.storage.mngr.stream.impl;
 
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.function.Consumer;
 import org.javatuples.Pair;
-import org.slf4j.Logger;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.mngr.stream.StreamMngrPort;
 import se.sics.dela.storage.mngr.stream.events.StreamMngrConnect;
-import se.sics.dela.storage.remove.Converter;
+import se.sics.dela.storage.mngr.stream.events.StreamMngrDisconnect;
+import se.sics.dela.storage.mngr.stream.util.StreamHandler;
+import se.sics.dela.storage.mngr.stream.util.StreamHandlerImpl;
+import se.sics.dela.storage.mngr.stream.util.StreamStorageConnected;
+import se.sics.dela.storage.mngr.stream.util.StreamStorageDisconnected;
 import se.sics.dela.util.ResultCallback;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.TupleHelper;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
-import se.sics.nstream.transfer.MyTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -45,86 +47,159 @@ import se.sics.nstream.transfer.MyTorrent;
 public class StreamMngrProxy {
 
   private ComponentProxy proxy;
-  private Logger logger;
   private Positive<StreamMngrPort> streamMngr;
 
-  private final Map<FileId, ResultCallback<Boolean>> fileCallbacks = new HashMap<>();
-  //<fileId, set<streamId>>
-  private final Map<FileId, Set<Identifier>> pendingConnect = new HashMap<>();
-  //<streamId, fileId>
-  private final Map<Identifier, FileId> pendingConnectRev = new HashMap<>();
-  //<fileId, set<streamId>>
-  private final Map<FileId, Set<Identifier>> pendingDisconnect = new HashMap<>();
-  //<streamId, fileId>
-  private final Map<Identifier, FileId> pendingDisconnectRev = new HashMap<>();
+  private final Map<FileId, ResultCallback<Boolean>> storageReadyCallbacks = new HashMap<>();
+
+  //<torrentId, fileId, handler>
+  private final Table<Identifier, FileId, StreamHandler> streamHandlers = HashBasedTable.create();
+  //<eventId, callbacks>
+  private final Map<Identifier, StreamStorageConnected> connectedCallbacks = new HashMap<>();
+  private final Map<Identifier, StreamStorageDisconnected> disconnectedCallbacks = new HashMap<>();
 
   public StreamMngrProxy() {
   }
-  
-  public StreamMngrProxy setup(ComponentProxy proxy, Logger logger) {
+
+  public StreamMngrProxy setup(ComponentProxy proxy) {
     this.proxy = proxy;
-    this.logger = logger;
-    streamMngr = proxy.getPositive(StreamMngrPort.class);
-    proxy.subscribe(handleStreamConnected, streamMngr);
-    proxy.subscribe(handleStreamConnected, streamMngr);
+    streamMngr = proxy.getNegative(StreamMngrPort.class).getPair();
+    proxy.subscribe(handleConnected, streamMngr);
+    proxy.subscribe(handleDisconnected, streamMngr);
     return this;
   }
 
-  public void prepareFile(Identifier clientId, FileId fileId, Pair<StreamId, StreamStorage> mainStream,
-    Set<Pair<StreamId, StreamStorage>> secondaryStreams, ResultCallback<Boolean> callback) {
-    pendingConnect.put(fileId, new HashSet<>());
-    fileCallbacks.put(fileId, callback);
-    prepareStream(clientId, fileId, mainStream);
-    secondaryStreams.forEach((stream) -> prepareStream(clientId, fileId, stream));
+  public void prepareFile(Identifier torrentId, FileId fileId, Map<StreamId, StreamStorage> readWrite,
+    Map<StreamId, StreamStorage> writeOnly) {
+    StreamHandlerImpl.Builder builder = new StreamHandlerImpl.Builder(
+      connectedCallback(torrentId), disconnectedCallback(torrentId));
+    readWrite.entrySet().forEach((storage) -> builder.readWrite(storage.getKey(), storage.getValue()));
+    writeOnly.entrySet().forEach((storage) -> builder.writeOnly(storage.getKey(), storage.getValue()));
+    streamHandlers.put(torrentId, fileId, builder.build());
   }
 
-  private void prepareStream(Identifier clientId, FileId fileId, Pair<StreamId, StreamStorage> stream) {
-    StreamMngrConnect.Request req = new StreamMngrConnect.Request(clientId, stream.getValue0(), stream.getValue1());
-    pendingConnect.get(fileId).add(req.getId());
-    pendingConnectRev.put(req.getId(), fileId);
-    proxy.trigger(req, streamMngr);
+  public void setupWrite(Identifier torrentId, FileId fileId,
+    TupleHelper.PairConsumer<Pair<String, Long>, Pair<String, Long>> callback) {
+    WriteSetupCollector collector = new WriteSetupCollector(callback);
+    streamHandlers.get(torrentId, fileId).connectReadWrite((result) -> collector.readWrite(result));
+    streamHandlers.get(torrentId, fileId).connectWriteOnly((result) -> collector.writeOnly(result));
   }
 
-  Handler handleStreamConnected = new Handler<StreamMngrConnect.Success>() {
+  public void setupRead(Identifier torrentId, FileId fileId, Consumer<Boolean> callback) {
+    streamHandlers.get(torrentId, fileId).connectReadWrite((result) -> callback.accept(true));
+  }
+
+  public void closeWrite(Identifier torrentId, FileId fileId, Consumer<Boolean> callback) {
+    streamHandlers.get(torrentId, fileId).disconnectWriteOnly(callback);
+  }
+
+  public void closeRead(Identifier torrentId, FileId fileId, Consumer<Boolean> callback) {
+    streamHandlers.get(torrentId, fileId).disconnectReadWrite(callback);
+  }
+
+  private static class WriteSetupCollector {
+
+    private TupleHelper.PairConsumer<Pair<String, Long>, Pair<String, Long>> callback;
+    private Map<String, Long> readWriteResult = null;
+    private Map<String, Long> writeOnlyResult = null;
+
+    public WriteSetupCollector(TupleHelper.PairConsumer<Pair<String, Long>, Pair<String, Long>> callback) {
+      this.callback = callback;
+    }
+
+    public void readWrite(Map<String, Long> result) {
+      this.readWriteResult = result;
+      if (writeOnlyResult != null) {
+        completed();
+      }
+    }
+
+    public void writeOnly(Map<String, Long> result) {
+      this.writeOnlyResult = result;
+      if (readWriteResult != null) {
+        completed();
+      }
+    }
+
+    private void completed() {
+      Pair<String, Long> writePos = Pair.with("", Long.MAX_VALUE);
+      Pair<String, Long> readPos = Pair.with("", Long.MIN_VALUE);
+      for (Map.Entry<String, Long> e : readWriteResult.entrySet()) {
+        if(e.getValue() < writePos.getValue1()) {
+          writePos = Pair.with(e.getKey(), e.getValue());
+        }
+        if(e.getValue() > readPos.getValue1()) {
+          readPos = Pair.with(e.getKey(), e.getValue());
+        }
+      }
+      for (Map.Entry<String, Long> e : writeOnlyResult.entrySet()) {
+        if(e.getValue() < writePos.getValue1()) {
+          writePos = Pair.with(e.getKey(), e.getValue());
+        }
+      }
+      callback.accept(readPos, writePos);
+    }
+  }
+
+  private static class WriteCompleteCollector {
+
+    private final Consumer<Boolean> callback;
+    private Boolean readWriteResult = null;
+    private Boolean writeOnlyResult = null;
+
+    public WriteCompleteCollector(Consumer<Boolean> callback) {
+      this.callback = callback;
+    }
+
+    public void readWrite(boolean result) {
+      this.readWriteResult = result;
+      if (writeOnlyResult != null) {
+        callback.accept(readWriteResult && writeOnlyResult);
+      }
+    }
+
+    public void writeOnly(boolean result) {
+      this.writeOnlyResult = result;
+      if (readWriteResult != null) {
+        callback.accept(readWriteResult && writeOnlyResult);
+      }
+    }
+  }
+
+  private TupleHelper.TripletConsumer<StreamId, StreamStorage, StreamStorageConnected>
+    connectedCallback(Identifier clientId) {
+    return TupleHelper.tripletConsumer((streamId) -> (streamStorage) -> (callback) -> {
+      StreamMngrConnect.Request req = new StreamMngrConnect.Request(clientId, streamId, streamStorage);
+      proxy.trigger(req, streamMngr);
+      connectedCallbacks.put(req.getId(), callback);
+    });
+  }
+
+  private TupleHelper.PairConsumer<StreamId, StreamStorageDisconnected>
+    disconnectedCallback(Identifier clientId) {
+    return TupleHelper.pairConsumer((streamId) -> (callback) -> {
+      StreamMngrDisconnect.Request req = new StreamMngrDisconnect.Request(clientId, streamId);
+      proxy.trigger(req, streamMngr);
+      disconnectedCallbacks.put(req.getId(), callback);
+    });
+  }
+
+  Handler<StreamMngrConnect.Success> handleConnected = new Handler<StreamMngrConnect.Success>() {
     @Override
     public void handle(StreamMngrConnect.Success resp) {
-      logger.info("prepared:{}", resp.req.streamId);
-      FileId fileId = pendingConnectRev.remove(resp.getId());
-      Set<Identifier> pendingStreams = pendingConnect.get(fileId);
-      pendingStreams.remove(resp.getId());
-      if(pendingStreams.isEmpty()) {
-        pendingConnect.remove(fileId);
-        ResultCallback<Boolean> fileCallback = fileCallbacks.remove(fileId);
-        fileCallback.complete(new Try.Success(true));
-      } 
-   }
+      StreamStorageConnected callback = connectedCallbacks.remove(resp.getId());
+      if (callback != null) {
+        callback.connected(resp.streamPos);
+      }
+    }
   };
-  
-  public static class Old extends StreamMngrProxy {
 
-    private final Set<FileId> pendingFiles = new HashSet<>();
-
-    public Old() {
-      super();
+  Handler<StreamMngrConnect.Success> handleDisconnected = new Handler<StreamMngrConnect.Success>() {
+    @Override
+    public void handle(StreamMngrConnect.Success resp) {
+      StreamStorageDisconnected callback = disconnectedCallbacks.remove(resp.getId());
+      if (callback != null) {
+        callback.disconnected();
+      }
     }
-
-    public void prepare(OverlayId torrentId, MyTorrent torrent, ResultCallback<Boolean> callback) {
-      torrent.extended.entrySet().forEach((file) -> {
-        pendingFiles.add(file.getKey());
-        prepareFile(torrentId, file.getKey(),
-          Converter.stream(file.getValue().getMainStream()),
-          Converter.streams(file.getValue().getSecondaryStreams()),
-          fileCallback(file.getKey(), callback));
-      });
-    }
-
-    private ResultCallback<Boolean> fileCallback(FileId fileId, ResultCallback<Boolean> torrentCallback) {
-      return (Try<Boolean> result) -> {
-        pendingFiles.remove(fileId);
-        if (pendingFiles.isEmpty()) {
-          torrentCallback.complete(new Try.Success(true));
-        }
-      };
-    }
-  }
+  };
 }

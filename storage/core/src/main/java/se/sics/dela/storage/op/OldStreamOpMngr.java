@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.ctrl.stream;
+package se.sics.dela.storage.op;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,10 +32,9 @@ import se.sics.dela.storage.buffer.KBuffer;
 import se.sics.dela.storage.buffer.append.SimpleAppendBuffer;
 import se.sics.dela.storage.buffer.nx.MultiKBuffer;
 import se.sics.dela.storage.cache.SimpleCache;
-import se.sics.dela.storage.mngr.stream.impl.StreamMngrProxy;
-import se.sics.dela.storage.operation.AppendFileMngr;
-import se.sics.dela.storage.operation.AsyncIncompleteStorage;
-import se.sics.dela.storage.operation.AsyncOnDemandHashStorage;
+import se.sics.dela.storage.op.util.AppendFileMngr;
+import se.sics.dela.storage.op.util.AsyncIncompleteStorage;
+import se.sics.dela.storage.op.util.AsyncOnDemandHashStorage;
 import se.sics.dela.storage.operation.StreamStorageOpProxy;
 import se.sics.dela.storage.remove.Converter;
 import se.sics.dela.util.ResultCallback;
@@ -56,16 +55,16 @@ import se.sics.nstream.util.FileBaseDetails;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class StreamCtrlMngr {
+public class OldStreamOpMngr {
 
-  private final StreamMngrProxy.Old proxy;
+  private final StorageOpProxy proxy;
   private final OverlayId torrentId;
   private final MyTorrent torrent;
   private final TreeMap<FileId, StreamOngoing> pending;
   private final Map<FileId, StreamOngoing> ongoing;
   private final Map<FileId, StreamComplete> completed;
 
-  public StreamCtrlMngr(OverlayId torrentId, MyTorrent torrent, StreamMngrProxy.Old proxy,
+  public OldStreamOpMngr(OverlayId torrentId, MyTorrent torrent, StorageOpProxy proxy,
     Map<FileId, StreamComplete> completed, Map<FileId, StreamOngoing> ongoing, TreeMap<FileId, StreamOngoing> pending) {
     this.proxy = proxy;
     this.torrentId = torrentId;
@@ -75,7 +74,7 @@ public class StreamCtrlMngr {
     this.pending = pending;
   }
 
-  public static StreamCtrlMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
+  public static OldStreamOpMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
     OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo, Logger logger) throws KReferenceException {
     Map<FileId, StreamComplete> completed = new HashMap<>();
     Map<FileId, StreamOngoing> ongoing = new HashMap<>();
@@ -86,22 +85,22 @@ public class StreamCtrlMngr {
 
       StreamStorageOpProxy storageProxy = new StreamStorageOpProxy().setup(proxy);
       TimerProxy timerProxy = new TimerProxy().setup(proxy);
-      
+
       FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
       Pair<StreamId, StreamStorage> mainStream = Converter.stream(entry.getValue().getMainStream());
       fileStreams.put(mainStream.getValue0(), streamsInfo.get(mainStream.getValue0()));
-      SimpleCache cache = new SimpleCache(config, storageProxy, timerProxy, mainStream, logger);
+      SimpleCache cache = new SimpleCache(config, storageProxy, timerProxy, mainStream.getValue0(), logger);
 
       List<KBuffer> bufs = new ArrayList<>();
-      
-      bufs.add(new SimpleAppendBuffer(config, storageProxy, mainStream, 0));
+
+      bufs.add(new SimpleAppendBuffer(storageProxy, mainStream.getValue0(), 0, 0));
       entry.getValue().getSecondaryStreams().forEach((stream) -> {
         fileStreams.put(stream.getValue0(), streamsInfo.get(stream.getValue0()));
-        bufs.add(new SimpleAppendBuffer(config, storageProxy, Converter.stream(stream), 0));
+        bufs.add(new SimpleAppendBuffer(storageProxy, Converter.stream(stream).getValue0(), 0, 0));
       });
       KBuffer buffer = new MultiKBuffer(bufs);
       AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);
-      AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, exSyncHandler, file, mainStream);
+      AsyncOnDemandHashStorage hash = new AsyncOnDemandHashStorage(fileDetails, file);
 
       long minPos = Collections.min(fileStreams.values());
       int minBlockNr = BlockHelper.getBlockNrFromPos(minPos, fileDetails);
@@ -115,12 +114,15 @@ public class StreamCtrlMngr {
         pending.put(entry.getKey(), new StreamOngoing(fileMngr, fileDetails));
       }
     }
-    StreamMngrProxy.Old streamCtrlMngrProxy = new StreamMngrProxy.Old();
-    return new StreamCtrlMngr(torrentId, torrent, streamCtrlMngrProxy, completed, ongoing, pending);
+    StorageOpProxy.Old streamOpProxy = new StorageOpProxy.Old();
+    streamOpProxy.setup(proxy, logger);
+    return new OldStreamOpMngr(torrentId, torrent, streamOpProxy, completed, ongoing, pending);
   }
 
   public void setupStreams(ResultCallback<Boolean> callback) {
-    proxy.prepare(torrentId, torrent, callback);
+    if (proxy instanceof StorageOpProxy.Old) {
+      ((StorageOpProxy.Old)proxy).prepare(torrentId, torrent, callback);
+    }
   }
 
   public void startStreams() {

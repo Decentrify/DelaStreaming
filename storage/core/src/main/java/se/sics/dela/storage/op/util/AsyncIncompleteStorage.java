@@ -16,11 +16,13 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.operation;
+package se.sics.dela.storage.op.util;
 
 import java.util.function.Consumer;
+import se.sics.dela.storage.buffer.KBuffer;
 import se.sics.dela.storage.cache.KCache;
 import se.sics.dela.storage.cache.KHint;
+import se.sics.dela.storage.operation.AsyncStorage;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
@@ -31,27 +33,36 @@ import se.sics.nstream.util.range.KRange;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class AsyncCompleteStorage implements AsyncStorage {
+public class AsyncIncompleteStorage implements AsyncStorage {
 
   private final KCache cache;
+  private final KBuffer buffer;
 
-  public AsyncCompleteStorage(KCache cache) {
+  public AsyncIncompleteStorage(KCache cache, KBuffer buffer) {
     this.cache = cache;
+    this.buffer = buffer;
   }
 
   @Override
   public void start() {
     cache.start();
+    buffer.start();
   }
 
   @Override
   public boolean isIdle() {
-    return cache.isIdle();
+    return cache.isIdle() && buffer.isIdle();
   }
 
   @Override
   public void close() throws KReferenceException {
+    buffer.close();
     cache.close();
+  }
+
+  public AsyncCompleteStorage complete() throws KReferenceException {
+    buffer.close();
+    return new AsyncCompleteStorage(cache);
   }
 
   //**************************************************************************
@@ -72,11 +83,17 @@ public class AsyncCompleteStorage implements AsyncStorage {
   }
 
   @Override
-  public void write(KBlock writeRange, KReference<byte[]> val, Consumer<Try<Boolean>> callback) {
-    throw new UnsupportedOperationException("Not supported");
+  public void write(KBlock writeRange, KReference<byte[]> val, Consumer<Try<Boolean>> writeResult) {
+    cache.buffered(writeRange, val);
+    buffer.write(writeRange, val, writeResult);
   }
 
   public KStorageReport report() {
-    return new KStorageReport(null, cache.report());
+    KStorageReport report = new KStorageReport(buffer.report(), cache.report());
+    return report;
+  }
+
+  public boolean pendingBlocks() {
+    return buffer.isIdle();
   }
 }

@@ -16,24 +16,19 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.operation;
+package se.sics.dela.storage.op.util;
 
-import se.sics.dela.storage.operation.AsyncStorage;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
-import org.javatuples.Pair;
-import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.cache.KHint;
+import se.sics.dela.storage.operation.AsyncStorage;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
-import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
-import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
-import se.sics.nstream.StreamId;
 import se.sics.nstream.util.BlockHelper;
 import se.sics.nstream.util.FileBaseDetails;
 import se.sics.nstream.util.range.KBlock;
@@ -45,17 +40,12 @@ import se.sics.nstream.util.range.KRange;
 public class AsyncOnDemandHashStorage implements AsyncStorage {
 
   private final FileBaseDetails fileDetails;
-  private final Pair<StreamId, StreamStorage> stream;
-  private final DelayedExceptionSyncHandler exSyncHandler;
   private final Map<Integer, KReference<byte[]>> hashes = new HashMap<>();
   private final AsyncStorage storage; //someone else is controlling it, I am merely piggy backing
 
-  public AsyncOnDemandHashStorage(FileBaseDetails fileDetails, DelayedExceptionSyncHandler exSyncHandler,
-    AsyncStorage storage, Pair<StreamId, StreamStorage> stream) {
+  public AsyncOnDemandHashStorage(FileBaseDetails fileDetails, AsyncStorage storage) {
     this.fileDetails = fileDetails;
-    this.exSyncHandler = exSyncHandler;
     this.storage = storage;
-    this.stream = stream;
   }
 
   @Override
@@ -68,14 +58,9 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
   }
 
   @Override
-  public void close() {
+  public void close() throws KReferenceException {
     for (KReference<byte[]> hash : hashes.values()) {
-      try {
-        hash.release();
-      } catch (KReferenceException ex) {
-        exSyncHandler.fail(Result.internalFailure(ex));
-        throw new RuntimeException(ex);
-      }
+      hash.release();
     }
   }
 
@@ -100,7 +85,7 @@ public class AsyncOnDemandHashStorage implements AsyncStorage {
       Consumer<Try<KReference<byte[]>>> readBlockCallback = (result) -> {
         if (result.isSuccess()) {
           byte[] block = result.get().getValue().get();
-          KReference<byte[]> computedHash 
+          KReference<byte[]> computedHash
             = KReferenceFactory.getReference(HashUtil.makeHash(block, fileDetails.hashAlg));
           hashes.put(readRange.parentBlock(), computedHash);
           callback.accept(new Try.Success(computedHash));

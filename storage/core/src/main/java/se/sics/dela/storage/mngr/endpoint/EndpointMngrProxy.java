@@ -56,9 +56,10 @@ public class EndpointMngrProxy {
     return this;
   }
 
-  public void connectEndpoint(String endpointName, ClientBuilder client) {
+  public Identifier connectEndpoint(String endpointName, ClientBuilder client) {
     Identifier endpointId = registry.idRegistry.lookup(endpointName);
     registry.connect(client.build(endpointId));
+    return endpointId;
   }
 
   public void disconnectEndpoint(Identifier clientId, Identifier endpointId) {

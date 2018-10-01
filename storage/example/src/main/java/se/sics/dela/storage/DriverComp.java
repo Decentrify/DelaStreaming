@@ -18,20 +18,25 @@
  */
 package se.sics.dela.storage;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import se.sics.dela.storage.disk.DiskComp;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.function.Consumer;
+import org.slf4j.Logger;
 import se.sics.dela.storage.disk.DiskEndpoint;
-import se.sics.dela.storage.disk.DiskResource;
 import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.mngr.endpoint.EndpointMngrPort;
 import se.sics.dela.storage.mngr.endpoint.EndpointMngrProxy;
 import se.sics.dela.storage.mngr.endpoint.EndpointRegistry;
 import se.sics.dela.storage.mngr.stream.StreamMngrPort;
-import se.sics.dela.storage.mngr.stream.impl.BaseStreamMngrProxy;
+import se.sics.dela.storage.mngr.stream.impl.StreamMngrProxy;
+import se.sics.dela.storage.op.TorrentHandlerMngr;
+import se.sics.dela.storage.op.TorrentHandlerMngr.FileReady;
+import se.sics.dela.storage.op.TorrentHandlerMngr.TorrentHandler;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -39,11 +44,11 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.TupleHelper;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.FileId;
-import se.sics.nstream.StreamId;
-import se.sics.nstream.TorrentIds;
+import se.sics.nstream.transfer.MyTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -53,21 +58,27 @@ public class DriverComp extends ComponentDefinition {
   private final Positive<StreamStorageOpPort> streamOpPort = requires(StreamStorageOpPort.class);
   private final Positive<EndpointMngrPort> endpointMngrPort = requires(EndpointMngrPort.class);
   private final Positive<StreamMngrPort> streamMngrPort = requires(StreamMngrPort.class);
+
   private final EndpointMngrProxy endpointMngrProxy;
-  private final BaseStreamMngrProxy streamMngrProxy;
+  private final TorrentHandlerMngr torrentStorageMngr;
+  private final StreamMngrProxy streamMngrProxy;
+
+  private final EndpointCtrl endpointCtrl;
+  private final Library library;
+
   private final Identifier selfId;
   private final String testPath;
-  private final OverlayId torrent1Id;
-  private final OverlayId torrent2Id;
-  
+
   public DriverComp(Init init) {
     selfId = init.selfId;
     testPath = init.testPath;
-    torrent1Id = TorrentIds.torrentIdFactory().randomId();
-    torrent2Id = TorrentIds.torrentIdFactory().randomId();
+    library = new Library(init.torrents);
 
     endpointMngrProxy = new EndpointMngrProxy(init.endpointIdFactory, init.storageProviders);
-    streamMngrProxy = new BaseStreamMngrProxy();
+    streamMngrProxy = new StreamMngrProxy();
+    torrentStorageMngr = new TorrentHandlerMngr(config(), logger, streamMngrProxy);
+    endpointCtrl = new EndpointCtrl(startTorrent());
+
     subscribe(handleStart, control);
   }
 
@@ -77,66 +88,225 @@ public class DriverComp extends ComponentDefinition {
       logger.info("started");
       endpointMngrProxy.setup(proxy);
       streamMngrProxy.setup(proxy);
-      connectEndpoints();
-      connectStreams();
+      prepareTorrents();
     }
   };
 
+  private void prepareTorrents() {
+    library.torrents.entrySet().forEach((torrent) -> torrentStorageMngr.setup(torrent.getKey(), torrent.getValue()));
+    connectEndpoints();
+  }
+
   private void connectEndpoints() {
-    endpointMngrProxy.connectEndpoint(DiskEndpoint.DISK_ENDPOINT_NAME, endpointClient(torrent1Id));
-    endpointMngrProxy.connectEndpoint(DiskEndpoint.DISK_ENDPOINT_NAME, endpointClient(torrent2Id));
+    connectDisk();
   }
 
-  private void connectStreams() {
-    String torrent1Path = testPath + File.separator + "torrent1";
-    prepareFile(torrent1Path, 0);
-  }
-  
-  private void prepareFile(String torrentPath, int fileNr) {
-    FileId fileId = TorrentIds.fileId(torrent1Id, fileNr);
-    Identifier endpointId = endpointMngrProxy.registry.idRegistry.lookup(DiskEndpoint.DISK_ENDPOINT_NAME);
-    Map<StreamId, StreamStorage> readWrite = new HashMap<>();
-    StreamId stream1Id = TorrentIds.streamId(endpointId, fileId);
-    StorageEndpoint storageEndpoint1 = new DiskEndpoint();
-    StorageResource storageResource1 = new DiskResource(torrentPath, "file" + fileNr);
-    StreamStorage streamStorage1 = new StreamStorage(storageEndpoint1, storageResource1);
-    readWrite.put(stream1Id, streamStorage1);
-    Map<StreamId, StreamStorage> writeOnly = new HashMap<>();
-    streamMngrProxy.prepareFile(torrent1Id, fileId, readWrite, writeOnly);
-  }
-  
-  private EndpointRegistry.ClientBuilder endpointClient(Identifier clientId) {
-    return new EndpointRegistry.ClientBuilder(clientId,
-      endpointConnected(),
-      endpointConnectFailed(),
-      endpointDisconnected());
-  }
-
-  TupleHelper.PairConsumer<Identifier, Identifier> endpointConnected() {
-    return new TupleHelper.PairConsumer<Identifier, Identifier>() {
+  private void connectDisk() {
+    Identifier clientId = BasicIdentifiers.eventId();
+    TupleHelper.PairConsumer diskConnected
+      = new TupleHelper.PairConsumer<Identifier, Identifier>() {
       @Override
       public void accept(Identifier clientId, Identifier endpointId) {
         logger.info("client:{}, endpoint:{} connected", new Object[]{clientId, endpointId});
+        endpointCtrl.connected(endpointId);
       }
     };
-  }
-
-  TupleHelper.TripletConsumer<Identifier, Identifier, Throwable> endpointConnectFailed() {
-    return new TupleHelper.TripletConsumer<Identifier, Identifier, Throwable>() {
+    TupleHelper.TripletConsumer<Identifier, Identifier, Throwable> diskConnectFailed
+      = new TupleHelper.TripletConsumer<Identifier, Identifier, Throwable>() {
       @Override
       public void accept(Identifier clientId, Identifier endpointId, Throwable cause) {
         logger.info("client:{}, endpoint:{} connect fail", new Object[]{clientId, endpointId});
+        endpointCtrl.connectFailed(endpointId, cause);
+      }
+    };
+
+    TupleHelper.PairConsumer<Identifier, Identifier> diskDisconnected
+      = new TupleHelper.PairConsumer<Identifier, Identifier>() {
+      @Override
+      public void accept(Identifier clientId, Identifier endpointId) {
+        logger.info("client:{}, endpoint:{} disconnected", new Object[]{clientId, endpointId});
+        endpointCtrl.disconnected(endpointId);
+      }
+    };
+
+    EndpointRegistry.ClientBuilder cb = new EndpointRegistry.ClientBuilder(clientId,
+      diskConnected, diskConnectFailed, diskDisconnected);
+    Identifier endpointId = endpointMngrProxy.connectEndpoint(DiskEndpoint.DISK_ENDPOINT_NAME, cb);
+    endpointCtrl.connect(endpointId);
+  }
+
+  private static class EndpointCtrl {
+
+    private final Set<Identifier> connecting = new HashSet<>();
+    private final Set<Identifier> connected = new HashSet<>();
+    private final Map<Identifier, Throwable> connectFailed = new HashMap<>();
+
+    private final Consumer<Boolean> connectedCallback;
+
+    public EndpointCtrl(Consumer<Boolean> connectedCallback) {
+      this.connectedCallback = connectedCallback;
+    }
+
+    public void connect(Identifier endpointId) {
+      connecting.add(endpointId);
+    }
+
+    public void connected(Identifier endpointId) {
+      connecting.remove(endpointId);
+      connected.add(endpointId);
+      if (connecting.isEmpty() && connectFailed.isEmpty()) {
+        connectedCallback.accept(true);
+      }
+    }
+
+    public void connectFailed(Identifier endpointId, Throwable cause) {
+      connecting.remove(endpointId);
+      connectFailed.put(endpointId, cause);
+    }
+
+    public void disconnected(Identifier endpointId) {
+      connected.remove(endpointId);
+    }
+
+    public boolean allConnected() {
+      return connecting.isEmpty() && connectFailed.isEmpty();
+    }
+  }
+
+//  private void connectStreams(OverlayId torrentId) {
+//    MyTorrent torrent = torrents.get(torrentId);
+//    String torrent1Path = testPath + File.separator + torrentId;
+//    prepareFile(torrentId, torrent1Path, 0);
+//  }
+//  private void prepareFile(OverlayId torrentId, String torrentPath, int fileNr) {
+//    FileId fileId = TorrentIds.fileId(torrentId, fileNr);
+//    Identifier endpointId = endpointMngrProxy.registry.idRegistry.lookup(DiskEndpoint.DISK_ENDPOINT_NAME);
+//    Map<StreamId, StreamStorage> readWrite = new HashMap<>();
+//    StreamId stream1Id = TorrentIds.streamId(endpointId, fileId);
+//    StorageEndpoint storageEndpoint1 = new DiskEndpoint();
+//    StorageResource storageResource1 = new DiskResource(torrentPath, "file" + fileNr);
+//    StreamStorage streamStorage1 = new StreamStorage(storageEndpoint1, storageResource1);
+//    readWrite.put(stream1Id, streamStorage1);
+//    Map<StreamId, StreamStorage> writeOnly = new HashMap<>();
+//    streamMngrProxy.prepareFile(torrentId, fileId, readWrite, writeOnly);
+//  }
+  private Consumer<Boolean> startTorrent() {
+    return new Consumer<Boolean>() {
+      @Override
+      public void accept(Boolean notUsed) {
+        nextTorrent();
       }
     };
   }
 
-  TupleHelper.PairConsumer<Identifier, Identifier> endpointDisconnected() {
-    return new TupleHelper.PairConsumer<Identifier, Identifier>() {
+  private void nextTorrent() {
+    if (!library.hasPending() && !library.hasActive()) {
+      logger.info("library completed");
+    }
+    OverlayId torrentId = library.nextTorrent();
+    logger.info("torrent:{} started", torrentId);
+    TorrentHandler storageHandler = torrentStorageMngr.getTorrent(torrentId);
+    nextFile(torrentId, storageHandler, torrentCallback());
+  }
+
+  private Consumer<OverlayId> torrentCallback() {
+    return (OverlayId torrentId) -> {
+      logger.info("torrent:{} completed", new Object[]{torrentId});
+      library.complete(torrentId);
+      nextTorrent();
+    };
+  }
+
+  private void nextFile(OverlayId torrentId, TorrentHandler torrentStorageHandler,
+    Consumer<OverlayId> torrentCompleted) {
+    if (torrentStorageHandler.hasPending()) {
+      Consumer<FileId> fileCompletedCallback = fileCallback(torrentId, torrentStorageHandler, torrentCompleted);
+      FileHandler fh = new FileHandler(logger, torrentId, torrentStorageHandler, fileCompletedCallback);
+      torrentStorageHandler.prepareNextPending(fh.fileReady);
+    }
+    if (!torrentStorageHandler.hasWritting()) {
+      torrentCompleted.accept(torrentId);
+    }
+  }
+
+  private Consumer<FileId> fileCallback(OverlayId torrentId, TorrentHandler torrentStorageHandler,
+    Consumer<OverlayId> torrentCompleted) {
+    return (FileId fileId) -> {
+      logger.info("torrent:{} file:{} completed", new Object[]{torrentId, fileId});
+      nextFile(torrentId, torrentStorageHandler, torrentCompleted);
+    };
+  }
+
+  private static class FileHandler {
+
+    final Logger logger;
+    final OverlayId torrentId;
+    final TorrentHandler storageHandler;
+    FileId fileId;
+    final Consumer<FileId> onCompletion;
+
+    public FileHandler(Logger logger, OverlayId torrentId, TorrentHandler storageHandler,
+      Consumer<FileId> onCompletion) {
+      this.logger = logger;
+      this.torrentId = torrentId;
+      this.storageHandler = storageHandler;
+      this.onCompletion = onCompletion;
+    }
+
+    private Consumer<FileReady> fileReady = new Consumer<FileReady>() {
       @Override
-      public void accept(Identifier clientId, Identifier endpointId) {
-        logger.info("client:{}, endpoint:{} disconnected", new Object[]{clientId, endpointId});
+      public void accept(FileReady file) {
+        fileId = file.fileId;
+        logger.info("torrent:{} file:{} ready", new Object[]{torrentId, fileId});
+        storageHandler.closeWrite(file.fileId, closeWrite);
       }
     };
+
+    private Consumer<Boolean> closeWrite = new Consumer<Boolean>() {
+      @Override
+      public void accept(Boolean result) {
+        logger.info("torrent:{} file:{} write closed", new Object[]{torrentId, fileId});
+        storageHandler.closeRead(fileId, closeRead);
+      }
+    };
+
+    private Consumer<Boolean> closeRead = new Consumer<Boolean>() {
+      @Override
+      public void accept(Boolean result) {
+        logger.info("torrent:{} file:{} read closed", new Object[]{torrentId, fileId});
+        onCompletion.accept(fileId);
+      }
+    };
+  }
+
+  private static class Library {
+
+    public final Map<OverlayId, MyTorrent> torrents;
+    private final TreeSet<OverlayId> pending = new TreeSet<>();
+    private final List<OverlayId> active = new LinkedList<>();
+
+    public Library(Map<OverlayId, MyTorrent> torrents) {
+      this.torrents = torrents;
+      this.pending.addAll(torrents.keySet());
+    }
+
+    public boolean hasPending() {
+      return !pending.isEmpty();
+    }
+
+    public boolean hasActive() {
+      return !active.isEmpty();
+    }
+
+    public OverlayId nextTorrent() {
+      OverlayId torrentId = pending.pollFirst();
+      active.add(torrentId);
+      return torrentId;
+    }
+
+    public void complete(OverlayId torrentId) {
+      active.remove(torrentId);
+    }
   }
 
   public static class Init extends se.sics.kompics.Init<DriverComp> {
@@ -145,13 +315,15 @@ public class DriverComp extends ComponentDefinition {
     public final List<StorageProvider> storageProviders;
     public final IdentifierFactory endpointIdFactory;
     public final String testPath;
+    public final Map<OverlayId, MyTorrent> torrents;
 
-    public Init(Identifier selfId, IdentifierFactory endpointIdFactory, List<StorageProvider> storageProviders, 
-      String testPath) {
+    public Init(Identifier selfId, IdentifierFactory endpointIdFactory, List<StorageProvider> storageProviders,
+      String testPath, Map<OverlayId, MyTorrent> torrents) {
       this.selfId = selfId;
       this.storageProviders = storageProviders;
       this.endpointIdFactory = endpointIdFactory;
       this.testPath = testPath;
+      this.torrents = torrents;
     }
   }
 }

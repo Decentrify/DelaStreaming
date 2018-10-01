@@ -18,6 +18,7 @@
  */
 package se.sics.dela.storage.mngr.stream.util;
 
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -25,9 +26,9 @@ import java.util.function.Consumer;
  */
 public interface StreamHandler {
   public boolean pendingOp();
-  public void setupReadWrite(Consumer<Boolean> callback);
-  public void setupReadOnly(Consumer<Boolean> callback);
-  public void writeComplete(Consumer<Boolean> callback);
-  public void readComplete(Consumer<Boolean> callback);
+  public void connectReadWrite(Consumer<Map<String, Long>> callback);
+  public void connectWriteOnly(Consumer<Map<String, Long>> callback);
+  public void disconnectWriteOnly(Consumer<Boolean> callback);
+  public void disconnectReadWrite(Consumer<Boolean> callback);
   public boolean isConnected();
 }

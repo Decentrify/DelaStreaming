@@ -22,12 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import org.javatuples.Pair;
-import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.buffer.KBuffer;
-import se.sics.dela.storage.buffer.KBufferConfig;
 import se.sics.dela.storage.buffer.KBufferReport;
 import se.sics.dela.storage.operation.StreamStorageOpProxy;
-import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.trysf.Try;
@@ -43,7 +40,6 @@ import se.sics.nstream.util.range.KBlock;
  */
 public class SimpleAppendBuffer implements KBuffer {
 
-  private final KBufferConfig bufferConfig;
   private final StreamId streamId;
   //**************************************************************************
   private final StreamStorageOpProxy proxy;
@@ -53,13 +49,11 @@ public class SimpleAppendBuffer implements KBuffer {
   //write result callback
   private final Map<Long, Pair<KReference<byte[]>, Consumer<Try<Boolean>>>> buffer = new HashMap<>();
 
-  public SimpleAppendBuffer(Config config, StreamStorageOpProxy proxy,
-    Pair<StreamId, StreamStorage> stream, long appendPos) {
-    this.bufferConfig = new KBufferConfig(config);
+  public SimpleAppendBuffer(StreamStorageOpProxy proxy, StreamId streamId, long appendPos, int writeBlock) {
     this.proxy = proxy;
-    this.streamId = stream.getValue0();
+    this.streamId = streamId;
     this.appendPos = appendPos;
-    this.blockPos = 0;
+    this.blockPos = writeBlock;
   }
 
   @Override

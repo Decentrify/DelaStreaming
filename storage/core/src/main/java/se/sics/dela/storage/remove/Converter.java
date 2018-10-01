@@ -1,7 +1,9 @@
 package se.sics.dela.storage.remove;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.javatuples.Pair;
 import se.sics.dela.storage.StreamStorage;
@@ -11,24 +13,43 @@ import se.sics.dela.storage.gcp.GCPEndpoint;
 import se.sics.dela.storage.gcp.GCPResource;
 import se.sics.dela.storage.hdfs.HDFSEndpoint;
 import se.sics.dela.storage.hdfs.HDFSResource;
+import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.util.MyStream;
+import se.sics.nstream.transfer.MyTorrent;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class Converter {
 
+  public static Map<StreamId, StreamStorage> readWrite(MyTorrent torrent, FileId fileId) {
+    Map<StreamId, StreamStorage> result = new HashMap<>();
+    Pair<StreamId, MyStream> mainS = torrent.extended.get(fileId).getMainStream();
+    Pair<StreamId, StreamStorage> mainStream = stream(mainS);
+    result.put(mainStream.getValue0(), mainStream.getValue1());
+    return result;
+  }
+
+  public static Map<StreamId, StreamStorage> writeOnly(MyTorrent torrent, FileId fileId) {
+    Map<StreamId, StreamStorage> result = new HashMap<>();
+    torrent.extended.get(fileId).getSecondaryStreams().forEach((secondaryS) -> {
+      Pair<StreamId, StreamStorage> secondaryStream = stream(secondaryS);
+      result.put(secondaryStream.getValue0(), secondaryStream.getValue1());
+    });
+    return result;
+  }
+
   public static Set<Pair<StreamId, StreamStorage>> streams(List<Pair<StreamId, MyStream>> vals) {
     Set<Pair<StreamId, StreamStorage>> result = new HashSet<>();
     vals.forEach((val) -> result.add(stream(val)));
     return result;
   }
-  
+
   public static Pair<StreamId, StreamStorage> stream(Pair<StreamId, MyStream> val) {
     return Pair.with(val.getValue0(), stream(val.getValue1()));
   }
-  
+
   public static StreamStorage stream(MyStream val) {
     if (val.resource instanceof se.sics.nstream.hops.storage.disk.DiskResource) {
       se.sics.nstream.hops.storage.disk.DiskResource r

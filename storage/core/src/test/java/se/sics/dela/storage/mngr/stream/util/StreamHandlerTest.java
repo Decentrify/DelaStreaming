@@ -55,6 +55,8 @@ public class StreamHandlerTest {
   @Test
   public void test() {
     SetupCallback streamCallback;
+    WriteSetupCallback readWriteStreamCallback;
+    WriteSetupCallback writeOnlyStreamCallback;
     StreamHandlerImpl.Builder sb = new StreamHandlerImpl.Builder(connect, disconnect);
     StorageResource r = resource("resource");
     StreamStorage s1 = new StreamStorage(endpoint("endpoint1"), r);
@@ -67,86 +69,85 @@ public class StreamHandlerTest {
     sb.writeOnly(null, s4);
 
     StreamHandler handler = sb.build();
-
-    streamCallback = new SetupCallback();
-    setupReadOnly(handler, streamCallback);
-    storageConnected(s1);
-    storageConnected(s2);
-    streamConnected(handler, streamCallback);
-
-    streamCallback = new SetupCallback();
-    readComplete(handler, streamCallback);
-    storageDisconnected(s1);
-    storageDisconnected(s2);
-    streamDisconnected(handler, streamCallback);
-
-    streamCallback = new SetupCallback();
-    setupReadWrite(handler, streamCallback);
-    storageConnected(s1);
-    storageConnected(s2);
+    //1
+    writeOnlyStreamCallback = new WriteSetupCallback();
+    
+    setupWriteOnly(handler, writeOnlyStreamCallback);
     storageConnected(s3);
     storageConnected(s4);
-    streamConnected(handler, streamCallback);
-
+    streamConnected(handler, writeOnlyStreamCallback);
+    //2
     streamCallback = new SetupCallback();
-    writeComplete(handler, streamCallback);
+    
+    disconnectWriteOnly(handler, streamCallback);
     storageDisconnected(s3);
     storageDisconnected(s4);
     streamDisconnected(handler, streamCallback);
 
+    //3
+    readWriteStreamCallback = new WriteSetupCallback();
+    
+    setupReadWrite(handler, readWriteStreamCallback);
+    storageConnected(s1);
+    storageConnected(s2);
+    streamConnected(handler, readWriteStreamCallback);
+
+    //4
     streamCallback = new SetupCallback();
-    readComplete(handler, streamCallback);
+    
+    disconnectReadWrite(handler, streamCallback);
     storageDisconnected(s1);
     storageDisconnected(s2);
     streamDisconnected(handler, streamCallback);
+
   }
 
-  private void setupReadWrite(StreamHandler handler, SetupCallback callback) {
+  private void setupReadWrite(StreamHandler handler, WriteSetupCallback callback) {
     Assert.assertFalse(handler.isConnected());
     Assert.assertFalse(handler.pendingOp());
-    handler.setupReadWrite(callback);
-    Assert.assertFalse(callback.ready);
+    handler.connectReadWrite(callback);
+    Assert.assertFalse(callback.isReady());
     Assert.assertTrue(handler.pendingOp());
   }
 
-  private void setupReadOnly(StreamHandler handler, SetupCallback callback) {
+  private void setupWriteOnly(StreamHandler handler, WriteSetupCallback callback) {
     Assert.assertFalse(handler.isConnected());
     Assert.assertFalse(handler.pendingOp());
-    handler.setupReadOnly(callback);
-    Assert.assertFalse(callback.ready);
+    handler.connectWriteOnly(callback);
+    Assert.assertFalse(callback.isReady());
     Assert.assertTrue(handler.pendingOp());
   }
 
-  private void readComplete(StreamHandler handler, SetupCallback callback) {
+  private void disconnectWriteOnly(StreamHandler handler, SetupCallback callback) {
     Assert.assertFalse(handler.pendingOp());
-    handler.readComplete(callback);
-    Assert.assertFalse(callback.ready);
+    handler.disconnectWriteOnly(callback);
+    Assert.assertFalse(callback.isReady());
     Assert.assertTrue(handler.pendingOp());
   }
 
-  private void writeComplete(StreamHandler handler, SetupCallback callback) {
+  private void disconnectReadWrite(StreamHandler handler, SetupCallback callback) {
     Assert.assertFalse(handler.pendingOp());
-    handler.writeComplete(callback);
-    Assert.assertFalse(callback.ready);
+    handler.disconnectReadWrite(callback);
+    Assert.assertFalse(callback.isReady());
     Assert.assertTrue(handler.pendingOp());
   }
 
-  private void streamConnected(StreamHandler handler, SetupCallback callback) {
+  private void streamConnected(StreamHandler handler, Callback callback) {
     Assert.assertTrue(pendingConnect.isEmpty());
-    Assert.assertTrue(callback.ready);
+    Assert.assertTrue(callback.isReady());
     Assert.assertTrue(handler.isConnected());
   }
 
-  private void streamDisconnected(StreamHandler handler, SetupCallback callback) {
+  private void streamDisconnected(StreamHandler handler, Callback callback) {
     Assert.assertTrue(pendingDisconnect.isEmpty());
-    Assert.assertTrue(callback.ready);
+    Assert.assertTrue(callback.isReady());
     Assert.assertFalse(handler.isConnected());
   }
 
   private void storageConnected(StreamStorage storage) {
     Assert.assertTrue(pendingConnect.containsKey(storage.getName()));
     StreamStorageConnected handler = pendingConnect.remove(storage.getName());
-    handler.connected();
+    handler.connected(0);
   }
 
   private void storageDisconnected(StreamStorage storage) {
@@ -173,13 +174,36 @@ public class StreamHandlerTest {
     };
   }
 
-  public static class SetupCallback implements Consumer<Boolean> {
+  public interface Callback {
+    public boolean isReady();
+  }
+  
+  public static class WriteSetupCallback implements Consumer<Map<String, Long>>, Callback {
+    public boolean ready = false;
+
+    @Override
+    public void accept(Map<String, Long> t) {
+      ready = true;
+    }
+
+    @Override
+    public boolean isReady() {
+      return ready;
+    }
+  }
+  
+  public static class SetupCallback implements Consumer<Boolean>, Callback {
 
     public boolean ready = false;
 
     @Override
     public void accept(Boolean t) {
       ready = true;
+    }
+
+    @Override
+    public boolean isReady() {
+      return ready;
     }
   }
 }

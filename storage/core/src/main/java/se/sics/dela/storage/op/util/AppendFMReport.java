@@ -16,25 +16,27 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.operation;
-
-import se.sics.dela.storage.buffer.KBufferReport;
-import se.sics.dela.storage.cache.KCacheReport;
+package se.sics.dela.storage.op.util;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class KStorageReport {
-    public final KBufferReport bufferReport;
-    public final KCacheReport cacheReport;
+public class AppendFMReport {
+    public final int blockPos;
+    public final int hashPos;
+    public final KStorageReport storage;
     
-    public KStorageReport(KBufferReport bufferReport, KCacheReport cacheReport) {
-        this.bufferReport = bufferReport;
-        this.cacheReport = cacheReport;
+    public AppendFMReport(int blockPos, int hashPos, KStorageReport storage) {
+        this.blockPos = blockPos;
+        this.hashPos = hashPos;
+        this.storage = storage;
     }
     
     @Override
     public String toString() {
-        return bufferReport.toString() + "\n" + cacheReport.toString();
+        StringBuilder sb = new StringBuilder();
+        sb.append("report file bpos:").append(blockPos).append(" hpos:").append(hashPos).append("\n");
+        sb.append(storage.toString());
+        return sb.toString();
     }
 }
