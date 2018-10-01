@@ -29,11 +29,10 @@ import java.util.Map;
 import java.util.Set;
 import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.util.IdRegistry;
-import se.sics.dela.util.MyIntIdFactory;
+import se.sics.dela.util.MyIdentifierFactory;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.TupleHelper;
-import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
  * It is expected that the requester will do one request at a time:
@@ -55,7 +54,6 @@ public class EndpointRegistry {
   final TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider> connectAction;
   final TupleHelper.PairConsumer<Identifier, Identifier> disconnectAction;
   final Map<Identifier, StorageProvider> providers = new HashMap<>();
-  final IdentifierFactory idFactory;
 
   final Set<Identifier> connecting = new HashSet<>();
   final Set<Identifier> disconnecting = new HashSet<>();
@@ -67,13 +65,12 @@ public class EndpointRegistry {
   final BiMap<Identifier, Identifier> clientProxies = HashBiMap.create();
   final Set<Identifier> postponedConnect = new HashSet<>();
 
-  public EndpointRegistry(IdentifierFactory idFactory, List<StorageProvider> providers,
+  public EndpointRegistry(MyIdentifierFactory idFactory, List<StorageProvider> providers,
     TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider> connectAction,
     TupleHelper.PairConsumer<Identifier, Identifier> disconnectAction) {
-    this.idFactory = idFactory;
     this.connectAction = connectAction;
     this.disconnectAction = disconnectAction;
-    this.idRegistry = new IdRegistry(new MyIntIdFactory(new IntIdFactory(null), 0));
+    this.idRegistry = new IdRegistry(idFactory);
     providers.forEach((provider) -> {
       Identifier endpointId = idRegistry.register(provider.getName());
       this.providers.put(endpointId, provider);
@@ -101,7 +98,7 @@ public class EndpointRegistry {
 
   private void proxyConnect(Identifier endpointId) {
     connecting.add(endpointId);
-    Identifier proxyId = idFactory.randomId();
+    Identifier proxyId = BasicIdentifiers.eventId();
     StorageProvider provider = providers.get(endpointId);
     connectAction.accept(proxyId, endpointId, provider);
     clientProxies.put(endpointId, proxyId);

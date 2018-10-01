@@ -25,12 +25,12 @@ import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.mngr.endpoint.EndpointRegistry.ClientBuilder;
 import se.sics.dela.storage.mngr.endpoint.events.EndpointMngrConnect;
 import se.sics.dela.storage.mngr.endpoint.events.EndpointMngrDisconnect;
+import se.sics.dela.util.MyIdentifierFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.TupleHelper;
-import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -43,7 +43,7 @@ public class EndpointMngrProxy {
   public final EndpointRegistry registry;
   private final BiMap<Identifier, Identifier> eventToEndpoint = HashBiMap.create();
 
-  public EndpointMngrProxy(IdentifierFactory idFactory, List<StorageProvider> providers) {
+  public EndpointMngrProxy(MyIdentifierFactory idFactory, List<StorageProvider> providers) {
     this.registry = new EndpointRegistry(idFactory, providers, connectAction, disconnectAction);
   }
 

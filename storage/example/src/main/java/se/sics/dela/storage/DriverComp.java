@@ -38,6 +38,7 @@ import se.sics.dela.storage.op.TorrentHandlerMngr;
 import se.sics.dela.storage.op.TorrentHandlerMngr.FileReady;
 import se.sics.dela.storage.op.TorrentHandlerMngr.TorrentHandler;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
+import se.sics.dela.util.MyIdentifierFactory;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
@@ -313,11 +314,11 @@ public class DriverComp extends ComponentDefinition {
 
     public final Identifier selfId;
     public final List<StorageProvider> storageProviders;
-    public final IdentifierFactory endpointIdFactory;
+    public final MyIdentifierFactory endpointIdFactory;
     public final String testPath;
     public final Map<OverlayId, MyTorrent> torrents;
 
-    public Init(Identifier selfId, IdentifierFactory endpointIdFactory, List<StorageProvider> storageProviders,
+    public Init(Identifier selfId, MyIdentifierFactory endpointIdFactory, List<StorageProvider> storageProviders,
       String testPath, Map<OverlayId, MyTorrent> torrents) {
       this.selfId = selfId;
       this.storageProviders = storageProviders;
