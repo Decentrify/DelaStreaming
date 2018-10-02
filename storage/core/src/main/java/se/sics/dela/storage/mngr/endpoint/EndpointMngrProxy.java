@@ -21,6 +21,7 @@ package se.sics.dela.storage.mngr.endpoint;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import java.util.List;
+import org.slf4j.Logger;
 import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.storage.mngr.endpoint.EndpointRegistry.ClientBuilder;
 import se.sics.dela.storage.mngr.endpoint.events.EndpointMngrConnect;
@@ -38,6 +39,7 @@ import se.sics.ktoolbox.util.TupleHelper;
 public class EndpointMngrProxy {
 
   private ComponentProxy proxy;
+  private Logger logger;
   private Positive<EndpointMngrPort> mngrPort;
 
   public final EndpointRegistry registry;
@@ -47,8 +49,9 @@ public class EndpointMngrProxy {
     this.registry = new EndpointRegistry(idFactory, providers, connectAction, disconnectAction);
   }
 
-  public EndpointMngrProxy setup(ComponentProxy proxy) {
+  public EndpointMngrProxy setup(ComponentProxy proxy, Logger logger) {
     this.proxy = proxy;
+    this.logger = logger;
     this.mngrPort = proxy.getNegative(EndpointMngrPort.class).getPair();
     proxy.subscribe(handleConnected, mngrPort);
     proxy.subscribe(handleConnectFail, mngrPort);
@@ -70,6 +73,8 @@ public class EndpointMngrProxy {
     = new TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider>() {
     @Override
     public void accept(Identifier clientId, Identifier endpointId, StorageProvider provider) {
+      logger.debug("mngr proxy - endpoint:{} client:{} - connecting provider:{}", 
+        new Object[]{endpointId, clientId, provider.getName()});
       EndpointMngrConnect.Request req = new EndpointMngrConnect.Request(clientId, endpointId, provider);
       proxy.trigger(req, mngrPort);
       eventToEndpoint.put(req.getId(), endpointId);
@@ -80,6 +85,7 @@ public class EndpointMngrProxy {
     = new TupleHelper.PairConsumer<Identifier, Identifier>() {
     @Override
     public void accept(Identifier clientId, Identifier endpointId) {
+      logger.debug("mngr proxy - endpoint:{} client:{} - disconnecting", new Object[]{endpointId, clientId});
       EndpointMngrDisconnect.Request req = new EndpointMngrDisconnect.Request(clientId, endpointId);
       proxy.trigger(req, mngrPort);
       eventToEndpoint.put(req.getId(), endpointId);
@@ -89,13 +95,19 @@ public class EndpointMngrProxy {
   Handler handleConnected = new Handler<EndpointMngrConnect.Success>() {
     @Override
     public void handle(EndpointMngrConnect.Success resp) {
+      logger.debug("mngr proxy - endpoint:{} client:{} - connected", 
+        new Object[]{resp.req.endpointId, resp.req.clientId});
       registry.connected(resp.getEndpointId());
+      eventToEndpoint.remove(resp.getId());
     }
   };
 
   Handler handleConnectFail = new Handler<EndpointMngrConnect.Failure>() {
     @Override
     public void handle(EndpointMngrConnect.Failure resp) {
+      logger.debug("mngr proxy - endpoint:{} client:{} - connect failed", 
+        new Object[]{resp.req.endpointId, resp.req.clientId});
+      eventToEndpoint.remove(resp.getId());
       throw new RuntimeException(resp.cause);
     }
   };
@@ -103,7 +115,10 @@ public class EndpointMngrProxy {
   Handler handleDisconnected = new Handler<EndpointMngrDisconnect.Success>() {
     @Override
     public void handle(EndpointMngrDisconnect.Success resp) {
+      logger.debug("mngr proxy - endpoint:{} client:{} - disconnected", 
+        new Object[]{resp.req.endpointId, resp.req.clientId});
       registry.disconnected(resp.getEndpointId());
+      eventToEndpoint.remove(resp.getId());
     }
   };
 }

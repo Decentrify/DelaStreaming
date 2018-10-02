@@ -85,6 +85,7 @@ public class HostComp extends ComponentDefinition {
   private static final String testPath = "./src/main/resources/example/storage";
 
   public HostComp(Init init) {
+    loggingCtxPutAlways("nid", init.selfId.toString());
     setup(init.seed, init.selfId);
     subscribe(handleStart, control);
   }

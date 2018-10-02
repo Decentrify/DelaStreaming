@@ -72,6 +72,7 @@ public class DriverComp extends ComponentDefinition {
 
   public DriverComp(Init init) {
     selfId = init.selfId;
+    loggingCtxPutAlways("nid", init.selfId.toString());
     testPath = init.testPath;
     library = new Library(init.torrents);
 
@@ -86,14 +87,14 @@ public class DriverComp extends ComponentDefinition {
   Handler<Start> handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      endpointMngrProxy.setup(proxy);
+      endpointMngrProxy.setup(proxy, logger);
       streamMngrProxy.setup(proxy);
       prepareTorrents();
     }
   };
 
   private void prepareTorrents() {
-    library.torrents.entrySet().forEach((torrent) -> torrentStorageMngr.setup(torrent.getKey(), torrent.getValue()));
+    library.torrents.entrySet().forEach((torrent) -> torrentStorageMngr.setupTorrent(torrent.getKey(), torrent.getValue()));
     connectEndpoints();
   }
 
@@ -107,7 +108,7 @@ public class DriverComp extends ComponentDefinition {
       = new TupleHelper.PairConsumer<Identifier, Identifier>() {
       @Override
       public void accept(Identifier clientId, Identifier endpointId) {
-        logger.info("client:{}, endpoint:{} connected", new Object[]{clientId, endpointId});
+        logger.info("endpoint:{} - connected", new Object[]{endpointId});
         endpointCtrl.connected(endpointId);
       }
     };
@@ -115,7 +116,7 @@ public class DriverComp extends ComponentDefinition {
       = new TupleHelper.TripletConsumer<Identifier, Identifier, Throwable>() {
       @Override
       public void accept(Identifier clientId, Identifier endpointId, Throwable cause) {
-        logger.info("client:{}, endpoint:{} connect fail", new Object[]{clientId, endpointId});
+        logger.info("endpoint:{} - connect fail", new Object[]{endpointId});
         endpointCtrl.connectFailed(endpointId, cause);
       }
     };
@@ -124,7 +125,7 @@ public class DriverComp extends ComponentDefinition {
       = new TupleHelper.PairConsumer<Identifier, Identifier>() {
       @Override
       public void accept(Identifier clientId, Identifier endpointId) {
-        logger.info("client:{}, endpoint:{} disconnected", new Object[]{clientId, endpointId});
+        logger.info("endpoint:{} - disconnected", new Object[]{endpointId});
         endpointCtrl.disconnected(endpointId);
       }
     };

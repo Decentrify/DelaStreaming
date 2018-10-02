@@ -48,8 +48,6 @@ import se.sics.ktoolbox.util.result.Result;
  */
 public class StorageMngrComp extends ComponentDefinition {
 
-  private final String logPrefix;
-
   private final Positive<Timer> timerPort = requires(Timer.class);
   private final Negative<StreamStorageOpPort> streamOpPort = provides(StreamStorageOpPort.class);
   private final Negative<StreamMngrPort> streamMngrPort = provides(StreamMngrPort.class);
@@ -65,11 +63,12 @@ public class StorageMngrComp extends ComponentDefinition {
 
   public StorageMngrComp(Init init) {
     self = init.self;
-    logPrefix = "<nid:" + self + ">";
-
-    streamMngrChannel = One2NChannel.getChannel(logPrefix + ":dstream_control", streamMngrPort,
+    loggingCtxPutAlways("nid", self.toString());
+    
+    String channelPrefix = "<nid:" + self.toString() + ">"; 
+    streamMngrChannel = One2NChannel.getChannel(channelPrefix + ":dstream_control", streamMngrPort,
       new EndpointIdExtractor());
-    streamOpChannel = One2NChannel.getChannel(logPrefix + ":dstorage", streamOpPort, new EndpointIdExtractor());
+    streamOpChannel = One2NChannel.getChannel(channelPrefix + ":dstorage", streamOpPort, new EndpointIdExtractor());
 
     subscribe(handleStart, control);
     subscribe(handleKilled, control);
@@ -86,7 +85,7 @@ public class StorageMngrComp extends ComponentDefinition {
   Handler handleKilled = new Handler<Killed>() {
     @Override
     public void handle(Killed event) {
-      logger.info("{}killed endpoint component:{}", logPrefix, event.component.id());
+      logger.info("killed endpoint component:{}", event.component.id());
     }
   };
 
@@ -104,7 +103,7 @@ public class StorageMngrComp extends ComponentDefinition {
   Handler handleConnect = new Handler<EndpointMngrConnect.Request>() {
     @Override
     public void handle(EndpointMngrConnect.Request req) {
-      logger.info("{}connecting endpoint:{}", logPrefix, req.endpointId);
+      logger.info("endpoint:{} client:{} - connecting", new Object[]{req.getEndpointId(), req.getClientId()});
       if (!endpoints.containsKey(req.endpointId)) {
         Component endpoint = setupEndpoint(req.endpointId, req.endpointProvider);
         trigger(Start.event, endpoint.control());
@@ -116,7 +115,7 @@ public class StorageMngrComp extends ComponentDefinition {
   Handler handleDisconnect = new Handler<EndpointMngrDisconnect.Request>() {
     @Override
     public void handle(EndpointMngrDisconnect.Request req) {
-      logger.info("{}disconnecting endpoint:{}", logPrefix, req.endpointId);
+      logger.info("endpoint:{} client:{} - disconnecting", new Object[]{req.getEndpointId(), req.getClientId()});
 
       Component endpoint = endpoints.get(req.endpointId);
       if (endpoint != null) {

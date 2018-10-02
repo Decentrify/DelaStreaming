@@ -36,7 +36,7 @@ public class EndpointMngrConnect {
     public final Identifier endpointId;
     public final StorageProvider endpointProvider;
 
-    public Request(Identifier endpointId, Identifier clientId, StorageProvider endpointProvider) {
+    public Request(Identifier clientId, Identifier endpointId, StorageProvider endpointProvider) {
       this.eventId = BasicIdentifiers.eventId();
       this.clientId = clientId;
       this.endpointId = endpointId;

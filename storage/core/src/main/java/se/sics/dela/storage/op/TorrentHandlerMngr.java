@@ -51,8 +51,9 @@ public class TorrentHandlerMngr {
     this.config = config;
     this.logger = logger;
   }
-
-  public void setup(OverlayId torrentId, MyTorrent torrent) {
+  
+  public void setupTorrent(OverlayId torrentId, MyTorrent torrent) {
+    logger.debug("setup torrent:{}", torrentId);
     TorrentHandler files = new TorrentHandler(torrentId, torrent);
     torrents.put(torrentId, files);
   }
