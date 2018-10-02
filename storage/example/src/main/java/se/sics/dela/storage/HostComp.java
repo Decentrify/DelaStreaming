@@ -54,10 +54,13 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.basic.StringByteIdFactory;
 import se.sics.ktoolbox.util.identifiable.basic.UUIDIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.ktoolbox.util.managedStore.core.util.HashUtil;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.TorrentIds;
+import se.sics.nstream.hops.SystemOverlays;
 import se.sics.nstream.hops.manifest.FileInfoJSON;
 import se.sics.nstream.hops.manifest.ManifestHelper;
 import se.sics.nstream.hops.manifest.ManifestJSON;
@@ -124,17 +127,25 @@ public class HostComp extends ComponentDefinition {
     }
   }
 
-  public static void registerDefaults(long seed) {
-    Random rand = new Random(seed + 1);
+  private static void setupBasicIds(long seed) {
+    Random rand = new Random(seed);
     IdentifierRegistry.register(BasicIdentifiers.Values.EVENT.toString(), new UUIDIdFactory());
     IdentifierRegistry.register(BasicIdentifiers.Values.MSG.toString(), new UUIDIdFactory());
     IdentifierRegistry.register(BasicIdentifiers.Values.OVERLAY.toString(), new StringByteIdFactory(rand, 64));
     IdentifierRegistry.register(BasicIdentifiers.Values.NODE.toString(), new IntIdFactory(rand));
   }
+  
+  private static void setupOverlayIds() {
+    OverlayRegistry.initiate(new SystemOverlays.TypeFactory(), new SystemOverlays.Comparator());
+    //torrent overlays
+    byte torrentOwnerId = 1;
+    OverlayRegistry.registerPrefix(TorrentIds.TORRENT_OVERLAYS, torrentOwnerId);
+  }
 
   public static void main(String[] args) throws IOException, FSMException, URISyntaxException {
     long seed = 1234;
-    registerDefaults(seed);
+    setupBasicIds(seed);
+    setupOverlayIds();
     Init init = new Init(seed, BasicIdentifiers.nodeId());
 
     if (Kompics.isOn()) {
