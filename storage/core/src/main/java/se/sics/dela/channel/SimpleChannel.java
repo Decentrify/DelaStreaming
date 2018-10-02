@@ -18,6 +18,7 @@
  */
 package se.sics.dela.channel;
 
+import se.sics.dela.channel.bss.BlockSelectionStrategy;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
