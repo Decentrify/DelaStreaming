@@ -94,7 +94,8 @@ public class DriverComp extends ComponentDefinition {
   };
 
   private void prepareTorrents() {
-    library.torrents.entrySet().forEach((torrent) -> torrentStorageMngr.setupTorrent(torrent.getKey(), torrent.getValue()));
+    library.torrents.entrySet().forEach((torrent) -> torrentStorageMngr.setupTorrent(torrent.getKey(), torrent.
+      getValue()));
     connectEndpoints();
   }
 
@@ -204,10 +205,12 @@ public class DriverComp extends ComponentDefinition {
     if (!library.hasPending() && !library.hasActive()) {
       logger.info("library completed");
     }
-    OverlayId torrentId = library.nextTorrent();
-    logger.info("torrent:{} started", torrentId);
-    TorrentHandler storageHandler = torrentStorageMngr.getTorrent(torrentId);
-    nextFile(torrentId, storageHandler, torrentCallback());
+    if (library.hasPending()) {
+      OverlayId torrentId = library.nextTorrent();
+      logger.info("torrent:{} started", torrentId);
+      TorrentHandler storageHandler = torrentStorageMngr.getTorrent(torrentId);
+      nextFile(torrentId, storageHandler, torrentCallback());
+    }
   }
 
   private Consumer<OverlayId> torrentCallback() {

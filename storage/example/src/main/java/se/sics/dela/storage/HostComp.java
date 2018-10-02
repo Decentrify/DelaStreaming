@@ -181,7 +181,7 @@ public class HostComp extends ComponentDefinition {
     base.put(TorrentIds.fileId(torrentId, 1), fileBase());
     base.put(TorrentIds.fileId(torrentId, 2), fileBase());
     Map<FileId, FileExtendedDetails> extended = new HashMap<>();
-    extended.put(TorrentIds.fileId(torrentId, 2), fileExtended(torrentId, endpointId, torrentName, 1));
+    extended.put(TorrentIds.fileId(torrentId, 1), fileExtended(torrentId, endpointId, torrentName, 1));
     extended.put(TorrentIds.fileId(torrentId, 2), fileExtended(torrentId, endpointId, torrentName, 2));
     MyTorrent torrent = new MyTorrent(manifest, files, base, extended);
     return torrent;
