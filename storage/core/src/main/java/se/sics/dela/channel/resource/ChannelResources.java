@@ -16,17 +16,48 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.channel;
+package se.sics.dela.channel.resource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface ChannelResource {
-  public State getState();
-  public void reserveSlot();
-  public void releaseSlot();
-  public void releaseAllSlots();
-  public static enum State {
-    LOW, SATURATED, HIGH 
+public class ChannelResources {
+
+  public static class Fixed implements ChannelResource {
+
+    private final int maxSlots;
+    private int usedSlots;
+
+    public Fixed(int maxSlots) {
+      this.maxSlots = maxSlots;
+      this.usedSlots = 0;
+
+    }
+
+    @Override
+    public State getState() {
+      if(maxSlots == usedSlots) {
+        return State.SATURATED;
+      } else if(maxSlots < usedSlots) {
+        return State.LOW;
+      } else {
+        return State.HIGH;
+      }
+    }
+
+    @Override
+    public void reserveSlot() {
+      usedSlots++;
+    }
+
+    @Override
+    public void releaseSlot() {
+      usedSlots--;
+    }
+
+    @Override
+    public void releaseAllSlots() {
+      usedSlots = 0;
+    }
   }
 }
