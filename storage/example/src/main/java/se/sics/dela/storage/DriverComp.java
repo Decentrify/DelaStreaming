@@ -34,9 +34,9 @@ import se.sics.dela.storage.mngr.endpoint.EndpointMngrProxy;
 import se.sics.dela.storage.mngr.endpoint.EndpointRegistry;
 import se.sics.dela.storage.mngr.stream.StreamMngrPort;
 import se.sics.dela.storage.mngr.stream.impl.StreamMngrProxy;
-import se.sics.dela.storage.op.TorrentHandlerMngr;
-import se.sics.dela.storage.op.TorrentHandlerMngr.FileReady;
-import se.sics.dela.storage.op.TorrentHandlerMngr.TorrentHandler;
+import se.sics.dela.storage.op.TorrentEndpointHandlers;
+import se.sics.dela.storage.op.TorrentEndpointHandlers.FileReady;
+import se.sics.dela.storage.op.TorrentEndpointHandlers.TorrentEndpointHandler;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.dela.util.MyIdentifierFactory;
 import se.sics.kompics.ComponentDefinition;
@@ -46,7 +46,6 @@ import se.sics.kompics.Start;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.TupleHelper;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.FileId;
 import se.sics.nstream.transfer.MyTorrent;
@@ -61,7 +60,7 @@ public class DriverComp extends ComponentDefinition {
   private final Positive<StreamMngrPort> streamMngrPort = requires(StreamMngrPort.class);
 
   private final EndpointMngrProxy endpointMngrProxy;
-  private final TorrentHandlerMngr torrentStorageMngr;
+  private final TorrentEndpointHandlers torrentStorageMngr;
   private final StreamMngrProxy streamMngrProxy;
 
   private final EndpointCtrl endpointCtrl;
@@ -78,7 +77,7 @@ public class DriverComp extends ComponentDefinition {
 
     endpointMngrProxy = new EndpointMngrProxy(init.endpointIdFactory, init.storageProviders);
     streamMngrProxy = new StreamMngrProxy();
-    torrentStorageMngr = new TorrentHandlerMngr(config(), logger, streamMngrProxy);
+    torrentStorageMngr = new TorrentEndpointHandlers(config(), logger, streamMngrProxy);
     endpointCtrl = new EndpointCtrl(startTorrent());
 
     subscribe(handleStart, control);
@@ -208,7 +207,7 @@ public class DriverComp extends ComponentDefinition {
     if (library.hasPending()) {
       OverlayId torrentId = library.nextTorrent();
       logger.info("torrent:{} started", torrentId);
-      TorrentHandler storageHandler = torrentStorageMngr.getTorrent(torrentId);
+      TorrentEndpointHandler storageHandler = torrentStorageMngr.getTorrent(torrentId);
       nextFile(torrentId, storageHandler, torrentCallback());
     }
   }
@@ -221,7 +220,7 @@ public class DriverComp extends ComponentDefinition {
     };
   }
 
-  private void nextFile(OverlayId torrentId, TorrentHandler torrentStorageHandler,
+  private void nextFile(OverlayId torrentId, TorrentEndpointHandler torrentStorageHandler,
     Consumer<OverlayId> torrentCompleted) {
     if (torrentStorageHandler.hasPending()) {
       Consumer<FileId> fileCompletedCallback = fileCallback(torrentId, torrentStorageHandler, torrentCompleted);
@@ -233,7 +232,7 @@ public class DriverComp extends ComponentDefinition {
     }
   }
 
-  private Consumer<FileId> fileCallback(OverlayId torrentId, TorrentHandler torrentStorageHandler,
+  private Consumer<FileId> fileCallback(OverlayId torrentId, TorrentEndpointHandler torrentStorageHandler,
     Consumer<OverlayId> torrentCompleted) {
     return (FileId fileId) -> {
       logger.info("torrent:{} file:{} completed", new Object[]{torrentId, fileId});
@@ -245,11 +244,11 @@ public class DriverComp extends ComponentDefinition {
 
     final Logger logger;
     final OverlayId torrentId;
-    final TorrentHandler storageHandler;
+    final TorrentEndpointHandler storageHandler;
     FileId fileId;
     final Consumer<FileId> onCompletion;
 
-    public FileHandler(Logger logger, OverlayId torrentId, TorrentHandler storageHandler,
+    public FileHandler(Logger logger, OverlayId torrentId, TorrentEndpointHandler storageHandler,
       Consumer<FileId> onCompletion) {
       this.logger = logger;
       this.torrentId = torrentId;

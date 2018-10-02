@@ -38,15 +38,15 @@ import se.sics.nstream.transfer.MyTorrent;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentHandlerMngr {
+public class TorrentEndpointHandlers {
 
   private final Config config;
   private final Logger logger;
   private final StreamMngrProxy streamMngrProxy;
   
-  private final Map<OverlayId, TorrentHandler> torrents = new HashMap<>();
+  private final Map<OverlayId, TorrentEndpointHandler> torrents = new HashMap<>();
   
-  public TorrentHandlerMngr(Config config, Logger logger, StreamMngrProxy streamMngrProxy) {
+  public TorrentEndpointHandlers(Config config, Logger logger, StreamMngrProxy streamMngrProxy) {
     this.streamMngrProxy = streamMngrProxy;
     this.config = config;
     this.logger = logger;
@@ -54,11 +54,11 @@ public class TorrentHandlerMngr {
   
   public void setupTorrent(OverlayId torrentId, MyTorrent torrent) {
     logger.debug("setup torrent:{}", torrentId);
-    TorrentHandler files = new TorrentHandler(torrentId, torrent);
+    TorrentEndpointHandler files = new TorrentEndpointHandler(torrentId, torrent);
     torrents.put(torrentId, files);
   }
 
-  public TorrentHandler getTorrent(OverlayId torrentId) {
+  public TorrentEndpointHandler getTorrent(OverlayId torrentId) {
     return torrents.get(torrentId);
   }
   
@@ -85,7 +85,7 @@ public class TorrentHandlerMngr {
     READ_CONN
   }
 
-  public class TorrentHandler {
+  public class TorrentEndpointHandler {
 
     private final OverlayId torrentId;
     private final MyTorrent torrent;
@@ -96,7 +96,7 @@ public class TorrentHandlerMngr {
     private int writingNr;
     private int readingNr;
 
-    public TorrentHandler(OverlayId torrentId, MyTorrent torrent) {
+    public TorrentEndpointHandler(OverlayId torrentId, MyTorrent torrent) {
       this.torrentId = torrentId;
       this.torrent = torrent;
       setup();
