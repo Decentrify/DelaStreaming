@@ -86,7 +86,6 @@ public class DriverComp extends ComponentDefinition {
   Handler<Start> handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      logger.info("started");
       endpointMngrProxy.setup(proxy);
       streamMngrProxy.setup(proxy);
       prepareTorrents();

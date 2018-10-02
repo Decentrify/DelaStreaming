@@ -66,7 +66,6 @@ public class StorageMngrComp extends ComponentDefinition {
   public StorageMngrComp(Init init) {
     self = init.self;
     logPrefix = "<nid:" + self + ">";
-    logger.info("{}initiating...", logPrefix);
 
     streamMngrChannel = One2NChannel.getChannel(logPrefix + ":dstream_control", streamMngrPort,
       new EndpointIdExtractor());
@@ -81,7 +80,6 @@ public class StorageMngrComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      logger.info("{}starting", logPrefix);
     }
   };
 

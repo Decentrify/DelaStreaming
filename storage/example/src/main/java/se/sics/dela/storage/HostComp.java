@@ -110,7 +110,6 @@ public class HostComp extends ComponentDefinition {
   Handler<Start> handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      logger.info("start");
     }
   };
 

@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 import se.sics.dela.storage.mngr.StorageProvider;
+import se.sics.dela.util.MyIntIdFactory;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.TupleHelper;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
@@ -43,7 +44,7 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
  */
 public class EndpointRegistryTest {
 
-  IntIdFactory idFactory = new IntIdFactory(new Random(123));
+  MyIntIdFactory idFactory = new MyIntIdFactory(new IntIdFactory(new Random(123)), 0);
   List<Pair<States, Identifier>> timeline = new ArrayList<>();
   Map<Identifier, Identifier> endpointProxyClients = new HashMap<>();
   TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider> connectAction

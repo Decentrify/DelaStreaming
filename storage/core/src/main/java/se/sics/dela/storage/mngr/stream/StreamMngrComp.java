@@ -61,7 +61,6 @@ public class StreamMngrComp extends ComponentDefinition {
   public StreamMngrComp(Init init) {
     self = init.self;
     logPrefix = "<nid:" + self + ">";
-    logger.info("{}initiating...", logPrefix);
 
     storageProvider = init.storageProvider;
 
@@ -76,7 +75,6 @@ public class StreamMngrComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      logger.info("{}starting", logPrefix);
     }
   };
 
