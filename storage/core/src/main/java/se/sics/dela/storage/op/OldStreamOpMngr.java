@@ -38,7 +38,7 @@ import se.sics.dela.storage.op.util.AsyncOnDemandHashStorage;
 import se.sics.dela.storage.operation.StreamStorageOpProxy;
 import se.sics.dela.storage.remove.Converter;
 import se.sics.dela.util.ResultCallback;
-import se.sics.dela.util.TimerProxy;
+import se.sics.dela.util.TimerProxyImpl;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -84,7 +84,7 @@ public class OldStreamOpMngr {
       Map<StreamId, Long> fileStreams = new HashMap<>();
 
       StreamStorageOpProxy storageProxy = new StreamStorageOpProxy().setup(proxy);
-      TimerProxy timerProxy = new TimerProxy().setup(proxy);
+      TimerProxyImpl timerProxy = new TimerProxyImpl().setup(proxy);
 
       FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
       Pair<StreamId, StreamStorage> mainStream = Converter.stream(entry.getValue().getMainStream());

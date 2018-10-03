@@ -38,7 +38,7 @@ public class ChannelResources {
     public State getState() {
       if(maxSlots == usedSlots) {
         return State.SATURATED;
-      } else if(maxSlots < usedSlots) {
+      } else if(usedSlots < maxSlots) {
         return State.LOW;
       } else {
         return State.HIGH;
@@ -58,6 +58,10 @@ public class ChannelResources {
     @Override
     public void releaseAllSlots() {
       usedSlots = 0;
+    }
+    
+    public int usedSlots() {
+      return usedSlots;
     }
   }
 }

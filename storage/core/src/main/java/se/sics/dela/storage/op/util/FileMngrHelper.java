@@ -26,7 +26,7 @@ import se.sics.dela.storage.buffer.append.SimpleAppendBuffer;
 import se.sics.dela.storage.buffer.nx.MultiKBuffer;
 import se.sics.dela.storage.cache.SimpleCache;
 import se.sics.dela.storage.operation.StreamStorageOpProxy;
-import se.sics.dela.util.TimerProxy;
+import se.sics.dela.util.TimerProxyImpl;
 import se.sics.kompics.config.Config;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
@@ -73,10 +73,10 @@ public class FileMngrHelper {
     public final Config config;
     public final Logger logger;
     public final StreamStorageOpProxy streamStorageOpProxy;
-    public final TimerProxy timerProxy;
+    public final TimerProxyImpl timerProxy;
 
     public Conf(Config config, Logger logger, StreamStorageOpProxy streamStorageOpProxy, 
-      TimerProxy timerProxy) {
+      TimerProxyImpl timerProxy) {
       this.config = config;
       this.logger = logger;
       this.streamStorageOpProxy = streamStorageOpProxy;

@@ -45,7 +45,7 @@ public class SimpleChannel {
   private final Sink sink;
   private final ChannelResource channelResource;
   private final BlockSelectionStrategy blockSelection;
-  private Consumer<Try<Boolean>> transferComplete;
+  private Optional<Consumer<Try<Boolean>>> completedCallback;
   private final Set<Integer> pendingReadBlocks = new HashSet<>();
   private final Set<Integer> pendingReadHashes = new HashSet<>();
   private final Set<Integer> pendingWriteBlocks = new HashSet<>();
@@ -63,10 +63,9 @@ public class SimpleChannel {
     this.timer = timer;
   }
 
-  public void start(Consumer<Try<Boolean>> callback) {
-    this.transferComplete = callback;
+  public void start(Consumer<Try<Boolean>> completedCallback) {
+    this.completedCallback = Optional.of(completedCallback);
     setup();
-    periodicCheck = timer.schedulePeriodicTimer(DELAY, DELAY, periodicCheck());
   }
 
   public void stop(Consumer<Try<Boolean>> callback) {
@@ -75,9 +74,11 @@ public class SimpleChannel {
     pendingWriteBlocks.forEach((block) -> sink.cancelBlock(0));
     pendingWriteHashes.forEach((hash) -> sink.cancelHash(hash));
     channelResource.releaseAllSlots();
+    if (periodicCheck != null) {
+      timer.cancelPeriodicTimer(periodicCheck);
+      periodicCheck = null;
+    }
     cleanup(Optional.empty(), callback);
-    timer.cancelPeriodicTimer(periodicCheck);
-    periodicCheck = null;
   }
 
   private Consumer<Boolean> periodicCheck() {
@@ -102,19 +103,39 @@ public class SimpleChannel {
           result.checkedGet();
           //should never get here
         } catch (Throwable t) {
-          cleanup(Optional.of(t), transferComplete);
+          if (completedCallback.isPresent()) {
+            cleanup(Optional.of(t), completedCallback.get());
+            completedCallback = Optional.empty();
+          }
         }
       } else {
+        periodicCheck = timer.schedulePeriodicTimer(DELAY, DELAY, periodicCheck());
         transfer(false);
       }
     };
   }
 
   private void transfer(boolean slotReserved) {
-    int nrSlots = adjustChannelUsage(slotReserved);
-    for (int i = 0; i < nrSlots; i++) {
+    for (int i = 0; i < 2; i++) {
+      ChannelResource.State resourceState = channelResource.getState();
+      if (ChannelResource.State.HIGH.equals(resourceState)) {
+        if (slotReserved) {
+          channelResource.releaseSlot();
+        }
+        break;
+      } else if (ChannelResource.State.SATURATED.equals(channelResource.getState())) {
+        if (!slotReserved) {
+          break;
+        }
+      } else if (ChannelResource.State.LOW.equals(channelResource.getState())) {
+        if (!slotReserved) {
+          channelResource.reserveSlot();
+        }
+      } else {
+        throw new IllegalArgumentException("unknown channel resource state:" + resourceState);
+      }
       Set<Integer> nextHashes = blockSelection.nextHashes();
-      if (!nextHashes.isEmpty()) {
+      if (nextHashes.isEmpty()) {
         Optional<Integer> nextBlock = blockSelection.nextBlock();
         if (nextBlock.isPresent()) {
           int blockNr = nextBlock.get();
@@ -125,8 +146,9 @@ public class SimpleChannel {
           channelResource.releaseSlot();
           if (pendingReadBlocks.isEmpty() && pendingReadHashes.isEmpty()
             && pendingWriteBlocks.isEmpty() && pendingWriteHashes.isEmpty()
-            && blockSelection.isComplete()) {
-            transferComplete.accept(new Try.Success(true));
+            && blockSelection.isComplete() && completedCallback.isPresent()) {
+            completedCallback.get().accept(new Try.Success(true));
+            completedCallback = Optional.empty();
           }
         }
       } else {
@@ -134,6 +156,7 @@ public class SimpleChannel {
         pendingReadHashes.addAll(nextHashes);
         source.readHash(nextHashes, readCallback);
       }
+      slotReserved = false;
     }
   }
 
@@ -151,7 +174,6 @@ public class SimpleChannel {
           sink.writeHashes(hashValues, writeCallback);
         }
         blockSelection.resetHashes(resetHashes);
-
       }
     };
   }
@@ -193,24 +215,6 @@ public class SimpleChannel {
         //TODO - some backoff mechanism allowing the sink to recover
       }
     };
-  }
-
-  private int adjustChannelUsage(boolean slotReserved) {
-    ChannelResource.State channelState = channelResource.getState();
-    switch (channelState) {
-      case HIGH:
-        if (slotReserved) {
-          channelResource.releaseSlot();
-        }
-        return 0;
-      case SATURATED:
-        return slotReserved ? 1 : 0;
-      case LOW:
-        channelResource.reserveSlot();
-        return slotReserved ? 2 : 1;
-      default:
-        throw new IllegalArgumentException("unknown resource state:" + channelState);
-    }
   }
 
   private void cleanup(Optional<Throwable> fault, Consumer<Try<Boolean>> cleanCallback) {
