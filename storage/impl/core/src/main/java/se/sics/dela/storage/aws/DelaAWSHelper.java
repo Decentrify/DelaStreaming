@@ -1,27 +1,28 @@
 /*
- * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
- * 2009 Royal Institute of Technology (KTH)
+ * Copyright (C) 2013 - 2018, Logical Clocks AB and RISE SICS AB. All rights reserved
  *
- * GVoD is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+ * software and associated documentation files (the "Software"), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+ * persons to whom the Software is furnished to do so, subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be included in all copies or
+ * substantial portions of the Software.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS  OR IMPLIED, INCLUDING
+ * BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+ * NONINFRINGEMENT. IN NO EVENT SHALL  THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR  OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ *
  */
-package se.sics.dela.storage.gcp;
+package se.sics.dela.storage.aws;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import java.util.function.BiFunction;
-import se.sics.dela.storage.gcp.GCPHelper.BlobException;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
@@ -31,18 +32,16 @@ import se.sics.nstream.hops.manifest.ManifestJSON;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DelaGCPHelper {
-
-  public static Try<ManifestJSON> tryReadManifest(GCPEndpoint endpoint, GCPResource resource) {
-    Try<Storage> storage = new Try.Success(GCPHelper.client(endpoint.credentials, endpoint.projectName));
-    BlobId blobId = resource.getBlobId();
+public class DelaAWSHelper {
+  public static Try<ManifestJSON> tryReadManifest(AWSEndpoint endpoint, AWSResource resource) {
+    Try<AmazonS3> storage = new Try.Success(AWSHelper.client(endpoint.credentials, endpoint.region));
     Try<ManifestJSON> manifest = storage
       .flatMap(GCPHelper.readAllBlob(blobId))
       .flatMap(ManifestHelper.tryGetManifestJSON());
     return manifest;
   }
 
-  public static Result<ManifestJSON> readManifest(GCPEndpoint endpoint, GCPResource resource) {
+  public static Result<ManifestJSON> readManifest(AWSEndpoint endpoint, GCPResource resource) {
     try {
       ManifestJSON manifest = tryReadManifest(endpoint, resource).checkedGet();
       return Result.success(manifest);
@@ -53,7 +52,7 @@ public class DelaGCPHelper {
 
   public static Try<Integer> tryWriteManifest(GCPEndpoint endpoint, GCPResource resource, ManifestJSON manifest) {
     BlobId blobId = resource.getBlobId();
-    Storage storage = GCPHelper.client(endpoint.credentials, endpoint.projectName);
+    Storage storage = GCPHelper.getStorage(endpoint.credentials, endpoint.projectName);
     Try<byte[]> toWriteManifest = ManifestHelper.tryGetManifestBytes(manifest);
     Try<byte[]> writtenManifest = GCPHelper.getBlob(storage, blobId)
       .flatMap(GCPHelper.readAllBlob());
@@ -88,7 +87,7 @@ public class DelaGCPHelper {
 
   private static BiFunction<Boolean, Throwable, Try<Boolean>> noManifestException() {
     return TryHelper.tryFFail((Throwable t) -> {
-      if (t instanceof BlobException && ((BlobException) t).isNoSuchBlob()) {
+      if (t instanceof GCPHelper.BlobException && ((GCPHelper.BlobException) t).isNoSuchBlob()) {
         return new Try.Success(false);
       }
       return new Try.Failure(t);

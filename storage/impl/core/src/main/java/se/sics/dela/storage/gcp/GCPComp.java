@@ -221,7 +221,7 @@ public class GCPComp extends ComponentDefinition {
     }
 
     private Blob checkCreateBlob(BlobId blobId) {
-      Storage storage = GCPHelper.getStorage(endpoint.credentials, endpoint.projectName);
+      Storage storage = GCPHelper.client(endpoint.credentials, endpoint.projectName);
       Try<Blob> blob = new Try.Success(storage)
         .flatMap(GCPHelper.getBlob(blobId))
         .recoverWith(GCPHelper.rCreateBlob(blobId));

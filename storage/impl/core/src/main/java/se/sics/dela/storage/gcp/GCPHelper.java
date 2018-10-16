@@ -68,7 +68,7 @@ public class GCPHelper {
   public static Try<Boolean> testCredentials(GoogleCredentials credentials, String projectName, String bucketName,
     String blobName, byte[] writeVal) {
     BlobId blobId = BlobId.of(bucketName, blobName);
-    Try<Storage> storage = new Try.Success(getStorage(credentials, projectName));
+    Try<Storage> storage = new Try.Success(GCPHelper.client(credentials, projectName));
     Try<Bucket> bucket = storage
       .flatMap(getBucket(bucketName));
     Try<Blob> blob = TryHelper.Joiner.map(bucket, storage)
@@ -91,7 +91,7 @@ public class GCPHelper {
     String storageLocation, String projectName, String bucketName, String blobName, byte[] writeVal) {
     BlobId blobId = BlobId.of(bucketName, blobName);
     Try<Storage> storage = new Try.Success(credentials)
-      .map(getStorage(projectName));
+      .map(client(projectName));
     Try<Bucket> bucket = storage
       .flatMap(getBucket(bucketName))
       .recoverWith(rCreateBucket(bucketName, storageClass, storageLocation));
@@ -131,13 +131,13 @@ public class GCPHelper {
     });
   }
 
-  public static BiFunction<GoogleCredentials, Throwable, Storage> getStorage(String projectName) {
+  public static BiFunction<GoogleCredentials, Throwable, Storage> client(String projectName) {
     return TryHelper.tryFSucc1((GoogleCredentials credentials) -> {
-      return getStorage(credentials, projectName);
+      return GCPHelper.client(credentials, projectName);
     });
   }
 
-  public static Storage getStorage(GoogleCredentials credentials, String projectId) {
+  public static Storage client(GoogleCredentials credentials, String projectId) {
     Storage storage = StorageOptions.newBuilder()
       .setProjectId(projectId)
       .setCredentials(credentials)
@@ -249,7 +249,7 @@ public class GCPHelper {
   }
 
   public static ReadChannel readChannel(GoogleCredentials credentials, String projectName, BlobId blobId) {
-    Storage storage = getStorage(credentials, projectName);
+    Storage storage = GCPHelper.client(credentials, projectName);
     ReadChannel reader = storage.reader(blobId);
     return reader;
   }
@@ -329,7 +329,7 @@ public class GCPHelper {
   }
 
   public static WriteChannel writeChannel(GoogleCredentials credentials, String projectId, BlobId blobId) {
-    Storage storage = getStorage(credentials, projectId);
+    Storage storage = GCPHelper.client(credentials, projectId);
     BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType("text/plain").build();
     WriteChannel writer = storage.writer(blobInfo);
     return writer;
