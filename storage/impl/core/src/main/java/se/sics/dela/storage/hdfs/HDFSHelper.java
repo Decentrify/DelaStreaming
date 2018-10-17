@@ -20,8 +20,10 @@ package se.sics.dela.storage.hdfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -33,6 +35,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.range.KRange;
 
 /**
@@ -40,7 +43,53 @@ import se.sics.nstream.util.range.KRange;
  */
 public class HDFSHelper {
 
+  public static <R> Try<R> doAs(Supplier<Try<R>> action, UserGroupInformation ugi) {
+    return ugi.doAs((PrivilegedAction<Try<R>>) () -> {
+      return action.get();
+    });
+  }
 
+  public static Supplier<Try<Boolean>> simpleCreate(HDFSEndpoint endpoint, HDFSResource resource) {
+    return (Supplier<Try<Boolean>>) () -> {
+      String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
+      try (FileSystem fs = FileSystem.get(endpoint.hdfsConfig)) {
+        if (!fs.isDirectory(new Path(resource.dirPath))) {
+          fs.mkdirs(new Path(resource.dirPath));
+        }
+        if (fs.isFile(new Path(filePath))) {
+          return new Try.Success(false);
+        }
+        try (FSDataOutputStream out = fs.create(new Path(filePath), (short) 1)) {
+          return new Try.Success(true);
+        }
+      } catch (IOException ex) {
+        String msg = "could not create file:" + filePath;
+        return new Try.Failure(new HDFSClientException(msg, ex));
+      }
+    };
+  }
+
+  public static Supplier<Try<Boolean>> append(HDFSEndpoint endpoint, HDFSResource resource, byte[] data) {
+    return (Supplier<Try<Boolean>>) () -> {
+      String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
+      try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
+        FSDataOutputStream out = fs.append(new Path(filePath))) {
+        out.write(data);
+        return new Try.Success(true);
+      } catch (IOException ex) {
+        String msg = "could not append to file:" + filePath;
+        return new Try.Failure(new HDFSClientException(msg, ex));
+      }
+    };
+  }
+
+  public static class HDFSClientException extends Exception {
+
+    public HDFSClientException(String msg, Throwable cause) {
+      super(msg, cause);
+    }
+  }
+  
   public static Result<Boolean> canConnect(final Configuration hdfsConfig, Logger logger) {
     logger.debug("testing hdfs connection");
     try (FileSystem fs = FileSystem.get(hdfsConfig)) {

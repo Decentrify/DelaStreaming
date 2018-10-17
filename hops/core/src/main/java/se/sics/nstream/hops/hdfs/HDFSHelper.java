@@ -91,7 +91,7 @@ public class HDFSHelper {
       return Result.externalSafeFailure(new HDFSException("hdfs file length", ex));
     }
   }
-  
+
   public static Result<Boolean> delete(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource) {
     final String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
     LOG.info("{}deleting file:{}", new Object[]{logPrefix, filePath});
@@ -246,7 +246,7 @@ public class HDFSHelper {
       return Result.externalUnsafeFailure(new HDFSException("hdfs file append", ex));
     }
   }
-  
+
   public static Result<Boolean> flush(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource) {
     final String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
     LOG.debug("{}flushing file:{}", new Object[]{logPrefix, filePath});
@@ -271,7 +271,7 @@ public class HDFSHelper {
       return Result.externalUnsafeFailure(new HDFSException("hdfs file append", ex));
     }
   }
-  
+
   public static Result<Long> blockSize(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource) {
     final String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
     LOG.debug("{}block size for file:{}", new Object[]{logPrefix, filePath});
