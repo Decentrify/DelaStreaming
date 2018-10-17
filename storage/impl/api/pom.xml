@@ -12,7 +12,7 @@
   <name>Dela Storage Impl API</name>
     
   <properties>
-    <hops.version>2.8.2.4</hops.version>
+    <hops.version>2.8.2.5</hops.version>
     <hopsutil.version>0.5.0</hopsutil.version>
   </properties>
   
