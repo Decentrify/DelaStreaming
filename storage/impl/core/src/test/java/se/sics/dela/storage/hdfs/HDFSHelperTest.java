@@ -18,8 +18,10 @@
  */
 package se.sics.dela.storage.hdfs;
 
+import java.io.IOException;
 import java.util.function.Supplier;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.junit.Test;
 import static se.sics.dela.storage.hdfs.HDFSHelper.doAs;
 import static se.sics.dela.storage.hdfs.HDFSHelper.simpleCreate;
 import se.sics.ktoolbox.util.trysf.Try;
@@ -28,10 +30,16 @@ import se.sics.ktoolbox.util.trysf.Try;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HDFSHelperTest {
-  HDFSEndpoint endpoint = HDFSEndpoint.getBasic("glassfish", "10.0.2.15", 30201);
-  HDFSResource resource = new HDFSResource("/test", "file1");
-  UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-  
-  Supplier<Try<Boolean>> createFile = simpleCreate(endpoint, resource);
-  Try<Boolean> result = doAs(createFile, ugi);
+
+  @Test
+  public void test() throws IOException {
+    HDFSEndpoint endpoint = HDFSEndpoint.getBasic("glassfish", "10.0.2.15", 8020);
+    HDFSResource resource = new HDFSResource("/test", "file3");
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
+
+    Supplier<Try<Boolean>> createFile = simpleCreate(endpoint, resource);
+    Try<Boolean> result = doAs(createFile, ugi);
+    result.get();
+    System.out.println("test");
+  }
 }

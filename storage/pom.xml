@@ -23,5 +23,6 @@
 			<artifactId>slf4j-api</artifactId>
 			<version>${logger.version}</version>
 		</dependency>
+    
   </dependencies>
 </project>

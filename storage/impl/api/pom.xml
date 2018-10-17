@@ -114,10 +114,6 @@
           <groupId>io.hops.gpu</groupId>
           <artifactId>hops-gpu-management</artifactId>
         </exclusion>
-        <exclusion>
-          <groupId>io.hops.metadata</groupId>
-          <artifactId>hops-metadata-dal</artifactId>
-        </exclusion>
         
         <exclusion>
           <groupId>org.apache.avro</groupId>
