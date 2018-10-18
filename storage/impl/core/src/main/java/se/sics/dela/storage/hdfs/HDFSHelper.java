@@ -23,7 +23,10 @@ import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -36,6 +39,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.util.range.KRange;
 
 /**
@@ -43,44 +47,173 @@ import se.sics.nstream.util.range.KRange;
  */
 public class HDFSHelper {
 
-  public static <R> Try<R> doAs(Supplier<Try<R>> action, UserGroupInformation ugi) {
-    return ugi.doAs((PrivilegedAction<Try<R>>) () -> {
-      return action.get();
+  public static class DoAs {
+
+    private final UserGroupInformation ugi;
+
+    public DoAs(UserGroupInformation ugi) {
+      this.ugi = ugi;
+    }
+
+    public <I, O> BiFunction<I, Throwable, Try<O>> wrap(Supplier<Try<O>> action) {
+      return doAs(ugi, action);
+    }
+  }
+
+  public static class FileDesc {
+
+    private final HDFSEndpoint endpoint;
+    private final HDFSResource resource;
+
+    public FileDesc(HDFSEndpoint endpoint, HDFSResource resource) {
+      this.endpoint = endpoint;
+      this.resource = resource;
+    }
+
+    public Try<Boolean> create() {
+      return HDFSHelper.createFile(endpoint, resource);
+    }
+
+    public Try<Boolean> delete() {
+      return HDFSHelper.delete(endpoint, resource);
+    }
+
+    public Try<Long> size() {
+      return HDFSHelper.fileSize(endpoint, resource);
+    }
+
+    public Try<Boolean> append(byte[] data) {
+      return HDFSHelper.append(endpoint, resource, data);
+    }
+
+    public Try<byte[]> read(KRange range) {
+      return HDFSHelper.read(endpoint, resource, range);
+    }
+
+    public Supplier<Try<Boolean>> createOp() {
+      return () -> create();
+    }
+
+    public Supplier<Try<Boolean>> deleteOp() {
+      return () -> delete();
+    }
+
+    public Supplier<Try<Long>> sizeOp() {
+      return () -> size();
+    }
+
+    public Supplier<Try<Boolean>> appendOp(byte[] data) {
+      return () -> append(data);
+    }
+
+    public Supplier<Try<byte[]>> readOp(KRange range) {
+      return () -> read(range);
+    }
+  }
+
+  public static <I, O> BiFunction<I, Throwable, Try<O>> doAs(UserGroupInformation ugi, Supplier<Try<O>> action) {
+    return TryHelper.tryFSucc0(() -> {
+      return ugi.doAs((PrivilegedAction<Try<O>>) () -> action.get());
     });
   }
 
-  public static Supplier<Try<Boolean>> simpleCreate(HDFSEndpoint endpoint, HDFSResource resource) {
-    return (Supplier<Try<Boolean>>) () -> {
+  public static Supplier<Try<Boolean>> createDirs(HDFSEndpoint endpoint, HDFSResource resource) {
+    return () -> {
       String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
       try (FileSystem fs = FileSystem.get(endpoint.hdfsConfig)) {
         if (!fs.isDirectory(new Path(resource.dirPath))) {
           fs.mkdirs(new Path(resource.dirPath));
-        }
-        if (fs.isFile(new Path(filePath))) {
-          return new Try.Success(false);
-        }
-        try (FSDataOutputStream out = fs.create(new Path(filePath), (short) 1)) {
           return new Try.Success(true);
         }
+        return new Try.Success(false);
       } catch (IOException ex) {
-        String msg = "could not create file:" + filePath;
+        String msg = "create dirs - could not create path:" + filePath;
         return new Try.Failure(new HDFSClientException(msg, ex));
       }
     };
   }
 
-  public static Supplier<Try<Boolean>> append(HDFSEndpoint endpoint, HDFSResource resource, byte[] data) {
-    return (Supplier<Try<Boolean>>) () -> {
-      String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
-      try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-        FSDataOutputStream out = fs.append(new Path(filePath))) {
+  public static Try<Boolean> createFile(HDFSEndpoint endpoint, HDFSResource resource) {
+    String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
+    try (FileSystem fs = FileSystem.get(endpoint.hdfsConfig)) {
+      if (fs.isFile(new Path(filePath))) {
+        return new Try.Success(false);
+      }
+      try (FSDataOutputStream out = fs.create(new Path(filePath))) {
+        return new Try.Success(true);
+      }
+    } catch (IOException ex) {
+      String msg = "create file - could not create:" + filePath;
+      return new Try.Failure(new HDFSClientException(msg, ex));
+    }
+  }
+
+  public static Try<Boolean> delete(HDFSEndpoint endpoint, HDFSResource resource) {
+    String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
+    try (FileSystem fs = FileSystem.get(endpoint.hdfsConfig)) {
+      if (!fs.exists(new Path(filePath))) {
+        return new Try.Success(false);
+      }
+      fs.delete(new Path(filePath), true);
+      return new Try.Success(true);
+    } catch (IOException ex) {
+      String msg = "delete file - could not delete:" + filePath;
+      return new Try.Failure(new HDFSClientException(msg, ex));
+    }
+  }
+
+  public static Try<Long> fileSize(HDFSEndpoint endpoint, HDFSResource resource) {
+    final String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
+    try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig)) {
+      FileStatus status = fs.getFileStatus(new Path(filePath));
+      if (status.isFile()) {
+        return new Try.Success(status.getLen());
+      } else {
+        return new Try.Success(-1l);
+      }
+    } catch (FileNotFoundException ex) {
+      return new Try.Success(-1l);
+    } catch (IOException ex) {
+      String msg = "meta - could not get size of file:" + filePath;
+      return new Try.Failure(new HDFSClientException(msg, ex));
+    }
+  }
+
+  public static Try<Boolean> append(HDFSEndpoint endpoint, HDFSResource resource, byte[] data) {
+    String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
+    try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig)) {
+      try (FSDataOutputStream out = fs.append(new Path(filePath))) {
         out.write(data);
         return new Try.Success(true);
-      } catch (IOException ex) {
-        String msg = "could not append to file:" + filePath;
-        return new Try.Failure(new HDFSClientException(msg, ex));
       }
-    };
+    } catch (IOException ex) {
+      String msg = "op - could not append to file:" + filePath;
+      return new Try.Failure(new HDFSClientException(msg, ex));
+    }
+  }
+
+  public static Try<Boolean> append(FSDataOutputStream out, byte[] data) {
+    try {
+      out.write(data);
+      return new Try.Success(true);
+    } catch (IOException ex) {
+      String msg = "op - could not append";
+      return new Try.Failure(new HDFSClientException(msg, ex));
+    }
+  }
+
+  public static Try<byte[]> read(HDFSEndpoint endpoint, HDFSResource resource, KRange readRange) {
+    String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
+    try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
+      FSDataInputStream in = fs.open(new Path(filePath))) {
+      int readLength = (int) (readRange.upperAbsEndpoint() - readRange.lowerAbsEndpoint() + 1);
+      byte[] byte_read = new byte[readLength];
+      in.readFully(readRange.lowerAbsEndpoint(), byte_read);
+      return new Try.Success(byte_read);
+    } catch (IOException ex) {
+      String msg = "op - could not read file:" + filePath;
+      return new Try.Failure(new HDFSClientException(msg, ex));
+    }
   }
 
   public static class HDFSClientException extends Exception {
@@ -89,7 +222,7 @@ public class HDFSHelper {
       super(msg, cause);
     }
   }
-  
+
   public static Result<Boolean> canConnect(final Configuration hdfsConfig, Logger logger) {
     logger.debug("testing hdfs connection");
     try (FileSystem fs = FileSystem.get(hdfsConfig)) {
@@ -134,8 +267,8 @@ public class HDFSHelper {
       return Result.externalSafeFailure(new HDFSException("hdfs file length", ex));
     }
   }
-  
-  public static Result<Boolean> delete(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource, 
+
+  public static Result<Boolean> delete(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource,
     Logger logger) {
     final String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
     logger.info("deleting file:{}", new Object[]{filePath});
@@ -290,8 +423,8 @@ public class HDFSHelper {
       return Result.externalUnsafeFailure(new HDFSException("hdfs file append", ex));
     }
   }
-  
-  public static Result<Boolean> flush(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource, 
+
+  public static Result<Boolean> flush(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource,
     Logger logger) {
     final String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
     logger.debug("flushing file:{}", new Object[]{filePath});
@@ -307,7 +440,8 @@ public class HDFSHelper {
             logger.warn("could not append to file:{} ex:{}", new Object[]{filePath, ex.getMessage()});
             return Result.externalUnsafeFailure(new HDFSException("hdfs file append", ex));
           }
-        };
+        }
+      ;
       });
       logger.trace("op completed");
       return result;
@@ -316,7 +450,7 @@ public class HDFSHelper {
       return Result.externalUnsafeFailure(new HDFSException("hdfs file append", ex));
     }
   }
-  
+
   public static Result<Long> blockSize(UserGroupInformation ugi, final HDFSEndpoint hdfsEndpoint, HDFSResource resource,
     Logger logger) {
     final String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
@@ -336,7 +470,8 @@ public class HDFSHelper {
             logger.warn("could not append to file:{} ex:{}", new Object[]{filePath, ex.getMessage()});
             return Result.externalUnsafeFailure(new HDFSException("hdfs file append", ex));
           }
-        };
+        }
+      ;
       });
       logger.trace("op completed");
       return result;
