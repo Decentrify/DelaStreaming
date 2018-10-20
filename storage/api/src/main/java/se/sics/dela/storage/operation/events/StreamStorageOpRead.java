@@ -22,6 +22,7 @@ import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.util.range.KBlock;
 
@@ -63,6 +64,15 @@ public class StreamStorageOpRead {
 
     public Response respond(Result<byte[]> result) {
       return new Response(this, result);
+    }
+
+    public Response respond(Try<byte[]> result) {
+      try {
+        result.checkedGet();
+        return new Response(this, Result.success(result.get()));
+      } catch (Throwable t) {
+        return new Response(this, Result.internalFailure((Exception) t));
+      }
     }
   }
 

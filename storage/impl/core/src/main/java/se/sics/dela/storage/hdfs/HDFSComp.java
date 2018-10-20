@@ -23,7 +23,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
@@ -44,6 +43,9 @@ import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
+import se.sics.dela.storage.common.FileDesc;
+import se.sics.dela.storage.hdfs.HDFSHelper.DoAs;
+import se.sics.ktoolbox.util.trysf.Try;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -57,9 +59,8 @@ public class HDFSComp extends ComponentDefinition {
   One2NChannel resourceChannel;
 
   private Map<Identifier, Component> components = new HashMap<>();
-  private final HDFSEndpoint hdfsEndpoint;
-  private final HDFSResource hdfsResource;
-  private final UserGroupInformation ugi;
+  private final FileDesc<HDFSEndpoint, HDFSResource> file;
+  private final DoAs doAs;
   private long writePos;
   private final TreeMap<Long, StreamStorageOpWrite.Request> pending = new TreeMap<>();
   //
@@ -70,9 +71,8 @@ public class HDFSComp extends ComponentDefinition {
   public HDFSComp(Init init) {
     logger.info("{}init", logPrefix);
 
-    hdfsEndpoint = init.endpoint;
-    hdfsResource = init.resource;
-    ugi = UserGroupInformation.createRemoteUser(hdfsEndpoint.user);
+    file = init.file;
+    doAs = init.doAs;
     writePos = init.streamPos;
     forceFlushCounter = forceFlushCounter();
 
@@ -83,9 +83,9 @@ public class HDFSComp extends ComponentDefinition {
   }
 
   private int forceFlushCounter() {
-    Result<Long> hdfsBlockSize = HDFSHelper.blockSize(ugi, hdfsEndpoint, hdfsResource, logger);
+    Try<Long> hdfsBlockSize = doAs.perform(HDFSHelper.blockSizeOp(file.endpoint, file.resource));
     long forceFlushDataSize
-      = Math.max(HardCodedConfig.minForceFlushDataSize, (hdfsBlockSize.isSuccess() ? hdfsBlockSize.getValue() : 0));
+      = Math.max(HardCodedConfig.minForceFlushDataSize, (hdfsBlockSize.isSuccess() ? hdfsBlockSize.get() : 0));
     int counter = (int) (forceFlushDataSize / HardCodedConfig.delaBlockSize);
     return counter;
   }
@@ -108,7 +108,7 @@ public class HDFSComp extends ComponentDefinition {
     @Override
     public void handle(StreamStorageOpRead.Request req) {
       logger.trace("{}received:{}", logPrefix, req);
-      Result<byte[]> readResult = HDFSHelper.read(ugi, hdfsEndpoint, hdfsResource, req.readRange, logger);
+      Try<byte[]> readResult = doAs.perform(file.read(req.readRange));
       StreamStorageOpRead.Response resp = req.respond(readResult);
       logger.trace("{}answering:{}", logPrefix, resp);
       answer(req, resp);
@@ -138,7 +138,7 @@ public class HDFSComp extends ComponentDefinition {
         writeValue = req.value;
       }
 
-      Result<Boolean> writeResult = HDFSHelper.append(ugi, hdfsEndpoint, hdfsResource, writeValue, logger);
+      Try<Boolean> writeResult = doAs.perform(file.append(writeValue));
       if (writeResult.isSuccess()) {
         writePos += writeValue.length;
         pending.put(writePos, req);
@@ -160,21 +160,20 @@ public class HDFSComp extends ComponentDefinition {
         progressed = false;
         return;
       }
-      HDFSHelper.flush(ugi, hdfsEndpoint, hdfsResource, logger);
       inspectHDFSFile();
       progressed = false;
     }
   };
 
   private void inspectHDFSFile() {
-    Result<Long> currentFilePos = HDFSHelper.length(ugi, hdfsEndpoint, hdfsResource, logger);
+    Try<Long> currentFilePos = doAs.perform(file.size());
     if (!currentFilePos.isSuccess()) {
       return;
     }
     Iterator<Map.Entry<Long, StreamStorageOpWrite.Request>> it = pending.entrySet().iterator();
     while (it.hasNext()) {
       Map.Entry<Long, StreamStorageOpWrite.Request> next = it.next();
-      if (next.getKey() <= currentFilePos.getValue()) {
+      if (next.getKey() <= currentFilePos.get()) {
         answer(next.getValue(), next.getValue().respond(Result.success(true)));
         it.remove();
         progressed = true;
@@ -206,15 +205,13 @@ public class HDFSComp extends ComponentDefinition {
 
   public static class Init extends se.sics.kompics.Init<HDFSComp> {
 
-    public final HDFSEndpoint endpoint;
-    public final HDFSResource resource;
-    public final UserGroupInformation ugi;
+    public final FileDesc file;
+    public final DoAs doAs;
     public final long streamPos;
 
-    public Init(HDFSEndpoint endpoint, HDFSResource resource, UserGroupInformation ugi, long streamPos) {
-      this.endpoint = endpoint;
-      this.resource = resource;
-      this.ugi = ugi;
+    public Init(FileDesc file, DoAs doAs, long streamPos) {
+      this.file = file;
+      this.doAs = doAs;
       this.streamPos = streamPos;
     }
   }
@@ -232,16 +229,22 @@ public class HDFSComp extends ComponentDefinition {
     @Override
     public Pair<HDFSComp.Init, Long> initiate(StorageResource resource, Logger logger) {
       HDFSResource hdfsResource = (HDFSResource) resource;
-      UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-      Result<Long> streamPos = HDFSHelper.length(ugi, endpoint, hdfsResource, logger);
+      FileDesc<HDFSEndpoint, HDFSResource> file 
+        = new FileDesc(new HDFSHelper.StorageProvider(), endpoint, resource);
+      DoAs doAs = HDFSHelper.doAs(endpoint.user).get();
+      Try<Long> streamPos = doAs.perform(file.size());
       if (!streamPos.isSuccess()) {
-        throw new RuntimeException(streamPos.getException());
+        try {
+          ((Try.Failure) streamPos).checkedGet();
+        } catch (Throwable t) {
+          throw new RuntimeException(t);
+        }
       }
-      if (streamPos.getValue() == -1) {
-        HDFSHelper.simpleCreate(ugi, endpoint, hdfsResource, logger);
+      if (streamPos.get() == -1) {
+        doAs.perform(file.create());
       }
-      HDFSComp.Init init = new HDFSComp.Init(endpoint, hdfsResource, ugi, streamPos.getValue());
-      return Pair.with(init, streamPos.getValue());
+      HDFSComp.Init init = new HDFSComp.Init(file, doAs, streamPos.get());
+      return Pair.with(init, streamPos.get());
     }
 
     @Override

@@ -16,18 +16,42 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.hdfs;
+package se.sics.dela.storage.common;
+
+import java.util.LinkedList;
+import java.util.List;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSException extends Exception {
-
-  public HDFSException(String msg) {
-    super(msg);
+public class DelaStorageException extends Exception {
+  public final Throwable cause;
+  public final List<Throwable> andThen = new LinkedList<>();
+  
+  public DelaStorageException(String msg) {
+    this(new Base(msg));
   }
-
-  public HDFSException(String msg, Exception ex) {
-    super(msg, ex);
+  
+  public DelaStorageException(String msg, Throwable cause) {
+    this(new Base(msg, cause));
+  }
+  
+  public DelaStorageException(Base cause) {
+    this.cause = cause;
+  }
+  
+  public DelaStorageException andThen(Throwable cause) {
+    andThen.add(cause);
+    return this;
+  }
+  
+  public static class Base extends Exception {
+    public Base(String msg) {
+      super(msg);
+    }
+    
+    public Base(String msg, Throwable cause) {
+      super(msg, cause);
+    }
   }
 }

@@ -24,6 +24,7 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamId;
 import se.sics.dela.storage.operation.events.StreamStorageOpEvent;
+import se.sics.ktoolbox.util.trysf.Try;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -55,6 +56,15 @@ public class StreamStorageOpWrite {
 
     public Response respond(Result<Boolean> result) {
       return new Response(this, result);
+    }
+
+    public Response respond(Try<Boolean> result) {
+      try {
+        result.checkedGet();
+        return new Response(this, Result.success(result.get()));
+      } catch (Throwable t) {
+        return new Response(this, Result.internalFailure((Exception)t));
+      }
     }
 
     @Override
@@ -95,13 +105,15 @@ public class StreamStorageOpWrite {
   }
 
   public static class Complete implements StreamStorageOpEvent {
+
     public final Identifier eventId;
     public final StreamId streamId;
-    
+
     public Complete(StreamId streamId) {
       this.eventId = BasicIdentifiers.eventId();
       this.streamId = streamId;
     }
+
     @Override
     public StreamId getStreamId() {
       return streamId;
