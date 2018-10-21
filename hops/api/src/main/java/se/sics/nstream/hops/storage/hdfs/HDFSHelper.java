@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.hops.hdfs;
+package se.sics.nstream.hops.storage.hdfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -34,10 +34,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.hops.manifest.ManifestHelper;
-import se.sics.nstream.hops.manifest.ManifestJSON;
-import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
-import se.sics.nstream.hops.storage.hdfs.HDFSResource;
+import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.nstream.hops.storage.hops.ManifestHelper;
+import se.sics.nstream.hops.storage.hops.ManifestJSON;
 import se.sics.nstream.util.range.KRange;
 
 /**
@@ -47,7 +46,23 @@ public class HDFSHelper {
 
   private final static Logger LOG = LoggerFactory.getLogger(HDFSHelper.class);
   private static String logPrefix = "";
+  
+  public static final String HOPS_URL = "fs.defaultFS";
+  public static final String DATANODE_FAILURE_POLICY = "dfs.client.block.write.replace-datanode-on-failure.policy";
 
+  public static Try<Configuration> fixConfig(Configuration config) {
+    try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(config)) {
+      if (fs.getDataNodeStats().length == 1) {
+        fs.close();
+        config.set(DATANODE_FAILURE_POLICY, "NEVER");
+      }
+      return new Try.Success(config);
+    } catch (IOException ex) {
+      String msg = "could not contact filesystem";
+      return new Try.Failure(new HDFSException(msg, ex));
+    }
+  }
+  
   public static Result<Boolean> canConnect(final Configuration hdfsConfig) {
     LOG.debug("{}testing hdfs connection", logPrefix);
     try (FileSystem fs = FileSystem.get(hdfsConfig)) {

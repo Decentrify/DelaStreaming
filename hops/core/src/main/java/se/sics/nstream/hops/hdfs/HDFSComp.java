@@ -18,6 +18,7 @@
  */
 package se.sics.nstream.hops.hdfs;
 
+import se.sics.nstream.hops.storage.hdfs.HDFSHelper;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;

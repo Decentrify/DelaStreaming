@@ -22,7 +22,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.hops.storage.hops.ManifestJSON;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 

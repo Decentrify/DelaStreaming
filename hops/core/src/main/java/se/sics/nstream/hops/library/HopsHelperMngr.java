@@ -27,7 +27,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.ktoolbox.util.result.Result;
-import se.sics.nstream.hops.hdfs.HDFSHelper;
+import se.sics.nstream.hops.storage.hdfs.HDFSHelper;
 import se.sics.nstream.hops.kafka.KafkaHelper;
 import se.sics.nstream.hops.kafka.avro.AvroParser;
 import se.sics.nstream.hops.library.event.helper.HDFSAvroFileCreateEvent;

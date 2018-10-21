@@ -18,6 +18,8 @@
  */
 package se.sics.nstream.hops.manifest;
 
+import se.sics.nstream.hops.storage.hops.ManifestHelper;
+import se.sics.nstream.hops.storage.hops.ManifestJSON;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;

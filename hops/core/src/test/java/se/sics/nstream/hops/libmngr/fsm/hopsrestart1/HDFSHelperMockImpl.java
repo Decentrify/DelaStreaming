@@ -25,7 +25,7 @@ import java.io.FileReader;
 import org.apache.hadoop.security.UserGroupInformation;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.hdfs.HDFSHelperMock;
-import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.hops.storage.hops.ManifestJSON;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.storage.hdfs.HDFSResource;
 

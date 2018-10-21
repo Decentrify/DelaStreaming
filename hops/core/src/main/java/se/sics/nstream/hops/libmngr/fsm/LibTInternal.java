@@ -40,7 +40,7 @@ import se.sics.nstream.hops.libmngr.TorrentBuilder;
 import se.sics.nstream.hops.library.event.core.HopsTorrentDownloadEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentStopEvent;
 import se.sics.nstream.hops.library.event.core.HopsTorrentUploadEvent;
-import se.sics.nstream.hops.manifest.ManifestJSON;
+import se.sics.nstream.hops.storage.hops.ManifestJSON;
 import se.sics.nstream.library.event.torrent.TorrentExtendedStatusEvent;
 import se.sics.nstream.library.restart.TorrentRestart;
 import se.sics.nstream.storage.durable.util.FileExtendedDetails;

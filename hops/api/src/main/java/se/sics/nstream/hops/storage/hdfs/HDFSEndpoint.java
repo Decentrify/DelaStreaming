@@ -19,8 +19,13 @@
 package se.sics.nstream.hops.storage.hdfs;
 
 import java.io.File;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.trysf.TryHelper;
+import static se.sics.nstream.hops.storage.hdfs.HDFSHelper.HOPS_URL;
 import se.sics.nstream.storage.durable.util.StreamEndpoint;
 
 /**
@@ -28,7 +33,6 @@ import se.sics.nstream.storage.durable.util.StreamEndpoint;
  */
 public class HDFSEndpoint implements StreamEndpoint {
 
-  public static final String HOPS_URL = "fs.defaultFS";
   public final Configuration hdfsConfig;
   public final String hopsURL;
   public final String user;
@@ -36,7 +40,7 @@ public class HDFSEndpoint implements StreamEndpoint {
   public HDFSEndpoint(Configuration hdfsConfig, String user) {
     this.hdfsConfig = hdfsConfig;
     this.user = user;
-    this.hopsURL = hdfsConfig.get(HOPS_URL);
+    this.hopsURL = hdfsConfig.get(HDFSHelper.HOPS_URL);
   }
 
   @Override
@@ -55,18 +59,25 @@ public class HDFSEndpoint implements StreamEndpoint {
   }
 
   public static HDFSEndpoint getBasic(String hopsURL, String user) {
-    Configuration hdfsConfig = new Configuration();
-    hdfsConfig.set(HOPS_URL, hopsURL);
-    return new HDFSEndpoint(hdfsConfig, user);
+    Configuration conf = new Configuration();
+    conf.set(HOPS_URL, hopsURL);
+    Try<HDFSEndpoint> endpoint = HDFSHelper.fixConfig(conf)
+      .map(TryHelper.tryFSucc1((Configuration config) -> new HDFSEndpoint(config, user)));
+    try {
+      return endpoint.checkedGet();
+    } catch (Throwable ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
-  public static HDFSEndpoint getXML(String hdfsXMLPath, String user) {
-    Configuration hdfsConfig = new Configuration();
-    File confFile = new File(hdfsXMLPath);
-    if (!confFile.exists()) {
-      throw new RuntimeException("conf file does not exist:" + hdfsXMLPath);
+  public static Try<HDFSEndpoint> getXML(String hdfsXMLPath, String user) {
+    if (!new File(hdfsXMLPath).exists()) {
+      return new Try.Failure(new HDFSException("conf file does not exist:" + hdfsXMLPath));
     }
-    hdfsConfig.addResource(new Path(hdfsXMLPath));
-    return new HDFSEndpoint(hdfsConfig, user);
+    Configuration conf = new Configuration();
+    conf.addResource(new Path(hdfsXMLPath));
+    return HDFSHelper.fixConfig(conf)
+      .map(TryHelper.tryFSucc1((Configuration config) -> new HDFSEndpoint(config, user)));
+
   }
 }
