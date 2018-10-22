@@ -30,7 +30,7 @@ import se.sics.nstream.storage.durable.util.MyStream;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LibrarySummaryHelperTest {
-  @Test
+//  @Test
   public void hdfsTest() {
     MyStream writeStream = new MyStream(HDFSEndpoint.getBasic("http://bbc1.sics.se:12345", "user1"), 
       new HDFSResource("/my/directory", "manifest.json"));

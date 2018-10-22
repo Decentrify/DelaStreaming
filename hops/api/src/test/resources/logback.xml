@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+	<property name="DELA_HOME" value="." />
+
+	<appender name="ALL"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>${DELA_HOME}/logs/dela.log</file>
+		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+			<Pattern>
+				%d{yyyy-MM-dd HH:mm:ss} - %msg%n
+			</Pattern>
+		</encoder>
+
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- rollover daily -->
+			<fileNamePattern>${DELA_HOME}/logs/archived/dela.%d{yyyy-MM-dd}.%i.log
+                        </fileNamePattern>
+			<timeBasedFileNamingAndTriggeringPolicy
+				class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+				<maxFileSize>10MB</maxFileSize>
+			</timeBasedFileNamingAndTriggeringPolicy>
+		</rollingPolicy>
+
+	</appender>
+
+	<logger name="se.sics.dela.cli" level="debug" additivity="false">
+		<appender-ref ref="ALL" />
+	</logger>
+
+	<root level="debug">
+		<appender-ref ref="ALL" />
+	</root>
+
+</configuration>
