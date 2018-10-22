@@ -70,14 +70,18 @@ public class HDFSEndpoint implements StreamEndpoint {
     }
   }
 
-  public static Try<HDFSEndpoint> getXML(String hdfsXMLPath, String user) {
+  public static HDFSEndpoint getXML(String hdfsXMLPath, String user) {
     if (!new File(hdfsXMLPath).exists()) {
-      return new Try.Failure(new HDFSException("conf file does not exist:" + hdfsXMLPath));
+      throw new RuntimeException(new HDFSException("conf file does not exist:" + hdfsXMLPath));
     }
     Configuration conf = new Configuration();
     conf.addResource(new Path(hdfsXMLPath));
-    return HDFSHelper.fixConfig(conf)
+    Try<HDFSEndpoint> endpoint = HDFSHelper.fixConfig(conf)
       .map(TryHelper.tryFSucc1((Configuration config) -> new HDFSEndpoint(config, user)));
-
+    try {
+      return endpoint.checkedGet();
+    } catch (Throwable ex) {
+      throw new RuntimeException(ex);
+    }
   }
 }
