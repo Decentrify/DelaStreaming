@@ -82,16 +82,16 @@ public class TorrentFileMngr {
       FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
       Pair<StreamId, MyStream> mainStream = entry.getValue().getMainStream();
       fileStreams.put(mainStream.getValue0(), streamsInfo.get(mainStream.getValue0()));
-      LOG.error("main {} found:{} expected:{}", 
-          new Object[]{mainStream.getValue1().resource.toString(), mainStream.getValue0(), 
+      LOG.info("{} found:{} expected:{}", 
+          new Object[]{mainStream.getValue1().resource.toString(), streamsInfo.get(mainStream.getValue0()), 
             torrent.base.get(mainStream.getValue0().fileId).length});
       SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream);
 
       List<KBuffer> bufs = new ArrayList<>();
       bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainStream, 0));
       for (Pair<StreamId, MyStream> secondaryStream : entry.getValue().getSecondaryStreams()) {
-        LOG.error("sec {} found:{} expected:{}", 
-          new Object[]{secondaryStream.getValue1().resource.toString(), secondaryStream.getValue0(), 
+        LOG.info("{} found:{} expected:{}", 
+          new Object[]{secondaryStream.getValue1().resource.toString(), streamsInfo.get(secondaryStream.getValue0()), 
             torrent.base.get(secondaryStream.getValue0().fileId).length});
         fileStreams.put(secondaryStream.getValue0(), streamsInfo.get(secondaryStream.getValue0()));
         bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, secondaryStream, 0));
