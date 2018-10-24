@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.javatuples.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
@@ -51,12 +53,15 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
  */
 public class TorrentFileMngr {
 
+  private static final Logger LOG = LoggerFactory.getLogger(TorrentFileMngr.class);
+  private String logPrefix = "";
+
   private final MyTorrent torrent;
   private final TreeMap<FileId, TFileIncomplete> pending;
   private final Map<FileId, TFileIncomplete> ongoing;
   private final Map<FileId, TFileComplete> completed;
 
-  public TorrentFileMngr(MyTorrent torrent, Map<FileId, TFileComplete> completed, 
+  public TorrentFileMngr(MyTorrent torrent, Map<FileId, TFileComplete> completed,
     Map<FileId, TFileIncomplete> ongoing, TreeMap<FileId, TFileIncomplete> pending) {
     this.torrent = torrent;
     this.completed = completed;
@@ -77,11 +82,17 @@ public class TorrentFileMngr {
       FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
       Pair<StreamId, MyStream> mainStream = entry.getValue().getMainStream();
       fileStreams.put(mainStream.getValue0(), streamsInfo.get(mainStream.getValue0()));
+      LOG.info("{} found:{} expected:{}", 
+          new Object[]{mainStream.getValue1().resource.toString(), streamsInfo.get(mainStream.getValue0()), 
+            torrent.base.get(mainStream.getValue0().fileId).length});
       SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream);
 
       List<KBuffer> bufs = new ArrayList<>();
       bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainStream, 0));
       for (Pair<StreamId, MyStream> secondaryStream : entry.getValue().getSecondaryStreams()) {
+        LOG.info("{} found:{} expected:{}", 
+          new Object[]{secondaryStream.getValue1().resource.toString(), streamsInfo.get(secondaryStream.getValue0()), 
+            torrent.base.get(secondaryStream.getValue0().fileId).length});
         fileStreams.put(secondaryStream.getValue0(), streamsInfo.get(secondaryStream.getValue0()));
         bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, secondaryStream, 0));
       }
