@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -77,12 +79,12 @@ public class HDFSHelper {
     public Try createFile(HDFSEndpoint endpoint, HDFSResource resource) {
       return HDFSHelper.createFile(endpoint, resource);
     }
-    
+
     @Override
     public Try deleteFile(HDFSEndpoint endpoint, HDFSResource resource) {
       return HDFSHelper.delete(endpoint, resource);
     }
-    
+
     @Override
     public Try<Long> fileSize(HDFSEndpoint endpoint, HDFSResource resource) {
       return HDFSHelper.fileSize(endpoint, resource);
@@ -92,7 +94,7 @@ public class HDFSHelper {
     public Try<byte[]> read(HDFSEndpoint endpoint, HDFSResource resource, KRange range) {
       return HDFSHelper.read(endpoint, resource, range);
     }
-    
+
     @Override
     public Try<byte[]> readAllFile(HDFSEndpoint endpoint, HDFSResource resource) {
       return HDFSHelper.readFully(endpoint, resource);
@@ -103,7 +105,7 @@ public class HDFSHelper {
       return HDFSHelper.append(endpoint, resource, data);
     }
   }
-  
+
 //  public static Try<Boolean> canConnect(final Configuration hdfsConfig, Logger logger) {
 //    logger.debug("testing hdfs connection");
 //    try (FileSystem fs = FileSystem.get(hdfsConfig)) {
@@ -166,6 +168,7 @@ public class HDFSHelper {
   public static Supplier<Try<Boolean>> createPathOp(HDFSEndpoint endpoint, HDFSResource resource) {
     return () -> createPath(endpoint, resource);
   }
+
   public static Try<Boolean> fileExists(HDFSEndpoint endpoint, HDFSResource resource) {
     Path filePath = new Path(resource.dirPath + Path.SEPARATOR + resource.fileName);
     try (FileSystem fs = FileSystem.get(endpoint.hdfsConfig)) {
@@ -257,7 +260,79 @@ public class HDFSHelper {
   public static Supplier<Try<Boolean>> appendOp(HDFSEndpoint endpoint, HDFSResource resource, byte[] data) {
     return () -> append(endpoint, resource, data);
   }
+
+  public static class MultiAppend {
+
+    private final DistributedFileSystem dfs;
+    private final FSDataOutputStream out;
+
+    public MultiAppend(DistributedFileSystem dfs, FSDataOutputStream out) {
+      this.dfs = dfs;
+      this.out = out;
+    }
+
+    public static Try<MultiAppend> open(HDFSEndpoint endpoint, HDFSResource resource) {
+      try {
+        DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
+        String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
+        FSDataOutputStream out = dfs.append(new Path(filePath));
+        return new Try.Success(new MultiAppend(dfs, out));
+      } catch (IOException ex) {
+        return new Try.Failure(ex);
+      }
+    }
+    
+    public Try<Boolean> append(byte[] data) {
+      return HDFSHelper.append(out, data);
+    }
+    
+    public Try<Boolean> close() {
+      try {
+        out.close();
+        dfs.close();
+        return new Try.Success(true);
+      } catch (IOException ex) {
+        return new Try.Failure(ex);
+      }
+    }
+  }
   
+  public static class MultiRead {
+
+    private final DistributedFileSystem dfs;
+    private final FSDataInputStream in;
+
+    public MultiRead(DistributedFileSystem dfs, FSDataInputStream in) {
+      this.dfs = dfs;
+      this.in = in;
+    }
+
+    public static Try<MultiRead> open(HDFSEndpoint endpoint, HDFSResource resource) {
+      try {
+        DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
+        String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
+        FSDataInputStream in = dfs.open(new Path(filePath));
+        return new Try.Success(new MultiRead(dfs, in));
+      } catch (IOException ex) {
+        return new Try.Failure(ex);
+      }
+    }
+    
+    public Try<byte[]> read(KRange range) {
+      return HDFSHelper.read(in, range);
+    }
+    
+    public Try<Boolean> close() {
+      try {
+        in.close();
+        dfs.close();
+        return new Try.Success(true);
+      } catch (IOException ex) {
+        return new Try.Failure(ex);
+      }
+    }
+  }
+
   public static Try<Boolean> append(FSDataOutputStream out, byte[] data) {
     try {
       out.write(data);
@@ -278,6 +353,18 @@ public class HDFSHelper {
       return new Try.Success(byte_read);
     } catch (IOException ex) {
       String msg = "file op - could not read file:" + filePath;
+      return new Try.Failure(new HDFSClientException(msg, ex));
+    }
+  }
+  
+  public static Try<byte[]> read(FSDataInputStream in, KRange range) {
+    try {
+      int readLength = (int) (range.upperAbsEndpoint() - range.lowerAbsEndpoint() + 1);
+      byte[] byte_read = new byte[readLength];
+      in.readFully(range.lowerAbsEndpoint(), byte_read);
+      return new Try.Success(byte_read);
+    } catch (IOException ex) {
+      String msg = "file op - could not read";
       return new Try.Failure(new HDFSClientException(msg, ex));
     }
   }
@@ -326,7 +413,7 @@ public class HDFSHelper {
       return new Try.Failure(new HDFSClientException(msg, ex));
     }
   }
-  
+
   public static Supplier<Try<Long>> blockSizeOp(HDFSEndpoint endpoint, HDFSResource resource) {
     return () -> blockSize(endpoint, resource);
   }
