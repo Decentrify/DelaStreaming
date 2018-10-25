@@ -43,7 +43,7 @@ import se.sics.nstream.util.range.KBlockImpl;
 public class HDFSHelperTest {
 
 //  @Test
-  public void test() throws IOException {
+  public void baseTest1() throws IOException {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file3");
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
@@ -90,7 +90,7 @@ public class HDFSHelperTest {
   }
 
 //  @Test
-  public void baseTest() throws IOException {
+  public void baseTest2() throws IOException {
     Configuration conf = new Configuration();
     conf.set("fs.defaultFS", "hdfs://10.0.2.15:8020");
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("vagrant");
