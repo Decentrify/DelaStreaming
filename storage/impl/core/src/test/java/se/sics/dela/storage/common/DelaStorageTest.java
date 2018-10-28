@@ -19,7 +19,11 @@
 package se.sics.dela.storage.common;
 
 import java.util.Random;
+import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,6 +33,8 @@ import se.sics.dela.storage.hdfs.HDFSEndpoint;
 import se.sics.dela.storage.hdfs.HDFSHelper;
 import static se.sics.dela.storage.hdfs.HDFSHelper.createPathOp;
 import se.sics.dela.storage.hdfs.HDFSResource;
+import se.sics.dela.util.TimerProxy;
+import se.sics.kompics.ComponentProxy;
 import se.sics.ktoolbox.util.trysf.Try;
 import static se.sics.ktoolbox.util.trysf.TryHelper.tryAssert;
 import se.sics.nstream.util.range.KBlockImpl;
@@ -39,7 +45,7 @@ import se.sics.nstream.util.range.KRange;
  */
 public class DelaStorageTest {
 
-  @Test
+//  @Test
   public void testHDFSAppend() {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
@@ -109,13 +115,14 @@ public class DelaStorageTest {
       rand.nextBytes(block);
 
       long start = System.nanoTime();
-      Try<HDFSHelper.MultiAppend> appendOp = HDFSHelper.MultiAppend.open((HDFSEndpoint) endpoint,
-        (HDFSResource) resource);
+      Try<HDFSHelper.AppendSession> appendOp = storage.appendSession((HDFSEndpoint) endpoint,
+        (HDFSResource) resource, new TestTimer());
       if (appendOp.isFailure()) {
         return (Try.Failure) appendOp;
       }
       for (int i = 0; i < 100; i++) {
-        appendOp.get().append(block);
+        System.err.println(i);
+        appendOp.get().append(block, new AppendCallback());
       }
       Try<Boolean> close = appendOp.get().close();
       if (close.isFailure()) {
@@ -130,7 +137,7 @@ public class DelaStorageTest {
     };
   }
 
-  @Test
+//  @Test
   public void testHDFSMultiRead() {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
@@ -156,16 +163,16 @@ public class DelaStorageTest {
     DelaStorageProvider storage, StorageEndpoint endpoint, StorageResource resource) {
     return () -> {
       long start = System.nanoTime();
-      Try<HDFSHelper.MultiRead> appendOp = HDFSHelper.MultiRead.open((HDFSEndpoint) endpoint,
-        (HDFSResource) resource);
-      if (appendOp.isFailure()) {
-        return (Try.Failure) appendOp;
+      Try<HDFSHelper.ReadSession> appendSession = storage.readSession((HDFSEndpoint) endpoint,
+        (HDFSResource) resource, new TestTimer());
+      if (appendSession.isFailure()) {
+        return (Try.Failure) appendSession;
       }
       for (int i = 0; i < 1000; i++) {
         KRange range = new KBlockImpl(i, i * 1024 * 1024, (i + 1) * 1024 * 1024 - 1);
-        appendOp.get().read(range);
+        appendSession.get().read(range, new ReadCallback());
       }
-      Try<Boolean> close = appendOp.get().close();
+      Try<Boolean> close = appendSession.get().close();
       if (close.isFailure()) {
         return (Try.Failure) close;
       }
@@ -178,7 +185,7 @@ public class DelaStorageTest {
     };
   }
 
-  @Test
+//  @Test
   public void testHDFSRead() {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
@@ -215,5 +222,43 @@ public class DelaStorageTest {
       System.err.println("read avg speed(MB/s):" + sizeMB / time);
       return new Try.Success(true);
     };
+  }
+
+  public static class TestTimer implements TimerProxy {
+
+    @Override
+    public TimerProxy setup(ComponentProxy proxy) {
+      return this;
+    }
+
+    @Override
+    public UUID schedulePeriodicTimer(long delay, long period, Consumer<Boolean> callback) {
+      return UUID.randomUUID();
+    }
+
+    @Override
+    public void cancelPeriodicTimer(UUID timeoutId) {
+    }
+  }
+
+  public static class AppendCallback implements Consumer<Try<Boolean>> {
+
+    @Override
+    public void accept(Try<Boolean> t) {
+      if (t.isFailure()) {
+        try {
+          t.checkedGet();
+        } catch (Throwable ex) {
+          throw new RuntimeException(ex);
+        }
+      }
+    }
+  }
+
+  public static class ReadCallback implements Consumer<Try<byte[]>> {
+
+    @Override
+    public void accept(Try<byte[]> t) {
+    }
   }
 }

@@ -31,8 +31,8 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
-import se.sics.dela.storage.StreamStorage;
 import se.sics.dela.storage.operation.StreamStorageOpProxy;
+import se.sics.dela.util.TimerProxy;
 import se.sics.dela.util.TimerProxyImpl;
 import se.sics.kompics.config.Config;
 import se.sics.kompics.util.Identifier;
@@ -54,7 +54,7 @@ public class SimpleCache implements KCache {
   private final KCacheConfig cacheConfig;
   private final StreamId streamId;
   private final StreamStorageOpProxy opProxy;
-  private final TimerProxyImpl timerProxy;
+  private final TimerProxy timerProxy;
   //blocks maintained by actual cache reads
   final TreeMap<Long, Pair<KBlock, CacheKReference>> cacheRef = new TreeMap<>();
   //blocks in the system, might as well cache them until no one else uses them
@@ -67,7 +67,7 @@ public class SimpleCache implements KCache {
   private UUID cacheCleanTid;
   private final Logger logger;
 
-  public SimpleCache(Config config, StreamStorageOpProxy opProxy, TimerProxyImpl timerProxy,
+  public SimpleCache(Config config, StreamStorageOpProxy opProxy, TimerProxy timerProxy,
     StreamId streamId, Logger logger) {
     this.cacheConfig = new KCacheConfig(config);
     this.opProxy = opProxy;

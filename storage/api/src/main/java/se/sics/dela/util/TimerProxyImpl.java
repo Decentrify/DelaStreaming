@@ -43,7 +43,7 @@ public class TimerProxyImpl implements TimerProxy {
   }
 
   @Override
-  public TimerProxyImpl setup(ComponentProxy proxy) {
+  public TimerProxy setup(ComponentProxy proxy) {
     this.proxy = proxy;
     proxy.getNegative(Timer.class).getPair();
     proxy.subscribe(handleTimeout, timer);

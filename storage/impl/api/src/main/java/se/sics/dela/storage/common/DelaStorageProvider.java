@@ -20,6 +20,7 @@ package se.sics.dela.storage.common;
 
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
+import se.sics.dela.util.TimerProxy;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.range.KRange;
 
@@ -51,7 +52,7 @@ public interface DelaStorageProvider<E extends StorageEndpoint, R extends Storag
    * @return Try.Success - true - file created, false - file already exists; Try.Failure - wrapped cause
    */
   public Try<Boolean> createFile(E endpoint, R resource);
-  
+
   /**
    * @param endpoint
    * @param resource
@@ -91,5 +92,20 @@ public interface DelaStorageProvider<E extends StorageEndpoint, R extends Storag
    * @return Try.Success - append succeeded; Try.Failure - wrapped cause
    */
   public Try<Boolean> append(E endpoint, R resource, byte[] data);
+  
+  /**
+   * open and keep open session for repeated reads
+   *
+   * @param endpoint
+   * @param resource
+   */
+  public Try<DelaReadSession> readSession(E endpoint, R resource, TimerProxy timer);
 
+  /**
+   * open and keep open session for repeated reads
+   *
+   * @param endpoint
+   * @param resource
+   */
+  public Try<DelaAppendSession> appendSession(E endpoint, R resource, TimerProxy timer);
 }
