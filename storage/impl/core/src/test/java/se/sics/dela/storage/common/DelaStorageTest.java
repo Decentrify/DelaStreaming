@@ -45,7 +45,7 @@ import se.sics.nstream.util.range.KRange;
 public class DelaStorageTest {
 
 //  @Test
-  public void testHDFSAppend() throws IOException {
+  public void testHDFSAppend() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
@@ -53,15 +53,15 @@ public class DelaStorageTest {
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
     DelaStorageProvider storage = new HDFSHelper.StorageProvider(endpoint, resource, dfs);
 
-    Try<Boolean> result = new Try.Success(true)
+    Try result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
-      .flatMap(TryHelper.tryFSucc0(() -> appendFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(appendFile(storage)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 10 * 1024 * 1024l, (long) size)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
-    result.get();
+    result.checkedGet();
   }
 
   private Supplier<Try<Boolean>> appendFile(DelaStorageProvider storage) {
@@ -84,7 +84,7 @@ public class DelaStorageTest {
   }
 
 //  @Test
-  public void testHDFSMultiAppend() throws IOException {
+  public void testHDFSMultiAppend() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
@@ -96,11 +96,11 @@ public class DelaStorageTest {
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
-      .flatMap(TryHelper.tryFSucc0(() -> multiAppendFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(multiAppendFile(storage)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
-    result.get();
+    result.checkedGet();
   }
 
   private Supplier<Try<Boolean>> multiAppendFile(DelaStorageProvider storage) {
@@ -131,7 +131,7 @@ public class DelaStorageTest {
   }
 
 //  @Test
-  public void testHDFSMultiRead() throws IOException {
+  public void testHDFSMultiRead() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
@@ -143,12 +143,12 @@ public class DelaStorageTest {
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
-      .flatMap(TryHelper.tryFSucc0(() -> multiAppendFile(storage)))
-      .flatMap(TryHelper.tryFSucc0(() -> multiReadFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(multiAppendFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(multiReadFile(storage)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
-    result.get();
+    result.checkedGet();
   }
 
   private Supplier<Try<Boolean>> multiReadFile(DelaStorageProvider storage) {
@@ -176,7 +176,7 @@ public class DelaStorageTest {
   }
 
 //  @Test
-  public void testHDFSRead() throws IOException {
+  public void testHDFSRead() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
@@ -188,12 +188,12 @@ public class DelaStorageTest {
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
-      .flatMap(TryHelper.tryFSucc0(() -> multiAppendFile(storage)))
-      .flatMap(TryHelper.tryFSucc0(() -> readFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(multiAppendFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(readFile(storage)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
-    result.get();
+    result.checkedGet();
   }
 
   private Supplier<Try<Boolean>> readFile(DelaStorageProvider storage) {
