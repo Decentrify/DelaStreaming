@@ -29,7 +29,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
 import se.sics.dela.storage.hdfs.HDFSEndpoint;
-import se.sics.dela.storage.hdfs.HDFSHelper;
+import se.sics.dela.storage.hdfs.HDFS;
 import se.sics.dela.storage.hdfs.HDFSResource;
 import se.sics.dela.util.TimerProxy;
 import se.sics.kompics.ComponentProxy;
@@ -51,7 +51,7 @@ public class DelaStorageTest {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
 
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new HDFSHelper.StorageProvider(endpoint, resource, dfs);
+    DelaStorageProvider storage = new HDFS.StorageProvider(endpoint, resource, dfs);
 
     Try result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
@@ -90,7 +90,7 @@ public class DelaStorageTest {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
 
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new HDFSHelper.StorageProvider(endpoint, resource, dfs);
+    DelaStorageProvider storage = new HDFS.StorageProvider(endpoint, resource, dfs);
 
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
@@ -110,7 +110,7 @@ public class DelaStorageTest {
       rand.nextBytes(block);
 
       long start = System.nanoTime();
-      Try<HDFSHelper.AppendSession> appendOp = storage.appendSession(new TestTimer());
+      Try<HDFS.AppendSession> appendOp = storage.appendSession(new TestTimer());
       if (appendOp.isFailure()) {
         return (Try.Failure) appendOp;
       }
@@ -137,7 +137,7 @@ public class DelaStorageTest {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
 
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new HDFSHelper.StorageProvider(endpoint, resource, dfs);
+    DelaStorageProvider storage = new HDFS.StorageProvider(endpoint, resource, dfs);
 
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
@@ -154,7 +154,7 @@ public class DelaStorageTest {
   private Supplier<Try<Boolean>> multiReadFile(DelaStorageProvider storage) {
     return () -> {
       long start = System.nanoTime();
-      Try<HDFSHelper.ReadSession> appendSession = storage.readSession(new TestTimer());
+      Try<HDFS.ReadSession> appendSession = storage.readSession(new TestTimer());
       if (appendSession.isFailure()) {
         return (Try.Failure) appendSession;
       }
@@ -182,7 +182,7 @@ public class DelaStorageTest {
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
 
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new HDFSHelper.StorageProvider(endpoint, resource, dfs);
+    DelaStorageProvider storage = new HDFS.StorageProvider(endpoint, resource, dfs);
 
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
