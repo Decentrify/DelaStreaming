@@ -34,6 +34,7 @@ import se.sics.dela.storage.hdfs.HDFSResource;
 import se.sics.dela.util.TimerProxy;
 import se.sics.kompics.ComponentProxy;
 import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.trysf.TryHelper;
 import static se.sics.ktoolbox.util.trysf.TryHelper.tryAssert;
 import se.sics.nstream.util.range.KBlockImpl;
 import se.sics.nstream.util.range.KRange;
@@ -51,17 +52,15 @@ public class DelaStorageTest {
 
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
     DelaStorageProvider storage = new HDFSHelper.StorageProvider(endpoint, resource, dfs);
-    StorageOp ops = new StorageOp(storage);
 
-    HDFSHelper.DoAs doAs = new HDFSHelper.DoAs(ugi);
     Try<Boolean> result = new Try.Success(true)
-      .flatMap(doAs.wrapOp(ops.deleteFile()))
-      .flatMap(doAs.wrapOp(ops.createPath()))
-      .flatMap(doAs.wrapOp(ops.createFile()))
-      .flatMap(doAs.wrapOp(appendFile(storage)))
-      .flatMap(doAs.wrapOp(ops.fileSize()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
+      .flatMap(TryHelper.tryFSucc0(() -> appendFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 10 * 1024 * 1024l, (long) size)))
-      .flatMap(doAs.wrapOp(ops.deleteFile()));
+      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
     result.get();
   }
 
@@ -92,17 +91,15 @@ public class DelaStorageTest {
 
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
     DelaStorageProvider storage = new HDFSHelper.StorageProvider(endpoint, resource, dfs);
-    StorageOp ops = new StorageOp(storage);
 
-    HDFSHelper.DoAs doAs = new HDFSHelper.DoAs(ugi);
     Try<Boolean> result = new Try.Success(true)
-      .flatMap(doAs.wrapOp(ops.deleteFile()))
-      .flatMap(doAs.wrapOp(ops.createPath()))
-      .flatMap(doAs.wrapOp(ops.createFile()))
-      .flatMap(doAs.wrapOp(multiAppendFile(storage)))
-      .flatMap(doAs.wrapOp(ops.fileSize()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
+      .flatMap(TryHelper.tryFSucc0(() -> multiAppendFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
-      .flatMap(doAs.wrapOp(ops.deleteFile()));
+      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
     result.get();
   }
 
@@ -141,18 +138,16 @@ public class DelaStorageTest {
 
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
     DelaStorageProvider storage = new HDFSHelper.StorageProvider(endpoint, resource, dfs);
-    StorageOp ops = new StorageOp(storage);
 
-    HDFSHelper.DoAs doAs = new HDFSHelper.DoAs(ugi);
     Try<Boolean> result = new Try.Success(true)
-      .flatMap(doAs.wrapOp(ops.deleteFile()))
-      .flatMap(doAs.wrapOp(ops.createPath()))
-      .flatMap(doAs.wrapOp(ops.createFile()))
-      .flatMap(doAs.wrapOp(multiAppendFile(storage)))
-      .flatMap(doAs.wrapOp(multiReadFile(storage)))
-      .flatMap(doAs.wrapOp(ops.fileSize()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
+      .flatMap(TryHelper.tryFSucc0(() -> multiAppendFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(() -> multiReadFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
-      .flatMap(doAs.wrapOp(ops.deleteFile()));
+      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
     result.get();
   }
 
@@ -188,18 +183,16 @@ public class DelaStorageTest {
 
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
     DelaStorageProvider storage = new HDFSHelper.StorageProvider(endpoint, resource, dfs);
-    StorageOp ops = new StorageOp(storage);
 
-    HDFSHelper.DoAs doAs = new HDFSHelper.DoAs(ugi);
     Try<Boolean> result = new Try.Success(true)
-      .flatMap(doAs.wrapOp(ops.deleteFile()))
-      .flatMap(doAs.wrapOp(ops.createPath()))
-      .flatMap(doAs.wrapOp(ops.createFile()))
-      .flatMap(doAs.wrapOp(multiAppendFile(storage)))
-      .flatMap(doAs.wrapOp(readFile(storage)))
-      .flatMap(doAs.wrapOp(ops.fileSize()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
+      .flatMap(TryHelper.tryFSucc0(() -> multiAppendFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(() -> readFile(storage)))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
-      .flatMap(doAs.wrapOp(ops.deleteFile()));
+      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
     result.get();
   }
 

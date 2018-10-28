@@ -65,19 +65,13 @@
 //  private Map<Identifier, Component> components = new HashMap<>();
 //  private final StorageOp ops;
 //  private final DelaStorageProvider storage;
-//  private final HDFSHelper.DoAs doAs;
 //  private long writePos;
 //  private final TreeMap<Long, StreamStorageOpWrite.Request> pending = new TreeMap<>();
-//  //
-//  private boolean progressed = false;
-//  private UUID flushTimer;
 //
 //  public HDFSComp(Init init) {
 //    logger.info("{}init", logPrefix);
 //
 //    storage = init.storage;
-//    ops = new StorageOp(storage);
-//    doAs = init.doAs;
 //    writePos = init.streamPos;
 //
 //    subscribe(handleStart, control);
