@@ -29,7 +29,5 @@ public interface DelaReadSession {
 
   public void read(KRange range, Consumer<Try<byte[]>> callback);
 
-  public void timeout();
-
   public Try<Boolean> close();
 }

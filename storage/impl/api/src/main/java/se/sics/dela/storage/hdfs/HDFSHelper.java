@@ -24,6 +24,7 @@ import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -76,11 +77,13 @@ public class HDFSHelper {
     public final HDFSEndpoint endpoint;
     public final HDFSResource resource;
     public final DistributedFileSystem dfs;
+    private final DoAs doAs;
 
     public StorageProvider(HDFSEndpoint endpoint, HDFSResource resource, DistributedFileSystem dfs) {
       this.endpoint = endpoint;
       this.resource = resource;
       this.dfs = dfs;
+      this.doAs = HDFSHelper.doAs(endpoint.user).get();
     }
 
     @Override
@@ -95,42 +98,42 @@ public class HDFSHelper {
 
     @Override
     public Try createPath() {
-      return HDFSHelper.createPath(dfs, endpoint, resource);
+      return doAs.perform(HDFSHelper.createPathOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try<Boolean> fileExists() {
-      return HDFSHelper.fileExists(dfs, endpoint, resource);
+      return doAs.perform(HDFSHelper.fileExistsOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try createFile() {
-      return HDFSHelper.createFile(dfs, endpoint, resource);
+      return doAs.perform(HDFSHelper.createFileOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try deleteFile() {
-      return HDFSHelper.delete(dfs, endpoint, resource);
+      return doAs.perform(HDFSHelper.deleteFileOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try<Long> fileSize() {
-      return HDFSHelper.fileSize(dfs, endpoint, resource);
+      return doAs.perform(HDFSHelper.fileSizeOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try<byte[]> read(KRange range) {
-      return HDFSHelper.read(dfs, endpoint, resource, range);
+      return doAs.perform(HDFSHelper.readOp(dfs, endpoint, resource, range));
     }
 
     @Override
     public Try<byte[]> readAllFile() {
-      return HDFSHelper.readFully(dfs, endpoint, resource);
+      return doAs.perform(HDFSHelper.readFullyOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try append(byte[] data) {
-      return HDFSHelper.append(dfs, endpoint, resource, data);
+      return doAs.perform(HDFSHelper.appendOp(dfs, endpoint, resource, data));
     }
 
     @Override
@@ -142,7 +145,7 @@ public class HDFSHelper {
         if (!size.isSuccess()) {
           return (Try.Failure) size;
         }
-        return new Try.Success(new ReadSession(dfs, in));
+        return new Try.Success(new ReadSession(dfs, in, doAs));
       } catch (IOException ex) {
         return new Try.Failure(ex);
       }
@@ -157,7 +160,9 @@ public class HDFSHelper {
         if (!size.isSuccess()) {
           return (Try.Failure) size;
         }
-        return new Try.Success(new AppendSession(endpoint, resource, dfs, out, size.get()));
+        AppendSession session = new AppendSession(endpoint, resource, dfs, out, doAs, size.get());
+        session.setup(timer);
+        return new Try.Success(session);
       } catch (IOException ex) {
         return new Try.Failure(ex);
       }
@@ -166,39 +171,64 @@ public class HDFSHelper {
 
   public static class AppendSession implements DelaAppendSession {
 
+    public static final Integer FLUSH_COUNTER_MB = 50;
+    public static final Long FLUSH_PERIOD = 1000l;
     private final HDFSEndpoint endpoint;
     private final HDFSResource resource;
 
     private final DistributedFileSystem dfs;
     private final FSDataOutputStream out;
+    private final DoAs doAs;
 
     private long confirmedPos;
     private long pendingPos;
-    private Map<Pair<Long, Long>, Consumer<Try<Boolean>>> pending = new HashMap<>();
+    private final Map<Pair<Long, Long>, Consumer<Try<Boolean>>> pending = new HashMap<>();
+    private TimerProxy timer;
+    private UUID flushTimer;
 
     public AppendSession(HDFSEndpoint endpoint, HDFSResource resource,
-      DistributedFileSystem dfs, FSDataOutputStream out, long pos) {
+      DistributedFileSystem dfs, FSDataOutputStream out, DoAs doAs, long pos) {
       this.endpoint = endpoint;
       this.resource = resource;
       this.dfs = dfs;
       this.out = out;
+      this.doAs = doAs;
       this.confirmedPos = pos;
+    }
+
+    private void setup(TimerProxy timer) {
+      this.timer = timer;
+      flushTimer = timer.schedulePeriodicTimer(FLUSH_PERIOD, FLUSH_PERIOD, timeout());
     }
 
     @Override
     public void append(byte[] data, Consumer<Try<Boolean>> callback) {
-      Try<Boolean> r = HDFSHelper.append(out, data);
+      Try<Boolean> r = doAs.perform(HDFSHelper.appendOp(out, data));
       if (r.isSuccess()) {
         pending.put(Pair.with(pendingPos, pendingPos + data.length), callback);
         pendingPos += data.length;
+        if (flushCounter()) {
+          checkPendingAppends();
+        }
       } else {
         callback.accept((Try.Failure) r);
       }
     }
 
-    @Override
-    public void timeout() {
-      Try<Long> size = HDFSHelper.fileSize(dfs, endpoint, resource);
+    private Consumer<Boolean> timeout() {
+      return (Boolean _in) -> {
+        if (!pending.isEmpty()) {
+          checkPendingAppends();
+        }
+      };
+    }
+
+    private boolean flushCounter() {
+      return (pendingPos - confirmedPos) > FLUSH_COUNTER_MB * 1024 * 1024;
+    }
+
+    private void checkPendingAppends() {
+      Try<Long> size = doAs.perform(HDFSHelper.fileSizeOp(dfs, endpoint, resource));
       if (!size.isSuccess()) {
         pending.values().forEach((callback) -> callback.accept((Try.Failure) size));
       }
@@ -222,6 +252,8 @@ public class HDFSHelper {
     public Try<Boolean> close() {
       try {
         out.close();
+        timer.cancelPeriodicTimer(flushTimer);
+        flushTimer = null;
         return new Try.Success(true);
       } catch (IOException ex) {
         return new Try.Failure(ex);
@@ -233,20 +265,18 @@ public class HDFSHelper {
 
     private final DistributedFileSystem dfs;
     private final FSDataInputStream in;
+    private final DoAs doAs;
 
-    public ReadSession(DistributedFileSystem dfs, FSDataInputStream in) {
+    public ReadSession(DistributedFileSystem dfs, FSDataInputStream in, DoAs doAs) {
       this.dfs = dfs;
       this.in = in;
+      this.doAs = doAs;
     }
 
     @Override
     public void read(KRange range, Consumer<Try<byte[]>> callback) {
-      Try<byte[]> val = HDFSHelper.read(in, range);
+      Try<byte[]> val = doAs.perform(HDFSHelper.readOp(in, range));
       callback.accept(val);
-    }
-
-    @Override
-    public void timeout() {
     }
 
     @Override
@@ -361,12 +391,17 @@ public class HDFSHelper {
     }
   }
 
-  public static Supplier<Try<Boolean>> createOp(DistributedFileSystem dfs,
+  public static Supplier<Try<Boolean>> createFileOp(DistributedFileSystem dfs,
     HDFSEndpoint endpoint, HDFSResource resource) {
     return () -> createFile(dfs, endpoint, resource);
   }
 
-  public static Try<Boolean> delete(DistributedFileSystem dfs, HDFSEndpoint endpoint, HDFSResource resource) {
+  public static Supplier<Try<Boolean>> deleteFileOp(DistributedFileSystem dfs,
+    HDFSEndpoint endpoint, HDFSResource resource) {
+    return () -> deleteFile(dfs, endpoint, resource);
+  }
+
+  public static Try<Boolean> deleteFile(DistributedFileSystem dfs, HDFSEndpoint endpoint, HDFSResource resource) {
     String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
     try {
       if (!dfs.exists(new Path(filePath))) {
@@ -431,6 +466,15 @@ public class HDFSHelper {
       return new Try.Failure(new DelaStorageException(msg, ex));
     }
   }
+  
+  public static Supplier<Try<Boolean>> appendOp(FSDataOutputStream out, byte[] data) {
+    return () -> append(out, data);
+  }
+
+  public static Supplier<Try<byte[]>> readOp(DistributedFileSystem dfs,
+    HDFSEndpoint endpoint, HDFSResource resource, KRange range) {
+    return () -> read(dfs, endpoint, resource, range);
+  }
 
   public static Try<byte[]> read(DistributedFileSystem dfs,
     HDFSEndpoint endpoint, HDFSResource resource, KRange range) {
@@ -453,6 +497,10 @@ public class HDFSHelper {
       String msg = "file op - could not read";
       return new Try.Failure(new DelaStorageException(msg, ex));
     }
+  }
+  
+  public static Supplier<Try<byte[]>> readOp(FSDataInputStream in, KRange range) {
+    return () -> read(in, range);
   }
 
   public static Try<byte[]> readFully(DistributedFileSystem dfs, HDFSEndpoint endpoint, HDFSResource resource) {

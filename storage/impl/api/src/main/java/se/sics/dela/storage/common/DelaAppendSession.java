@@ -28,8 +28,6 @@ public interface DelaAppendSession {
 
   public void append(byte[] data, Consumer<Try<Boolean>> callback);
 
-  public void timeout();
-
   public Try<Boolean> close();
 
 }

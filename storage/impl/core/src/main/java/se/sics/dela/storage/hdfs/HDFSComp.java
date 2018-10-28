@@ -47,6 +47,7 @@ import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
+import se.sics.dela.storage.common.DelaStorageProvider;
 import se.sics.dela.storage.common.StorageOp;
 import se.sics.dela.storage.hdfs.HDFSHelper.DoAs;
 import se.sics.ktoolbox.util.trysf.Try;
@@ -224,7 +225,6 @@ public class HDFSComp extends ComponentDefinition {
   }
 
   public static class StorageProvider implements se.sics.dela.storage.mngr.StorageProvider<HDFSComp> {
-
     public final Identifier self;
     public final HDFSEndpoint endpoint;
 
@@ -243,9 +243,15 @@ public class HDFSComp extends ComponentDefinition {
         throw new RuntimeException(ex);
       }
       HDFSHelper.StorageProvider storage = new HDFSHelper.StorageProvider(endpoint, hdfsResource, dfs);
-      StorageOp ops = new StorageOp(storage);
+      
+      long streamPos = initFile(storage);
       DoAs doAs = HDFSHelper.doAs(endpoint.user).get();
-      Try<Long> streamPos = doAs.perform(ops.fileSize());
+      HDFSComp.Init init = new HDFSComp.Init(storage, doAs, streamPos);
+      return Pair.with(init, streamPos);
+    }
+    
+    private long initFile(DelaStorageProvider storage) {
+      Try<Long> streamPos = storage.fileSize();
       if (!streamPos.isSuccess()) {
         try {
           ((Try.Failure) streamPos).checkedGet();
@@ -254,10 +260,10 @@ public class HDFSComp extends ComponentDefinition {
         }
       }
       if (streamPos.get() == -1) {
-        doAs.perform(ops.createFile());
+        storage.createFile();
+        return 0l;
       }
-      HDFSComp.Init init = new HDFSComp.Init(storage, doAs, streamPos.get());
-      return Pair.with(init, streamPos.get());
+      return streamPos.get();
     }
 
     @Override
