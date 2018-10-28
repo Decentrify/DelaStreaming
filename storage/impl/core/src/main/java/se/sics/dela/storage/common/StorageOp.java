@@ -35,35 +35,35 @@ public class StorageOp<E extends StorageEndpoint, R extends StorageResource> {
     this.storage = storage;
   }
 
-  public Supplier<Try<Boolean>> createPath(E endpoint, R resource) {
-    return () -> storage.createPath(endpoint, resource);
+  public Supplier<Try<Boolean>> createPath() {
+    return () -> storage.createPath();
   }
 
-  public Supplier<Try<Boolean>> fileExists(E endpoint, R resource) {
-    return () -> storage.fileExists(endpoint, resource);
+  public Supplier<Try<Boolean>> fileExists() {
+    return () -> storage.fileExists();
   }
 
-  public Supplier<Try<Boolean>> createFile(E endpoint, R resource) {
-    return () -> storage.createFile(endpoint, resource);
-  }
-  
-  public Supplier<Try<Boolean>> deleteFile(E endpoint, R resource) {
-    return () -> storage.deleteFile(endpoint, resource);
+  public Supplier<Try<Boolean>> createFile() {
+    return () -> storage.createFile();
   }
 
-  public Supplier<Try<Long>> fileSize(E endpoint, R resource) {
-    return () -> storage.fileSize(endpoint, resource);
+  public Supplier<Try<Boolean>> deleteFile() {
+    return () -> storage.deleteFile();
   }
 
-  public Supplier<Try<byte[]>> read(E endpoint, R resource, KRange range) {
-    return () -> storage.read(endpoint, resource, range);
+  public Supplier<Try<Long>> fileSize() {
+    return () -> storage.fileSize();
   }
 
-  public Supplier<Try<byte[]>> readAllFile(E endpoint, R resource) {
-    return () -> storage.readAllFile(endpoint, resource);
+  public Supplier<Try<byte[]>> read(KRange range) {
+    return () -> storage.read(range);
   }
 
-  public Supplier<Try<Boolean>> append(E endpoint, R resource, byte[] data) {
-    return () -> storage.append(endpoint, resource, data);
+  public Supplier<Try<byte[]>> readAllFile() {
+    return () -> storage.readAllFile();
+  }
+
+  public Supplier<Try<Boolean>> append(byte[] data) {
+    return () -> storage.append(data);
   }
 }

@@ -21,6 +21,7 @@ package se.sics.dela.storage.hdfs;
 import java.io.File;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import se.sics.dela.storage.StorageEndpoint;
 import static se.sics.dela.storage.hdfs.HDFSHelper.HOPS_URL;
 import se.sics.ktoolbox.util.trysf.Try;

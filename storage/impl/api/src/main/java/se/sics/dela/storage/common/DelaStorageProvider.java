@@ -28,84 +28,64 @@ import se.sics.nstream.util.range.KRange;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface DelaStorageProvider<E extends StorageEndpoint, R extends StorageResource> {
-
+  
+  public E getEndpoint();
+  
+  public R getResource();
+  
   /**
    *
-   * @param endpoint
-   * @param resource
    * @return Try.Success - true - path created, false - path already existed
    * Try.Failure - wrapped cause
    */
-  public Try<Boolean> createPath(E endpoint, R resource);
+  public Try<Boolean> createPath();
 
   /**
-   *
-   * @param endpoint
-   * @param resource
    * @return Try.Success - true - file exists, false - file does not exist; Try.Failure - wrapped cause
    */
-  public Try<Boolean> fileExists(E endpoint, R resource);
+  public Try<Boolean> fileExists();
 
   /**
-   * @param endpoint
-   * @param resource
    * @return Try.Success - true - file created, false - file already exists; Try.Failure - wrapped cause
    */
-  public Try<Boolean> createFile(E endpoint, R resource);
+  public Try<Boolean> createFile();
 
   /**
-   * @param endpoint
-   * @param resource
    * @return Try.Success - true - file deleted, false - file already deleted; Try.Failure - wrapped cause
    */
-  public Try<Boolean> deleteFile(E endpoint, R resource);
+  public Try<Boolean> deleteFile();
 
   /**
    *
-   * @param endpoint
-   * @param resource
    * @return Try.Success - long as size; Try.Failure - wrapped cause
    */
-  public Try<Long> fileSize(E endpoint, R resource);
+  public Try<Long> fileSize();
 
   /**
-   *
-   * @param endpoint
-   * @param resource
    * @param range
    * @return Try.Success - content; Try.Failure - wrapped cause
    */
-  public Try<byte[]> read(E endpoint, R resource, KRange range);
+  public Try<byte[]> read(KRange range);
 
   /**
    *
-   * @param endpoint
-   * @param resource
    * @return Try.Success - content; Try.Failure - wrapped cause
    */
-  public Try<byte[]> readAllFile(E endpoint, R resource);
+  public Try<byte[]> readAllFile();
 
   /**
-   * @param endpoint
-   * @param resource
    * @param data
    * @return Try.Success - append succeeded; Try.Failure - wrapped cause
    */
-  public Try<Boolean> append(E endpoint, R resource, byte[] data);
+  public Try<Boolean> append(byte[] data);
   
   /**
    * open and keep open session for repeated reads
-   *
-   * @param endpoint
-   * @param resource
    */
-  public Try<DelaReadSession> readSession(E endpoint, R resource, TimerProxy timer);
+  public Try<DelaReadSession> readSession(TimerProxy timer);
 
   /**
    * open and keep open session for repeated reads
-   *
-   * @param endpoint
-   * @param resource
    */
-  public Try<DelaAppendSession> appendSession(E endpoint, R resource, TimerProxy timer);
+  public Try<DelaAppendSession> appendSession(TimerProxy timer);
 }

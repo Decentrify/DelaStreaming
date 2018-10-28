@@ -18,40 +18,16 @@
  */
 package se.sics.dela.storage.common;
 
-import java.util.LinkedList;
-import java.util.List;
-
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DelaStorageException extends Exception {
-  public final Throwable cause;
-  public final List<Throwable> andThen = new LinkedList<>();
-  
+
   public DelaStorageException(String msg) {
-    this(new Base(msg));
+    super(msg);
   }
-  
+
   public DelaStorageException(String msg, Throwable cause) {
-    this(new Base(msg, cause));
-  }
-  
-  public DelaStorageException(Base cause) {
-    this.cause = cause;
-  }
-  
-  public DelaStorageException andThen(Throwable cause) {
-    andThen.add(cause);
-    return this;
-  }
-  
-  public static class Base extends Exception {
-    public Base(String msg) {
-      super(msg);
-    }
-    
-    public Base(String msg, Throwable cause) {
-      super(msg, cause);
-    }
+    super(msg, cause);
   }
 }

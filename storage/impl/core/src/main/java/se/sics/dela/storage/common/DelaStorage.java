@@ -30,41 +30,41 @@ import se.sics.nstream.hops.manifest.ManifestJSON;
  */
 public class DelaStorage<E extends StorageEndpoint, R extends StorageResource> {
 
-  private final StorageOp<E, R> storage;
+  private final StorageOp ops;
 
-  public DelaStorage(DelaStorageProvider<E, R> storage) {
-    this.storage = new StorageOp(storage);
+  public DelaStorage(DelaStorageProvider storage) {
+    this.ops = new StorageOp(storage);
   }
 
-  public Try<ManifestJSON> readManifest(E endpoint, R resource) {
+  public Try<ManifestJSON> readManifest() {
     return new Try.Success(true)
-      .flatMap(TryHelper.tryFSucc0(storage.fileExists(endpoint, resource)))
+      .flatMap(TryHelper.tryFSucc0(ops.fileExists()))
       .flatMap(TryHelper.tryFSucc1((Boolean fileExists) -> {
         if (fileExists) {
           return new Try.Success(true);
         } else {
-          String msg = "manifest file does not exist:" + resource.getSinkName();
+          String msg = "manifest file does not exist:" + ops.storage.getResource().getSinkName();
           return new Try.Failure(new DelaStorageException(msg));
         }
       }))
-      .flatMap(TryHelper.tryFSucc0(storage.readAllFile(endpoint, resource)))
+      .flatMap(TryHelper.tryFSucc0(ops.readAllFile()))
       .map(TryHelper.tryFSucc1((byte[] manifestBytes) -> ManifestHelper.getManifestJSON(manifestBytes)));
   }
   
-  public Try<Boolean> writeManifest(E endpoint, R resource, ManifestJSON manifest) {
+  public Try<Boolean> writeManifest(ManifestJSON manifest) {
     return new Try.Success(true)
-      .flatMap(TryHelper.tryFSucc0(storage.fileExists(endpoint, resource)))
+      .flatMap(TryHelper.tryFSucc0(ops.fileExists()))
       .flatMap(TryHelper.tryFSucc1((Boolean fileExists) -> {
         if (fileExists) {
-          String msg = "manifest already exists:" + resource.getSinkName();
+          String msg = "manifest already exists:" + ops.storage.getResource().getSinkName();
           return new Try.Failure(new DelaStorageException(msg));
         } else {
           return new Try.Success(true)
-            .flatMap(TryHelper.tryFSucc0(storage.createPath(endpoint, resource)))
-            .flatMap(TryHelper.tryFSucc0(storage.createFile(endpoint, resource)));
+            .flatMap(TryHelper.tryFSucc0(ops.createPath()))
+            .flatMap(TryHelper.tryFSucc0(ops.createFile()));
         }
       }))
-      .flatMap(TryHelper.tryFSucc0(storage.append(endpoint, resource, ManifestHelper.getManifestByte(manifest))));
+      .flatMap(TryHelper.tryFSucc0(ops.append(ManifestHelper.getManifestByte(manifest))));
   }
   
   public static class DelaStorageException extends Exception {
