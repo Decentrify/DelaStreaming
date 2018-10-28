@@ -20,10 +20,14 @@ package se.sics.dela.storage.common;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
+import java.util.Optional;
+import java.util.function.Consumer;
+import se.sics.dela.storage.hdfs.HDFS.AppendSession;
+import se.sics.dela.storage.hdfs.HDFS.ReadSession;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.dela.storage.operation.events.StreamStorageOpRead;
 import se.sics.dela.storage.operation.events.StreamStorageOpWrite;
+import se.sics.dela.util.TimerProxyImpl;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -35,6 +39,7 @@ import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.trysf.TryHelper;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -46,21 +51,31 @@ public class DelaStorageComp extends ComponentDefinition {
   Positive<Timer> timerPort = requires(Timer.class);
   Negative<StreamStorageOpPort> resourcePort = provides(StreamStorageOpPort.class);
   One2NChannel resourceChannel;
+  private final TimerProxyImpl timerProxy;
 
   private Map<Identifier, Component> components = new HashMap<>();
   private final DelaStorageProvider storage;
-  private long writePos;
-  private final TreeMap<Long, StreamStorageOpWrite.Request> pending = new TreeMap<>();
+  private Optional<AppendSession> appendSession;
+  private Optional<ReadSession> readSession;
+  private long pendingPos;
+  private long confirmedPos;
+  private final Map<Identifier, StreamStorageOpRead.Request> pendingReads = new HashMap<>();
+  private final Map<Identifier, StreamStorageOpWrite.Request> pendingWrites = new HashMap<>();
 
   public DelaStorageComp(Init init) {
     logger.info("{}init", logPrefix);
 
+    timerProxy = new TimerProxyImpl();
+    timerProxy.setup(proxy);
     storage = init.storage;
-    writePos = init.pos;
+    pendingPos = init.pos;
+    confirmedPos = pendingPos;
 
     subscribe(handleStart, control);
     subscribe(handleReadRequest, resourcePort);
     subscribe(handleWriteRequest, resourcePort);
+    subscribe(handleReadComplete, resourcePort);
+    subscribe(handleWriteComplete, resourcePort);
   }
 
   //********************************CONTROL***********************************
@@ -76,40 +91,99 @@ public class DelaStorageComp extends ComponentDefinition {
     @Override
     public void handle(StreamStorageOpRead.Request req) {
       logger.trace("{}received:{}", logPrefix, req);
-      Try<byte[]> readResult = storage.read(req.readRange);
-      StreamStorageOpRead.Response resp = req.respond(readResult);
-      logger.trace("{}answering:{}", logPrefix, resp);
-      answer(req, resp);
+      if (!readSession.isPresent()) {
+        setupReadSession();
+      }
+      pendingReads.put(req.getId(), req);
+      readSession.get().read(req.readRange, readCallback(req));
     }
   };
+
+  private void setupReadSession() {
+    Try<ReadSession> rs = storage.readSession(timerProxy);
+    if (rs.isSuccess()) {
+      readSession = Optional.of(rs.get());
+    } else {
+      throw new RuntimeException(TryHelper.tryError(rs));
+    }
+  }
+
+  private Consumer<Try<byte[]>> readCallback(StreamStorageOpRead.Request req) {
+    return (Try<byte[]> result) -> {
+      pendingReads.remove(req.getId());
+      StreamStorageOpRead.Response resp = req.respond(result);
+      logger.trace("{}answering:{}", logPrefix, resp);
+      answer(req, resp);
+    };
+  }
 
   Handler handleWriteRequest = new Handler<StreamStorageOpWrite.Request>() {
     @Override
     public void handle(StreamStorageOpWrite.Request req) {
       logger.info("{}write:{}", logPrefix, req);
-      if (writePos >= req.pos + req.value.length) {
+      if (!appendSession.isPresent()) {
+        setupAppendSession();
+      }
+      if (pendingPos >= req.pos + req.value.length) {
         logger.info("{}write with pos:{} skipped", logPrefix, req.pos);
         answer(req, req.respond(Result.success(true)));
         return;
       }
       long pos = req.pos;
-      byte[] writeValue = req.value;
-      if (writePos > req.pos) {
-        pos = writePos;
-        int sourcePos = (int) (pos - writePos);
-        int writeAmount = req.value.length - sourcePos;
-        writeValue = new byte[writeAmount];
-        System.arraycopy(req.value, sourcePos, writeValue, 0, writeAmount);
-        logger.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
-          new Object[]{logPrefix, req.pos, pos, req.value.length, writeAmount});
-      } else {
-        writeValue = req.value;
-      }
+      byte[] writeValue = prepareAppendVal(req);
+      pendingWrites.put(req.getId(), req);
+      appendSession.get().append(writeValue, appendCallback(req));
+    }
+  };
 
-      Try<Boolean> writeResult = storage.append(writeValue);
-      if (!writeResult.isSuccess()) {
-        StreamStorageOpWrite.Response resp = req.respond(writeResult);
-        answer(req, resp);
+  private void setupAppendSession() {
+    Try<AppendSession> rs = storage.appendSession(timerProxy);
+    if (rs.isSuccess()) {
+      appendSession = Optional.of(rs.get());
+    } else {
+      throw new RuntimeException(TryHelper.tryError(rs));
+    }
+  }
+
+  private byte[] prepareAppendVal(StreamStorageOpWrite.Request req) {
+    byte[] appendVal = req.value;
+    if (pendingPos > req.pos) {
+      int sourcePos = (int) (pendingPos - req.pos);
+      int writeAmount = req.value.length - sourcePos;
+      appendVal = new byte[writeAmount];
+      System.arraycopy(req.value, sourcePos, appendVal, 0, writeAmount);
+      logger.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
+        new Object[]{logPrefix, req.pos, pendingPos, req.value.length, writeAmount});
+    }
+    return appendVal;
+  }
+
+  private Consumer<Try<Boolean>> appendCallback(StreamStorageOpWrite.Request req) {
+    return (Try<Boolean> result) -> {
+      pendingWrites.remove(req.getId());
+      if (confirmedPos < req.pos + req.value.length) {
+        confirmedPos = req.pos + req.value.length;
+      }
+      StreamStorageOpWrite.Response resp = req.respond(result);
+      logger.trace("{}answering:{}", logPrefix, resp);
+      answer(req, resp);
+    };
+  }
+  
+  Handler handleReadComplete = new Handler<StreamStorageOpRead.Complete>() {
+    @Override
+    public void handle(StreamStorageOpRead.Complete event) {
+      if(readSession.isPresent()) {
+        readSession.get().close();
+      }
+    }
+  };
+  
+  Handler handleWriteComplete = new Handler<StreamStorageOpWrite.Complete>() {
+    @Override
+    public void handle(StreamStorageOpWrite.Complete event) {
+      if(appendSession.isPresent()) {
+        appendSession.get().close();
       }
     }
   };
