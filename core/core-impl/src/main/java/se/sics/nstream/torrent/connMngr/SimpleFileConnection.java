@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import se.sics.kompics.util.Identifier;
 import se.sics.nstream.FileId;
 import se.sics.nstream.util.actuator.ComponentLoadTracking;
@@ -31,7 +33,8 @@ import se.sics.nstream.util.actuator.ComponentLoadTracking;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class SimpleFileConnection implements FileConnection {
-
+    private final static Logger logger = LoggerFactory.getLogger(SimpleFileConnection.class);
+  
     private final FileId fileId;
     //**************************************************************************
     private final ComponentLoadTracking loadTracking;
@@ -74,12 +77,10 @@ public class SimpleFileConnection implements FileConnection {
     }
 
     private boolean availableBufferSpace() {
-        int bufSize = loadTracking.getMaxBufferSize(fileId);
-        int usedTransferSize = bufSize == -1 ? totalSlots : totalSlots + bufSize;
-        if(usedTransferSize < maxBufSize) {
-            return true;
-        }
-        return false;
+      int bufSize = loadTracking.getMaxBufferSize(fileId);
+      logger.debug("file:{} - transfer:{} buffer:{} total:{}", new Object[]{fileId, totalSlots, bufSize, maxBufSize});
+      int usedTransferSize = (bufSize == -1) ? totalSlots : totalSlots + bufSize;
+      return usedTransferSize < maxBufSize;
     }
 
     @Override
