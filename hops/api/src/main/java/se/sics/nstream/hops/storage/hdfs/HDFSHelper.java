@@ -51,7 +51,7 @@ public class HDFSHelper {
   public static final String DATANODE_FAILURE_POLICY = "dfs.client.block.write.replace-datanode-on-failure.policy";
 
   public static Try<Configuration> fixConfig(Configuration config) {
-    try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(config)) {
+    try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.newInstance(config)) {
       if (fs.getDataNodeStats().length == 1) {
         fs.close();
         config.set(DATANODE_FAILURE_POLICY, "NEVER");
@@ -65,7 +65,7 @@ public class HDFSHelper {
   
   public static Result<Boolean> canConnect(final Configuration hdfsConfig) {
     LOG.debug("{}testing hdfs connection", logPrefix);
-    try (FileSystem fs = FileSystem.get(hdfsConfig)) {
+    try (FileSystem fs = FileSystem.newInstance(hdfsConfig)) {
       LOG.debug("{}getting status", logPrefix);
       FsStatus status = fs.getStatus();
       LOG.debug("{}got status", logPrefix);
@@ -85,7 +85,7 @@ public class HDFSHelper {
         @Override
         public Result<Long> run() {
           long length = -1;
-          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.newInstance(hdfsEndpoint.hdfsConfig)) {
             FileStatus status = fs.getFileStatus(new Path(filePath));
             if (status.isFile()) {
               length = status.getLen();
@@ -114,7 +114,7 @@ public class HDFSHelper {
       Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
         @Override
         public Result<Boolean> run() {
-          try (FileSystem fs = FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+          try (FileSystem fs = FileSystem.newInstance(hdfsEndpoint.hdfsConfig)) {
             fs.delete(new Path(filePath), false);
             return Result.success(true);
           } catch (IOException ex) {
@@ -139,7 +139,7 @@ public class HDFSHelper {
       Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
         @Override
         public Result<Boolean> run() {
-          try (FileSystem fs = FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+          try (FileSystem fs = FileSystem.newInstance(hdfsEndpoint.hdfsConfig)) {
             if (!fs.isDirectory(new Path(hdfsResource.dirPath))) {
               fs.mkdirs(new Path(hdfsResource.dirPath));
             }
@@ -171,7 +171,7 @@ public class HDFSHelper {
       Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
         @Override
         public Result<Boolean> run() {
-          try (FileSystem fs = FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+          try (FileSystem fs = FileSystem.newInstance(hdfsEndpoint.hdfsConfig)) {
             if (!fs.isDirectory(new Path(hdfsResource.dirPath))) {
               fs.mkdirs(new Path(hdfsResource.dirPath));
             }
@@ -216,7 +216,7 @@ public class HDFSHelper {
       Result<byte[]> result = ugi.doAs(new PrivilegedExceptionAction<Result<byte[]>>() {
         @Override
         public Result<byte[]> run() {
-          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig);
+          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.newInstance(hdfsEndpoint.hdfsConfig);
             FSDataInputStream in = fs.open(new Path(filePath))) {
             int readLength = (int) (readRange.upperAbsEndpoint() - readRange.lowerAbsEndpoint() + 1);
             byte[] byte_read = new byte[readLength];
@@ -244,7 +244,7 @@ public class HDFSHelper {
       Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
         @Override
         public Result<Boolean> run() {
-          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig);
+          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.newInstance(hdfsEndpoint.hdfsConfig);
             FSDataOutputStream out = fs.append(new Path(filePath))) {
             out.write(data);
             return Result.success(true);
@@ -269,7 +269,7 @@ public class HDFSHelper {
       Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
         @Override
         public Result<Boolean> run() {
-          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig);
+          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.newInstance(hdfsEndpoint.hdfsConfig);
             FSDataOutputStream out = fs.append(new Path(filePath))) {
             out.hflush();
             return Result.success(true);
@@ -294,7 +294,7 @@ public class HDFSHelper {
       Result<Long> result = ugi.doAs(new PrivilegedExceptionAction<Result<Long>>() {
         @Override
         public Result<Long> run() {
-          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.newInstance(hdfsEndpoint.hdfsConfig)) {
             FileStatus status = fs.getFileStatus(new Path(filePath));
             long hdfsBlockSize = fs.getDefaultBlockSize();
             if (status.isFile()) {
@@ -323,7 +323,7 @@ public class HDFSHelper {
       Result<ManifestJSON> result = ugi.doAs(new PrivilegedExceptionAction<Result<ManifestJSON>>() {
         @Override
         public Result<ManifestJSON> run() {
-          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+          try (DistributedFileSystem fs = (DistributedFileSystem) FileSystem.newInstance(hdfsEndpoint.hdfsConfig)) {
             if (!fs.isFile(new Path(filePath))) {
               LOG.warn("{}file does not exist", new Object[]{logPrefix, filePath});
               return Result.externalSafeFailure(new HDFSException("hdfs file read"));
@@ -357,7 +357,7 @@ public class HDFSHelper {
       Result<Boolean> result = ugi.doAs(new PrivilegedExceptionAction<Result<Boolean>>() {
         @Override
         public Result<Boolean> run() {
-          try (FileSystem fs = FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+          try (FileSystem fs = FileSystem.newInstance(hdfsEndpoint.hdfsConfig)) {
             if (!fs.isDirectory(new Path(hdfsResource.dirPath))) {
               fs.mkdirs(new Path(hdfsResource.dirPath));
             }
