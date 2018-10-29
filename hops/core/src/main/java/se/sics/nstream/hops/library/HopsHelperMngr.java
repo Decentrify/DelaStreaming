@@ -18,8 +18,11 @@
  */
 package se.sics.nstream.hops.library;
 
+import java.io.IOException;
 import java.util.Random;
 import org.apache.avro.Schema;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +30,8 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Negative;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.hops.storage.hdfs.HDFSHelper;
 import se.sics.nstream.hops.kafka.KafkaHelper;
 import se.sics.nstream.hops.kafka.avro.AvroParser;
@@ -47,7 +52,7 @@ public class HopsHelperMngr {
     private final ComponentProxy proxy;
     private final Negative<HopsHelperPort> hdfsPort;
 
-    public HopsHelperMngr(ComponentProxy proxy, String logPrefix) {
+    public HopsHelperMngr(ComponentProxy proxy,String logPrefix) {
         this.proxy = proxy;
         this.logPrefix = logPrefix;
         hdfsPort = proxy.getPositive(HopsHelperPort.class).getPair();
@@ -70,8 +75,8 @@ public class HopsHelperMngr {
         @Override
         public void handle(HDFSConnectionEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            Result<Boolean> result = HDFSHelper.canConnect(req.connection.hdfsConfig);
-            proxy.answer(req, req.answer(result));
+            Try<Boolean> result = HDFSHelper.canConnect(req.connection.hdfsConfig);
+            proxy.answer(req, req.answer(convert(result)));
         }
     };
 
@@ -79,9 +84,13 @@ public class HopsHelperMngr {
         @Override
         public void handle(HDFSFileDeleteEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.hdfsEndpoint.user);
-            Result<Boolean> result = HDFSHelper.delete(ugi, req.hdfsEndpoint, req.hdfsResource);
-            proxy.answer(req, req.answer(result));
+            try (DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(req.hdfsEndpoint.hdfsConfig)) {
+              UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.hdfsEndpoint.user);
+              Try<Boolean> result = HDFSHelper.delete(dfs, ugi, req.hdfsEndpoint, req.hdfsResource);
+              proxy.answer(req, req.answer(convert(result)));
+            } catch (IOException ex) {
+              throw new RuntimeException(ex);
+            }
         }
     };
 
@@ -89,9 +98,14 @@ public class HopsHelperMngr {
         @Override
         public void handle(HDFSFileCreateEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
-            UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.hdfsEndpoint.user);
-            Result<Boolean> result = HDFSHelper.createWithLength(ugi, req.hdfsEndpoint, req.hdfsResource, req.fileSize);
-            proxy.answer(req, req.answer(result));
+            try (DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(req.hdfsEndpoint.hdfsConfig)) {
+              UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.hdfsEndpoint.user);
+              Try<Boolean> result 
+                = HDFSHelper.createWithLength(dfs, ugi, req.hdfsEndpoint, req.hdfsResource,req.fileSize);
+              proxy.answer(req, req.answer(convert(result)));
+            } catch (IOException ex) {
+              throw new RuntimeException(ex);
+            }
         }
     };
 
@@ -100,33 +114,45 @@ public class HopsHelperMngr {
         public void handle(HDFSAvroFileCreateEvent.Request req) {
             LOG.trace("{}received:{}", logPrefix, req);
             Random rand = new Random(1234);
-            UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.hdfsEndpoint.user);
+            try (DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(req.hdfsEndpoint.hdfsConfig)) {
+              UserGroupInformation ugi = UserGroupInformation.createRemoteUser(req.hdfsEndpoint.user);
 
-            Result<Boolean> intermediateRes;
-            intermediateRes = HDFSHelper.simpleCreate(ugi, req.hdfsEndpoint, req.hdfsResource);
-            if (!intermediateRes.isSuccess()) {
-                proxy.answer(req, req.answer((Result) intermediateRes));
+              Try<Boolean> createResult = HDFSHelper.simpleCreate(dfs, ugi, req.hdfsEndpoint, req.hdfsResource);
+              if (!createResult.isSuccess()) {
+                  proxy.answer(req, req.answer(TryHelper.tryError(createResult)));
+              }
+              Schema avroSchema = KafkaHelper.getKafkaSchemaByTopic(req.kafkaEndpoint, req.kafkaResource);
+              long filesize = 0;
+              Try<Boolean> appendResult;
+              for (int i = 0; i < req.nrMsgs / 10000; i++) {
+                  byte[] avroBlob = AvroParser.nAvroToBlob(avroSchema, 10000, rand);
+                  filesize += avroBlob.length;
+                  appendResult = HDFSHelper.append(dfs, ugi, req.hdfsEndpoint, req.hdfsResource, avroBlob);
+                  if (!appendResult.isSuccess()) {
+                      proxy.answer(req, req.answer(TryHelper.tryError(appendResult)));
+                  }
+              }
+              int leftover = (int) (req.nrMsgs % 10000);
+              if (leftover != 0) {
+                  byte[] avroBlob = AvroParser.nAvroToBlob(avroSchema, leftover, rand);
+                  filesize += avroBlob.length;
+                  appendResult = HDFSHelper.append(dfs, ugi, req.hdfsEndpoint, req.hdfsResource, AvroParser.nAvroToBlob(avroSchema, leftover, rand));
+                  if (!appendResult.isSuccess()) {
+                      proxy.answer(req, req.answer(TryHelper.tryError(appendResult)));
+                  }
+              }
+              proxy.answer(req, req.answer(filesize));
+            } catch (IOException ex) {
+              throw new RuntimeException(ex);
             }
-            Schema avroSchema = KafkaHelper.getKafkaSchemaByTopic(req.kafkaEndpoint, req.kafkaResource);
-            long filesize = 0;
-            for (int i = 0; i < req.nrMsgs / 10000; i++) {
-                byte[] avroBlob = AvroParser.nAvroToBlob(avroSchema, 10000, rand);
-                filesize += avroBlob.length;
-                intermediateRes = HDFSHelper.append(ugi, req.hdfsEndpoint, req.hdfsResource, avroBlob);
-                if (!intermediateRes.isSuccess()) {
-                    proxy.answer(req, req.answer((Result) intermediateRes));
-                }
-            }
-            int leftover = (int) (req.nrMsgs % 10000);
-            if (leftover != 0) {
-                byte[] avroBlob = AvroParser.nAvroToBlob(avroSchema, leftover, rand);
-                filesize += avroBlob.length;
-                intermediateRes = HDFSHelper.append(ugi, req.hdfsEndpoint, req.hdfsResource, AvroParser.nAvroToBlob(avroSchema, leftover, rand));
-                if (!intermediateRes.isSuccess()) {
-                    proxy.answer(req, req.answer((Result) intermediateRes));
-                }
-            }
-            proxy.answer(req, req.answer(Result.success(filesize)));
         }
     };
+    
+    private <O> Result<O> convert(Try<O> result) {
+      if(result.isSuccess()) {
+        return Result.success(result.get());
+      } else {
+        return Result.internalFailure((Exception)TryHelper.tryError(result));
+      }
+    }
 }

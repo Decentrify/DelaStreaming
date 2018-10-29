@@ -19,12 +19,16 @@
 package se.sics.nstream.hops.libmngr.fsm;
 
 import com.google.common.base.Optional;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -41,6 +45,8 @@ import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.TorrentIds;
@@ -610,7 +616,19 @@ public class LibTHandlers {
       HDFSEndpoint hdfsEndpoint = (HDFSEndpoint) manifestStream.endpoint;
       //TODO Alex - creating too many ugi's
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(hdfsEndpoint.user);
-      return HDFSHelper.readManifest(ugi, hdfsEndpoint, (HDFSResource) manifestStream.resource);
+      try(DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+        return convert(HDFSHelper.readManifest(dfs, ugi, hdfsEndpoint, (HDFSResource) manifestStream.resource));
+      } catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
+    }
+  }
+  
+  private static <O> Result<O> convert(Try<O> result) {
+    if (result.isSuccess()) {
+      return Result.success(result.get());
+    } else {
+      return Result.internalFailure((Exception) TryHelper.tryError(result));
     }
   }
 
@@ -631,7 +649,11 @@ public class LibTHandlers {
       HDFSResource hdfsResource = (HDFSResource) manifestStream.resource;
       //TODO Alex - creating too many ugi's
       UserGroupInformation ugi = UserGroupInformation.createRemoteUser(hdfsEndpoint.user);
-      return HDFSHelper.writeManifest(ugi, hdfsEndpoint, hdfsResource, manifestJSON);
+      try(DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(hdfsEndpoint.hdfsConfig)) {
+        return convert(HDFSHelper.writeManifest(dfs, ugi, hdfsEndpoint, hdfsResource, manifestJSON));
+      } catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
     }
   }
 

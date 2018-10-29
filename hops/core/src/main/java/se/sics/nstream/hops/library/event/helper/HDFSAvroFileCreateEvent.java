@@ -23,6 +23,8 @@ import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
+import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.hops.kafka.KafkaEndpoint;
 import se.sics.nstream.hops.kafka.KafkaResource;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
@@ -62,8 +64,12 @@ public class HDFSAvroFileCreateEvent {
             return eventId;
         }
 
-        public Response answer(Result<Long> result) {
-            return new Response(this, result);
+        public Response answer(long result) {
+            return new Response(this, Result.success(result));
+        }
+        
+        public Response answer(Throwable cause) {
+          return new Response(this, Result.internalFailure((Exception)cause));
         }
     }
 
