@@ -347,7 +347,7 @@ public class LibTHandlers {
 
       } else {
         LOG.warn("<{}>torrent:{} - start failed", resp.getLibTFSMId(), resp.overlayId());
-        throw new RuntimeException("todo deal with failure");
+        throw new RuntimeException(resp.result.getException());
       }
     }
   };
@@ -370,7 +370,7 @@ public class LibTHandlers {
         }
       } else {
         LOG.warn("<{}>torrent:{} - start failed", req.getLibTFSMId(), req.torrentId);
-        throw new RuntimeException("todo deal with failure");
+        throw new RuntimeException(req.result.getException());
       }
     }
   };
@@ -414,7 +414,7 @@ public class LibTHandlers {
         }
       } else {
         LOG.debug("<{}>torrent:{} - transfer - set up failed", resp.getLibTFSMId(), resp.overlayId());
-        throw new RuntimeException("todo deal with failure");
+        throw new RuntimeException(resp.result.getException());
       }
     }
   };
