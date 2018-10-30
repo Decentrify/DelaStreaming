@@ -20,14 +20,14 @@ package se.sics.dela.storage.common;
 
 import java.util.function.Consumer;
 import se.sics.ktoolbox.util.trysf.Try;
+import se.sics.nstream.util.range.KRange;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface DelaAppendSession {
+public interface DelaReadStream {
 
-  public void append(byte[] data, Consumer<Try<Boolean>> callback);
+  public void read(KRange range, Consumer<Try<byte[]>> callback);
 
   public Try<Boolean> close();
-
 }

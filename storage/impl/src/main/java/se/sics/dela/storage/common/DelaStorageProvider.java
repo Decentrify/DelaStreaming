@@ -82,10 +82,10 @@ public interface DelaStorageProvider<E extends StorageEndpoint, R extends Storag
   /**
    * open and keep open session for repeated reads
    */
-  public Try<DelaReadSession> readSession(TimerProxy timer);
+  public Try<DelaReadStream> readSession(TimerProxy timer);
 
   /**
    * open and keep open session for repeated reads
    */
-  public Try<DelaAppendSession> appendSession(TimerProxy timer);
+  public Try<DelaAppendStream> appendSession(TimerProxy timer);
 }

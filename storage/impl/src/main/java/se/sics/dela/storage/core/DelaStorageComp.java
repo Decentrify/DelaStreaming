@@ -22,9 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import se.sics.dela.storage.common.DelaAppendStream;
+import se.sics.dela.storage.common.DelaReadStream;
 import se.sics.dela.storage.common.DelaStorageProvider;
-import se.sics.dela.storage.hdfs.HDFS.AppendSession;
-import se.sics.dela.storage.hdfs.HDFS.ReadSession;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.dela.storage.operation.events.StreamStorageOpRead;
 import se.sics.dela.storage.operation.events.StreamStorageOpWrite;
@@ -56,8 +56,8 @@ public class DelaStorageComp extends ComponentDefinition {
 
   private Map<Identifier, Component> components = new HashMap<>();
   private final DelaStorageProvider storage;
-  private Optional<AppendSession> appendSession;
-  private Optional<ReadSession> readSession;
+  private Optional<DelaAppendStream> appendSession;
+  private Optional<DelaReadStream> readSession;
   private long pendingPos;
   private long confirmedPos;
   private final Map<Identifier, StreamStorageOpRead.Request> pendingReads = new HashMap<>();
@@ -101,7 +101,7 @@ public class DelaStorageComp extends ComponentDefinition {
   };
 
   private void setupReadSession() {
-    Try<ReadSession> rs = storage.readSession(timerProxy);
+    Try<DelaReadStream> rs = storage.readSession(timerProxy);
     if (rs.isSuccess()) {
       readSession = Optional.of(rs.get());
     } else {
@@ -138,7 +138,7 @@ public class DelaStorageComp extends ComponentDefinition {
   };
 
   private void setupAppendSession() {
-    Try<AppendSession> rs = storage.appendSession(timerProxy);
+    Try<DelaAppendStream> rs = storage.appendSession(timerProxy);
     if (rs.isSuccess()) {
       appendSession = Optional.of(rs.get());
     } else {
