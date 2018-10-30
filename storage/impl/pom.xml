@@ -8,12 +8,9 @@
   </parent>
   <groupId>se.sics.dela.storage</groupId>
   <artifactId>impl</artifactId>
-  <packaging>pom</packaging>
+  <packaging>jar</packaging>
   <name>Dela Storage Impl</name>
-  <modules>
-    <module>api</module>
-    <module>core</module>
-  </modules>
+  <modules></modules>
     
   <properties>
     <hops.version>2.8.2.5</hops.version>

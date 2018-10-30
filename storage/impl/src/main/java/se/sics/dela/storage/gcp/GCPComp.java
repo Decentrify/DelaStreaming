@@ -41,6 +41,8 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
+import se.sics.dela.storage.gcp.GCPEndpoint;
+import se.sics.dela.storage.gcp.GCPResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

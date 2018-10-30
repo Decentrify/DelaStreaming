@@ -37,6 +37,8 @@ import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
+import se.sics.dela.storage.disk.DiskEndpoint;
+import se.sics.dela.storage.disk.DiskResource;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

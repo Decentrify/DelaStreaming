@@ -16,10 +16,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.common;
+package se.sics.dela.storage.core;
 
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
+import se.sics.dela.storage.common.DelaStorageProvider;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.hops.manifest.ManifestHelper;
