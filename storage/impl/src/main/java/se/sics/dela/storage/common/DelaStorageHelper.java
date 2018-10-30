@@ -13,14 +13,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * along with this program; if not, append to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.core;
+package se.sics.dela.storage.common;
 
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
-import se.sics.dela.storage.common.DelaStorageProvider;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.hops.manifest.ManifestHelper;
@@ -29,11 +28,11 @@ import se.sics.nstream.hops.manifest.ManifestJSON;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DelaStorage<E extends StorageEndpoint, R extends StorageResource> {
+public class DelaStorageHelper<E extends StorageEndpoint, R extends StorageResource> {
 
   private final DelaStorageProvider storage;
 
-  public DelaStorage(DelaStorageProvider storage) {
+  public DelaStorageHelper(DelaStorageProvider storage) {
     this.storage = storage;
   }
 
@@ -65,7 +64,7 @@ public class DelaStorage<E extends StorageEndpoint, R extends StorageResource> {
             .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()));
         }
       }))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.append(ManifestHelper.getManifestByte(manifest))));
+      .flatMap(TryHelper.tryFSucc0(() -> storage.append(0, ManifestHelper.getManifestByte(manifest))));
   }
 
   public static class DelaStorageException extends Exception {

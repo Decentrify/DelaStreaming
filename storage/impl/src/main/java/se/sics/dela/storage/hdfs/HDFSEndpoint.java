@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import se.sics.dela.storage.StorageEndpoint;
-import static se.sics.dela.storage.hdfs.HDFSHelper.HOPS_URL;
+import static se.sics.dela.storage.hdfs.DelaHDFS.HOPS_URL;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
 
@@ -39,7 +39,7 @@ public class HDFSEndpoint implements StorageEndpoint {
   public HDFSEndpoint(Configuration hdfsConfig, String user) {
     this.hdfsConfig = hdfsConfig;
     this.user = user;
-    this.hopsURL = hdfsConfig.get(HDFSHelper.HOPS_URL);
+    this.hopsURL = hdfsConfig.get(DelaHDFS.HOPS_URL);
   }
 
   @Override
@@ -60,7 +60,7 @@ public class HDFSEndpoint implements StorageEndpoint {
   public static Try<HDFSEndpoint> getBasic(String hopsURL, String user) {
     Configuration conf = new Configuration();
     conf.set(HOPS_URL, hopsURL);
-    return HDFSHelper.fixConfig(conf)
+    return DelaHDFS.fixConfig(conf)
       .map(TryHelper.tryFSucc1((Configuration config) -> new HDFSEndpoint(config, user)));
   }
 
@@ -70,7 +70,7 @@ public class HDFSEndpoint implements StorageEndpoint {
     }
     Configuration conf = new Configuration();
     conf.addResource(new Path(hdfsXMLPath));
-    return HDFSHelper.fixConfig(conf)
+    return DelaHDFS.fixConfig(conf)
       .map(TryHelper.tryFSucc1((Configuration config) -> new HDFSEndpoint(config, user)));
   }
 }

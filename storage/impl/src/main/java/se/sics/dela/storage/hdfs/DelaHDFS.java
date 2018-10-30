@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * along with this program; if not, append to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 package se.sics.dela.storage.hdfs;
@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -49,13 +50,13 @@ import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.util.range.KRange;
-import se.sics.dela.storage.common.DelaAppendStream;
 import se.sics.dela.storage.common.DelaReadStream;
+import se.sics.dela.storage.common.DelaAppendStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class HDFSHelper {
+public class DelaHDFS {
 
   public static final String HOPS_URL = "fs.defaultFS";
   public static final String DATANODE_FAILURE_POLICY = "dfs.client.block.write.replace-datanode-on-failure.policy";
@@ -127,11 +128,11 @@ public class HDFSHelper {
     }
 
     public <O> Try<O> perform(Supplier<Try<O>> action) {
-      return HDFSHelper.doAs(ugi, action);
+      return DelaHDFS.doAs(ugi, action);
     }
 
     public <I, O> BiFunction<I, Throwable, Try<O>> wrapOp(Supplier<Try<O>> action) {
-      return HDFSHelper.doAsOp(ugi, action);
+      return DelaHDFS.doAsOp(ugi, action);
     }
   }
 
@@ -161,42 +162,42 @@ public class HDFSHelper {
 
     @Override
     public Try createPath() {
-      return doAs.perform(HDFSHelper.createPathOp(dfs, endpoint, resource));
+      return doAs.perform(DelaHDFS.createPathOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try<Boolean> fileExists() {
-      return doAs.perform(HDFSHelper.fileExistsOp(dfs, endpoint, resource));
+      return doAs.perform(DelaHDFS.fileExistsOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try createFile() {
-      return doAs.perform(HDFSHelper.createFileOp(dfs, endpoint, resource));
+      return doAs.perform(DelaHDFS.createFileOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try deleteFile() {
-      return doAs.perform(HDFSHelper.deleteFileOp(dfs, endpoint, resource));
+      return doAs.perform(DelaHDFS.deleteFileOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try<Long> fileSize() {
-      return doAs.perform(HDFSHelper.fileSizeOp(dfs, endpoint, resource));
+      return doAs.perform(DelaHDFS.fileSizeOp(dfs, endpoint, resource));
     }
 
     @Override
     public Try<byte[]> read(KRange range) {
-      return doAs.perform(HDFSHelper.readOp(dfs, endpoint, resource, range));
+      return doAs.perform(DelaHDFS.readOp(dfs, endpoint, resource, range));
     }
 
     @Override
     public Try<byte[]> readAllFile() {
-      return doAs.perform(HDFSHelper.readFullyOp(dfs, endpoint, resource));
+      return doAs.perform(DelaHDFS.readFullyOp(dfs, endpoint, resource));
     }
 
     @Override
-    public Try append(byte[] data) {
-      return doAs.perform(HDFSHelper.appendOp(dfs, endpoint, resource, data));
+    public Try append(long pos, byte[] data) {
+      return doAs.perform(DelaHDFS.writeOp(dfs, endpoint, resource, pos, data));
     }
 
     @Override
@@ -204,7 +205,7 @@ public class HDFSHelper {
       try {
         String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
         FSDataInputStream in = dfs.open(new Path(filePath));
-        Try<Long> size = HDFSHelper.fileSize(dfs, endpoint, resource);
+        Try<Long> size = DelaHDFS.fileSize(dfs, endpoint, resource);
         if (!size.isSuccess()) {
           return (Try.Failure) size;
         }
@@ -219,7 +220,7 @@ public class HDFSHelper {
       try {
         String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
         FSDataOutputStream out = dfs.append(new Path(filePath));
-        Try<Long> size = HDFSHelper.fileSize(dfs, filePath);
+        Try<Long> size = DelaHDFS.fileSize(dfs, filePath);
         if (!size.isSuccess()) {
           return (Try.Failure) size;
         }
@@ -265,8 +266,12 @@ public class HDFSHelper {
     }
 
     @Override
-    public void append(byte[] data, Consumer<Try<Boolean>> callback) {
-      Try<Boolean> r = doAs.perform(HDFSHelper.appendOp(out, data));
+    public void write(long pos, byte[] data, Consumer<Try<Boolean>> callback) {
+      if(pendingPos != pos) {
+        String msg = "HDFS supports append only - pending pos:" + pendingPos + " write pos:" + pos;
+        callback.accept(new Try.Failure(new DelaStorageException(msg)));
+      }
+      Try<Boolean> r = doAs.perform(DelaHDFS.appendOp(out, data));
       if (r.isSuccess()) {
         pending.put(Pair.with(pendingPos, pendingPos + data.length), callback);
         pendingPos += data.length;
@@ -291,7 +296,7 @@ public class HDFSHelper {
     }
 
     private void checkPendingAppends() {
-      Try<Long> size = doAs.perform(HDFSHelper.fileSizeOp(dfs, endpoint, resource));
+      Try<Long> size = doAs.perform(DelaHDFS.fileSizeOp(dfs, endpoint, resource));
       if (!size.isSuccess()) {
         pending.values().forEach((callback) -> callback.accept((Try.Failure) size));
       }
@@ -338,7 +343,7 @@ public class HDFSHelper {
 
     @Override
     public void read(KRange range, Consumer<Try<byte[]>> callback) {
-      Try<byte[]> val = doAs.perform(HDFSHelper.readOp(in, range));
+      Try<byte[]> val = doAs.perform(DelaHDFS.readOp(in, range));
       callback.accept(val);
     }
 
@@ -348,7 +353,8 @@ public class HDFSHelper {
         in.close();
         return new Try.Success(true);
       } catch (IOException ex) {
-        return new Try.Failure(ex);
+        String msg = "closing file";
+        return new Try.Failure(new DelaStorageException(msg, ex));
       }
     }
   }
@@ -518,6 +524,23 @@ public class HDFSHelper {
   public static Supplier<Try<Boolean>> appendOp(DistributedFileSystem dfs,
     HDFSEndpoint endpoint, HDFSResource resource, byte[] data) {
     return () -> append(dfs, endpoint, resource, data);
+  }
+  
+  public static Supplier<Try<Boolean>> writeOp(DistributedFileSystem dfs,
+    HDFSEndpoint endpoint, HDFSResource resource, long pos, byte[] data) {
+    return () -> {
+      return new Try.Success(true)
+        .flatMap(TryHelper.tryFSucc0(DelaHDFS.fileSizeOp(dfs, endpoint, resource)))
+        .flatMap(TryHelper.tryFSucc1((Long fileSize) -> {
+          if(fileSize != pos) {
+            String msg = "HDFS supports append only - pending pos:" + fileSize + " write pos:" + pos;
+            return new Try.Failure(new DelaStorageException(msg));
+          } else {
+            return new Try.Success(true);
+          }
+        }))
+        .flatMap(TryHelper.tryFSucc0(appendOp(dfs, endpoint, resource, data)));
+    };
   }
 
   public static Try<Boolean> append(FSDataOutputStream out, byte[] data) {

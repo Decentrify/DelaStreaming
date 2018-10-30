@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * along with this program; if not, append to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 package se.sics.dela.storage.core;
@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
-import se.sics.dela.storage.common.DelaAppendStream;
 import se.sics.dela.storage.common.DelaReadStream;
 import se.sics.dela.storage.common.DelaStorageProvider;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
@@ -41,6 +40,7 @@ import se.sics.ktoolbox.util.network.ports.One2NChannel;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
+import se.sics.dela.storage.common.DelaAppendStream;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -133,7 +133,7 @@ public class DelaStorageComp extends ComponentDefinition {
       long pos = req.pos;
       byte[] writeValue = prepareAppendVal(req);
       pendingWrites.put(req.getId(), req);
-      appendSession.get().append(writeValue, appendCallback(req));
+      appendSession.get().write(pos, writeValue, appendCallback(req));
     }
   };
 

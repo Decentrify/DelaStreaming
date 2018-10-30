@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * along with this program; if not, append to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 package se.sics.dela.storage.common;
@@ -77,7 +77,7 @@ public interface DelaStorageProvider<E extends StorageEndpoint, R extends Storag
    * @param data
    * @return Try.Success - append succeeded; Try.Failure - wrapped cause
    */
-  public Try<Boolean> append(byte[] data);
+  public Try<Boolean> append(long pos, byte[] data);
   
   /**
    * open and keep open session for repeated reads
@@ -85,7 +85,7 @@ public interface DelaStorageProvider<E extends StorageEndpoint, R extends Storag
   public Try<DelaReadStream> readSession(TimerProxy timer);
 
   /**
-   * open and keep open session for repeated reads
+   * open and keep open session for repeated writes
    */
   public Try<DelaAppendStream> appendSession(TimerProxy timer);
 }

@@ -26,7 +26,7 @@ import se.sics.ktoolbox.util.trysf.Try;
  */
 public interface DelaAppendStream {
 
-  public void append(byte[] data, Consumer<Try<Boolean>> callback);
+  public void write(long pos, byte[] data, Consumer<Try<Boolean>> callback);
 
   public Try<Boolean> close();
 
