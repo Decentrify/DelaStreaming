@@ -23,6 +23,10 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.function.Consumer;
+import org.javatuples.Pair;
+import org.slf4j.Logger;
+import se.sics.dela.storage.StorageEndpoint;
+import se.sics.dela.storage.StorageResource;
 import se.sics.dela.storage.common.DelaReadStream;
 import se.sics.dela.storage.common.DelaStorageException;
 import se.sics.dela.storage.common.DelaStorageProvider;
@@ -31,11 +35,50 @@ import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.util.range.KRange;
 import se.sics.dela.storage.common.DelaAppendStream;
+import se.sics.dela.storage.core.DelaStorageComp;
+import se.sics.kompics.util.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DelaDisk {
+
+  public static class StorageCompProvider implements se.sics.dela.storage.mngr.StorageProvider<DelaStorageComp> {
+
+    public final Identifier self;
+    public final DiskEndpoint endpoint = new DiskEndpoint();
+
+    public StorageCompProvider(Identifier self) {
+      this.self = self;
+    }
+
+    @Override
+    public Pair<DelaStorageComp.Init, Long> initiate(StorageResource resource, Logger logger) {
+      DiskResource diskResource = (DiskResource) resource;
+      DelaStorageProvider storage = new StorageProvider(endpoint, diskResource);
+      Try<Long> pos = DelaDisk.fileSize(endpoint, diskResource);
+      if (pos.isFailure()) {
+        throw new RuntimeException(TryHelper.tryError(pos));
+      }
+      DelaStorageComp.Init init = new DelaStorageComp.Init(storage, pos.get());
+      return Pair.with(init, pos.get());
+    }
+
+    @Override
+    public String getName() {
+      return endpoint.getEndpointName();
+    }
+
+    @Override
+    public Class<DelaStorageComp> getStorageDefinition() {
+      return DelaStorageComp.class;
+    }
+
+    @Override
+    public StorageEndpoint getEndpoint() {
+      return endpoint;
+    }
+  }
 
   public static class StorageProvider implements DelaStorageProvider<DiskEndpoint, DiskResource> {
 
@@ -97,8 +140,7 @@ public class DelaDisk {
 
     @Override
     public Try<Long> fileSize() {
-      File f = new File(resource.dirPath, resource.fileName);
-      return new Try.Success(f.length());
+      return DelaDisk.fileSize(endpoint, resource);
     }
 
     @Override
@@ -248,6 +290,10 @@ public class DelaDisk {
         return new Try.Failure(new DelaStorageException(msg, ex));
       }
     }
+  }
 
+  public static Try<Long> fileSize(DiskEndpoint endpoint, DiskResource resource) {
+    File f = new File(resource.dirPath, resource.fileName);
+    return new Try.Success(f.length());
   }
 }
