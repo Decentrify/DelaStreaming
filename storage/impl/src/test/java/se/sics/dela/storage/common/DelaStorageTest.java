@@ -60,7 +60,7 @@ public class DelaStorageTest {
     testAppend(storage);
   }
 
-  //  @Test
+//    @Test
   public void testHDFSMultiAppend() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
@@ -69,10 +69,10 @@ public class DelaStorageTest {
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
     DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
 
-    testHDFSMultiAppend();
+    testMultiAppend(storage);
   }
 
-  //  @Test
+//    @Test
   public void testHDFSMultiRead() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
@@ -84,7 +84,7 @@ public class DelaStorageTest {
     testMultiRead(storage);
   }
   
-  //  @Test
+//    @Test
   public void testHDFSRead() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
@@ -135,6 +135,7 @@ public class DelaStorageTest {
   
 
   private void testAppend(DelaStorageProvider storage) throws Throwable {
+    System.err.println("test write");
     Try result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
@@ -167,6 +168,7 @@ public class DelaStorageTest {
   }
 
   private void testMultiAppend(DelaStorageProvider storage) throws Throwable {
+    System.err.println("test multi write");
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
@@ -207,6 +209,7 @@ public class DelaStorageTest {
   }
 
   private void testMultiRead(DelaStorageProvider storage) throws Throwable {
+    System.err.println("test multi read");
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
@@ -244,6 +247,7 @@ public class DelaStorageTest {
   }
 
   private void testRead(DelaStorageProvider storage) throws Throwable {
+    System.err.println("test read");
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
