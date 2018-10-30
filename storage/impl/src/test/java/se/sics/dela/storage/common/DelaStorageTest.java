@@ -28,6 +28,9 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
+import se.sics.dela.storage.disk.DelaDisk;
+import se.sics.dela.storage.disk.DiskEndpoint;
+import se.sics.dela.storage.disk.DiskResource;
 import se.sics.dela.storage.hdfs.HDFSEndpoint;
 import se.sics.dela.storage.hdfs.DelaHDFS;
 import se.sics.dela.storage.hdfs.HDFSResource;
@@ -44,6 +47,7 @@ import se.sics.nstream.util.range.KRange;
  */
 public class DelaStorageTest {
 
+  //************************************************HDFS****************************************************************
 //  @Test
   public void testHDFSAppend() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
@@ -53,6 +57,84 @@ public class DelaStorageTest {
     DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
     DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
 
+    testAppend(storage);
+  }
+
+  //  @Test
+  public void testHDFSMultiAppend() throws IOException, Throwable {
+    HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
+    HDFSResource resource = new HDFSResource("/test", "file");
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
+
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
+    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
+
+    testHDFSMultiAppend();
+  }
+
+  //  @Test
+  public void testHDFSMultiRead() throws IOException, Throwable {
+    HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
+    HDFSResource resource = new HDFSResource("/test", "file");
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
+
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
+    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
+
+    testMultiRead(storage);
+  }
+  
+  //  @Test
+  public void testHDFSRead() throws IOException, Throwable {
+    HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
+    HDFSResource resource = new HDFSResource("/test", "file");
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
+
+    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
+    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
+    
+    testRead(storage);
+  }
+  
+  //***************************************************DISK*************************************************************
+//  @Test
+  public void testDiskAppend() throws Throwable {
+    DiskEndpoint endpoint = new DiskEndpoint();
+    DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
+    
+    DelaStorageProvider storage = new DelaDisk.StorageProvider(endpoint, resource);
+    testAppend(storage);
+  }
+  
+//  @Test
+  public void testDiskMultiAppend() throws Throwable {
+    DiskEndpoint endpoint = new DiskEndpoint();
+    DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
+    
+    DelaStorageProvider storage = new DelaDisk.StorageProvider(endpoint, resource);
+    testMultiAppend(storage);
+  }
+  
+//  @Test
+  public void testDiskRead() throws Throwable {
+    DiskEndpoint endpoint = new DiskEndpoint();
+    DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
+    
+    DelaStorageProvider storage = new DelaDisk.StorageProvider(endpoint, resource);
+    testRead(storage);
+  }
+  
+//  @Test
+  public void testDiskMultiRead() throws Throwable {
+    DiskEndpoint endpoint = new DiskEndpoint();
+    DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
+    
+    DelaStorageProvider storage = new DelaDisk.StorageProvider(endpoint, resource);
+    testMultiRead(storage);
+  }
+  
+
+  private void testAppend(DelaStorageProvider storage) throws Throwable {
     Try result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
@@ -73,7 +155,7 @@ public class DelaStorageTest {
 
       long start = System.nanoTime();
       for (int i = 0; i < 10; i++) {
-        storage.append(i*blockSize, block);
+        storage.append(i * blockSize, block);
       }
       long end = System.nanoTime();
       long sizeMB = 10 * 10;
@@ -84,15 +166,7 @@ public class DelaStorageTest {
     };
   }
 
-//  @Test
-  public void testHDFSMultiAppend() throws IOException, Throwable {
-    HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
-    HDFSResource resource = new HDFSResource("/test", "file");
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-
-    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
-
+  private void testMultiAppend(DelaStorageProvider storage) throws Throwable {
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
@@ -112,12 +186,12 @@ public class DelaStorageTest {
       rand.nextBytes(block);
 
       long start = System.nanoTime();
-      Try<DelaHDFS.AppendSession> appendOp = storage.appendSession(new TestTimer());
+      Try<DelaAppendStream> appendOp = storage.appendSession(new TestTimer());
       if (appendOp.isFailure()) {
         return (Try.Failure) appendOp;
       }
       for (int i = 0; i < 100; i++) {
-        appendOp.get().write(i*blockSize, block, new AppendCallback());
+        appendOp.get().write(i * blockSize, block, new AppendCallback());
       }
       Try<Boolean> close = appendOp.get().close();
       if (close.isFailure()) {
@@ -132,15 +206,7 @@ public class DelaStorageTest {
     };
   }
 
-//  @Test
-  public void testHDFSMultiRead() throws IOException, Throwable {
-    HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
-    HDFSResource resource = new HDFSResource("/test", "file");
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-
-    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
-
+  private void testMultiRead(DelaStorageProvider storage) throws Throwable {
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
@@ -156,7 +222,7 @@ public class DelaStorageTest {
   private Supplier<Try<Boolean>> multiReadFile(DelaStorageProvider storage) {
     return () -> {
       long start = System.nanoTime();
-      Try<DelaHDFS.ReadSession> appendSession = storage.readSession(new TestTimer());
+      Try<DelaReadStream> appendSession = storage.readSession(new TestTimer());
       if (appendSession.isFailure()) {
         return (Try.Failure) appendSession;
       }
@@ -177,15 +243,7 @@ public class DelaStorageTest {
     };
   }
 
-//  @Test
-  public void testHDFSRead() throws IOException, Throwable {
-    HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
-    HDFSResource resource = new HDFSResource("/test", "file");
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-
-    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
-
+  private void testRead(DelaStorageProvider storage) throws Throwable {
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
       .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
@@ -237,7 +295,7 @@ public class DelaStorageTest {
     public void accept(Try<Boolean> t) {
       if (t.isFailure()) {
         try {
-          ((Try.Failure)t).checkedGet();
+          ((Try.Failure) t).checkedGet();
         } catch (Throwable ex) {
           throw new RuntimeException(ex);
         }

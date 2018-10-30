@@ -209,7 +209,7 @@ public class DelaHDFS {
         if (!size.isSuccess()) {
           return (Try.Failure) size;
         }
-        return new Try.Success(new ReadSession(dfs, in, doAs));
+        return new Try.Success(new ReadStream(dfs, in, doAs));
       } catch (IOException ex) {
         return new Try.Failure(ex);
       }
@@ -224,7 +224,7 @@ public class DelaHDFS {
         if (!size.isSuccess()) {
           return (Try.Failure) size;
         }
-        AppendSession session = new AppendSession(endpoint, resource, dfs, out, doAs, size.get());
+        AppendStream session = new AppendStream(endpoint, resource, dfs, out, doAs, size.get());
         session.setup(timer);
         return new Try.Success(session);
       } catch (IOException ex) {
@@ -233,7 +233,7 @@ public class DelaHDFS {
     }
   }
 
-  public static class AppendSession implements DelaAppendStream {
+  public static class AppendStream implements DelaAppendStream {
 
     public static final Integer FLUSH_COUNTER_MB = 50;
     public static final Long FLUSH_PERIOD = 1000l;
@@ -250,7 +250,7 @@ public class DelaHDFS {
     private TimerProxy timer;
     private UUID flushTimer;
 
-    public AppendSession(HDFSEndpoint endpoint, HDFSResource resource,
+    public AppendStream(HDFSEndpoint endpoint, HDFSResource resource,
       DistributedFileSystem dfs, FSDataOutputStream out, DoAs doAs, long pos) {
       this.endpoint = endpoint;
       this.resource = resource;
@@ -329,13 +329,13 @@ public class DelaHDFS {
     }
   }
 
-  public static class ReadSession implements DelaReadStream {
+  public static class ReadStream implements DelaReadStream {
 
     private final DistributedFileSystem dfs;
     private final FSDataInputStream in;
     private final DoAs doAs;
 
-    public ReadSession(DistributedFileSystem dfs, FSDataInputStream in, DoAs doAs) {
+    public ReadStream(DistributedFileSystem dfs, FSDataInputStream in, DoAs doAs) {
       this.dfs = dfs;
       this.in = in;
       this.doAs = doAs;
