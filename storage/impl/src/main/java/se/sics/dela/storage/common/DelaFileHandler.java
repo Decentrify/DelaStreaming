@@ -27,39 +27,19 @@ import se.sics.nstream.util.range.KRange;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface DelaStorageProvider<E extends StorageEndpoint, R extends StorageResource> {
+public interface DelaFileHandler<E extends StorageEndpoint, R extends StorageResource> {
   
   public E getEndpoint();
   
   public R getResource();
   
-  /**
-   *
-   * @return Try.Success - true - path created, false - path already existed
-   * Try.Failure - wrapped cause
-   */
-  public Try<Boolean> createPath();
-
-  /**
-   * @return Try.Success - true - file exists, false - file does not exist; Try.Failure - wrapped cause
-   */
-  public Try<Boolean> fileExists();
-
-  /**
-   * @return Try.Success - true - file created, false - file already exists; Try.Failure - wrapped cause
-   */
-  public Try<Boolean> createFile();
-
-  /**
-   * @return Try.Success - true - file deleted, false - file already deleted; Try.Failure - wrapped cause
-   */
-  public Try<Boolean> deleteFile();
-
+  public StorageType storageType();
+  
   /**
    *
    * @return Try.Success - long as size; Try.Failure - wrapped cause
    */
-  public Try<Long> fileSize();
+  public Try<Long> size();
 
   /**
    * @param range
@@ -71,7 +51,7 @@ public interface DelaStorageProvider<E extends StorageEndpoint, R extends Storag
    *
    * @return Try.Success - content; Try.Failure - wrapped cause
    */
-  public Try<byte[]> readAllFile();
+  public Try<byte[]> readAll();
 
   /**
    * @param data

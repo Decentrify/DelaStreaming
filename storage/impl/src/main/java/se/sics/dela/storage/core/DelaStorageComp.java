@@ -23,7 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import se.sics.dela.storage.common.DelaReadStream;
-import se.sics.dela.storage.common.DelaStorageProvider;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.dela.storage.operation.events.StreamStorageOpRead;
 import se.sics.dela.storage.operation.events.StreamStorageOpWrite;
@@ -41,6 +40,8 @@ import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.dela.storage.common.DelaAppendStream;
+import se.sics.dela.storage.common.DelaFileHandler;
+import se.sics.dela.storage.common.DelaStorageException;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -55,7 +56,7 @@ public class DelaStorageComp extends ComponentDefinition {
   private final TimerProxyImpl timerProxy;
 
   private Map<Identifier, Component> components = new HashMap<>();
-  private final DelaStorageProvider storage;
+  private final DelaFileHandler file;
   private Optional<DelaAppendStream> appendSession;
   private Optional<DelaReadStream> readSession;
   private long pendingPos;
@@ -68,7 +69,7 @@ public class DelaStorageComp extends ComponentDefinition {
 
     timerProxy = new TimerProxyImpl();
     timerProxy.setup(proxy);
-    storage = init.storage;
+    file = init.storage;
     pendingPos = init.pos;
     confirmedPos = pendingPos;
 
@@ -101,7 +102,7 @@ public class DelaStorageComp extends ComponentDefinition {
   };
 
   private void setupReadSession() {
-    Try<DelaReadStream> rs = storage.readSession(timerProxy);
+    Try<DelaReadStream> rs = file.readSession(timerProxy);
     if (rs.isSuccess()) {
       readSession = Optional.of(rs.get());
     } else {
@@ -125,20 +126,21 @@ public class DelaStorageComp extends ComponentDefinition {
       if (!appendSession.isPresent()) {
         setupAppendSession();
       }
-      if (pendingPos >= req.pos + req.value.length) {
-        logger.info("{}write with pos:{} skipped", logPrefix, req.pos);
-        answer(req, req.respond(Result.success(true)));
-        return;
+      Try<byte[]> writeValue = prepareAppend(req);
+      if (writeValue.isFailure()) {
+        answer(req, req.respond((Try.Failure) writeValue));
+      } else if (writeValue.get().length == 0) {
+        answer(req, req.respond(Result.success(false)));
+      } else {
+        pendingWrites.put(req.getId(), req);
+        appendSession.get().write(pendingPos, writeValue.get(), appendCallback(req));
+        pendingPos += writeValue.get().length;
       }
-      long pos = req.pos;
-      byte[] writeValue = prepareAppendVal(req);
-      pendingWrites.put(req.getId(), req);
-      appendSession.get().write(pos, writeValue, appendCallback(req));
     }
   };
 
   private void setupAppendSession() {
-    Try<DelaAppendStream> rs = storage.appendSession(timerProxy);
+    Try<DelaAppendStream> rs = file.appendSession(timerProxy);
     if (rs.isSuccess()) {
       appendSession = Optional.of(rs.get());
     } else {
@@ -146,17 +148,27 @@ public class DelaStorageComp extends ComponentDefinition {
     }
   }
 
-  private byte[] prepareAppendVal(StreamStorageOpWrite.Request req) {
-    byte[] appendVal = req.value;
-    if (pendingPos > req.pos) {
+  private Try<byte[]> prepareAppend(StreamStorageOpWrite.Request req) {
+    if (pendingPos >= req.pos + req.value.length) {
+      logger.info("{}write with pos:{} skipped", logPrefix, req.pos);
+      return new Try.Success(new byte[0]);
+    } else if (pendingPos > req.pos) {
+      byte[] appendVal = req.value;
       int sourcePos = (int) (pendingPos - req.pos);
       int writeAmount = req.value.length - sourcePos;
       appendVal = new byte[writeAmount];
       System.arraycopy(req.value, sourcePos, appendVal, 0, writeAmount);
       logger.info("{}convert write pos from:{} to:{} write amount from:{} to:{}",
         new Object[]{logPrefix, req.pos, pendingPos, req.value.length, writeAmount});
+      return new Try.Success(appendVal);
+    } else if (pendingPos == req.pos) {
+      return new Try.Success(req.value);
+    } else {
+      String msg = "Storage can only append"
+        + " - writePos:" + pendingPos
+        + " - reqPos:" + req.pos;
+      return new Try.Failure(new DelaStorageException(msg, file.storageType()));
     }
-    return appendVal;
   }
 
   private Consumer<Try<Boolean>> appendCallback(StreamStorageOpWrite.Request req) {
@@ -170,20 +182,20 @@ public class DelaStorageComp extends ComponentDefinition {
       answer(req, resp);
     };
   }
-  
+
   Handler handleReadComplete = new Handler<StreamStorageOpRead.Complete>() {
     @Override
     public void handle(StreamStorageOpRead.Complete event) {
-      if(readSession.isPresent()) {
+      if (readSession.isPresent()) {
         readSession.get().close();
       }
     }
   };
-  
+
   Handler handleWriteComplete = new Handler<StreamStorageOpWrite.Complete>() {
     @Override
     public void handle(StreamStorageOpWrite.Complete event) {
-      if(appendSession.isPresent()) {
+      if (appendSession.isPresent()) {
         appendSession.get().close();
       }
     }
@@ -191,10 +203,10 @@ public class DelaStorageComp extends ComponentDefinition {
 
   public static class Init extends se.sics.kompics.Init<DelaStorageComp> {
 
-    public final DelaStorageProvider storage;
+    public final DelaFileHandler storage;
     public final long pos;
 
-    public Init(DelaStorageProvider storage, long pos) {
+    public Init(DelaFileHandler storage, long pos) {
       this.storage = storage;
       this.pos = pos;
     }

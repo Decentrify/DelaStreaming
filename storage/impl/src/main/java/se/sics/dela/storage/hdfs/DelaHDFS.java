@@ -28,7 +28,6 @@ import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.logging.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -43,7 +42,6 @@ import org.slf4j.Logger;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 import se.sics.dela.storage.common.DelaStorageException;
-import se.sics.dela.storage.common.DelaStorageProvider;
 import se.sics.dela.storage.core.DelaStorageComp;
 import se.sics.dela.util.TimerProxy;
 import se.sics.kompics.util.Identifier;
@@ -52,6 +50,11 @@ import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.nstream.util.range.KRange;
 import se.sics.dela.storage.common.DelaReadStream;
 import se.sics.dela.storage.common.DelaAppendStream;
+import se.sics.dela.storage.common.DelaFileHandler;
+import se.sics.dela.storage.common.DelaHelper;
+import static se.sics.dela.storage.common.DelaHelper.recoverFrom;
+import se.sics.dela.storage.common.DelaStorageHandler;
+import se.sics.dela.storage.common.StorageType;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -60,52 +63,38 @@ public class DelaHDFS {
 
   public static final String HOPS_URL = "fs.defaultFS";
   public static final String DATANODE_FAILURE_POLICY = "dfs.client.block.write.replace-datanode-on-failure.policy";
+  public static final String HDFS_COMMUNICATION_ERROR = "hdfs_communication_error";
 
   public static class StorageCompProvider implements se.sics.dela.storage.mngr.StorageProvider<DelaStorageComp> {
 
     public final Identifier self;
-    public final HDFSEndpoint endpoint;
+    public final StorageHandler storage;
 
-    public StorageCompProvider(Identifier self, HDFSEndpoint endpoint) {
+    public StorageCompProvider(Identifier self, StorageHandler storage) {
       this.self = self;
-      this.endpoint = endpoint;
+      this.storage = storage;
     }
 
     @Override
     public Pair<DelaStorageComp.Init, Long> initiate(StorageResource resource, Logger logger) {
       HDFSResource hdfsResource = (HDFSResource) resource;
-      DistributedFileSystem dfs;
-      try {
-        dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-      } catch (IOException ex) {
-        throw new RuntimeException(ex);
+      Try<DelaFileHandler<HDFSEndpoint, HDFSResource>> file = storage.get(hdfsResource)
+        .recoverWith(recoverFrom(StorageType.HDFS, DelaStorageException.RESOURCE_DOES_NOT_EXIST, 
+          () -> storage.create(hdfsResource)));
+      if(file.isFailure()) {
+        throw new RuntimeException(TryHelper.tryError(file));
       }
-      StorageProvider storage = new StorageProvider(endpoint, hdfsResource, dfs);
-      long streamPos = fileInit(storage);
-
-      DelaStorageComp.Init init = new DelaStorageComp.Init(storage, streamPos);
-      return Pair.with(init, streamPos);
-    }
-
-    private long fileInit(StorageProvider storage) {
-      Try<Long> streamPos = storage.fileSize();
-      if (!streamPos.isSuccess()) {
-        try {
-          ((Try.Failure) streamPos).checkedGet();
-        } catch (Throwable t) {
-          throw new RuntimeException(t);
-        }
+      Try<Long> pos = file.get().size();
+      if(pos.isFailure()) {
+        throw new RuntimeException(TryHelper.tryError(pos));
       }
-      if (streamPos.get() == -1) {
-        storage.createFile();
-        return 0l;
-      }
-      return streamPos.get();
+      DelaStorageComp.Init init = new DelaStorageComp.Init(file.get(), pos.get());
+      return Pair.with(init, pos.get());
     }
 
     @Override
     public String getName() {
-      return endpoint.getEndpointName();
+      return storage.endpoint.getEndpointName();
     }
 
     @Override
@@ -115,7 +104,7 @@ public class DelaHDFS {
 
     @Override
     public StorageEndpoint getEndpoint() {
-      return endpoint;
+      return storage.endpoint;
     }
   }
 
@@ -136,14 +125,62 @@ public class DelaHDFS {
     }
   }
 
-  public static class StorageProvider implements DelaStorageProvider<HDFSEndpoint, HDFSResource> {
+  public static class StorageHandler implements DelaStorageHandler<HDFSEndpoint, HDFSResource> {
+
+    public final HDFSEndpoint endpoint;
+    private final DistributedFileSystem dfs;
+    private final DoAs doAs;
+
+    public StorageHandler(HDFSEndpoint endpoint, DistributedFileSystem dfs) {
+      this.endpoint = endpoint;
+      this.dfs = dfs;
+      this.doAs = doAs(endpoint.user).get();
+    }
+
+    public static Try<StorageHandler> handler(HDFSEndpoint endpoint) {
+      try {
+        DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.newInstance(endpoint.hdfsConfig);
+        return new Try.Success(new StorageHandler(endpoint, dfs));
+      } catch (IOException ex) {
+        return new Try.Failure(new DelaStorageException(HDFS_COMMUNICATION_ERROR, ex, StorageType.HDFS));
+      }
+    }
+
+    @Override
+    public Try<DelaFileHandler<HDFSEndpoint, HDFSResource>> get(HDFSResource resource) {
+      return new Try.Success(true)
+        .flatMap(doAs.wrapOp(DelaHDFS.fileExistsOp(dfs, endpoint, resource)))
+        .flatMap(TryHelper.tryFSucc1((Boolean fileExists) -> {
+          if (fileExists) {
+            return new Try.Success(new FileHandler(endpoint, resource, dfs));
+          } else {
+            return new Try.Failure(
+              new DelaStorageException(DelaStorageException.RESOURCE_DOES_NOT_EXIST, StorageType.HDFS));
+          }
+        }));
+    }
+
+    @Override
+    public Try<DelaFileHandler<HDFSEndpoint, HDFSResource>> create(HDFSResource resource) {
+      return new Try.Success(true)
+        .flatMap(doAs.wrapOp(DelaHDFS.createPathOp(dfs, endpoint, resource)))
+        .flatMap(doAs.wrapOp(DelaHDFS.createFileOp(dfs, endpoint, resource)));
+    }
+
+    @Override
+    public Try<Boolean> delete(HDFSResource resource) {
+      return doAs.perform(DelaHDFS.deleteFileOp(dfs, endpoint, resource));
+    }
+  }
+
+  public static class FileHandler implements DelaFileHandler<HDFSEndpoint, HDFSResource> {
 
     public final HDFSEndpoint endpoint;
     public final HDFSResource resource;
-    public final DistributedFileSystem dfs;
+    private final DistributedFileSystem dfs;
     private final DoAs doAs;
 
-    public StorageProvider(HDFSEndpoint endpoint, HDFSResource resource, DistributedFileSystem dfs) {
+    public FileHandler(HDFSEndpoint endpoint, HDFSResource resource, DistributedFileSystem dfs) {
       this.endpoint = endpoint;
       this.resource = resource;
       this.dfs = dfs;
@@ -159,29 +196,14 @@ public class DelaHDFS {
     public HDFSResource getResource() {
       return resource;
     }
-
+    
     @Override
-    public Try createPath() {
-      return doAs.perform(DelaHDFS.createPathOp(dfs, endpoint, resource));
+    public StorageType storageType() {
+      return StorageType.HDFS;
     }
 
     @Override
-    public Try<Boolean> fileExists() {
-      return doAs.perform(DelaHDFS.fileExistsOp(dfs, endpoint, resource));
-    }
-
-    @Override
-    public Try createFile() {
-      return doAs.perform(DelaHDFS.createFileOp(dfs, endpoint, resource));
-    }
-
-    @Override
-    public Try deleteFile() {
-      return doAs.perform(DelaHDFS.deleteFileOp(dfs, endpoint, resource));
-    }
-
-    @Override
-    public Try<Long> fileSize() {
+    public Try<Long> size() {
       return doAs.perform(DelaHDFS.fileSizeOp(dfs, endpoint, resource));
     }
 
@@ -191,8 +213,10 @@ public class DelaHDFS {
     }
 
     @Override
-    public Try<byte[]> readAllFile() {
-      return doAs.perform(DelaHDFS.readFullyOp(dfs, endpoint, resource));
+    public Try<byte[]> readAll() {
+      return size()
+        .flatMap(DelaHelper.fullRange(StorageType.HDFS, resource))
+        .flatMap(TryHelper.tryFSucc1((KRange range) -> read(range)));
     }
 
     @Override
@@ -267,9 +291,9 @@ public class DelaHDFS {
 
     @Override
     public void write(long pos, byte[] data, Consumer<Try<Boolean>> callback) {
-      if(pendingPos != pos) {
+      if (pendingPos != pos) {
         String msg = "HDFS supports append only - pending pos:" + pendingPos + " write pos:" + pos;
-        callback.accept(new Try.Failure(new DelaStorageException(msg)));
+        callback.accept(new Try.Failure(new DelaStorageException(msg, StorageType.HDFS)));
       }
       Try<Boolean> r = doAs.perform(DelaHDFS.appendOp(out, data));
       if (r.isSuccess()) {
@@ -354,21 +378,21 @@ public class DelaHDFS {
         return new Try.Success(true);
       } catch (IOException ex) {
         String msg = "closing file";
-        return new Try.Failure(new DelaStorageException(msg, ex));
+        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
       }
     }
   }
-  
+
   public static Try<DoAs> doAs(String user) {
     try {
       UserGroupInformation ugi = UserGroupInformation.createProxyUser(user, UserGroupInformation.getLoginUser());
       return new Try.Success(new DoAs(ugi));
     } catch (IOException ex) {
       String msg = "could not create proxy user:" + user;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
-  
+
   public static Try<Boolean> canConnect(Configuration hdfsConfig) {
     try {
       FileSystem fs = FileSystem.get(hdfsConfig);
@@ -399,7 +423,7 @@ public class DelaHDFS {
       return new Try.Success(config);
     } catch (IOException ex) {
       String msg = "could not contact filesystem";
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -413,7 +437,7 @@ public class DelaHDFS {
       return new Try.Success(false);
     } catch (IOException ex) {
       String msg = "dir op - could not create path:" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -429,14 +453,14 @@ public class DelaHDFS {
         if (dfs.isFile(filePath)) {
           return new Try.Success(true);
         } else {
-          return new Try.Failure(new DelaStorageException("path exists, and it is not a file"));
+          return new Try.Failure(new DelaStorageException("path exists, and it is not a file", StorageType.HDFS));
         }
       } else {
         return new Try.Success(false);
       }
     } catch (IOException ex) {
       String msg = "dir op - could not check exists:" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -456,7 +480,7 @@ public class DelaHDFS {
       }
     } catch (IOException ex) {
       String msg = "dir op - could not create:" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -480,7 +504,7 @@ public class DelaHDFS {
       return new Try.Success(true);
     } catch (IOException ex) {
       String msg = "dir op- could not delete:" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -506,7 +530,7 @@ public class DelaHDFS {
       return new Try.Success(-1l);
     } catch (IOException ex) {
       String msg = "file meta - could not get size of file:" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -517,7 +541,7 @@ public class DelaHDFS {
       return append(out, data);
     } catch (IOException ex) {
       String msg = "file op - could not append to file:" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -525,16 +549,16 @@ public class DelaHDFS {
     HDFSEndpoint endpoint, HDFSResource resource, byte[] data) {
     return () -> append(dfs, endpoint, resource, data);
   }
-  
+
   public static Supplier<Try<Boolean>> writeOp(DistributedFileSystem dfs,
     HDFSEndpoint endpoint, HDFSResource resource, long pos, byte[] data) {
     return () -> {
       return new Try.Success(true)
         .flatMap(TryHelper.tryFSucc0(DelaHDFS.fileSizeOp(dfs, endpoint, resource)))
         .flatMap(TryHelper.tryFSucc1((Long fileSize) -> {
-          if(fileSize != pos) {
+          if (fileSize != pos) {
             String msg = "HDFS supports append only - pending pos:" + fileSize + " write pos:" + pos;
-            return new Try.Failure(new DelaStorageException(msg));
+            return new Try.Failure(new DelaStorageException(msg, StorageType.HDFS));
           } else {
             return new Try.Success(true);
           }
@@ -549,7 +573,7 @@ public class DelaHDFS {
       return new Try.Success(true);
     } catch (IOException ex) {
       String msg = "file op - could not append";
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -569,7 +593,7 @@ public class DelaHDFS {
       return read(in, range);
     } catch (IOException ex) {
       String msg = "file op - could not read file:" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -581,7 +605,7 @@ public class DelaHDFS {
       return new Try.Success(byte_read);
     } catch (IOException ex) {
       String msg = "file op - could not read";
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -598,7 +622,7 @@ public class DelaHDFS {
       return new Try.Success(allBytes);
     } catch (IOException ex) {
       String msg = "file op - could not read file:" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -614,7 +638,7 @@ public class DelaHDFS {
       return new Try.Success(true);
     } catch (IOException ex) {
       String msg = "file op - could not flush to file:{}" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 
@@ -629,7 +653,7 @@ public class DelaHDFS {
       return new Try.Success(hdfsBlockSize);
     } catch (IOException ex) {
       String msg = "file meta - could not get block size for file" + filePath;
-      return new Try.Failure(new DelaStorageException(msg, ex));
+      return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
     }
   }
 

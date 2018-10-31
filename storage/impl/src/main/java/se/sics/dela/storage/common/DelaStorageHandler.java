@@ -2,7 +2,7 @@
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
  *
- * GVoD is free software; you can redistribute it and/or
+ * KompicsToolbox is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
@@ -13,35 +13,27 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * along with this program; if not, append to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.storage.gcp;
+package se.sics.dela.storage.common;
 
-import com.google.auth.oauth2.GoogleCredentials;
 import se.sics.dela.storage.StorageEndpoint;
+import se.sics.dela.storage.StorageResource;
+import se.sics.ktoolbox.util.trysf.Try;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class GCPEndpoint implements StorageEndpoint {
-  public final GoogleCredentials credentials;
-  public final String projectName;
-  public final String bucketName;
-  
-  public GCPEndpoint(GoogleCredentials credentials, String projectName, String bucketName) {
-    this.credentials = credentials;
-    this.projectName = projectName;
-    this.bucketName = bucketName;
-  }
+public interface DelaStorageHandler<E extends StorageEndpoint, R extends StorageResource> {
 
-  @Override
-  public String getEndpointName() {
-    return "gcp_" + projectName + "_" + bucketName;
-  }
+  public Try<DelaFileHandler<E, R>> get(R resource);
 
-  @Override
-  public String toString() {
-    return getEndpointName();
-  }
+  public Try<DelaFileHandler<E, R>> create(R resource);
+
+  /**
+   * @return Try.Success - true - file deleted, false - file already deleted; Try.Failure - wrapped cause
+   */
+  public Try<Boolean> delete(R resource);
 }

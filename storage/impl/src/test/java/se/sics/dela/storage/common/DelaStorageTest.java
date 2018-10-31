@@ -28,6 +28,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.Assert;
 import org.junit.Test;
+import se.sics.dela.storage.StorageResource;
 import se.sics.dela.storage.disk.DelaDisk;
 import se.sics.dela.storage.disk.DiskEndpoint;
 import se.sics.dela.storage.disk.DiskResource;
@@ -52,48 +53,32 @@ public class DelaStorageTest {
   public void testHDFSAppend() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-
-    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
-
-    testAppend(storage);
+    Try<DelaHDFS.StorageHandler> storage = DelaHDFS.StorageHandler.handler(endpoint);
+    testAppend(storage.checkedGet(), resource);
   }
 
 //    @Test
   public void testHDFSMultiAppend() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-
-    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
-
-    testMultiAppend(storage);
+    Try<DelaHDFS.StorageHandler> storage = DelaHDFS.StorageHandler.handler(endpoint);
+    testMultiAppend(storage.checkedGet(), resource);
   }
 
 //    @Test
   public void testHDFSMultiRead() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-
-    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
-
-    testMultiRead(storage);
+    Try<DelaHDFS.StorageHandler> storage = DelaHDFS.StorageHandler.handler(endpoint);
+    testMultiRead(storage.checkedGet(), resource);
   }
   
 //    @Test
   public void testHDFSRead() throws IOException, Throwable {
     HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
     HDFSResource resource = new HDFSResource("/test", "file");
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(endpoint.user);
-
-    DistributedFileSystem dfs = (DistributedFileSystem) FileSystem.get(endpoint.hdfsConfig);
-    DelaStorageProvider storage = new DelaHDFS.StorageProvider(endpoint, resource, dfs);
-    
-    testRead(storage);
+    Try<DelaHDFS.StorageHandler> storage = DelaHDFS.StorageHandler.handler(endpoint);
+    testRead(storage.checkedGet(), resource);
   }
   
   //***************************************************DISK*************************************************************
@@ -101,53 +86,53 @@ public class DelaStorageTest {
   public void testDiskAppend() throws Throwable {
     DiskEndpoint endpoint = new DiskEndpoint();
     DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
-    
-    DelaStorageProvider storage = new DelaDisk.StorageProvider(endpoint, resource);
-    testAppend(storage);
+    DelaDisk.StorageHandler storage = new DelaDisk.StorageHandler(endpoint);
+    testAppend(storage, resource);
   }
   
 //  @Test
   public void testDiskMultiAppend() throws Throwable {
     DiskEndpoint endpoint = new DiskEndpoint();
     DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
-    
-    DelaStorageProvider storage = new DelaDisk.StorageProvider(endpoint, resource);
-    testMultiAppend(storage);
+    DelaDisk.StorageHandler storage = new DelaDisk.StorageHandler(endpoint);
+    testMultiAppend(storage, resource);
   }
   
 //  @Test
   public void testDiskRead() throws Throwable {
     DiskEndpoint endpoint = new DiskEndpoint();
     DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
-    
-    DelaStorageProvider storage = new DelaDisk.StorageProvider(endpoint, resource);
-    testRead(storage);
+    DelaDisk.StorageHandler storage = new DelaDisk.StorageHandler(endpoint);
+    testRead(storage, resource);
   }
   
 //  @Test
   public void testDiskMultiRead() throws Throwable {
     DiskEndpoint endpoint = new DiskEndpoint();
     DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
-    
-    DelaStorageProvider storage = new DelaDisk.StorageProvider(endpoint, resource);
-    testMultiRead(storage);
+    DelaDisk.StorageHandler storage = new DelaDisk.StorageHandler(endpoint);
+    testMultiRead(storage, resource);
   }
   
-
-  private void testAppend(DelaStorageProvider storage) throws Throwable {
+  private DelaFileHandler prepareFile(DelaStorageHandler storage, StorageResource resource) throws Throwable {
+    Try<DelaFileHandler> file = new Try.Success(true)
+      .flatMap(TryHelper.tryFSucc0(() -> storage.delete(resource)))
+      .flatMap(TryHelper.tryFSucc0(() -> storage.create(resource)));
+    return file.checkedGet();
+  }
+  
+  private void testAppend(DelaStorageHandler storage, StorageResource resource) throws Throwable {
     System.err.println("test write");
-    Try result = new Try.Success(true)
-      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
-      .flatMap(TryHelper.tryFSucc0(appendFile(storage)))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
+    DelaFileHandler file = prepareFile(storage, resource);
+    Try<Boolean> result = new Try.Success(true)
+      .flatMap(TryHelper.tryFSucc0(appendFile(file)))
+      .flatMap(TryHelper.tryFSucc0(() -> file.size()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 10 * 1024 * 1024l, (long) size)))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
+      .flatMap(TryHelper.tryFSucc0(() -> storage.delete(resource)));
     result.checkedGet();
   }
 
-  private Supplier<Try<Boolean>> appendFile(DelaStorageProvider storage) {
+  private Supplier<Try<Boolean>> appendFile(DelaFileHandler storage) {
     return () -> {
       int blockSize = 10 * 1024 * 1024;
       byte[] block = new byte[blockSize];
@@ -167,20 +152,18 @@ public class DelaStorageTest {
     };
   }
 
-  private void testMultiAppend(DelaStorageProvider storage) throws Throwable {
+  private void testMultiAppend(DelaStorageHandler storage, StorageResource resource) throws Throwable {
     System.err.println("test multi write");
+    DelaFileHandler file = prepareFile(storage, resource);
     Try<Boolean> result = new Try.Success(true)
-      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
-      .flatMap(TryHelper.tryFSucc0(multiAppendFile(storage)))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
+      .flatMap(TryHelper.tryFSucc0(multiAppendFile(file)))
+      .flatMap(TryHelper.tryFSucc0(() -> file.size()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
+      .flatMap(TryHelper.tryFSucc0(() -> storage.delete(resource)));
     result.checkedGet();
   }
 
-  private Supplier<Try<Boolean>> multiAppendFile(DelaStorageProvider storage) {
+  private Supplier<Try<Boolean>> multiAppendFile(DelaFileHandler storage) {
     return () -> {
       int blockSize = 10 * 1024 * 1024;
       byte[] block = new byte[blockSize];
@@ -208,21 +191,19 @@ public class DelaStorageTest {
     };
   }
 
-  private void testMultiRead(DelaStorageProvider storage) throws Throwable {
+  private void testMultiRead(DelaStorageHandler storage, StorageResource resource) throws Throwable {
     System.err.println("test multi read");
+    DelaFileHandler file = prepareFile(storage, resource);
     Try<Boolean> result = new Try.Success(true)
-      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
-      .flatMap(TryHelper.tryFSucc0(multiAppendFile(storage)))
-      .flatMap(TryHelper.tryFSucc0(multiReadFile(storage)))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
+      .flatMap(TryHelper.tryFSucc0(multiAppendFile(file)))
+      .flatMap(TryHelper.tryFSucc0(multiReadFile(file)))
+      .flatMap(TryHelper.tryFSucc0(() -> file.size()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
+      .flatMap(TryHelper.tryFSucc0(() -> storage.delete(resource)));
     result.checkedGet();
   }
 
-  private Supplier<Try<Boolean>> multiReadFile(DelaStorageProvider storage) {
+  private Supplier<Try<Boolean>> multiReadFile(DelaFileHandler storage) {
     return () -> {
       long start = System.nanoTime();
       Try<DelaReadStream> appendSession = storage.readSession(new TestTimer());
@@ -246,21 +227,19 @@ public class DelaStorageTest {
     };
   }
 
-  private void testRead(DelaStorageProvider storage) throws Throwable {
+  private void testRead(DelaStorageHandler storage, StorageResource resource) throws Throwable {
     System.err.println("test read");
+    DelaFileHandler file = prepareFile(storage, resource);
     Try<Boolean> result = new Try.Success(true)
-      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.createPath()))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.createFile()))
-      .flatMap(TryHelper.tryFSucc0(multiAppendFile(storage)))
-      .flatMap(TryHelper.tryFSucc0(readFile(storage)))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.fileSize()))
+      .flatMap(TryHelper.tryFSucc0(multiAppendFile(file)))
+      .flatMap(TryHelper.tryFSucc0(readFile(file)))
+      .flatMap(TryHelper.tryFSucc0(() -> file.size()))
       .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
-      .flatMap(TryHelper.tryFSucc0(() -> storage.deleteFile()));
+      .flatMap(TryHelper.tryFSucc0(() -> storage.delete(resource)));
     result.checkedGet();
   }
 
-  private Supplier<Try<Boolean>> readFile(DelaStorageProvider storage) {
+  private Supplier<Try<Boolean>> readFile(DelaFileHandler storage) {
     return () -> {
       long start = System.nanoTime();
       for (int i = 0; i < 100; i++) {

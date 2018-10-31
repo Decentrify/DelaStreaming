@@ -29,7 +29,6 @@ import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 import se.sics.dela.storage.common.DelaReadStream;
 import se.sics.dela.storage.common.DelaStorageException;
-import se.sics.dela.storage.common.DelaStorageProvider;
 import se.sics.dela.util.TimerProxy;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
@@ -37,6 +36,10 @@ import se.sics.nstream.util.range.KRange;
 import se.sics.dela.storage.common.DelaAppendStream;
 import se.sics.dela.storage.core.DelaStorageComp;
 import se.sics.kompics.util.Identifier;
+import se.sics.dela.storage.common.DelaFileHandler;
+import se.sics.dela.storage.common.DelaHelper;
+import se.sics.dela.storage.common.DelaStorageHandler;
+import se.sics.dela.storage.common.StorageType;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -55,7 +58,7 @@ public class DelaDisk {
     @Override
     public Pair<DelaStorageComp.Init, Long> initiate(StorageResource resource, Logger logger) {
       DiskResource diskResource = (DiskResource) resource;
-      DelaStorageProvider storage = new StorageProvider(endpoint, diskResource);
+      DelaFileHandler storage = new FileHandler(endpoint, diskResource);
       Try<Long> pos = DelaDisk.fileSize(endpoint, diskResource);
       if (pos.isFailure()) {
         throw new RuntimeException(TryHelper.tryError(pos));
@@ -80,12 +83,58 @@ public class DelaDisk {
     }
   }
 
-  public static class StorageProvider implements DelaStorageProvider<DiskEndpoint, DiskResource> {
+  public static class StorageHandler implements DelaStorageHandler<DiskEndpoint, DiskResource> {
+
+    public final DiskEndpoint endpoint;
+
+    public StorageHandler(DiskEndpoint endpoint) {
+      this.endpoint = endpoint;
+    }
+
+    @Override
+    public Try<DelaFileHandler<DiskEndpoint, DiskResource>> get(DiskResource resource) {
+      File f = new File(resource.dirPath, resource.fileName);
+      if (!f.exists()) {
+        return new Try.Failure(new DelaStorageException(DelaStorageException.RESOURCE_DOES_NOT_EXIST, StorageType.DISK));
+      }
+      DelaFileHandler<DiskEndpoint, DiskResource> file = new FileHandler(endpoint, resource);
+      return new Try.Success(file);
+    }
+
+    @Override
+    public Try<DelaFileHandler<DiskEndpoint, DiskResource>> create(DiskResource resource) {
+      File dir = new File(resource.dirPath);
+      if (dir.isFile()) {
+        String msg = "resource parent dir:" + dir.getAbsolutePath() + " is a file";
+        return new Try.Failure(new DelaStorageException(msg, StorageType.DISK));
+      }
+      if (!dir.exists()) {
+        dir.mkdirs();
+      }
+      File f = new File(dir, resource.fileName);
+      try {
+        f.createNewFile();
+        DelaFileHandler<DiskEndpoint, DiskResource> file = new FileHandler(endpoint, resource);
+        return new Try.Success(file);
+      } catch (IOException ex) {
+        String msg = "could not create file:" + f.getAbsolutePath();
+        return new Try.Failure(new DelaStorageException(msg, StorageType.DISK));
+      }
+    }
+
+    @Override
+    public Try<Boolean> delete(DiskResource resource) {
+      File f = new File(resource.dirPath, resource.fileName);
+      return new Try.Success(f.delete());
+    }
+  }
+
+  public static class FileHandler implements DelaFileHandler<DiskEndpoint, DiskResource> {
 
     public final DiskEndpoint endpoint;
     public final DiskResource resource;
 
-    public StorageProvider(DiskEndpoint endpoint, DiskResource resource) {
+    public FileHandler(DiskEndpoint endpoint, DiskResource resource) {
       this.endpoint = endpoint;
       this.resource = resource;
     }
@@ -99,47 +148,14 @@ public class DelaDisk {
     public DiskResource getResource() {
       return resource;
     }
-
+    
     @Override
-    public Try<Boolean> createPath() {
-      File dir = new File(resource.dirPath);
-      if (dir.isFile()) {
-        String msg = "resource parent dir:" + dir.getAbsolutePath() + " is a file";
-        return new Try.Failure(new DelaStorageException(msg));
-      }
-      if (!dir.exists()) {
-        dir.mkdirs();
-        return new Try.Success(true);
-      } else {
-        return new Try.Success(false);
-      }
+    public StorageType storageType() {
+      return StorageType.DISK;
     }
 
     @Override
-    public Try<Boolean> fileExists() {
-      File f = new File(resource.dirPath, resource.fileName);
-      return new Try.Success(f.exists());
-    }
-
-    @Override
-    public Try<Boolean> createFile() {
-      File f = new File(resource.dirPath, resource.fileName);
-      try {
-        return new Try.Success(f.createNewFile());
-      } catch (IOException ex) {
-        String msg = "could not create file:" + f.getAbsolutePath();
-        return new Try.Failure(new DelaStorageException(msg));
-      }
-    }
-
-    @Override
-    public Try<Boolean> deleteFile() {
-      File f = new File(resource.dirPath, resource.fileName);
-      return new Try.Success(f.delete());
-    }
-
-    @Override
-    public Try<Long> fileSize() {
+    public Try<Long> size() {
       return DelaDisk.fileSize(endpoint, resource);
     }
 
@@ -155,31 +171,16 @@ public class DelaDisk {
         return new Try.Success(readVal);
       } catch (IOException ex) {
         String msg = "could not read file:" + f;
-        return new Try.Failure(new DelaStorageException(msg, ex));
+        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
       }
     }
 
     @Override
-    public Try<byte[]> readAllFile() {
+    public Try<byte[]> readAll() {
       Try<byte[]> result = new Try.Success(true)
-        .flatMap(TryHelper.tryFSucc0(() -> fileSize()))
-        .flatMap(TryHelper.tryFSucc1((Long fileSize) -> {
-          String f = resource.dirPath + File.separator + resource.fileName;
-          if (fileSize > Integer.MAX_VALUE) {
-            String msg = "file:" + f + " is too big to read fully";
-            return new Try.Failure(new DelaStorageException(msg));
-          }
-          int readLength = (int) (long) fileSize;
-          byte[] readVal = new byte[readLength];
-
-          try (RandomAccessFile raf = new RandomAccessFile(f, "rw")) {
-            raf.readFully(readVal);
-            return new Try.Success(readVal);
-          } catch (IOException ex) {
-            String msg = "could not read file:" + f;
-            return new Try.Failure(new DelaStorageException(msg, ex));
-          }
-        }));
+        .flatMap(TryHelper.tryFSucc0(() -> size())) //get file size
+        .flatMap(DelaHelper.fullRange(StorageType.DISK, resource)) //build range
+        .flatMap(TryHelper.tryFSucc1((KRange range) -> read(range))); //read all range
       return result;
     }
 
@@ -192,7 +193,7 @@ public class DelaDisk {
         return new Try.Success(true);
       } catch (IOException ex) {
         String msg = "could not write file:" + f;
-        return new Try.Failure(new DelaStorageException(msg, ex));
+        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
       }
     }
 
@@ -204,7 +205,7 @@ public class DelaDisk {
         return new Try.Success(new ReadStream(filePath, raf));
       } catch (FileNotFoundException ex) {
         String msg = "could not find file:" + filePath;
-        return new Try.Failure(new DelaStorageException(msg, ex));
+        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
       }
     }
 
@@ -216,7 +217,7 @@ public class DelaDisk {
         return new Try.Success(new AppendStream(filePath, raf));
       } catch (FileNotFoundException ex) {
         String msg = "could not find file:" + filePath;
-        return new Try.Failure(new DelaStorageException(msg, ex));
+        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
       }
     }
   }
@@ -242,7 +243,7 @@ public class DelaDisk {
         callback.accept(new Try.Success(readVal));
       } catch (IOException ex) {
         String msg = "could not read file:" + filePath;
-        callback.accept(new Try.Failure(new DelaStorageException(msg, ex)));
+        callback.accept(new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK)));
       }
     }
 
@@ -253,7 +254,7 @@ public class DelaDisk {
         return new Try.Success(true);
       } catch (IOException ex) {
         String msg = "closing file:" + filePath;
-        return new Try.Failure(new DelaStorageException(msg, ex));
+        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
       }
     }
   }
@@ -276,7 +277,7 @@ public class DelaDisk {
         callback.accept(new Try.Success(true));
       } catch (IOException ex) {
         String msg = "could not write file:" + filePath;
-        callback.accept(new Try.Failure(new DelaStorageException(msg, ex)));
+        callback.accept(new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK)));
       }
     }
 
@@ -287,7 +288,7 @@ public class DelaDisk {
         return new Try.Success(true);
       } catch (IOException ex) {
         String msg = "closing file:" + filePath;
-        return new Try.Failure(new DelaStorageException(msg, ex));
+        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
       }
     }
   }

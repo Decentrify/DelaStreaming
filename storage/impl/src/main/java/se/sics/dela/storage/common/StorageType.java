@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * along with this program; if not, append to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 package se.sics.dela.storage.common;
@@ -21,17 +21,6 @@ package se.sics.dela.storage.common;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class DelaStorageException extends Exception {
-  public static final String RESOURCE_DOES_NOT_EXIST = "resource_does_not_exist";
-
-  public final StorageType storageType;
-  public DelaStorageException(String msg, StorageType storageType) {
-    super(msg);
-    this.storageType = storageType;
-  }
-
-  public DelaStorageException(String msg, Throwable cause, StorageType storageType) {
-    super(msg, cause);
-    this.storageType = storageType;
-  }
+public enum StorageType {
+  MEMORY, DISK, HDFS, GCP, AWS, KAFKA
 }
