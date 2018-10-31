@@ -62,10 +62,10 @@ public interface DelaFileHandler<E extends StorageEndpoint, R extends StorageRes
   /**
    * open and keep open session for repeated reads
    */
-  public Try<DelaReadStream> readSession(TimerProxy timer);
+  public Try<DelaReadStream> readStream(TimerProxy timer);
 
   /**
    * open and keep open session for repeated writes
    */
-  public Try<DelaAppendStream> appendSession(TimerProxy timer);
+  public Try<DelaAppendStream> appendStream(TimerProxy timer);
 }

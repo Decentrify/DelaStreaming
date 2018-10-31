@@ -198,7 +198,7 @@ public class DelaDisk {
     }
 
     @Override
-    public Try<DelaReadStream> readSession(TimerProxy timer) {
+    public Try<DelaReadStream> readStream(TimerProxy timer) {
       String filePath = resource.dirPath + File.separator + resource.fileName;
       try {
         RandomAccessFile raf = new RandomAccessFile(filePath, "rw");
@@ -210,7 +210,7 @@ public class DelaDisk {
     }
 
     @Override
-    public Try<DelaAppendStream> appendSession(TimerProxy timer) {
+    public Try<DelaAppendStream> appendStream(TimerProxy timer) {
       String filePath = resource.dirPath + File.separator + resource.fileName;
       try {
         RandomAccessFile raf = new RandomAccessFile(filePath, "rw");

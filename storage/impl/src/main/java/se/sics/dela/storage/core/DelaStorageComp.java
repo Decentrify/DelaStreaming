@@ -102,7 +102,7 @@ public class DelaStorageComp extends ComponentDefinition {
   };
 
   private void setupReadSession() {
-    Try<DelaReadStream> rs = file.readSession(timerProxy);
+    Try<DelaReadStream> rs = file.readStream(timerProxy);
     if (rs.isSuccess()) {
       readSession = Optional.of(rs.get());
     } else {
@@ -140,7 +140,7 @@ public class DelaStorageComp extends ComponentDefinition {
   };
 
   private void setupAppendSession() {
-    Try<DelaAppendStream> rs = file.appendSession(timerProxy);
+    Try<DelaAppendStream> rs = file.appendStream(timerProxy);
     if (rs.isSuccess()) {
       appendSession = Optional.of(rs.get());
     } else {

@@ -136,7 +136,12 @@ public class DelaGCP {
       return new Try.Success(true)
         .flatMap(DelaGCP.getBucketB0(storage, endpoint.bucketName))
         .flatMap(DelaGCP.getBlobB0(storage, resource.getBlobId()))
-        .flatMap(DelaGCP.deleteBlobB1());
+        .transform(DelaGCP.deleteBlobB1(), deleteNonExistingBlob());
+    }
+    
+    private BiFunction<Blob, Throwable, Try<Boolean>> deleteNonExistingBlob() {
+      return DelaHelper.recoverFrom(StorageType.GCP, DelaStorageException.RESOURCE_DOES_NOT_EXIST, 
+        () -> new Try.Success(true));
     }
   }
 
@@ -198,13 +203,13 @@ public class DelaGCP {
     }
 
     @Override
-    public Try<DelaReadStream> readSession(TimerProxy timer) {
+    public Try<DelaReadStream> readStream(TimerProxy timer) {
       ReadChannel in = DelaGCP.readChannel(blob);
       return new Try.Success(new ReadStream(in));
     }
 
     @Override
-    public Try<DelaAppendStream> appendSession(TimerProxy timer) {
+    public Try<DelaAppendStream> appendStream(TimerProxy timer) {
       Try<Long> pos = size();
       if (pos.isFailure()) {
         return (Try.Failure) pos;
@@ -254,6 +259,7 @@ public class DelaGCP {
         callback.accept(new Try.Failure(new DelaStorageException(msg, StorageType.GCP)));
       }
       callback.accept(DelaGCP.write(out, data));
+      pendingPos += data.length;
     }
 
     @Override
@@ -356,9 +362,9 @@ public class DelaGCP {
     });
   }
 
-  public static Storage getStorage(GoogleCredentials credentials, String projectId) {
+  public static Storage getStorage(GoogleCredentials credentials, String project) {
     Storage storage = StorageOptions.newBuilder()
-      .setProjectId(projectId)
+      .setProjectId(project)
       .setCredentials(credentials)
       .build()
       .getService();

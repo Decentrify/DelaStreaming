@@ -26,30 +26,55 @@ import se.sics.dela.storage.StorageResource;
  */
 public class GCPResource implements StorageResource {
 
+  public final String bucketName;
   public final String libDir;
   public final String relativePath;
   public final String file;
 
-  public GCPResource(String libDir, String relativePath, String file) {
+  public GCPResource(String bucketName, String libDir, String relativePath, String file) {
+    this.bucketName = bucketName;
     this.libDir = libDir;
     this.relativePath = relativePath;
     this.file = file;
   }
 
+  private String fullPath() {
+    return  bucketName + blobPath();
+  }
+  private String blobPath() {
+    String p1 = stripEdgeSeparators(libDir);
+    String p2 = stripEdgeSeparators(relativePath);
+    return "/" + p1 + "/" + p2 + "/" + file;
+  }
+  private String stripEdgeSeparators(String path) {
+    String p = path;
+    if(p.equals("/")){
+      p = "";
+    } else {
+      if(p.endsWith("/")){
+        p = p.substring(0, p.length()-1);
+      }
+      if(p.startsWith("/")) {
+        p = p.substring(1, p.length());
+      }
+    }
+    return p;
+  }
+  
   @Override
   public String getSinkName() {
-    return "gcp:/" + libDir + "/" + relativePath + "/" + file;
+    return "gcp:/" + fullPath();
   }
 
   public String getBlobName() {
-    return libDir + "/" + relativePath + "/" + file;
+    return fullPath();
   }
 
   public BlobId getBlobId() {
-    return BlobId.of(libDir, relativePath + "/" + file);
+    return BlobId.of(bucketName, blobPath());
   }
 
   public GCPResource withFile(String file) {
-    return new GCPResource(libDir, relativePath, file);
+    return new GCPResource(bucketName, libDir, relativePath, file);
   }
 }

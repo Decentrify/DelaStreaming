@@ -225,7 +225,7 @@ public class DelaHDFS {
     }
 
     @Override
-    public Try<DelaReadStream> readSession(TimerProxy timer) {
+    public Try<DelaReadStream> readStream(TimerProxy timer) {
       try {
         String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
         FSDataInputStream in = dfs.open(new Path(filePath));
@@ -240,7 +240,7 @@ public class DelaHDFS {
     }
 
     @Override
-    public Try<DelaAppendStream> appendSession(TimerProxy timer) {
+    public Try<DelaAppendStream> appendStream(TimerProxy timer) {
       try {
         String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
         FSDataOutputStream out = dfs.append(new Path(filePath));
