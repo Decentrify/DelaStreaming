@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import org.javatuples.Pair;
 import org.javatuples.Triplet;
 import org.slf4j.Logger;
@@ -118,7 +119,10 @@ public class DelaGCP {
       return new Try.Success(true)
         .flatMap(DelaGCP.getBucketB0(storage, endpoint.bucketName))
         .flatMap(DelaGCP.getBlobB0(storage, resource.getBlobId()))
-        .map(TryHelper.tryFSucc1((Blob blob) -> new FileHandler(blob, endpoint, resource)));
+        .map(TryHelper.tryFSucc1((Blob blob) -> {
+          blob.update();
+          return new FileHandler(blob, endpoint, resource);
+        }));
     }
 
     @Override
@@ -128,7 +132,10 @@ public class DelaGCP {
         .flatMap(DelaGCP.getBlobB0(storage, resource.getBlobId()))
         .recoverWith(DelaHelper.recoverFrom(StorageType.GCP, DelaStorageException.RESOURCE_DOES_NOT_EXIST,
           DelaGCP.createBlobF0(storage, resource.getBlobId())))
-        .map(TryHelper.tryFSucc1((Blob blob) -> new FileHandler(blob, endpoint, resource)));
+        .map(TryHelper.tryFSucc1((Blob blob) -> {
+          blob.update();
+          return new FileHandler(blob, endpoint, resource);
+        }));
     }
 
     @Override
@@ -138,9 +145,9 @@ public class DelaGCP {
         .flatMap(DelaGCP.getBlobB0(storage, resource.getBlobId()))
         .transform(DelaGCP.deleteBlobB1(), deleteNonExistingBlob());
     }
-    
+
     private BiFunction<Blob, Throwable, Try<Boolean>> deleteNonExistingBlob() {
-      return DelaHelper.recoverFrom(StorageType.GCP, DelaStorageException.RESOURCE_DOES_NOT_EXIST, 
+      return DelaHelper.recoverFrom(StorageType.GCP, DelaStorageException.RESOURCE_DOES_NOT_EXIST,
         () -> new Try.Success(true));
     }
   }
@@ -149,7 +156,7 @@ public class DelaGCP {
 
     public final GCPEndpoint endpoint;
     public final GCPResource resource;
-    private final Blob blob;
+    private Blob blob;
     //
     private final String bucketName;
     private final BlobId blobId;
@@ -218,7 +225,17 @@ public class DelaGCP {
         return new Try.Failure(new DelaStorageException(msg, StorageType.GCP));
       } else {
         WriteChannel out = DelaGCP.writeChannel(blob);
-        return new Try.Success(new AppendStream(out));
+        return new Try.Success(new AppendStream(this, out));
+      }
+    }
+    
+    private void update() {
+      Storage storage = blob.getStorage();
+      try {
+        Thread.sleep(1000);
+        blob = DelaGCP.getBlob(storage, blobId).checkedGet();
+      } catch (Throwable ex) {
+        throw new RuntimeException(ex);
       }
     }
   }
@@ -245,10 +262,12 @@ public class DelaGCP {
 
   public static class AppendStream implements DelaAppendStream {
 
-    private final WriteChannel out;
+    private final FileHandler parent;
+    private WriteChannel out;
     private long pendingPos = 0;
 
-    public AppendStream(WriteChannel out) {
+    public AppendStream(FileHandler parent, WriteChannel out) {
+      this.parent = parent;
       this.out = out;
     }
 
@@ -266,6 +285,7 @@ public class DelaGCP {
     public Try<Boolean> close() {
       try {
         out.close();
+        parent.update();
         return new Try.Success(true);
       } catch (IOException ex) {
         return new Try.Failure(new DelaStorageException("dela_gcp", ex, StorageType.GCP));
@@ -490,6 +510,7 @@ public class DelaGCP {
   }
 
   public static Try<Long> blobSize(Blob blob) {
+//    Blob bl = DelaGCP.getBlob(storage, blobId)storage.get(blob.getBlobId());
     return new Try.Success(blob.getSize());
   }
 

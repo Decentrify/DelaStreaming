@@ -39,28 +39,34 @@ public class GCPResource implements StorageResource {
   }
 
   private String fullPath() {
-    return  bucketName + blobPath();
+    return bucketName + "/" + blobPath();
   }
+
   private String blobPath() {
     String p1 = stripEdgeSeparators(libDir);
     String p2 = stripEdgeSeparators(relativePath);
-    return "/" + p1 + "/" + p2 + "/" + file;
+    if (p1.equals("")) {
+      return p2 + "/" + file;
+    } else {
+      return p1 + "/" + p2 + "/" + file;
+    }
   }
+
   private String stripEdgeSeparators(String path) {
     String p = path;
-    if(p.equals("/")){
+    if (p.equals("/")) {
       p = "";
     } else {
-      if(p.endsWith("/")){
-        p = p.substring(0, p.length()-1);
+      if (p.endsWith("/")) {
+        p = p.substring(0, p.length() - 1);
       }
-      if(p.startsWith("/")) {
+      if (p.startsWith("/")) {
         p = p.substring(1, p.length());
       }
     }
     return p;
   }
-  
+
   @Override
   public String getSinkName() {
     return "gcp:/" + fullPath();

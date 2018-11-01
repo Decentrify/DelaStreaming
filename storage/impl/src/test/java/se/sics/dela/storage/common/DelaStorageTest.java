@@ -54,6 +54,15 @@ public class DelaStorageTest {
   //************************************************GCP***************************************************************
   //gcp multiple single append do not make sense since once write channel is close, the blobs become immutable
   @Test
+  public void test() throws Throwable {
+    GCPConfig config = GCPConfig.read(TypesafeConfig.load()).checkedGet();
+    GCPEndpoint endpoint = new GCPEndpoint(config.credentials, config.project, config.bucket);
+    GCPResource resource = new GCPResource(config.bucket, "/", "test", "file");
+    Storage gcp = DelaGCP.getStorage(config.credentials, config.project);
+    DelaGCP.createBlob(gcp, resource.getBlobId()).checkedGet();
+    DelaGCP.getBlob(gcp, resource.getBlobId()).checkedGet();
+  }
+  @Test
   public void testGCPMultiAppend() throws IOException, Throwable {
     GCPConfig config = GCPConfig.read(TypesafeConfig.load()).checkedGet();
     GCPEndpoint endpoint = new GCPEndpoint(config.credentials, config.project, config.bucket);
@@ -179,7 +188,7 @@ public class DelaStorageTest {
         file.append(i * blockSize, block);
       }
       long end = System.nanoTime();
-      long sizeMB = 10 * 10;
+      long sizeMB = 1l * blocks * blockSize / (1024 * 1024);
       double time = (double) (end - start) / (1000 * 1000 * 1000);
       System.err.println("write time(s):" + time);
       System.err.println("write avg speed(MB/s):" + sizeMB / time);
@@ -206,19 +215,19 @@ public class DelaStorageTest {
       rand.nextBytes(block);
 
       long start = System.nanoTime();
-      Try<DelaAppendStream> appendOp = file.appendStream(new TestTimer());
-      if (appendOp.isFailure()) {
-        return (Try.Failure) appendOp;
+      Try<DelaAppendStream> appendStream = file.appendStream(new TestTimer());
+      if (appendStream.isFailure()) {
+        return (Try.Failure) appendStream;
       }
       for (int i = 0; i < blocks; i++) {
-        appendOp.get().write(i * blockSize, block, new AppendCallback());
+        appendStream.get().write(i * blockSize, block, new AppendCallback());
       }
-      Try<Boolean> close = appendOp.get().close();
+      Try<Boolean> close = appendStream.get().close();
       if (close.isFailure()) {
         return (Try.Failure) close;
       }
       long end = System.nanoTime();
-      long sizeMB = 100 * 10;
+      long sizeMB = 1l * blocks * blockSize / (1024 * 1024);
       double time = (double) (end - start) / (1000 * 1000 * 1000);
       System.err.println("multiwrite time(s):" + time);
       System.err.println("multiwrite avg speed(MB/s):" + sizeMB / time);
@@ -232,22 +241,22 @@ public class DelaStorageTest {
     DelaFileHandler file = prepareFile(storage, resource);
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(multiAppendFile(file, blocks, blockSize)))
-      .flatMap(TryHelper.tryFSucc0(multiReadFile(file)))
+      .flatMap(TryHelper.tryFSucc0(multiReadFile(file, blocks, blockSize)))
       .flatMap(TryHelper.tryFSucc0(() -> file.size()))
-      .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
+      .map(tryAssert((Long size) -> Assert.assertEquals(1l * blocks * blockSize, (long) size)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.delete(resource)));
     result.checkedGet();
   }
 
-  private Supplier<Try<Boolean>> multiReadFile(DelaFileHandler storage) {
+  private Supplier<Try<Boolean>> multiReadFile(DelaFileHandler storage, int blocks, int blockSize) {
     return () -> {
       long start = System.nanoTime();
       Try<DelaReadStream> appendSession = storage.readStream(new TestTimer());
       if (appendSession.isFailure()) {
         return (Try.Failure) appendSession;
       }
-      for (int i = 0; i < 1000; i++) {
-        KRange range = new KBlockImpl(i, i * 1024 * 1024, (i + 1) * 1024 * 1024 - 1);
+      for (int i = 0; i < blocks; i++) {
+        KRange range = new KBlockImpl(i, i * blockSize, (i + 1) * blockSize - 1);
         appendSession.get().read(range, new ReadCallback());
       }
       Try<Boolean> close = appendSession.get().close();
@@ -255,7 +264,7 @@ public class DelaStorageTest {
         return (Try.Failure) close;
       }
       long end = System.nanoTime();
-      long sizeMB = 1000;
+      long sizeMB = 1l * blocks * blockSize / (1024 * 1024);
       double time = (double) (end - start) / (1000 * 1000 * 1000);
       System.err.println("multiread time(s):" + time);
       System.err.println("multiread avg speed(MB/s):" + sizeMB / time);
@@ -269,22 +278,22 @@ public class DelaStorageTest {
     DelaFileHandler file = prepareFile(storage, resource);
     Try<Boolean> result = new Try.Success(true)
       .flatMap(TryHelper.tryFSucc0(multiAppendFile(file, blocks, blockSize)))
-      .flatMap(TryHelper.tryFSucc0(readFile(file)))
+      .flatMap(TryHelper.tryFSucc0(readFile(file, blocks, blockSize)))
       .flatMap(TryHelper.tryFSucc0(() -> file.size()))
-      .map(tryAssert((Long size) -> Assert.assertEquals(10 * 100 * 1024 * 1024l, (long) size)))
+      .map(tryAssert((Long size) -> Assert.assertEquals(1l * blocks * blockSize, (long) size)))
       .flatMap(TryHelper.tryFSucc0(() -> storage.delete(resource)));
     result.checkedGet();
   }
 
-  private Supplier<Try<Boolean>> readFile(DelaFileHandler storage) {
+  private Supplier<Try<Boolean>> readFile(DelaFileHandler storage, int blocks, int blockSize) {
     return () -> {
       long start = System.nanoTime();
-      for (int i = 0; i < 100; i++) {
-        KRange range = new KBlockImpl(i, i * 1024 * 1024, (i + 1) * 1024 * 1024 - 1);
+      for (int i = 0; i < blocks; i++) {
+        KRange range = new KBlockImpl(i, i * blockSize, (i + 1) * blockSize - 1);
         storage.read(range);
       }
       long end = System.nanoTime();
-      long sizeMB = 100;
+      long sizeMB = 1l * blocks * blockSize / (1024 * 1024);
       double time = (double) (end - start) / (1000 * 1000 * 1000);
       System.err.println("read time(s):" + time);
       System.err.println("read avg speed(MB/s):" + sizeMB / time);
