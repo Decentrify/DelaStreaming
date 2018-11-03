@@ -18,6 +18,7 @@
  */
 package se.sics.dela.storage.common;
 
+import java.util.function.Consumer;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 import se.sics.dela.util.TimerProxy;
@@ -67,5 +68,5 @@ public interface DelaFileHandler<E extends StorageEndpoint, R extends StorageRes
   /**
    * open and keep open session for repeated writes
    */
-  public Try<DelaAppendStream> appendStream(TimerProxy timer);
+  public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed);
 }

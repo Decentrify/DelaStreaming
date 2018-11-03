@@ -37,6 +37,7 @@ import static com.amazonaws.event.ProgressEventType.TRANSFER_STARTED_EVENT;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -49,9 +50,11 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.internal.S3ProgressListener;
+import io.netty.buffer.ByteBuf;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
@@ -82,6 +85,8 @@ import se.sics.nstream.util.range.KRange;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DelaAWS {
+
+  private static final int BLOCK_SIZE = 10 * 1024 * 1024;
 
   public static class StorageHandler implements DelaStorageHandler<AWSEndpoint, AWSResource> {
 
@@ -165,7 +170,7 @@ public class DelaAWS {
 
     @Override
     public Try<Long> size() {
-      Try<Long> result = new Try.Success(DelaAWS.size(client, resource.bucket, resource.getKey()));
+      Try<Long> result = DelaAWS.size(client, resource.bucket, resource.getKey());
       return result;
     }
 
@@ -199,9 +204,8 @@ public class DelaAWS {
     }
 
     @Override
-    public Try<DelaAppendStream> appendStream(TimerProxy timer) {
-      return size().
-        flatMap(tryFSucc1((Long fileSize) -> AppendStream.instance(executors, tm, resource, fileSize)));
+    public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed) {
+      return AppendStream.instance(executors, completed, tm, resource, appendSize);
     }
   }
 
@@ -229,18 +233,24 @@ public class DelaAWS {
 
   public static class AppendStream implements DelaAppendStream, WriterProgress {
 
+    private static final int PIPE_SIZE = 5;
     private final ExecutorService executors;
+    private final Consumer<Try<Boolean>> completed;
     private Future<Boolean> appendStreamTask;
-    private Optional<Upload> upload;
+    private Optional<Upload> upload = Optional.empty();
     //
     private final PipedOutputStream out;
     private final PipedInputStream in;
     //
-    private final TreeMap<Long, Pair<Integer, Consumer<Try<Boolean>>>> pendingAppends = new TreeMap<>();
-    private long pendingPos = 0;
+    private final TreeMap<Long, byte[]> pendingReq = new TreeMap<>();
+    private final TreeMap<Long, Pair<Integer, Consumer<Try<Boolean>>>> pendingResp = new TreeMap<>();
+    private long appendPos = 0;
+    private long confirmedPos = 0;
 
-    private AppendStream(ExecutorService executors, PipedInputStream in, PipedOutputStream out) {
+    private AppendStream(ExecutorService executors, Consumer<Try<Boolean>> completed,
+      PipedInputStream in, PipedOutputStream out) {
       this.executors = executors;
+      this.completed = completed;
       this.in = in;
       this.out = out;
     }
@@ -253,20 +263,20 @@ public class DelaAWS {
       this.appendStreamTask = appendStreamTask;
     }
 
-    public static Try<DelaAppendStream> instance(ExecutorService executors, TransferManager tm, AWSResource resource,
-      long size) {
+    public static Try<DelaAppendStream> instance(ExecutorService executors, Consumer<Try<Boolean>> completed,
+      TransferManager tm, AWSResource resource, long appendSize) {
       PipedOutputStream out = new PipedOutputStream();
       PipedInputStream in;
       try {
-        in = new PipedInputStream(out);
+        in = new PipedInputStream(out, PIPE_SIZE * BLOCK_SIZE);
       } catch (IOException ex) {
         String msg = "append error1";
         return new Try.Failure(new DelaStorageException(msg, ex, StorageType.AWS));
       }
-      AppendStream writer = new AppendStream(executors, in, out);
+      AppendStream writer = new AppendStream(executors, completed, in, out);
       Future<Boolean> appendStreamTask = executors.submit(() -> {
         ObjectMetadata meta = new ObjectMetadata();
-        meta.setContentLength(size);
+        meta.setContentLength(appendSize);
         TupleHelper.PairConsumer<ProgressEvent, WriterProgress> transferEventConsumer = transferEventConsumer();
         Upload upload = tm.upload(new PutObjectRequest(resource.bucket, resource.getKey(), in, meta),
           new S3ProgressListener() {
@@ -281,6 +291,7 @@ public class DelaAWS {
         });
         writer.setUpload(upload);
         upload.waitForCompletion();
+        completed.accept(new Try.Success(true));
         return true;
       });
       writer.setTask(appendStreamTask);
@@ -289,53 +300,86 @@ public class DelaAWS {
 
     @Override
     public synchronized void transferred() {
-      System.err.println(pendingPos + "/" + upload.get().getProgress().getBytesTransferred());
-      callbacks(upload.get().getProgress().getBytesTransferred());
+      if (upload.isPresent()) {
+//        System.err.println(pendingPos + "/" + upload.get().getProgress().getBytesTransferred());
+        confirmedPos = upload.get().getProgress().getBytesTransferred();
+        callbacks(confirmedPos);
+      } else {
+        System.err.println("upload not prepared yet");
+      }
+      while (appendPos < confirmedPos + (PIPE_SIZE - 1) * BLOCK_SIZE && moveToPipe()) {
+//        System.err.println("confirmed:" + confirmedPos + " pending:" + pendingPos);
+      }
     }
 
     @Override
     public synchronized void transferCompleted() {
-      System.err.println(pendingPos + "/" + upload.get().getProgress().getBytesTransferred());
-      callbacks(upload.get().getProgress().getBytesTransferred());
+      if (upload.isPresent()) {
+//        System.err.println(pendingPos + "/" + upload.get().getProgress().getBytesTransferred());
+        confirmedPos = upload.get().getProgress().getBytesTransferred();
+        callbacks(confirmedPos);
+      } else {
+        System.err.println("upload not prepared yet");
+      }
     }
 
-    private void callbacks(Long confirmedPos) {
-      Iterator<Map.Entry<Long, Pair<Integer, Consumer<Try<Boolean>>>>> it = pendingAppends.entrySet().iterator();
+    private synchronized void callbacks(Long confirmedPos) {
+      Iterator<Map.Entry<Long, Pair<Integer, Consumer<Try<Boolean>>>>> it = pendingResp.entrySet().iterator();
       while (it.hasNext()) {
         Map.Entry<Long, Pair<Integer, Consumer<Try<Boolean>>>> next = it.next();
-        if (next.getKey() + next.getValue().getValue0() <= confirmedPos) {
-          next.getValue().getValue1().accept(new Try.Success(true));
+        long pos = next.getKey();
+        int dataSize = next.getValue().getValue0();
+        Consumer<Try<Boolean>> callback = next.getValue().getValue1();
+        if (pos + dataSize <= confirmedPos) {
+          callback.accept(new Try.Success(true));
           it.remove();
         }
-        if (next.getKey() > confirmedPos) {
+        if (pos > confirmedPos) {
           return;
         }
       }
     }
 
     @Override
-    public synchronized void error(Throwable t) {
-      Iterator<Map.Entry<Long, Pair<Integer, Consumer<Try<Boolean>>>>> it = pendingAppends.entrySet().iterator();
+    public synchronized void appendError(DelaStorageException ex) {
+      Iterator<Map.Entry<Long, Pair<Integer, Consumer<Try<Boolean>>>>> it = pendingResp.entrySet().iterator();
       while (it.hasNext()) {
         Map.Entry<Long, Pair<Integer, Consumer<Try<Boolean>>>> next = it.next();
-        next.getValue().getValue1().accept(new Try.Success(true));
+        Consumer<Try<Boolean>> callback = next.getValue().getValue1();
+        callback.accept(new Try.Failure(ex));
         it.remove();
       }
+      completed.accept(new Try.Failure(ex));
     }
 
     @Override
     public synchronized void write(long pos, byte[] data, Consumer<Try<Boolean>> callback) {
-      if (pendingPos != pos) {
-        String msg = "pending pos:" + pendingPos + " pos:" + pos;
-        callback.accept(new Try.Failure(new DelaStorageException(msg, StorageType.AWS)));
+      pendingReq.put(pos, data);
+      pendingResp.put(pos, Pair.with(data.length, callback));
+      while (appendPos < confirmedPos + (PIPE_SIZE - 1) * BLOCK_SIZE && moveToPipe()) {
+//        System.err.println("confirmed:" + confirmedPos + " pending:" + pendingPos);
       }
-      try {
-        out.write(data);
-        pendingPos += data.length;
-        pendingAppends.put(pos, Pair.with(data.length, callback));
-      } catch (IOException ex) {
-        String msg = "append error1";
-        callback.accept(new Try.Failure(new DelaStorageException(msg, ex, StorageType.AWS)));
+    }
+
+    private synchronized boolean moveToPipe() {
+      if (!pendingReq.isEmpty()) {
+        Long pos = pendingReq.firstKey();
+//        System.err.println("move to pipe:" + pos);
+        byte[] data = pendingReq.remove(pos);
+        if (appendPos != pos) {
+          String msg = "pipe move error1";
+          appendError(new DelaStorageException(msg, StorageType.AWS));
+        }
+        appendPos += data.length;
+        try {
+          out.write(data);
+        } catch (IOException ex) {
+          String msg = "pipe move error2";
+          appendError(new DelaStorageException(msg, ex, StorageType.AWS));
+        }
+        return true;
+      } else {
+        return false;
       }
     }
 
@@ -348,6 +392,7 @@ public class DelaAWS {
         String msg = "close error1";
         return new Try.Failure(new DelaStorageException(msg, ex, StorageType.AWS));
       } finally {
+
         try {
           in.close();
         } catch (IOException ex) {
@@ -412,7 +457,7 @@ public class DelaAWS {
 
     public void transferCompleted();
 
-    public void error(Throwable t);
+    public void appendError(DelaStorageException ex);
   }
 
   //************************************************BASE****************************************************************
@@ -423,6 +468,14 @@ public class DelaAWS {
         return new Try.Failure(new DelaStorageException(DelaStorageException.RESOURCE_DOES_NOT_EXIST, StorageType.AWS));
       } else {
         return new Try.Success(meta);
+      }
+    } catch (AmazonS3Exception ex) {
+      AmazonS3Exception s3Ex = (AmazonS3Exception) ex;
+      if ("Not Found".equals(s3Ex.getErrorMessage())) {
+        return new Try.Failure(new DelaStorageException(DelaStorageException.RESOURCE_DOES_NOT_EXIST, StorageType.AWS));
+      } else {
+        String msg = "error getting object metadata";
+        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.AWS));
       }
     } catch (SdkClientException ex) {
       String msg = "error getting object metadata";
@@ -461,15 +514,20 @@ public class DelaAWS {
       .flatMap(tryTSucc1((S3Object s3Object) -> {
         try (S3ObjectInputStream in = s3Object.getObjectContent()) {
           int readLength = (int) (range.upperAbsEndpoint() - range.lowerAbsEndpoint() + 1);
-          byte[] val = new byte[readLength];
-          int read = in.read(val);
-          if (read != readLength) {
-            String msg = "read error1";
-            return new Try.Failure(new DelaStorageException(msg, StorageType.AWS));
-          }
-          return tryVal(val);
+          byte[] readVal = new byte[readLength];
+          ByteBuffer readBuf = ByteBuffer.wrap(readVal);
+          do {
+            int size = in.available();
+            if (size > 0) {
+              byte[] val = new byte[size];
+              int read = in.read(val);
+              readLength -= size;
+              readBuf.put(val);
+            }
+          } while (readLength > 0);
+          return tryVal(readVal);
         } catch (IOException ex) {
-          String msg = "read error2";
+          String msg = "read error1";
           return new Try.Failure(new DelaStorageException(msg, ex, StorageType.AWS));
         }
       }));
@@ -507,7 +565,7 @@ public class DelaAWS {
   public static TransferManager s3Transfer(AmazonS3 s3) {
     TransferManager tm = TransferManagerBuilder.standard()
       .withS3Client(s3)
-      .withMultipartCopyPartSize(10 * 1024 * 1024l)
+      .withMultipartCopyPartSize(1l * BLOCK_SIZE)
       .build();
     return tm;
   }
@@ -522,7 +580,7 @@ public class DelaAWS {
 
   public static Try<Long> size(AmazonS3 client, String bucketName, String key) {
     return getObjectMetadata(client, bucketName, key)
-      .flatMap(tryFSucc1((ObjectMetadata meta) -> tryVal(meta.getContentLength())));
+      .flatMap(tryTSucc1((ObjectMetadata meta) -> tryVal(meta.getContentLength())));
   }
 
 }

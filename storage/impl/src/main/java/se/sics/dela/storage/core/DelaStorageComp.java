@@ -61,6 +61,7 @@ public class DelaStorageComp extends ComponentDefinition {
   private Optional<DelaReadStream> readSession;
   private long pendingPos;
   private long confirmedPos;
+  private Consumer<Try<Boolean>> appendCompleted;
   private final Map<Identifier, StreamStorageOpRead.Request> pendingReads = new HashMap<>();
   private final Map<Identifier, StreamStorageOpWrite.Request> pendingWrites = new HashMap<>();
 
@@ -140,7 +141,15 @@ public class DelaStorageComp extends ComponentDefinition {
   };
 
   private void setupAppendSession() {
-    Try<DelaAppendStream> rs = file.appendStream(timerProxy);
+    appendCompleted = (Try<Boolean> result) -> {
+      if(result.isFailure()) {
+        throw new RuntimeException(TryHelper.tryError(result));
+      }
+      appendSession.get().close();
+      appendSession = Optional.empty();
+    };
+    Try<DelaAppendStream> rs = file.size()
+      .flatMap(TryHelper.tryFSucc1((Long fileSize) -> file.appendStream(fileSize, timerProxy, appendCompleted)));
     if (rs.isSuccess()) {
       appendSession = Optional.of(rs.get());
     } else {

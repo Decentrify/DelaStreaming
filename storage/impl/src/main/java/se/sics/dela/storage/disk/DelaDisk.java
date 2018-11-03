@@ -148,7 +148,7 @@ public class DelaDisk {
     public DiskResource getResource() {
       return resource;
     }
-    
+
     @Override
     public StorageType storageType() {
       return StorageType.DISK;
@@ -210,11 +210,11 @@ public class DelaDisk {
     }
 
     @Override
-    public Try<DelaAppendStream> appendStream(TimerProxy timer) {
+    public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed) {
       String filePath = resource.dirPath + File.separator + resource.fileName;
       try {
         RandomAccessFile raf = new RandomAccessFile(filePath, "rw");
-        return new Try.Success(new AppendStream(filePath, raf));
+        return new Try.Success(new AppendStream(filePath, raf, appendSize, completed));
       } catch (FileNotFoundException ex) {
         String msg = "could not find file:" + filePath;
         return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
@@ -263,22 +263,41 @@ public class DelaDisk {
 
     private final String filePath;
     private final RandomAccessFile raf;
+    private final long appendSize;
+    private long appendPos = 0;
+    private final Consumer<Try<Boolean>> completed;
 
-    public AppendStream(String filePath, RandomAccessFile raf) {
+    public AppendStream(String filePath, RandomAccessFile raf, long appendSize, Consumer<Try<Boolean>> completed) {
       this.filePath = filePath;
       this.raf = raf;
+      this.appendSize = appendSize;
+      this.completed = completed;
     }
 
     @Override
     public void write(long pos, byte[] data, Consumer<Try<Boolean>> callback) {
+      if (appendPos != pos) {
+        appendError(callback, "append problem - appendPos:" + appendPos + " pos:" + pos);
+        return;
+      }
       try {
         raf.seek(pos);
         raf.write(data);
+        appendPos += data.length;
         callback.accept(new Try.Success(true));
+        if (appendPos == appendSize) {
+          completed.accept(new Try.Success(true));
+        }
       } catch (IOException ex) {
-        String msg = "could not write file:" + filePath;
-        callback.accept(new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK)));
+        appendError(callback, "could not write file:" + filePath);
+        return;
       }
+    }
+
+    private void appendError(Consumer<Try<Boolean>> callback, String msg) {
+      Try.Failure failure = new Try.Failure(new DelaStorageException(msg, StorageType.DISK));
+      callback.accept(failure);
+      completed.accept(failure);
     }
 
     @Override

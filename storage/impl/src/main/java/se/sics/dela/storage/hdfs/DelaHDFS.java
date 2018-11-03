@@ -79,13 +79,13 @@ public class DelaHDFS {
     public Pair<DelaStorageComp.Init, Long> initiate(StorageResource resource, Logger logger) {
       HDFSResource hdfsResource = (HDFSResource) resource;
       Try<DelaFileHandler<HDFSEndpoint, HDFSResource>> file = storage.get(hdfsResource)
-        .recoverWith(recoverFrom(StorageType.HDFS, DelaStorageException.RESOURCE_DOES_NOT_EXIST, 
+        .recoverWith(recoverFrom(StorageType.HDFS, DelaStorageException.RESOURCE_DOES_NOT_EXIST,
           () -> storage.create(hdfsResource)));
-      if(file.isFailure()) {
+      if (file.isFailure()) {
         throw new RuntimeException(TryHelper.tryError(file));
       }
       Try<Long> pos = file.get().size();
-      if(pos.isFailure()) {
+      if (pos.isFailure()) {
         throw new RuntimeException(TryHelper.tryError(pos));
       }
       DelaStorageComp.Init init = new DelaStorageComp.Init(file.get(), pos.get());
@@ -196,7 +196,7 @@ public class DelaHDFS {
     public HDFSResource getResource() {
       return resource;
     }
-    
+
     @Override
     public StorageType storageType() {
       return StorageType.HDFS;
@@ -240,15 +240,16 @@ public class DelaHDFS {
     }
 
     @Override
-    public Try<DelaAppendStream> appendStream(TimerProxy timer) {
+    public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed) {
       try {
         String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
         FSDataOutputStream out = dfs.append(new Path(filePath));
-        Try<Long> size = DelaHDFS.fileSize(dfs, filePath);
-        if (!size.isSuccess()) {
-          return (Try.Failure) size;
+        Try<Long> appendPos = DelaHDFS.fileSize(dfs, filePath);
+        if (!appendPos.isSuccess()) {
+          return (Try.Failure) appendPos;
         }
-        AppendStream session = new AppendStream(endpoint, resource, dfs, out, doAs, size.get());
+        AppendStream session = new AppendStream(endpoint, resource, dfs, out, doAs, appendPos.get(),
+          appendSize, completed);
         session.setup(timer);
         return new Try.Success(session);
       } catch (IOException ex) {
@@ -268,20 +269,29 @@ public class DelaHDFS {
     private final FSDataOutputStream out;
     private final DoAs doAs;
 
+    private final Consumer<Try<Boolean>> completed;
+    private final long appendStart;
+    private final long appendSize;
+    private long appendPos;
     private long confirmedPos;
-    private long pendingPos;
+
     private final Map<Pair<Long, Long>, Consumer<Try<Boolean>>> pending = new HashMap<>();
     private TimerProxy timer;
     private UUID flushTimer;
 
     public AppendStream(HDFSEndpoint endpoint, HDFSResource resource,
-      DistributedFileSystem dfs, FSDataOutputStream out, DoAs doAs, long pos) {
+      DistributedFileSystem dfs, FSDataOutputStream out, DoAs doAs, long appendStart,
+      long appendSize, Consumer<Try<Boolean>> completed) {
       this.endpoint = endpoint;
       this.resource = resource;
       this.dfs = dfs;
       this.out = out;
       this.doAs = doAs;
-      this.confirmedPos = pos;
+      this.completed = completed;
+      this.appendSize = appendSize;
+      this.appendStart = appendStart;
+      this.appendPos = appendStart;
+      this.confirmedPos = appendStart;
     }
 
     private void setup(TimerProxy timer) {
@@ -291,19 +301,19 @@ public class DelaHDFS {
 
     @Override
     public void write(long pos, byte[] data, Consumer<Try<Boolean>> callback) {
-      if (pendingPos != pos) {
-        String msg = "HDFS supports append only - pending pos:" + pendingPos + " write pos:" + pos;
-        callback.accept(new Try.Failure(new DelaStorageException(msg, StorageType.HDFS)));
+      if (appendPos != pos) {
+        String msg = "HDFS supports append only - pending pos:" + appendPos + " write pos:" + pos;
+        appendError(new Try.Failure(new DelaStorageException(msg, StorageType.HDFS)));
       }
+      pending.put(Pair.with(appendPos, appendPos + data.length), callback);
       Try<Boolean> r = doAs.perform(DelaHDFS.appendOp(out, data));
       if (r.isSuccess()) {
-        pending.put(Pair.with(pendingPos, pendingPos + data.length), callback);
-        pendingPos += data.length;
+        appendPos += data.length;
         if (flushCounter()) {
           checkPendingAppends();
         }
       } else {
-        callback.accept((Try.Failure) r);
+        appendError(r);
       }
     }
 
@@ -315,8 +325,13 @@ public class DelaHDFS {
       };
     }
 
+    private void appendError(Try failure) {
+      pending.values().forEach((Consumer<Try<Boolean>> callback) -> callback.accept(failure));
+      completed.accept(failure);
+    }
+
     private boolean flushCounter() {
-      return (pendingPos - confirmedPos) > FLUSH_COUNTER_MB * 1024 * 1024;
+      return (appendPos - confirmedPos) > FLUSH_COUNTER_MB * 1024 * 1024;
     }
 
     private void checkPendingAppends() {
@@ -337,6 +352,9 @@ public class DelaHDFS {
         } else {
           break;
         }
+      }
+      if (confirmedPos == appendStart + appendSize) {
+        completed.accept(new Try.Success(true));
       }
     }
 

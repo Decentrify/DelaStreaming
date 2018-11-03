@@ -215,7 +215,7 @@ public class DelaGCP {
     }
 
     @Override
-    public Try<DelaAppendStream> appendStream(TimerProxy timer) {
+    public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed) {
       Try<Long> pos = size();
       if (pos.isFailure()) {
         return (Try.Failure) pos;
@@ -224,10 +224,10 @@ public class DelaGCP {
         return new Try.Failure(new DelaStorageException(msg, StorageType.GCP));
       } else {
         WriteChannel out = DelaGCP.writeChannel(blob);
-        return new Try.Success(new AppendStream(this, out));
+        return new Try.Success(new AppendStream(completed, appendSize, this, out));
       }
     }
-    
+
     private void update() {
       Storage storage = blob.getStorage();
       try {
@@ -261,23 +261,46 @@ public class DelaGCP {
 
   public static class AppendStream implements DelaAppendStream {
 
+    private final Consumer<Try<Boolean>> completed;
     private final FileHandler parent;
     private WriteChannel out;
-    private long pendingPos = 0;
+    private final long appendSize;
+    private long appendPos = 0;
 
-    public AppendStream(FileHandler parent, WriteChannel out) {
+    public AppendStream(Consumer<Try<Boolean>> completed, long appendSize, FileHandler parent, WriteChannel out) {
+      this.completed = completed;
+      this.appendSize = appendSize;
       this.parent = parent;
       this.out = out;
     }
 
     @Override
     public void write(long pos, byte[] data, Consumer<Try<Boolean>> callback) {
-      if (pendingPos != pos) {
-        String msg = "pending pos:" + pendingPos + " pos:" + pos;
-        callback.accept(new Try.Failure(new DelaStorageException(msg, StorageType.GCP)));
+      if (appendPos != pos) {
+        appendError(callback, "pending pos:" + appendPos + " pos:" + pos);
+        return;
       }
-      callback.accept(DelaGCP.write(out, data));
-      pendingPos += data.length;
+      Try<Boolean> result = DelaGCP.write(out, data);
+      if (result.isFailure()) {
+        appendError(callback, result);
+        return;
+      } else {
+        appendPos += data.length;
+        callback.accept(result);
+        if (appendPos == appendSize) {
+          completed.accept(new Try.Success(true));
+        }
+      }
+    }
+    
+    private void appendError(Consumer<Try<Boolean>> callback, String msg) {
+      Try.Failure failure = new Try.Failure(new DelaStorageException(msg, StorageType.DISK));
+      appendError(callback, failure);
+    }
+    
+    private void appendError(Consumer<Try<Boolean>> callback, Try failure) {
+      callback.accept(failure);
+      completed.accept(failure);
     }
 
     @Override
@@ -618,7 +641,6 @@ public class DelaGCP {
   }
 
   public static WriteChannel writeChannel(Blob blob) {
-//    BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType("text/plain").build();
     WriteChannel writer = blob.writer();
     return writer;
   }
