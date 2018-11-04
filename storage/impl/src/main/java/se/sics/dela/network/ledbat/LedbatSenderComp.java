@@ -58,7 +58,7 @@ public class LedbatSenderComp extends ComponentDefinition {
   private final RTTEstimator rttEstimator;
   private final RingTimer<RingContainer> ringTimer;
   private final LedbatConfig ledbatConfig;
-  private LinkedList<LedbatSenderEvent.Send> pendingData = new LinkedList<>();
+  private LinkedList<LedbatSenderEvent.Request> pendingData = new LinkedList<>();
 
   private UUID ringTid;
 
@@ -105,9 +105,9 @@ public class LedbatSenderComp extends ComponentDefinition {
     timer.cancelPeriodicTimer(ringTid);
   }
 
-  Handler handleReq = new Handler<LedbatSenderEvent.Send>() {
+  Handler handleReq = new Handler<LedbatSenderEvent.Request>() {
     @Override
-    public void handle(LedbatSenderEvent.Send req) {
+    public void handle(LedbatSenderEvent.Request req) {
       pendingData.add(req);
       trySend();
     }
@@ -134,7 +134,7 @@ public class LedbatSenderComp extends ComponentDefinition {
 
   private void trySend() {
     while (!pendingData.isEmpty() && cwnd.canSend(ledbatConfig.MSS)) {
-      LedbatSenderEvent.Send event = pendingData.removeFirst();
+      LedbatSenderEvent.Request event = pendingData.removeFirst();
       logger.trace("sending:{}", event);
       send();
       cwnd.send(ledbatConfig.MSS);
@@ -148,9 +148,9 @@ public class LedbatSenderComp extends ComponentDefinition {
 
   public static class RingContainer implements RingTimer.Container {
 
-    public final LedbatSenderEvent.Send req;
+    public final LedbatSenderEvent.Request req;
 
-    public RingContainer(LedbatSenderEvent.Send req) {
+    public RingContainer(LedbatSenderEvent.Request req) {
       this.req = req;
     }
 
@@ -164,12 +164,10 @@ public class LedbatSenderComp extends ComponentDefinition {
 
     public final KAddress selfAdr;
     public final KAddress dstAdr;
-    public final long seed;
 
-    public Init(KAddress selfAdr, KAddress dstAdr, long seed) {
+    public Init(KAddress selfAdr, KAddress dstAdr) {
       this.selfAdr = selfAdr;
       this.dstAdr = dstAdr;
-      this.seed = seed;
     }
   }
 }

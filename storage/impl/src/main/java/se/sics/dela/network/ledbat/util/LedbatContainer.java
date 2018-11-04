@@ -16,18 +16,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.dela.network.ledbat.util;
 
-package se.sics.dela.network.ledbat;
-
-import se.sics.kompics.PortType;
+import se.sics.kompics.util.Identifiable;
+import se.sics.kompics.util.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LedbatSenderPort extends PortType {
-  {
-    request(LedbatSenderEvent.Request.class);
-    indication(LedbatSenderEvent.Acked.class);
-    indication(LedbatSenderEvent.Timeout.class);
+public class LedbatContainer implements Identifiable {
+  public final Identifier dataId;
+  public final byte[] data;
+  public LedbatContainer(Identifier dataId, byte[] data) {
+    this.dataId = dataId;
+    this.data = data;
+  }
+
+  @Override
+  public Identifier getId() {
+    return dataId;
   }
 }

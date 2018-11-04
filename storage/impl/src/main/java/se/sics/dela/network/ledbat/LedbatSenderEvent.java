@@ -29,12 +29,12 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
  */
 public class LedbatSenderEvent {
 
-  public static class Send<D extends Identifiable> extends Direct.Request<Indication> implements Identifiable {
+  public static class Request<D extends Identifiable> extends Direct.Request<Indication> implements Identifiable {
 
     public final Identifier eventId;
     public final D data;
 
-    public Send(D data) {
+    public Request(D data) {
       this.eventId = BasicIdentifiers.eventId();
       this.data = data;
     }
@@ -54,9 +54,9 @@ public class LedbatSenderEvent {
   }
 
   public static class Indication<D extends Identifiable> implements Direct.Response, Identifiable {
-    public final Send<D> req;
+    public final Request<D> req;
     
-    public Indication(Send<D> req) {
+    public Indication(Request<D> req) {
       this.req = req;
     }
     
@@ -68,14 +68,14 @@ public class LedbatSenderEvent {
 
   public static class Acked<D extends Identifiable> extends Indication<D> {
 
-    public Acked(Send<D> req) {
+    public Acked(Request<D> req) {
       super(req);
     }
   }
 
   public static class Timeout<D extends Identifiable> extends Indication<D> {
 
-    public Timeout(Send<D> req) {
+    public Timeout(Request<D> req) {
       super(req);
     }
   }

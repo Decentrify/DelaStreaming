@@ -18,7 +18,9 @@
  */
 package se.sics.dela.network.ledbat;
 
+import se.sics.dela.network.ledbat.msg.LedbatContainerSerializer;
 import se.sics.dela.network.ledbat.msg.LedbatMsgSerializer;
+import se.sics.dela.network.ledbat.util.LedbatContainer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 
@@ -29,11 +31,12 @@ import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 public class LedbatSerializerSetup {
 
   public static int maxSerializers = 5;
-  public static int serializerIds = 2;
+  public static int serializerIds = 3;
 
   public static enum LedbatSerializers {
     LedbatMsgData(LedbatMsg.Data.class, "delaLedbatMsgData"),
-    LedbatMsgAck(LedbatMsg.Ack.class, "delaLedbatMsgAck");
+    LedbatMsgAck(LedbatMsg.Ack.class, "delaLedbatMsgAck"),
+    LedbatContainer(LedbatContainer.class, "delaLedbatContainer");
 
     public final Class serializedClass;
     public final String serializerName;
@@ -68,6 +71,11 @@ public class LedbatSerializerSetup {
     Serializers.register(ledbatMsgAckSerializer, LedbatSerializers.LedbatMsgAck.serializerName);
     Serializers.register(LedbatSerializers.LedbatMsgAck.serializedClass,
       LedbatSerializers.LedbatMsgAck.serializerName);
+    
+    LedbatContainerSerializer ledbatContainerSerializer = new LedbatContainerSerializer(currentId++);
+    Serializers.register(ledbatContainerSerializer, LedbatSerializers.LedbatContainer.serializerName);
+    Serializers.register(LedbatSerializers.LedbatContainer.serializedClass,
+      LedbatSerializers.LedbatContainer.serializerName);
 
     assert startingId + serializerIds == currentId;
     assert serializerIds <= maxSerializers;

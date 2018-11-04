@@ -16,18 +16,30 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+package se.sics.dela.network.ledbat.receiver;
 
-package se.sics.dela.network.ledbat;
-
-import se.sics.kompics.PortType;
+import se.sics.dela.network.ledbat.LedbatReceiverEvent;
+import se.sics.dela.network.ledbat.LedbatReceiverPort;
+import se.sics.kompics.ComponentDefinition;
+import se.sics.kompics.Handler;
+import se.sics.kompics.Positive;
 
 /**
+ *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LedbatSenderPort extends PortType {
-  {
-    request(LedbatSenderEvent.Request.class);
-    indication(LedbatSenderEvent.Acked.class);
-    indication(LedbatSenderEvent.Timeout.class);
+public class DriverComp extends ComponentDefinition {
+
+  Positive<LedbatReceiverPort> ledbatPort = requires(LedbatReceiverPort.class);
+
+  public DriverComp() {
+    subscribe(handleReceived, ledbatPort);
   }
+
+  Handler handleReceived = new Handler<LedbatReceiverEvent.Received>() {
+    @Override
+    public void handle(LedbatReceiverEvent.Received event) {
+      logger.info("received:", event.data.getId());
+    }
+  };
 }
