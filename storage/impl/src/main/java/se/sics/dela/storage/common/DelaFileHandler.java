@@ -36,6 +36,8 @@ public interface DelaFileHandler<E extends StorageEndpoint, R extends StorageRes
   
   public StorageType storageType();
   
+  public void setTimerProxy(TimerProxy timerProxy);
+  
   /**
    *
    * @return Try.Success - long as size; Try.Failure - wrapped cause
@@ -63,10 +65,10 @@ public interface DelaFileHandler<E extends StorageEndpoint, R extends StorageRes
   /**
    * open and keep open session for repeated reads
    */
-  public Try<DelaReadStream> readStream(TimerProxy timer);
+  public Try<DelaReadStream> readStream();
 
   /**
    * open and keep open session for repeated writes
    */
-  public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed);
+  public Try<DelaAppendStream> appendStream(long appendSize, Consumer<Try<Boolean>> completed);
 }

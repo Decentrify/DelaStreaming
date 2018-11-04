@@ -214,10 +214,12 @@ public class DelaStorageTest {
 
   private <E extends StorageEndpoint, R extends StorageResource> DelaFileHandler<E, R> prepareFile(
     DelaStorageHandler<E, R> storage, R resource) throws Throwable {
-    Try<DelaFileHandler> file = new Try.Success(true)
+    Try<DelaFileHandler> tryFile = new Try.Success(true)
       .flatMap(TryHelper.tryTSucc0(() -> storage.delete(resource)))
       .flatMap(TryHelper.tryTSucc0(() -> storage.create(resource)));
-    return file.checkedGet();
+    DelaFileHandler file = tryFile.checkedGet();
+    file.setTimerProxy(new TestTimer());
+    return file;
   }
 
   private <E extends StorageEndpoint, R extends StorageResource> void testAppend(
@@ -292,7 +294,7 @@ public class DelaStorageTest {
       };
 
       long start = System.nanoTime();
-      Try<DelaAppendStream> appendStream = file.appendStream(1l * blocks * blockSize, new TestTimer(), completed);
+      Try<DelaAppendStream> appendStream = file.appendStream(1l * blocks * blockSize, completed);
       if (appendStream.isFailure()) {
         return (Try.Failure) appendStream;
       }
@@ -350,7 +352,7 @@ public class DelaStorageTest {
         }
       };
       long start = System.nanoTime();
-      Try<DelaReadStream> appendSession = storage.readStream(new TestTimer());
+      Try<DelaReadStream> appendSession = storage.readStream();
       if (appendSession.isFailure()) {
         return (Try.Failure) appendSession;
       }

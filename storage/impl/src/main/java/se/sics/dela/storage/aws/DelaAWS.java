@@ -137,6 +137,7 @@ public class DelaAWS {
     public final AWSResource resource;
     private final AmazonS3 client;
     private final TransferManager tm;
+    private Optional<TimerProxy> timer = Optional.empty();
 
     private FileHandler(ExecutorService executors, AWSEndpoint endpoint, AWSResource resource, AmazonS3 client,
       TransferManager tm) {
@@ -169,6 +170,11 @@ public class DelaAWS {
     }
 
     @Override
+    public void setTimerProxy(TimerProxy timer) {
+      this.timer = Optional.of(timer);
+    }
+    
+    @Override
     public Try<Long> size() {
       Try<Long> result = DelaAWS.size(client, resource.bucket, resource.getKey());
       return result;
@@ -199,12 +205,16 @@ public class DelaAWS {
     }
 
     @Override
-    public Try<DelaReadStream> readStream(TimerProxy timer) {
+    public Try<DelaReadStream> readStream() {
       return new Try.Success(new ReadStream(client, resource));
     }
 
     @Override
-    public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed) {
+    public Try<DelaAppendStream> appendStream(long appendSize, Consumer<Try<Boolean>> completed) {
+      if(!timer.isPresent()) {
+        String msg = "aws storage not configured properly - missing timer proxy";
+        return new Try.Failure(new DelaStorageException(msg, StorageType.AWS));
+      }
       return AppendStream.instance(executors, completed, tm, resource, appendSize);
     }
   }

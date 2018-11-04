@@ -22,5 +22,5 @@ package se.sics.dela.storage.common;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public enum StorageType {
-  MEMORY, DISK, HDFS, GCP, AWS, KAFKA
+  DISK, HDFS, GCP, AWS, NETWORK
 }

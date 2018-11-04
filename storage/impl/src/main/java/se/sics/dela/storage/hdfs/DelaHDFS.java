@@ -24,6 +24,7 @@ import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -179,6 +180,7 @@ public class DelaHDFS {
     public final HDFSResource resource;
     private final DistributedFileSystem dfs;
     private final DoAs doAs;
+    private Optional<TimerProxy> timer = Optional.empty();
 
     public FileHandler(HDFSEndpoint endpoint, HDFSResource resource, DistributedFileSystem dfs) {
       this.endpoint = endpoint;
@@ -200,6 +202,11 @@ public class DelaHDFS {
     @Override
     public StorageType storageType() {
       return StorageType.HDFS;
+    }
+    
+    @Override
+    public void setTimerProxy(TimerProxy timer) {
+      this.timer = Optional.of(timer);
     }
 
     @Override
@@ -225,7 +232,7 @@ public class DelaHDFS {
     }
 
     @Override
-    public Try<DelaReadStream> readStream(TimerProxy timer) {
+    public Try<DelaReadStream> readStream() {
       try {
         String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
         FSDataInputStream in = dfs.open(new Path(filePath));
@@ -240,7 +247,11 @@ public class DelaHDFS {
     }
 
     @Override
-    public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed) {
+    public Try<DelaAppendStream> appendStream(long appendSize, Consumer<Try<Boolean>> completed) {
+      if(!timer.isPresent()) {
+        String msg = "hdfs storage not configured properly - missing timer proxy";
+        return new Try.Failure(new DelaStorageException(msg, StorageType.HDFS));
+      }
       try {
         String filePath = resource.dirPath + Path.SEPARATOR + resource.fileName;
         FSDataOutputStream out = dfs.append(new Path(filePath));
@@ -250,7 +261,7 @@ public class DelaHDFS {
         }
         AppendStream session = new AppendStream(endpoint, resource, dfs, out, doAs, appendPos.get(),
           appendSize, completed);
-        session.setup(timer);
+        session.setup(timer.get());
         return new Try.Success(session);
       } catch (IOException ex) {
         return new Try.Failure(ex);

@@ -184,6 +184,10 @@ public class DelaGCP {
     }
 
     @Override
+    public void setTimerProxy(TimerProxy timer) {
+    }
+    
+    @Override
     public Try<Long> size() {
       return DelaGCP.blobSize(blob);
     }
@@ -209,13 +213,13 @@ public class DelaGCP {
     }
 
     @Override
-    public Try<DelaReadStream> readStream(TimerProxy timer) {
+    public Try<DelaReadStream> readStream() {
       ReadChannel in = DelaGCP.readChannel(blob);
       return new Try.Success(new ReadStream(in));
     }
 
     @Override
-    public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed) {
+    public Try<DelaAppendStream> appendStream(long appendSize, Consumer<Try<Boolean>> completed) {
       Try<Long> pos = size();
       if (pos.isFailure()) {
         return (Try.Failure) pos;

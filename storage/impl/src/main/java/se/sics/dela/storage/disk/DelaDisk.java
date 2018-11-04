@@ -160,6 +160,10 @@ public class DelaDisk {
     }
 
     @Override
+    public void setTimerProxy(TimerProxy timer) {
+    }
+
+    @Override
     public Try<byte[]> read(KRange range) {
       int readLength = (int) (range.upperAbsEndpoint() - range.lowerAbsEndpoint() + 1);
       byte[] readVal = new byte[readLength];
@@ -198,7 +202,7 @@ public class DelaDisk {
     }
 
     @Override
-    public Try<DelaReadStream> readStream(TimerProxy timer) {
+    public Try<DelaReadStream> readStream() {
       String filePath = resource.dirPath + File.separator + resource.fileName;
       try {
         RandomAccessFile raf = new RandomAccessFile(filePath, "rw");
@@ -210,7 +214,7 @@ public class DelaDisk {
     }
 
     @Override
-    public Try<DelaAppendStream> appendStream(long appendSize, TimerProxy timer, Consumer<Try<Boolean>> completed) {
+    public Try<DelaAppendStream> appendStream(long appendSize, Consumer<Try<Boolean>> completed) {
       String filePath = resource.dirPath + File.separator + resource.fileName;
       try {
         RandomAccessFile raf = new RandomAccessFile(filePath, "rw");

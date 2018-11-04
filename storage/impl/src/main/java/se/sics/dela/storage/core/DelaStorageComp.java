@@ -73,6 +73,7 @@ public class DelaStorageComp extends ComponentDefinition {
     file = init.storage;
     pendingPos = init.pos;
     confirmedPos = pendingPos;
+    file.setTimerProxy(timerProxy);
 
     subscribe(handleStart, control);
     subscribe(handleReadRequest, resourcePort);
@@ -103,7 +104,7 @@ public class DelaStorageComp extends ComponentDefinition {
   };
 
   private void setupReadSession() {
-    Try<DelaReadStream> rs = file.readStream(timerProxy);
+    Try<DelaReadStream> rs = file.readStream();
     if (rs.isSuccess()) {
       readSession = Optional.of(rs.get());
     } else {
@@ -149,7 +150,7 @@ public class DelaStorageComp extends ComponentDefinition {
       appendSession = Optional.empty();
     };
     Try<DelaAppendStream> rs = file.size()
-      .flatMap(TryHelper.tryFSucc1((Long fileSize) -> file.appendStream(fileSize, timerProxy, appendCompleted)));
+      .flatMap(TryHelper.tryFSucc1((Long fileSize) -> file.appendStream(fileSize, appendCompleted)));
     if (rs.isSuccess()) {
       appendSession = Optional.of(rs.get());
     } else {
