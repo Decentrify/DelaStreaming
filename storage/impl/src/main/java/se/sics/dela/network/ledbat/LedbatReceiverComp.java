@@ -82,12 +82,10 @@ public class LedbatReceiverComp extends ComponentDefinition {
 
     public final KAddress selfAdr;
     public final KAddress srcAdr;
-    public final long seed;
 
-    public Init(KAddress selfAdr, KAddress srcAdr, long seed) {
+    public Init(KAddress selfAdr, KAddress srcAdr) {
       this.selfAdr = selfAdr;
       this.srcAdr = srcAdr;
-      this.seed = seed;
     }
   }
 }

@@ -35,7 +35,7 @@
 
   <logger name="se.sics.dela.storage" level="debug" additivity="false"><appender-ref ref="CONSOLE_NID"/></logger>
 
-  <root level="error">
+  <root level="trace">
     <appender-ref ref="CONSOLE" />
   </root>
 

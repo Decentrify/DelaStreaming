@@ -28,3 +28,6 @@
 /storage/example/target/
 /storage/example/src/main/resources/example/logs/
 /storage/impl/target/
+/storage/network/target/
+
+/storage/example/lib/bin/lib/x86_64-MacOSX-gpp/jni/libbarchart-udt-core-2.3.0-SNAPSHOT.jnilib

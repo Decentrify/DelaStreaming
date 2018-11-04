@@ -11,6 +11,10 @@
   <packaging>jar</packaging>
   <name>Dela Storage Example</name>
     
+  <properties>
+    <nat.version>0.0.5-SNAPSHOT</nat.version>
+  </properties>
+  
   <dependencies>
     <dependency>
       <groupId>se.sics.dela.storage</groupId>
@@ -19,9 +23,21 @@
     </dependency>
     
     <dependency>
-      <groupId>se.sics.dela.storage.impl</groupId>
-      <artifactId>core</artifactId>
+      <groupId>se.sics.dela.storage</groupId>
+      <artifactId>impl</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>se.sics.dela.storage</groupId>
+      <artifactId>network</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>se.sics.nat.mngr</groupId>
+      <artifactId>core</artifactId>
+      <version>${nat.version}</version>
     </dependency>
     
     <dependency>
@@ -31,9 +47,42 @@
     </dependency>
     
     <dependency>
-			<groupId>ch.qos.logback</groupId>
-			<artifactId>logback-classic</artifactId>
-			<version>1.2.3</version>
-		</dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <version>1.2.3</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>${junit.version}</version>
+    </dependency>
+    
+    <!-- network -->
+    <dependency>
+      <groupId>se.sics.ktoolbox.croupier</groupId>
+      <artifactId>network</artifactId>
+      <version>${ktoolbox.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>se.sics.nat.stun</groupId>
+      <artifactId>network</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>se.sics.ktoolbox.netmngr</groupId>
+      <artifactId>network</artifactId>
+      <version>${ktoolbox.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>se.sics.ktoolbox.overlaymngr</groupId>
+      <artifactId>network</artifactId>
+      <version>${ktoolbox.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>se.sics.nat.stun</groupId>
+      <artifactId>network</artifactId>
+      <version>${nat.version}</version>
+    </dependency>
   </dependencies>
 </project>
