@@ -52,7 +52,6 @@ import se.sics.nstream.util.range.KRange;
 import se.sics.dela.storage.common.DelaReadStream;
 import se.sics.dela.storage.common.DelaAppendStream;
 import se.sics.dela.storage.common.DelaFileHandler;
-import se.sics.dela.storage.common.DelaHelper;
 import static se.sics.dela.storage.common.DelaHelper.recoverFrom;
 import se.sics.dela.storage.common.DelaStorageHandler;
 import se.sics.dela.storage.common.StorageType;
@@ -212,23 +211,6 @@ public class DelaHDFS {
     @Override
     public Try<Long> size() {
       return doAs.perform(DelaHDFS.fileSizeOp(dfs, endpoint, resource));
-    }
-
-    @Override
-    public Try<byte[]> read(KRange range) {
-      return doAs.perform(DelaHDFS.readOp(dfs, endpoint, resource, range));
-    }
-
-    @Override
-    public Try<byte[]> readAll() {
-      return size()
-        .flatMap(DelaHelper.fullRange(StorageType.HDFS, resource))
-        .flatMap(TryHelper.tryFSucc1((KRange range) -> read(range)));
-    }
-
-    @Override
-    public Try append(long pos, byte[] data) {
-      return doAs.perform(DelaHDFS.writeOp(dfs, endpoint, resource, pos, data));
     }
 
     @Override

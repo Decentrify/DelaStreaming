@@ -193,26 +193,6 @@ public class DelaGCP {
     }
 
     @Override
-    public Try<byte[]> read(KRange range) {
-      return DelaGCP.read(blob, range);
-    }
-
-    @Override
-    public Try<byte[]> readAll() {
-      return size()
-        .flatMap(DelaHelper.fullRange(StorageType.GCP, resource))
-        .flatMap(TryHelper.tryFSucc1((KRange range) -> read(range)));
-    }
-
-    @Override
-    public Try<Boolean> append(long pos, byte[] data) {
-      if (pos != 0) {
-        return new Try.Failure(new DelaStorageException("simple append works only as a full write", StorageType.GCP));
-      }
-      return DelaGCP.write(blob, data);
-    }
-
-    @Override
     public Try<DelaReadStream> readStream() {
       ReadChannel in = DelaGCP.readChannel(blob);
       return new Try.Success(new ReadStream(in));

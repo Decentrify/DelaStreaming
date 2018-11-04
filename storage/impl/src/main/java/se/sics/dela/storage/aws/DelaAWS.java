@@ -50,7 +50,6 @@ import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
 import com.amazonaws.services.s3.transfer.internal.S3ProgressListener;
-import io.netty.buffer.ByteBuf;
 import java.io.IOException;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
@@ -75,7 +74,6 @@ import se.sics.dela.util.TimerProxy;
 import se.sics.ktoolbox.util.TupleHelper;
 import se.sics.ktoolbox.util.trysf.Try;
 import static se.sics.ktoolbox.util.trysf.TryHelper.tryFSucc0;
-import static se.sics.ktoolbox.util.trysf.TryHelper.tryFSucc1;
 import static se.sics.ktoolbox.util.trysf.TryHelper.tryTSucc1;
 import static se.sics.ktoolbox.util.trysf.TryHelper.tryVal;
 import se.sics.nstream.util.range.KRange;
@@ -177,30 +175,6 @@ public class DelaAWS {
     @Override
     public Try<Long> size() {
       Try<Long> result = DelaAWS.size(client, resource.bucket, resource.getKey());
-      return result;
-    }
-
-    @Override
-    public Try<byte[]> read(KRange range) {
-      Try<byte[]> result = DelaAWS.read(client, resource.bucket, resource.getKey(), range);
-      return result;
-    }
-
-    @Override
-    public Try<byte[]> readAll() {
-      Try<byte[]> result = size()
-        .flatMap(DelaHelper.fullRange(StorageType.AWS, resource))
-        .flatMap(tryFSucc1(
-          (KRange range) -> DelaAWS.read(client, resource.bucket, resource.getKey(), range)));
-      return result;
-    }
-
-    @Override
-    public Try<Boolean> append(long pos, byte[] data) {
-      if (pos != 0) {
-        return new Try.Failure(new DelaStorageException("simple append works only as a full write", StorageType.AWS));
-      }
-      Try<Boolean> result = DelaAWS.write(executors, tm, resource, data);
       return result;
     }
 

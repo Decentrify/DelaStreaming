@@ -37,7 +37,6 @@ import se.sics.dela.storage.common.DelaAppendStream;
 import se.sics.dela.storage.core.DelaStorageComp;
 import se.sics.kompics.util.Identifier;
 import se.sics.dela.storage.common.DelaFileHandler;
-import se.sics.dela.storage.common.DelaHelper;
 import se.sics.dela.storage.common.DelaStorageHandler;
 import se.sics.dela.storage.common.StorageType;
 
@@ -161,44 +160,6 @@ public class DelaDisk {
 
     @Override
     public void setTimerProxy(TimerProxy timer) {
-    }
-
-    @Override
-    public Try<byte[]> read(KRange range) {
-      int readLength = (int) (range.upperAbsEndpoint() - range.lowerAbsEndpoint() + 1);
-      byte[] readVal = new byte[readLength];
-      int readPos = (int) range.lowerAbsEndpoint();
-      String f = resource.dirPath + File.separator + resource.fileName;
-      try (RandomAccessFile raf = new RandomAccessFile(f, "rw")) {
-        raf.seek(readPos);
-        raf.readFully(readVal);
-        return new Try.Success(readVal);
-      } catch (IOException ex) {
-        String msg = "could not read file:" + f;
-        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
-      }
-    }
-
-    @Override
-    public Try<byte[]> readAll() {
-      Try<byte[]> result = new Try.Success(true)
-        .flatMap(TryHelper.tryFSucc0(() -> size())) //get file size
-        .flatMap(DelaHelper.fullRange(StorageType.DISK, resource)) //build range
-        .flatMap(TryHelper.tryFSucc1((KRange range) -> read(range))); //read all range
-      return result;
-    }
-
-    @Override
-    public Try<Boolean> append(long pos, byte[] data) {
-      String f = resource.dirPath + File.separator + resource.fileName;
-      try (RandomAccessFile raf = new RandomAccessFile(f, "rw")) {
-        raf.seek(pos);
-        raf.write(data);
-        return new Try.Success(true);
-      } catch (IOException ex) {
-        String msg = "could not write file:" + f;
-        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
-      }
     }
 
     @Override

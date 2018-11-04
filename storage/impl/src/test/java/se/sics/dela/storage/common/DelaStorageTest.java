@@ -23,16 +23,12 @@ import com.google.common.util.concurrent.SettableFuture;
 import java.io.IOException;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Test;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 import se.sics.dela.storage.aws.AWSConfig;
@@ -96,17 +92,6 @@ public class DelaStorageTest {
     testMultiRead(storage, resource, BLOCKS, 10 * 1024 * 1024);
   }
 
-//  @Test
-  public void testAWSRead() throws IOException, Throwable {
-    System.err.println("aws");
-    ExecutorService executors = Executors.newFixedThreadPool(5);
-    AWSConfig config = AWSConfig.read(TypesafeConfig.load()).checkedGet();
-    AWSEndpoint endpoint = new AWSEndpoint(config.credentials, config.bucket, config.region);
-    AWSResource resource = new AWSResource(config.bucket, "/", "test", "file");
-    DelaAWS.StorageHandler storage = DelaAWS.StorageHandler.instance(executors, config.credentials, endpoint);
-    testRead(storage, resource, BLOCKS, 10 * 1024 * 1024);
-  }
-
   //************************************************GCP***************************************************************
   //gcp multiple single append do not make sense since once write channel is close, the blobs become immutable
 //  @Test
@@ -131,27 +116,7 @@ public class DelaStorageTest {
     testMultiRead(storage, resource, BLOCKS, 10 * 1024 * 1024);
   }
 
-//  @Test
-  public void testGCPRead() throws IOException, Throwable {
-    System.err.println("gcp");
-    GCPConfig config = GCPConfig.read(TypesafeConfig.load()).checkedGet();
-    GCPEndpoint endpoint = new GCPEndpoint(config.credentials, config.project, config.bucket);
-    GCPResource resource = new GCPResource(config.bucket, "/", "test", "file");
-    Storage gcp = DelaGCP.getStorage(config.credentials, config.project);
-    DelaGCP.StorageHandler storage = new DelaGCP.StorageHandler(gcp, endpoint);
-    testRead(storage, resource, BLOCKS, 10 * 1024 * 1024);
-  }
-
   //************************************************HDFS****************************************************************
-//  @Test
-  public void testHDFSAppend() throws IOException, Throwable {
-    System.err.println("hdfs");
-    HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
-    HDFSResource resource = new HDFSResource("/test", "file");
-    DelaHDFS.StorageHandler storage = DelaHDFS.StorageHandler.handler(endpoint).checkedGet();
-    testAppend(storage, resource, BLOCKS, 10 * 1024 * 1024);
-  }
-
 //    @Test
   public void testHDFSMultiAppend() throws IOException, Throwable {
     System.err.println("hdfs");
@@ -170,25 +135,7 @@ public class DelaStorageTest {
     testMultiRead(storage, resource, BLOCKS, 10 * 1024 * 1024);
   }
 
-//    @Test
-  public void testHDFSRead() throws IOException, Throwable {
-    System.err.println("hdfs");
-    HDFSEndpoint endpoint = HDFSEndpoint.getBasic("vagrant", "10.0.2.15", 8020).get();
-    HDFSResource resource = new HDFSResource("/test", "file");
-    DelaHDFS.StorageHandler storage = DelaHDFS.StorageHandler.handler(endpoint).checkedGet();
-    testRead(storage, resource, BLOCKS, 10 * 1024 * 1024);
-  }
-
   //***************************************************DISK*************************************************************
-//  @Test
-  public void testDiskAppend() throws Throwable {
-    System.err.println("disk");
-    DiskEndpoint endpoint = new DiskEndpoint();
-    DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
-    DelaDisk.StorageHandler storage = new DelaDisk.StorageHandler(endpoint);
-    testAppend(storage, resource, BLOCKS, 10 * 1024 * 1024);
-  }
-
 //  @Test
   public void testDiskMultiAppend() throws Throwable {
     System.err.println("disk");
@@ -196,15 +143,6 @@ public class DelaStorageTest {
     DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
     DelaDisk.StorageHandler storage = new DelaDisk.StorageHandler(endpoint);
     testMultiAppend(storage, resource, BLOCKS, 10 * 1024 * 1024);
-  }
-
-//  @Test
-  public void testDiskRead() throws Throwable {
-    System.err.println("disk");
-    DiskEndpoint endpoint = new DiskEndpoint();
-    DiskResource resource = new DiskResource("src/test/resources", "disk_test_file");
-    DelaDisk.StorageHandler storage = new DelaDisk.StorageHandler(endpoint);
-    testRead(storage, resource, BLOCKS, 10 * 1024 * 1024);
   }
 
 //  @Test
@@ -224,40 +162,6 @@ public class DelaStorageTest {
     DelaFileHandler file = tryFile.checkedGet();
     file.setTimerProxy(new TestTimer());
     return file;
-  }
-
-  private <E extends StorageEndpoint, R extends StorageResource> void testAppend(
-    DelaStorageHandler<E, R> storage, R resource, int blocks, int blockSize)
-    throws Throwable {
-    System.err.println("test write");
-    DelaFileHandler<E, R> file = prepareFile(storage, resource);
-    Try<Boolean> result = new Try.Success(true)
-      .flatMap(TryHelper.tryTSucc0(appendFile(file, blocks, blockSize)))
-      .flatMap(TryHelper.tryTSucc0(() -> file.size()))
-      .map(tryAssert((Long size) -> Assert.assertEquals(1l * blocks * blockSize, (long) size)))
-      .flatMap(TryHelper.tryTSucc0(() -> storage.delete(resource)));
-    result.checkedGet();
-  }
-
-  private <E extends StorageEndpoint, R extends StorageResource> Supplier<Try<Boolean>> appendFile(
-    DelaFileHandler<E, R> file, int blocks, int blockSize) {
-    return () -> {
-      byte[] block = new byte[blockSize];
-      Random rand = new Random(123);
-      rand.nextBytes(block);
-
-      long start = System.nanoTime();
-      for (int i = 0; i < blocks; i++) {
-        file.append(i * blockSize, block);
-        System.err.println("appended:" + i);
-      }
-      long end = System.nanoTime();
-      long sizeMB = 1l * blocks * blockSize / (1024 * 1024);
-      double time = (double) (end - start) / (1000 * 1000 * 1000);
-      System.err.println("write time(s):" + time);
-      System.err.println("write avg speed(MB/s):" + sizeMB / time);
-      return new Try.Success(true);
-    };
   }
 
   private <E extends StorageEndpoint, R extends StorageResource> void testMultiAppend(
@@ -359,37 +263,6 @@ public class DelaStorageTest {
       double time = (double) (end - start) / (1000 * 1000 * 1000);
       System.err.println("multiread time(s):" + time);
       System.err.println("multiread avg speed(MB/s):" + sizeMB / time);
-      return new Try.Success(true);
-    };
-  }
-
-  private <E extends StorageEndpoint, R extends StorageResource> void testRead(
-    DelaStorageHandler<E, R> storage, R resource, int blocks, int blockSize) throws Throwable {
-    System.err.println("test read");
-    DelaFileHandler<E, R> file = prepareFile(storage, resource);
-    Try<Boolean> result = new Try.Success(true)
-      .flatMap(TryHelper.tryTSucc0(multiAppendFile(file, blocks, blockSize)))
-      .flatMap(TryHelper.tryTSucc0(readFile(file, blocks, blockSize)))
-      .flatMap(TryHelper.tryTSucc0(() -> file.size()))
-      .map(tryAssert((Long size) -> Assert.assertEquals(1l * blocks * blockSize, (long) size)))
-      .flatMap(TryHelper.tryTSucc0(() -> storage.delete(resource)));
-    result.checkedGet();
-  }
-
-  private <E extends StorageEndpoint, R extends StorageResource> Supplier<Try<Boolean>> readFile(
-    DelaFileHandler<E, R> storage, int blocks, int blockSize) {
-    return () -> {
-      long start = System.nanoTime();
-      for (int i = 0; i < blocks; i++) {
-        KRange range = new KBlockImpl(i, i * blockSize, (i + 1) * blockSize - 1);
-        storage.read(range);
-        System.err.println("read:" + i);
-      }
-      long end = System.nanoTime();
-      long sizeMB = 1l * blocks * blockSize / (1024 * 1024);
-      double time = (double) (end - start) / (1000 * 1000 * 1000);
-      System.err.println("read time(s):" + time);
-      System.err.println("read avg speed(MB/s):" + sizeMB / time);
       return new Try.Success(true);
     };
   }

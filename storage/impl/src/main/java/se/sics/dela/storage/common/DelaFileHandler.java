@@ -23,7 +23,6 @@ import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 import se.sics.dela.util.TimerProxy;
 import se.sics.ktoolbox.util.trysf.Try;
-import se.sics.nstream.util.range.KRange;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -44,24 +43,6 @@ public interface DelaFileHandler<E extends StorageEndpoint, R extends StorageRes
    */
   public Try<Long> size();
 
-  /**
-   * @param range
-   * @return Try.Success - content; Try.Failure - wrapped cause
-   */
-  public Try<byte[]> read(KRange range);
-
-  /**
-   *
-   * @return Try.Success - content; Try.Failure - wrapped cause
-   */
-  public Try<byte[]> readAll();
-
-  /**
-   * @param data
-   * @return Try.Success - append succeeded; Try.Failure - wrapped cause
-   */
-  public Try<Boolean> append(long pos, byte[] data);
-  
   /**
    * open and keep open session for repeated reads
    */
