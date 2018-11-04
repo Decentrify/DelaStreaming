@@ -16,14 +16,14 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.network.ledbat.receiver;
+package se.sics.dela.network.ledbat.sender;
 
 import com.google.common.base.Optional;
 import java.util.Random;
 import java.util.UUID;
 import se.sics.dela.network.DelaSerializerSetup;
-import se.sics.dela.network.ledbat.LedbatReceiverComp;
-import se.sics.dela.network.ledbat.LedbatReceiverPort;
+import se.sics.dela.network.ledbat.LedbatSenderComp;
+import se.sics.dela.network.ledbat.LedbatSenderPort;
 import se.sics.dela.network.ledbat.LedbatSerializerSetup;
 import se.sics.kompics.Channel;
 import se.sics.kompics.ClassMatchedHandler;
@@ -68,15 +68,15 @@ public class HostComp extends ComponentDefinition {
 
   private Component timerComp;
   private Component networkMngrComp;
-  private Component ledbatReceiverComp;
+  private Component ledbatSenderComp;
   private Component driverComp;
 
   private KAddress selfAdr;
-  private KAddress srcAdr;
+  private KAddress dstAdr;
 
   public HostComp() {
     HostConfig hostConfig = new HostConfig(config());
-    srcAdr = hostConfig.srcAdr;
+    dstAdr = hostConfig.dstAdr;
     subscribe(handleStart, control);
     subscribe(handleNetReady, otherStatusPort);
 
@@ -106,35 +106,35 @@ public class HostComp extends ComponentDefinition {
     public void handle(NetMngrReady content, Status.Internal<NetMngrReady> container) {
       logger.info("network mngr ready");
       selfAdr = content.systemAdr;
-      setLedbatReceiver();
+      setLedbatSender();
       setDriver();
-      trigger(Start.event, ledbatReceiverComp.control());
+      trigger(Start.event, ledbatSenderComp.control());
       trigger(Start.event, driverComp.control());
       logger.info("starting complete...");
     }
   };
 
-  private void setLedbatReceiver() {
-    logger.info("setting up ledbat receiver");
-    ledbatReceiverComp = create(LedbatReceiverComp.class, new LedbatReceiverComp.Init(selfAdr, srcAdr));
-    connect(ledbatReceiverComp.getNegative(Network.class), networkMngrComp.getPositive(Network.class), Channel.TWO_WAY);
+  private void setLedbatSender() {
+    logger.info("setting up ledbat sender");
+    ledbatSenderComp = create(LedbatSenderComp.class, new LedbatSenderComp.Init(selfAdr, dstAdr));
+    connect(ledbatSenderComp.getNegative(Network.class), networkMngrComp.getPositive(Network.class), Channel.TWO_WAY);
   }
 
   private void setDriver() {
     logger.info("setting up driver");
     driverComp = create(DriverComp.class, Init.NONE);
-    connect(driverComp.getNegative(LedbatReceiverPort.class), ledbatReceiverComp.getPositive(LedbatReceiverPort.class),
+    connect(driverComp.getNegative(LedbatSenderPort.class), ledbatSenderComp.getPositive(LedbatSenderPort.class),
       Channel.TWO_WAY);
   }
 
   public static class HostConfig {
 
-    public static BasicAddressOption srcAdrOpt = new BasicAddressOption("transfer.src");
+    public static BasicAddressOption dstAdrOpt = new BasicAddressOption("transfer.dst");
 
-    public KAddress srcAdr;
+    public KAddress dstAdr;
 
     public HostConfig(Config config) {
-      srcAdr = srcAdrOpt.readValue(config).get();
+      dstAdr = dstAdrOpt.readValue(config).get();
     }
   }
 
