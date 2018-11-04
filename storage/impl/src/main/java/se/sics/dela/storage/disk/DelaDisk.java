@@ -252,13 +252,12 @@ public class DelaDisk {
     }
 
     @Override
-    public Try<Boolean> close() {
+    public void close() throws IOException{
       try {
         raf.close();
-        return new Try.Success(true);
       } catch (IOException ex) {
         String msg = "closing file:" + filePath;
-        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
+        throw new IOException(new DelaStorageException(msg, ex, StorageType.DISK));
       }
     }
   }
@@ -305,13 +304,12 @@ public class DelaDisk {
     }
 
     @Override
-    public Try<Boolean> close() {
+    public void close() throws IOException {
       try {
         raf.close();
-        return new Try.Success(true);
       } catch (IOException ex) {
         String msg = "closing file:" + filePath;
-        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.DISK));
+        throw new IOException(new DelaStorageException(msg, ex, StorageType.DISK));
       }
     }
   }

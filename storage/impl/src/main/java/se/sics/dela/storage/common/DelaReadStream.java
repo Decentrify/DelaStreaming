@@ -18,6 +18,7 @@
  */
 package se.sics.dela.storage.common;
 
+import java.io.Closeable;
 import java.util.function.Consumer;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.util.range.KRange;
@@ -25,9 +26,7 @@ import se.sics.nstream.util.range.KRange;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface DelaReadStream {
+public interface DelaReadStream extends Closeable {
 
   public void read(KRange range, Consumer<Try<byte[]>> callback);
-
-  public Try<Boolean> close();
 }

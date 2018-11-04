@@ -28,6 +28,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -62,7 +64,9 @@ import se.sics.nstream.util.range.KRange;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DelaStorageTest {
+
   private static final int BLOCKS = 2;
+
   @Before
   public void setup() {
     Conversions.register(new AWSRegionsConverter());
@@ -276,9 +280,8 @@ public class DelaStorageTest {
       rand.nextBytes(block);
 
       SettableFuture<Try<Boolean>> completedFuture = SettableFuture.create();
-      Consumer<Try<Boolean>> completed = (Try<Boolean> result) -> {
-        completedFuture.set(result);
-      };
+      Consumer<Try<Boolean>> completed = (Try<Boolean> result) -> completedFuture.set(result);
+      
       Consumer<Try<Boolean>> appendCallbacks = new Consumer<Try<Boolean>>() {
         int currentAppend = 0;
 
@@ -294,23 +297,13 @@ public class DelaStorageTest {
       };
 
       long start = System.nanoTime();
-      Try<DelaAppendStream> appendStream = file.appendStream(1l * blocks * blockSize, completed);
-      if (appendStream.isFailure()) {
-        return (Try.Failure) appendStream;
-      }
-
-      for (int i = 0; i < blocks; i++) {
-        appendStream.get().write(i * blockSize, block, appendCallbacks);
-      }
-      try {
-        System.err.println("waiting");
-        Try<Boolean> result = completedFuture.get()
-          .flatMap(TryHelper.tryFSucc0(() -> appendStream.get().close()));
-        if(result.isFailure()) {
-          return (Try.Failure)result;
+      try (DelaAppendStream stream = file.appendStream(1l * blocks * blockSize, completed).checkedGet()) {
+        for (int i = 0; i < blocks; i++) {
+          stream.write(i * blockSize, block, appendCallbacks);
         }
-      } catch (InterruptedException | ExecutionException ex) {
-        return new Try.Failure(ex);
+        System.err.println("waiting");
+        Try<Boolean> result = completedFuture.get();
+      } catch (Throwable ex) {
       }
 
       long end = System.nanoTime();
@@ -341,9 +334,10 @@ public class DelaStorageTest {
     return () -> {
       Consumer<Try<byte[]>> callback = new Consumer<Try<byte[]>>() {
         int currentRead = 0;
+
         @Override
         public void accept(Try<byte[]> result) {
-          if(result.isFailure()) {
+          if (result.isFailure()) {
             throw new RuntimeException(TryHelper.tryError(result));
           } else {
             System.err.println("read:" + currentRead);
@@ -352,17 +346,13 @@ public class DelaStorageTest {
         }
       };
       long start = System.nanoTime();
-      Try<DelaReadStream> appendSession = storage.readStream();
-      if (appendSession.isFailure()) {
-        return (Try.Failure) appendSession;
-      }
-      for (int i = 0; i < blocks; i++) {
-        KRange range = new KBlockImpl(i, i * blockSize, (i + 1) * blockSize - 1);
-        appendSession.get().read(range, callback);
-      }
-      Try<Boolean> close = appendSession.get().close();
-      if (close.isFailure()) {
-        return (Try.Failure) close;
+      try (DelaReadStream stream = storage.readStream().checkedGet()) {
+        for (int i = 0; i < blocks; i++) {
+          KRange range = new KBlockImpl(i, i * blockSize, (i + 1) * blockSize - 1);
+          stream.read(range, callback);
+        }
+      } catch (Throwable ex) {
+        return new Try.Failure(ex);
       }
       long end = System.nanoTime();
       long sizeMB = 1l * blocks * blockSize / (1024 * 1024);

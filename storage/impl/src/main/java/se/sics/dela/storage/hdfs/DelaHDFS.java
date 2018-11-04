@@ -370,14 +370,14 @@ public class DelaHDFS {
     }
 
     @Override
-    public Try<Boolean> close() {
+    public void close() throws IOException {
       try {
         out.close();
         timer.cancelPeriodicTimer(flushTimer);
         flushTimer = null;
-        return new Try.Success(true);
       } catch (IOException ex) {
-        return new Try.Failure(ex);
+        String msg = "close exception";
+        throw new IOException(new DelaStorageException(msg, ex, StorageType.HDFS));
       }
     }
   }
@@ -401,13 +401,12 @@ public class DelaHDFS {
     }
 
     @Override
-    public Try<Boolean> close() {
+    public void close() throws IOException {
       try {
         in.close();
-        return new Try.Success(true);
       } catch (IOException ex) {
-        String msg = "closing file";
-        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.HDFS));
+        String msg = "close exception";
+        throw new IOException(new DelaStorageException(msg, ex, StorageType.HDFS));
       }
     }
   }

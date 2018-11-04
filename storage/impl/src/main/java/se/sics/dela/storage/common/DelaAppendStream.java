@@ -18,16 +18,15 @@
  */
 package se.sics.dela.storage.common;
 
+import java.io.Closeable;
 import java.util.function.Consumer;
 import se.sics.ktoolbox.util.trysf.Try;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface DelaAppendStream {
+public interface DelaAppendStream extends Closeable {
 
   public void write(long pos, byte[] data, Consumer<Try<Boolean>> callback);
-
-  public Try<Boolean> close();
 
 }

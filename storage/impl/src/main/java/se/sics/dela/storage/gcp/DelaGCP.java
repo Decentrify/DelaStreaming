@@ -257,9 +257,8 @@ public class DelaGCP {
     }
 
     @Override
-    public Try<Boolean> close() {
+    public void close() {
       in.close();
-      return new Try.Success(true);
     }
   }
 
@@ -308,13 +307,12 @@ public class DelaGCP {
     }
 
     @Override
-    public Try<Boolean> close() {
+    public void close() throws IOException {
       try {
         out.close();
         parent.update();
-        return new Try.Success(true);
       } catch (IOException ex) {
-        return new Try.Failure(new DelaStorageException("dela_gcp", ex, StorageType.GCP));
+        throw new IOException(new DelaStorageException("dela_gcp", ex, StorageType.GCP));
       }
     }
   }

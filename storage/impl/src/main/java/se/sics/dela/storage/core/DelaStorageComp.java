@@ -18,10 +18,13 @@
  */
 package se.sics.dela.storage.core;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import se.sics.dela.storage.common.DelaReadStream;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.dela.storage.operation.events.StreamStorageOpRead;
@@ -146,7 +149,11 @@ public class DelaStorageComp extends ComponentDefinition {
       if(result.isFailure()) {
         throw new RuntimeException(TryHelper.tryError(result));
       }
-      appendSession.get().close();
+      try {
+        appendSession.get().close();
+      } catch (IOException ex) {
+        throw new RuntimeException(ex);
+      }
       appendSession = Optional.empty();
     };
     Try<DelaAppendStream> rs = file.size()
@@ -197,7 +204,11 @@ public class DelaStorageComp extends ComponentDefinition {
     @Override
     public void handle(StreamStorageOpRead.Complete event) {
       if (readSession.isPresent()) {
-        readSession.get().close();
+        try {
+          readSession.get().close();
+        } catch (IOException ex) {
+          throw new RuntimeException(ex);
+        }
       }
     }
   };
@@ -206,7 +217,11 @@ public class DelaStorageComp extends ComponentDefinition {
     @Override
     public void handle(StreamStorageOpWrite.Complete event) {
       if (appendSession.isPresent()) {
-        appendSession.get().close();
+        try {
+          appendSession.get().close();
+        } catch (IOException ex) {
+          throw new RuntimeException(ex);
+        }
       }
     }
   };

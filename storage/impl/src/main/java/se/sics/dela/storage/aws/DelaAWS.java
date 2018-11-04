@@ -236,8 +236,7 @@ public class DelaAWS {
     }
 
     @Override
-    public Try<Boolean> close() {
-      return new Try.Success(true);
+    public void close() {
     }
   }
 
@@ -394,30 +393,29 @@ public class DelaAWS {
     }
 
     @Override
-    public synchronized Try<Boolean> close() {
+    public synchronized void close() throws IOException {
       upload.get().abort();
       try {
         appendStreamTask.get();
       } catch (InterruptedException | ExecutionException ex) {
         String msg = "close error1";
-        return new Try.Failure(new DelaStorageException(msg, ex, StorageType.AWS));
+        throw new IOException(new DelaStorageException(msg, ex, StorageType.AWS));
       } finally {
 
         try {
           in.close();
         } catch (IOException ex) {
           String msg = "close error2";
-          return new Try.Failure(new DelaStorageException(msg, ex, StorageType.AWS));
+          throw new IOException(new DelaStorageException(msg, ex, StorageType.AWS));
         } finally {
           try {
             out.close();
           } catch (IOException ex) {
             String msg = "close error3";
-            return new Try.Failure(new DelaStorageException(msg, ex, StorageType.AWS));
+            throw new IOException(new DelaStorageException(msg, ex, StorageType.AWS));
           }
         }
       }
-      return new Try.Success(true);
     }
   }
 
