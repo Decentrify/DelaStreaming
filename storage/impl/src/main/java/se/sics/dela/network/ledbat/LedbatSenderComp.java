@@ -32,6 +32,7 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
+import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.timer.RingTimer;
@@ -39,6 +40,9 @@ import se.sics.ktoolbox.nutil.timer.TimerProxy;
 import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.KHeader;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicHeader;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -135,14 +139,17 @@ public class LedbatSenderComp extends ComponentDefinition {
     while (!pendingData.isEmpty() && cwnd.canSend(ledbatConfig.MSS)) {
       LedbatSenderEvent.Request event = pendingData.removeFirst();
       logger.trace("sending:{}", event);
-      send();
+      send(event);
       cwnd.send(ledbatConfig.MSS);
       ringTimer.setTimeout(rttEstimator.rto(), new RingContainer(event));
     }
   }
 
-  private void send() {
-
+  private void send(LedbatSenderEvent.Request req) {
+    LedbatMsg.Data content = new LedbatMsg.Data(req.data);
+    KHeader header = new BasicHeader(selfAdr, dstAdr, Transport.UDP);
+    KContentMsg msg = new BasicContentMsg(header, content);
+    trigger(msg, networkPort);
   }
 
   public static class RingContainer implements RingTimer.Container {
