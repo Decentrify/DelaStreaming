@@ -146,7 +146,6 @@ public class HostComp extends ComponentDefinition {
     serializerId = OMngrSerializerSetup.registerSerializers(serializerId);
     serializerId = NetworkMngrSerializerSetup.registerSerializers(serializerId);
     serializerId = StunSerializerSetup.registerSerializers(serializerId);
-    serializerId = LedbatSerializerSetup.registerSerializers(serializerId);
     serializerId = DelaSerializerSetup.registerSerializers(serializerId);
   }
   
