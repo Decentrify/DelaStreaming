@@ -94,8 +94,8 @@ public class LedbatSenderComp extends ComponentDefinition {
         logger.trace("event:{} timed out", rc.req);
         cwnd.loss(now, rttEstimator.rto(), ledbatConfig.MSS);
         answer(rc.req, rc.req.timeout());
-        trySend();
       }
+      trySend();
     };
   }
 

@@ -118,6 +118,7 @@ public class HostComp extends ComponentDefinition {
     logger.info("setting up ledbat sender");
     ledbatSenderComp = create(LedbatSenderComp.class, new LedbatSenderComp.Init(selfAdr, dstAdr));
     connect(ledbatSenderComp.getNegative(Network.class), networkMngrComp.getPositive(Network.class), Channel.TWO_WAY);
+    connect(ledbatSenderComp.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
   }
 
   private void setDriver() {

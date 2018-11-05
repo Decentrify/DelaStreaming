@@ -34,15 +34,15 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
  */
 public class DriverComp extends ComponentDefinition {
 
-  Positive<LedbatSenderPort> ledbatPort = requires(LedbatSenderPort.class);
+  Positive<LedbatSenderPort> network = requires(LedbatSenderPort.class);
 
   private Random rand = new Random(123);
   private int acked = 0;
 
   public DriverComp() {
     subscribe(handleStart, control);
-    subscribe(handleAcked, ledbatPort);
-    subscribe(handleTimeout, ledbatPort);
+    subscribe(handleAcked, network);
+    subscribe(handleTimeout, network);
   }
 
   Handler handleStart = new Handler<Start>() {
@@ -57,6 +57,7 @@ public class DriverComp extends ComponentDefinition {
     public void handle(LedbatSenderEvent.Acked event) {
       logger.info("received:", event.req.data.getId());
       acked++;
+      trySend();
     }
   };
   
@@ -73,7 +74,8 @@ public class DriverComp extends ComponentDefinition {
       rand.nextBytes(dataBytes);
       LedbatContainer dataContainer = new LedbatContainer(BasicIdentifiers.nodeId(), dataBytes);
       LedbatSenderEvent.Request req = new LedbatSenderEvent.Request(dataContainer);
-      trigger(req, ledbatPort);
+      logger.info("sending:", req.data.getId());
+      trigger(req, network);
     }
   }
 }

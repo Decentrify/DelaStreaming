@@ -39,6 +39,7 @@ public class Cwnd {
 
   public Cwnd(LedbatConfig config) {
     this.config = config;
+    init();
   }
 
   private void init() {
