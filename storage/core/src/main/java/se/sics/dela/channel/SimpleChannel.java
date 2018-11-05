@@ -28,7 +28,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import se.sics.dela.connector.Sink;
 import se.sics.dela.connector.Source;
-import se.sics.dela.util.TimerProxy;
+import se.sics.ktoolbox.nutil.timer.TimerProxy;
 import se.sics.ktoolbox.util.TupleHelper;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.trysf.Try;

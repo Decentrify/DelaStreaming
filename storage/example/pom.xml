@@ -65,11 +65,6 @@
       <version>${ktoolbox.version}</version>
     </dependency>
     <dependency>
-      <groupId>se.sics.nat.stun</groupId>
-      <artifactId>network</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <dependency>
       <groupId>se.sics.ktoolbox.netmngr</groupId>
       <artifactId>network</artifactId>
       <version>${ktoolbox.version}</version>
@@ -85,4 +80,76 @@
       <version>${nat.version}</version>
     </dependency>
   </dependencies>
+  
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>2.3</version>
+        <executions>
+          <execution>
+            <id>sender</id>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <shadedArtifactAttached>true</shadedArtifactAttached> 
+              <shadedClassifierName>sender</shadedClassifierName> 
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>se.sics.dela.network.ledbat.sender.HostComp</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>application.conf</exclude>
+                    <exclude>config.yml</exclude>
+                    <exclude>log4j.properties</exclude>
+                  </excludes>
+                </filter>
+              </filters>                        
+            </configuration>
+          </execution>
+          <execution>
+            <id>receiver</id>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <shadedArtifactAttached>true</shadedArtifactAttached> 
+              <shadedClassifierName>receiver</shadedClassifierName> 
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>se.sics.dela.network.ledbat.receiver.HostComp</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>application.conf</exclude>
+                    <exclude>config.yml</exclude>
+                    <exclude>log4j.properties</exclude>
+                  </excludes>
+                </filter>
+              </filters>                        
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 </project>

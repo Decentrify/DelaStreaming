@@ -70,7 +70,7 @@ import se.sics.dela.storage.common.DelaReadStream;
 import se.sics.dela.storage.common.DelaStorageException;
 import se.sics.dela.storage.common.DelaStorageHandler;
 import se.sics.dela.storage.common.StorageType;
-import se.sics.dela.util.TimerProxy;
+import se.sics.ktoolbox.nutil.timer.TimerProxy;
 import se.sics.ktoolbox.util.TupleHelper;
 import se.sics.ktoolbox.util.trysf.Try;
 import static se.sics.ktoolbox.util.trysf.TryHelper.tryFSucc0;

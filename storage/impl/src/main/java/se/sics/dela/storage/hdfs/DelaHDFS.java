@@ -44,7 +44,6 @@ import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 import se.sics.dela.storage.common.DelaStorageException;
 import se.sics.dela.storage.core.DelaStorageComp;
-import se.sics.dela.util.TimerProxy;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
@@ -55,6 +54,7 @@ import se.sics.dela.storage.common.DelaFileHandler;
 import static se.sics.dela.storage.common.DelaHelper.recoverFrom;
 import se.sics.dela.storage.common.DelaStorageHandler;
 import se.sics.dela.storage.common.StorageType;
+import se.sics.ktoolbox.nutil.timer.TimerProxy;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>

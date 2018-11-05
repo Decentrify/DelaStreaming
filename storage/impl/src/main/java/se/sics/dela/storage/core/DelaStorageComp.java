@@ -23,13 +23,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import se.sics.dela.storage.common.DelaReadStream;
 import se.sics.dela.storage.operation.StreamStorageOpPort;
 import se.sics.dela.storage.operation.events.StreamStorageOpRead;
 import se.sics.dela.storage.operation.events.StreamStorageOpWrite;
-import se.sics.dela.util.TimerProxyImpl;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -45,6 +42,8 @@ import se.sics.ktoolbox.util.trysf.TryHelper;
 import se.sics.dela.storage.common.DelaAppendStream;
 import se.sics.dela.storage.common.DelaFileHandler;
 import se.sics.dela.storage.common.DelaStorageException;
+import se.sics.ktoolbox.nutil.timer.TimerProxy;
+import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -56,7 +55,7 @@ public class DelaStorageComp extends ComponentDefinition {
   Positive<Timer> timerPort = requires(Timer.class);
   Negative<StreamStorageOpPort> resourcePort = provides(StreamStorageOpPort.class);
   One2NChannel resourceChannel;
-  private final TimerProxyImpl timerProxy;
+  private final TimerProxy timerProxy;
 
   private Map<Identifier, Component> components = new HashMap<>();
   private final DelaFileHandler file;

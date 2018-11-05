@@ -21,7 +21,7 @@ package se.sics.dela.storage.common;
 import java.util.function.Consumer;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
-import se.sics.dela.util.TimerProxy;
+import se.sics.ktoolbox.nutil.timer.TimerProxy;
 import se.sics.ktoolbox.util.trysf.Try;
 
 /**

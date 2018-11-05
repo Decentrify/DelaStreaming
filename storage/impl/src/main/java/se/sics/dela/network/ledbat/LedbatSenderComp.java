@@ -25,8 +25,6 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import se.sics.dela.network.ledbat.util.Cwnd;
 import se.sics.dela.network.ledbat.util.RTTEstimator;
-import se.sics.dela.util.TimerProxy;
-import se.sics.dela.util.TimerProxyImpl;
 import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -37,9 +35,10 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.timer.RingTimer;
+import se.sics.ktoolbox.nutil.timer.TimerProxy;
+import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
-import se.sics.ktoolbox.util.network.KHeader;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
