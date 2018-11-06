@@ -56,8 +56,11 @@ public class DriverComp extends ComponentDefinition {
   Handler handleAcked = new Handler<LedbatSenderEvent.Acked>() {
     @Override
     public void handle(LedbatSenderEvent.Acked event) {
-      logger.info("received:{}", event.req.data.getId());
+      logger.debug("received:{}", event.req.data.getId());
       acked++;
+      if(acked == 100) {
+        logger.info("done");
+      }
       trySend();
     }
   };
@@ -65,7 +68,7 @@ public class DriverComp extends ComponentDefinition {
   Handler handleTimeout = new Handler<LedbatSenderEvent.Timeout>() {
     @Override
     public void handle(LedbatSenderEvent.Timeout event) {
-      logger.info("timeout:{}", event.req.data.getId());
+      logger.debug("timeout:{}", event.req.data.getId());
       trySend();
     }
   };
@@ -82,7 +85,7 @@ public class DriverComp extends ComponentDefinition {
     Identifier dataId = BasicIdentifiers.eventId();
     LedbatContainer dataContainer = new LedbatContainer(dataId, data);
     LedbatSenderEvent.Request req = new LedbatSenderEvent.Request(dataContainer);
-    logger.info("sending:{}", req.data.getId());
+    logger.debug("sending:{}", req.data.getId());
     trigger(req, ledbat);
   }
 }

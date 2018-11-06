@@ -104,7 +104,7 @@ public class Cwnd {
 
   private void updateCurrentDelay(long r) {
     currentDelaysPointer += 1;
-    if (currentDelaysPointer > config.CURRENT_FILTER) {
+    if (currentDelaysPointer >= config.CURRENT_FILTER) {
       currentDelaysPointer = 0;
     }
     currentDelays[currentDelaysPointer] = r;
@@ -114,7 +114,7 @@ public class Cwnd {
     long nowMinute = roundToMinute(now);
     if (nowMinute > lastRolloverMinute) {
       baseDelaysPointer += 1;
-      if (baseDelaysPointer > config.BASE_HISTORY) {
+      if (baseDelaysPointer >= config.BASE_HISTORY) {
         baseDelaysPointer = 0;
       }
       baseDelays[baseDelaysPointer] = r;

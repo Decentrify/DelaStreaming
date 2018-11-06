@@ -39,7 +39,7 @@ public class DriverComp extends ComponentDefinition {
   Handler handleReceived = new Handler<LedbatReceiverEvent.Received>() {
     @Override
     public void handle(LedbatReceiverEvent.Received event) {
-      logger.info("received:", event.data.getId());
+      logger.debug("received:", event.data.getId());
     }
   };
 }
