@@ -131,17 +131,21 @@ public class LedbatSenderComp extends ComponentDefinition {
       long dataDelay = content.dataDelay.receive - content.dataDelay.send;
       cwnd.ack(now, dataDelay, ledbatConfig.MSS);
       rttEstimator.update(rtt);
+      appAck(ringContainer.get().req);
       trySend();
     }
   };
 
+  private void appAck(LedbatSenderEvent.Request req) {
+    answer(req, req.ack());
+  }
+  
   private void trySend() {
     while (!pendingData.isEmpty() && cwnd.canSend(ledbatConfig.MSS)) {
-      LedbatSenderEvent.Request event = pendingData.removeFirst();
-      logger.trace("sending:{}", event);
-      send(event);
+      LedbatSenderEvent.Request req = pendingData.removeFirst();
+      send(req);
       cwnd.send(ledbatConfig.MSS);
-      ringTimer.setTimeout(rttEstimator.rto(), new RingContainer(event));
+      ringTimer.setTimeout(rttEstimator.rto(), new RingContainer(req));
     }
   }
 
@@ -149,6 +153,7 @@ public class LedbatSenderComp extends ComponentDefinition {
     LedbatMsg.Data content = new LedbatMsg.Data(req.data);
     KHeader header = new BasicHeader(selfAdr, dstAdr, Transport.UDP);
     KContentMsg msg = new BasicContentMsg(header, content);
+    logger.trace("sending:{}", msg);
     trigger(msg, networkPort);
   }
 

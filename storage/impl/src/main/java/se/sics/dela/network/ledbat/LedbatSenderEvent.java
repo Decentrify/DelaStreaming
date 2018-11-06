@@ -51,6 +51,11 @@ public class LedbatSenderEvent {
     public Timeout timeout() {
       return new Timeout(this);
     }
+
+    @Override
+    public String toString() {
+      return "LedbatSenderRequest{" + "data=" + data.getId() + '}';
+    }
   }
 
   public static class Indication<D extends Identifiable> implements Direct.Response, Identifiable {
@@ -71,12 +76,22 @@ public class LedbatSenderEvent {
     public Acked(Request<D> req) {
       super(req);
     }
+    
+    @Override
+    public String toString() {
+      return "LedbatSenderAck{" + "data=" + req.data.getId() + '}';
+    }
   }
 
   public static class Timeout<D extends Identifiable> extends Indication<D> {
 
     public Timeout(Request<D> req) {
       super(req);
+    }
+    
+    @Override
+    public String toString() {
+      return "LedbatSenderTimeout{" + "data=" + req.data.getId() + '}';
     }
   }
 }

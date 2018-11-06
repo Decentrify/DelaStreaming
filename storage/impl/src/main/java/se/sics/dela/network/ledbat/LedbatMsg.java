@@ -51,6 +51,11 @@ public class LedbatMsg {
     public Identifier getId() {
       return msgId;
     }
+    
+    @Override
+    public String toString() {
+      return "LedbatMsgData{" + "data=" + data.getId() + '}';
+    }
   }
   
   public static class Ack implements Identifiable {
@@ -74,6 +79,11 @@ public class LedbatMsg {
     @Override
     public Identifier getId() {
       return msgId;
+    }
+    
+    @Override
+    public String toString() {
+      return "LedbatMsgAck{" + "data=" + dataId + '}';
     }
   }
 }

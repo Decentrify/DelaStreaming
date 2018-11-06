@@ -15,28 +15,8 @@
     </encoder>
   </appender>
 
-  <appender name="FILE"
-            class="ch.qos.logback.core.rolling.RollingFileAppender">
-    <file>${DELA_HOME}/example/logs/storage.log</file>
-    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-      <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) %logger{1} [%thread] %X %n    - %msg%n</pattern>
-    </encoder>
+  <logger name="se.sics.kompics.timer.java.JavaTimer" level="WARN" additivity="false"><appender-ref ref="CONSOLE"/></logger>
 
-    <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-      <!-- rollover daily -->
-      <fileNamePattern>${DELA_HOME}/example/logs/archived/storage.%d{yyyy-MM-dd}.%i.log
-      </fileNamePattern>
-      <timeBasedFileNamingAndTriggeringPolicy
-        class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
-        <maxFileSize>10MB</maxFileSize>
-      </timeBasedFileNamingAndTriggeringPolicy>
-    </rollingPolicy>
-  </appender>
-
-  <logger name="se.sics.dela.storage" level="debug" additivity="false"><appender-ref ref="CONSOLE_NID"/></logger>
-
-  <root level="trace">
-    <appender-ref ref="CONSOLE" />
-  </root>
+  <root level="trace"> <appender-ref ref="CONSOLE" /> </root>
 
 </configuration>
