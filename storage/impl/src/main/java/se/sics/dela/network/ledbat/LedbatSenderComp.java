@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import se.sics.dela.network.ledbat.util.Cwnd;
 import se.sics.dela.network.ledbat.util.RTTEstimator;
 import se.sics.kompics.ClassMatchedHandler;
@@ -66,6 +64,7 @@ public class LedbatSenderComp extends ComponentDefinition {
   private LinkedList<LedbatSenderEvent.Request> pendingData = new LinkedList<>();
 
   private UUID ringTid;
+  private UUID reportTid;
 
   public LedbatSenderComp(Init init) {
     this.selfAdr = init.selfAdr;
@@ -90,12 +89,16 @@ public class LedbatSenderComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      ringTid = timer.schedulePeriodicTimer(ledbatConfig.timerWindowSize, ledbatConfig.timerWindowSize, 
-        ringTimerCallback());
+      ringTid = timer.schedulePeriodicTimer(ledbatConfig.timerWindowSize, ledbatConfig.timerWindowSize,
+        ringTimer());
+      if (ledbatConfig.reportPeriod.isPresent()) {
+        reportTid = timer.schedulePeriodicTimer(ledbatConfig.reportPeriod.get(), ledbatConfig.reportPeriod.get(), 
+          reportTimer());
+      }
     }
   };
 
-  private Consumer<Boolean> ringTimerCallback() {
+  private Consumer<Boolean> ringTimer() {
     return (_input) -> {
       List<RingContainer> timeouts = ringTimer.windowTick();
       long now = System.currentTimeMillis();
@@ -106,6 +109,12 @@ public class LedbatSenderComp extends ComponentDefinition {
         answer(rc.req, rc.req.timeout());
       }
       trySend();
+    };
+  }
+  
+  private Consumer<Boolean> reportTimer() {
+    return (_input) -> {
+      logger.info("rto:{} cwnd:{}", new Object[]{rttEstimator.rto(), cwnd.size()});
     };
   }
 
@@ -121,7 +130,7 @@ public class LedbatSenderComp extends ComponentDefinition {
       trySend();
     }
   };
-  
+
   ClassMatchedHandler handleAck
     = new ClassMatchedHandler<LedbatMsg.Ack, KContentMsg<?, ?, LedbatMsg.Ack>>() {
     @Override
@@ -145,7 +154,7 @@ public class LedbatSenderComp extends ComponentDefinition {
   private void appAck(LedbatSenderEvent.Request req) {
     answer(req, req.ack());
   }
-  
+
   private void trySend() {
     while (!pendingData.isEmpty() && cwnd.canSend(ledbatConfig.base.MSS)) {
       LedbatSenderEvent.Request req = pendingData.removeFirst();

@@ -28,15 +28,19 @@ import se.sics.ktoolbox.util.trysf.Try;
  */
 public class DelaLedbatConfig {
   public static final String TIMER_WINDOW_SIZE = "ledbat.timer.window";
+  public static final String REPORT_PERIOD = "ledbat.report.period";
   
   public final LedbatConfig base;
   public final int statusPeriod = 100;
   public final long timerWindowSize;
   public final long maxTimeout = 25000;
+  
+  public final Optional<Long> reportPeriod;
 
-  public DelaLedbatConfig(LedbatConfig base, long timerWindowSize) {
+  public DelaLedbatConfig(LedbatConfig base, long timerWindowSize, Optional<Long> reportPeriod) {
     this.base = base;
     this.timerWindowSize = timerWindowSize;
+    this.reportPeriod = reportPeriod;
   }
 
   public static Try<DelaLedbatConfig> instance(Config config) {
@@ -49,6 +53,7 @@ public class DelaLedbatConfig {
       String msg = "missing value - " + TIMER_WINDOW_SIZE;
       return new Try.Failure(new IllegalStateException(msg));
     }
-    return new Try.Success(new DelaLedbatConfig(base.get(), timerWindowSize.get()));
+    Optional<Long> reportPeriod = config.readValue(REPORT_PERIOD, Long.class);
+    return new Try.Success(new DelaLedbatConfig(base.get(), timerWindowSize.get(), reportPeriod));
   }
 }

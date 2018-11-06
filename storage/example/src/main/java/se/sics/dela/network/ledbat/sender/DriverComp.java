@@ -39,6 +39,7 @@ public class DriverComp extends ComponentDefinition {
 
   private Random rand = new Random(123);
   private int acked = 0;
+  private static final int TOTAL_MSGS = 1000000;
 
   public DriverComp() {
     subscribe(handleStart, control);
@@ -58,7 +59,7 @@ public class DriverComp extends ComponentDefinition {
     public void handle(LedbatSenderEvent.Acked event) {
       logger.debug("received:{}", event.req.data.getId());
       acked++;
-      if(acked == 100) {
+      if(acked == TOTAL_MSGS) {
         logger.info("done");
       }
       trySend();
@@ -74,7 +75,7 @@ public class DriverComp extends ComponentDefinition {
   };
 
   private void trySend() {
-    if (acked < 100) {
+    if (acked < TOTAL_MSGS) {
       byte[] dataBytes = new byte[1024];
       rand.nextBytes(dataBytes);
       send(dataBytes);
