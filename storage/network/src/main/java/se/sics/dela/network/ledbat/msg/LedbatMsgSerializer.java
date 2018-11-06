@@ -101,7 +101,7 @@ public class LedbatMsgSerializer {
       Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
       Identifier dataId = (Identifier) Serializers.fromBinary(buf, hint);
       long sendTime = buf.readLong();
-      long receiveTime = System.currentTimeMillis();
+      long receiveTime = buf.readLong();
       OneWayDelay dataDelay = new OneWayDelay(sendTime, receiveTime);
       long sendAckTime = buf.readLong();
       long receiveAckTime = System.currentTimeMillis();

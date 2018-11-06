@@ -42,7 +42,7 @@ public class RTTEstimator {
       updateNext(r);
     }
     rto = srtt + Math.max(config.G, config.K*rttvar);
-    rto = Math.max(config.MAX_RTO, Math.min(config.MIN_RTO, rto));
+    rto = Math.min(config.MAX_RTO, Math.max(config.MIN_RTO, rto));
   }
   
   private void updateFirst(long r) {

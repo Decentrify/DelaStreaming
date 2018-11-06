@@ -26,6 +26,7 @@ import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
@@ -34,15 +35,15 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
  */
 public class DriverComp extends ComponentDefinition {
 
-  Positive<LedbatSenderPort> network = requires(LedbatSenderPort.class);
+  Positive<LedbatSenderPort> ledbat = requires(LedbatSenderPort.class);
 
   private Random rand = new Random(123);
   private int acked = 0;
 
   public DriverComp() {
     subscribe(handleStart, control);
-    subscribe(handleAcked, network);
-    subscribe(handleTimeout, network);
+    subscribe(handleAcked, ledbat);
+    subscribe(handleTimeout, ledbat);
   }
 
   Handler handleStart = new Handler<Start>() {
@@ -55,16 +56,17 @@ public class DriverComp extends ComponentDefinition {
   Handler handleAcked = new Handler<LedbatSenderEvent.Acked>() {
     @Override
     public void handle(LedbatSenderEvent.Acked event) {
-      logger.info("received:", event.req.data.getId());
+      logger.info("received:{}", event.req.data.getId());
       acked++;
       trySend();
     }
   };
-  
+
   Handler handleTimeout = new Handler<LedbatSenderEvent.Timeout>() {
     @Override
     public void handle(LedbatSenderEvent.Timeout event) {
-      logger.info("timeout:", event.req.data.getId());
+      logger.info("timeout:{}", event.req.data.getId());
+      trySend();
     }
   };
 
@@ -72,10 +74,15 @@ public class DriverComp extends ComponentDefinition {
     if (acked < 100) {
       byte[] dataBytes = new byte[1024];
       rand.nextBytes(dataBytes);
-      LedbatContainer dataContainer = new LedbatContainer(BasicIdentifiers.nodeId(), dataBytes);
-      LedbatSenderEvent.Request req = new LedbatSenderEvent.Request(dataContainer);
-      logger.info("sending:", req.data.getId());
-      trigger(req, network);
+      send(dataBytes);
     }
+  }
+
+  private void send(byte[] data) {
+    Identifier dataId = BasicIdentifiers.eventId();
+    LedbatContainer dataContainer = new LedbatContainer(dataId, data);
+    LedbatSenderEvent.Request req = new LedbatSenderEvent.Request(dataContainer);
+    logger.info("sending:{}", req.data.getId());
+    trigger(req, ledbat);
   }
 }

@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import se.sics.dela.network.ledbat.util.Cwnd;
 import se.sics.dela.network.ledbat.util.RTTEstimator;
 import se.sics.kompics.ClassMatchedHandler;
@@ -60,7 +62,7 @@ public class LedbatSenderComp extends ComponentDefinition {
   private final Cwnd cwnd;
   private final RTTEstimator rttEstimator;
   private final RingTimer<RingContainer> ringTimer;
-  private final LedbatConfig ledbatConfig;
+  private final DelaLedbatConfig ledbatConfig;
   private LinkedList<LedbatSenderEvent.Request> pendingData = new LinkedList<>();
 
   private UUID ringTid;
@@ -72,10 +74,14 @@ public class LedbatSenderComp extends ComponentDefinition {
     loggingCtxPutAlways("dstId", init.dstAdr.getId().toString());
     timer = new TimerProxyImpl().setup(proxy);
 
-    ledbatConfig = new LedbatConfig();
-    cwnd = new Cwnd(ledbatConfig);
-    rttEstimator = new RTTEstimator(ledbatConfig);
-    ringTimer = new RingTimer(LedbatCompConfig.windowSize, LedbatCompConfig.maxTimeout);
+    try {
+      ledbatConfig = DelaLedbatConfig.instance(config()).checkedGet();
+    } catch (Throwable ex) {
+      throw new RuntimeException(ex);
+    }
+    cwnd = new Cwnd(ledbatConfig.base);
+    rttEstimator = new RTTEstimator(ledbatConfig.base);
+    ringTimer = new RingTimer(ledbatConfig.timerWindowSize, ledbatConfig.maxTimeout);
     subscribe(handleStart, control);
     subscribe(handleReq, appPort);
     subscribe(handleAck, networkPort);
@@ -84,8 +90,8 @@ public class LedbatSenderComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      long ringWindow = LedbatCompConfig.windowSize;
-      ringTid = timer.schedulePeriodicTimer(ringWindow, ringWindow, ringTimerCallback());
+      ringTid = timer.schedulePeriodicTimer(ledbatConfig.timerWindowSize, ledbatConfig.timerWindowSize, 
+        ringTimerCallback());
     }
   };
 
@@ -96,7 +102,7 @@ public class LedbatSenderComp extends ComponentDefinition {
       for (RingContainer c : timeouts) {
         RingContainer rc = (RingContainer) c;
         logger.trace("event:{} timed out", rc.req);
-        cwnd.loss(now, rttEstimator.rto(), ledbatConfig.MSS);
+        cwnd.loss(now, rttEstimator.rto(), ledbatConfig.base.MSS);
         answer(rc.req, rc.req.timeout());
       }
       trySend();
@@ -129,7 +135,7 @@ public class LedbatSenderComp extends ComponentDefinition {
       long now = System.currentTimeMillis();
       long rtt = content.ackDelay.receive - content.dataDelay.send;
       long dataDelay = content.dataDelay.receive - content.dataDelay.send;
-      cwnd.ack(now, dataDelay, ledbatConfig.MSS);
+      cwnd.ack(now, dataDelay, ledbatConfig.base.MSS);
       rttEstimator.update(rtt);
       appAck(ringContainer.get().req);
       trySend();
@@ -141,10 +147,10 @@ public class LedbatSenderComp extends ComponentDefinition {
   }
   
   private void trySend() {
-    while (!pendingData.isEmpty() && cwnd.canSend(ledbatConfig.MSS)) {
+    while (!pendingData.isEmpty() && cwnd.canSend(ledbatConfig.base.MSS)) {
       LedbatSenderEvent.Request req = pendingData.removeFirst();
       send(req);
-      cwnd.send(ledbatConfig.MSS);
+      cwnd.send(ledbatConfig.base.MSS);
       ringTimer.setTimeout(rttEstimator.rto(), new RingContainer(req));
     }
   }

@@ -18,6 +18,9 @@
  */
 package se.sics.dela.network.ledbat;
 
+import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.util.trysf.Try;
+
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
@@ -40,10 +43,17 @@ public class LedbatConfig {
    * rtt estimator
    * https://tools.ietf.org/html/rfc6298
    */
-  public final long MIN_RTO = 1000; //1s
+  public final long MIN_RTO = 200; //0.2s
   public final long MAX_RTO = 60000;//60s
   public final int K = 4;
   public final double ALPHA = 0.125;
   public final double BETA = 0.25;
   public final int G = Integer.MIN_VALUE; // not using clock granularity
+
+  public LedbatConfig() {
+  }
+  
+  public static Try<LedbatConfig> instance(Config config) {
+    return new Try.Success(new LedbatConfig());
+  }
 }
