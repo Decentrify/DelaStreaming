@@ -27,7 +27,7 @@ import se.sics.ktoolbox.util.trysf.Try;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DelaLedbatConfig {
-  public static final String TIMER_WINDOW_SIZE = "ledbat.timer.window";
+  public static final String BUFFER_SIZE = "ledbat.buffer.size";
   public static final String REPORT_PERIOD = "ledbat.report.period";
   
   public final LedbatConfig base;
@@ -35,11 +35,13 @@ public class DelaLedbatConfig {
   public final long timerWindowSize;
   public final long maxTimeout = 25000;
   
+  public final int bufferSize;
   public final Optional<Long> reportPeriod;
 
-  public DelaLedbatConfig(LedbatConfig base, long timerWindowSize, Optional<Long> reportPeriod) {
+  public DelaLedbatConfig(LedbatConfig base, long timerWindowSize, int bufferSize, Optional<Long> reportPeriod) {
     this.base = base;
     this.timerWindowSize = timerWindowSize;
+    this.bufferSize = bufferSize;
     this.reportPeriod = reportPeriod;
   }
 
@@ -48,12 +50,14 @@ public class DelaLedbatConfig {
     if(base.isFailure()) {
       return (Try.Failure)base;
     }
-    Optional<Long> timerWindowSize = config.readValue(TIMER_WINDOW_SIZE, Long.class);
-    if(!timerWindowSize.isPresent()) {
-      String msg = "missing value - " + TIMER_WINDOW_SIZE;
+    Optional<Integer> bufferSize = config.readValue(BUFFER_SIZE, Integer.class);
+    if(!bufferSize.isPresent()) {
+      String msg = "missing value - " + BUFFER_SIZE;
       return new Try.Failure(new IllegalStateException(msg));
     }
     Optional<Long> reportPeriod = config.readValue(REPORT_PERIOD, Long.class);
-    return new Try.Success(new DelaLedbatConfig(base.get(), timerWindowSize.get(), reportPeriod));
+    
+    long timerWindowSize = base.get().MIN_RTO;
+    return new Try.Success(new DelaLedbatConfig(base.get(), timerWindowSize, bufferSize.get(), reportPeriod));
   }
 }

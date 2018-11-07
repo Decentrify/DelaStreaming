@@ -19,15 +19,12 @@
 package se.sics.nstream;
 
 import com.google.common.primitives.Ints;
-import java.util.Random;
+import java.util.Optional;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierBuilder;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
-import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
-import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
-import se.sics.ktoolbox.util.identifiable.basic.StringByteIdFactory;
-import se.sics.ktoolbox.util.identifiable.basic.UUIDIdFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
@@ -92,38 +89,14 @@ public class TorrentIds {
         }
     }
 
-    public static void registerDefaults(long seed) {
-        Random rand = new Random(seed);
-        IdentifierRegistry.register(BasicIdentifiers.Values.EVENT.toString(), new UUIDIdFactory());
-        IdentifierRegistry.register(BasicIdentifiers.Values.MSG.toString(), new UUIDIdFactory());
-        IdentifierRegistry.register(BasicIdentifiers.Values.OVERLAY.toString(), new StringByteIdFactory(rand, 64));
-        IdentifierRegistry.register(BasicIdentifiers.Values.NODE.toString(), new IntIdFactory(rand));
-    }
-
-    public static boolean checkBasicIdentifiers() {
-        if (IdentifierRegistry.lookup(BasicIdentifiers.Values.EVENT.toString()) == null) {
-            return false;
-        }
-        if (IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()) == null) {
-            return false;
-        }
-        if (IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString()) == null) {
-            return false;
-        }
-        if (IdentifierRegistry.lookup(BasicIdentifiers.Values.NODE.toString()) == null) {
-            return false;
-        }
-        return true;
-    }
-    
-    public static OverlayIdFactory torrentIdFactory() {
+    public static OverlayIdFactory torrentIdFactory(long seed) {
         byte torrentOwnerId = OverlayRegistry.getPrefix(TORRENT_OVERLAYS);
-        IdentifierFactory torrentBaseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        IdentifierFactory torrentBaseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, Optional.of(seed));
         return new OverlayIdFactory(torrentBaseIdFactory, TorrentIds.Types.TORRENT, torrentOwnerId);
     }
     
-    public static OverlayId torrentId(IdentifierBuilder idBuilder) {
-        return torrentIdFactory().id(idBuilder);
+    public static OverlayId torrentId(IdentifierBuilder idBuilder, long seed) {
+        return torrentIdFactory(seed).id(idBuilder);
     }
 
     public static FileId fileId(OverlayId torrentId, int fileNr) {

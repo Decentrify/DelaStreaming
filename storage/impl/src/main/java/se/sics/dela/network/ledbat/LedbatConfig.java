@@ -43,7 +43,7 @@ public class LedbatConfig {
    * rtt estimator
    * https://tools.ietf.org/html/rfc6298
    */
-  public final long MIN_RTO = 200; //0.2s
+  public final long MIN_RTO = 50; //0.2s
   public final long MAX_RTO = 60000;//60s
   public final int K = 4;
   public final double ALPHA = 0.125;

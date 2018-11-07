@@ -24,10 +24,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import junit.framework.Assert;
+import java.util.Optional;
 import org.javatuples.Pair;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import se.sics.dela.storage.StorageEndpoint;
@@ -44,7 +44,7 @@ import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
  */
 public class EndpointRegistryTest {
 
-  MyIntIdFactory idFactory = new MyIntIdFactory(new IntIdFactory(new Random(123)), 0);
+  MyIntIdFactory idFactory = new MyIntIdFactory(new IntIdFactory(Optional.of(1234l)), 0);
   List<Pair<States, Identifier>> timeline = new ArrayList<>();
   Map<Identifier, Identifier> endpointProxyClients = new HashMap<>();
   TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider> connectAction

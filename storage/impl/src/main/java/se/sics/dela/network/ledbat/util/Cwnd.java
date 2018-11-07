@@ -128,4 +128,12 @@ public class Cwnd {
   private long roundToMinute(long timeInMillis) {
     return timeInMillis / 60000;
   }
+  
+  public void details(Logger logger) {
+    long queuingDelay = Arrays.stream(currentDelays).min().getAsLong()
+      - Arrays.stream(baseDelays).min().getAsLong();
+    double offTarget = (config.TARGET - queuingDelay) / config.TARGET;
+    int cwndMsgs = (int)cwnd/config.MSS;
+    logger.info("cwnd:{} qd:{} offTarget:{}", new Object[]{cwndMsgs, queuingDelay, offTarget});
+  }
 }

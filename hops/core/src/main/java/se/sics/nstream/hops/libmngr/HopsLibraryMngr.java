@@ -34,6 +34,7 @@ import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
+import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -67,6 +68,7 @@ public class HopsLibraryMngr {
   private String logPrefix = "";
 
   private final Config config;
+  private final SystemKCWrapper systemConfig;
   private final HopsLibraryKConfig hopsLibraryConfig;
   private final KAddress selfAdr;
   private final MultiFSM fsm;
@@ -76,6 +78,7 @@ public class HopsLibraryMngr {
 
   public HopsLibraryMngr(OnFSMExceptionAction oexa, ComponentProxy proxy, Config config, String logPrefix,
     KAddress selfAdr) {
+    systemConfig = new SystemKCWrapper(config);
     LOG.info("{}initing", logPrefix);
     this.logPrefix = logPrefix;
     this.config = config;
@@ -88,7 +91,7 @@ public class HopsLibraryMngr {
       throw new RuntimeException(ex);
     }
 
-    OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory();
+    OverlayIdFactory torrentIdFactory = TorrentIds.torrentIdFactory(systemConfig.seed);
     if (LibraryType.DISK.equals(hopsLibraryConfig.libraryType)) {
       library = new DiskLibrary(torrentIdFactory, config);
     } else if (LibraryType.MYSQL.equals(hopsLibraryConfig.libraryType)) {

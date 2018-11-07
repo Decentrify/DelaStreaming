@@ -20,11 +20,12 @@ package se.sics.nstream.hops.library.util;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Optional;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
-import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.basic.IntId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicAddress;
@@ -74,7 +75,7 @@ public class AddressJSON {
 
   public KAddress fromJSON() {
     try {
-      IdentifierFactory nodeIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.NODE.toString());
+      IdentifierFactory nodeIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.NODE, Optional.<Long>empty());
       Identifier nodeId = nodeIdFactory.id(new BasicBuilders.IntBuilder(id));
       return NatAwareAddressImpl.open(new BasicAddress(InetAddress.getByName(ip), port, nodeId));
     } catch (UnknownHostException ex) {

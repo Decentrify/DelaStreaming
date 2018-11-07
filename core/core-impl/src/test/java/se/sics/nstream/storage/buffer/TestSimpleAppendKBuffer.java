@@ -18,7 +18,7 @@
  */
 package se.sics.nstream.storage.buffer;
 
-import java.util.Random;
+import java.util.Optional;
 import org.javatuples.Pair;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -30,7 +30,7 @@ import se.sics.kompics.config.TypesafeConfig;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
-import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
@@ -76,19 +76,19 @@ public class TestSimpleAppendKBuffer {
     }
 
     private static void systemSetup() {
-        TorrentIds.registerDefaults(1234l);
+        IdentifierRegistryV2.registerBaseDefaults1(64);
         OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
     }
 
     private static void experimentSetup() {
-        IntIdFactory endpointIdFactory = new IntIdFactory(new Random(1234));
+        IntIdFactory endpointIdFactory = new IntIdFactory(Optional.of(1234l));
         Identifier endpointId = endpointIdFactory.randomId();
 
-        IdentifierFactory nodeIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.NODE.toString());
+        IdentifierFactory nodeIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.NODE, Optional.of(1234l));
         readerId = nodeIdFactory.randomId();
 
         byte owner = 1;
-        IdentifierFactory baseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+        IdentifierFactory baseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, Optional.of(1234l));
         OverlayIdFactory overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, owner);
 
         OverlayId torrentId = overlayIdFactory.randomId();

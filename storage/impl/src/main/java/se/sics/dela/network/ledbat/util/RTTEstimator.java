@@ -18,6 +18,7 @@
  */
 package se.sics.dela.network.ledbat.util;
 
+import org.slf4j.Logger;
 import se.sics.dela.network.ledbat.LedbatConfig;
 
 /**
@@ -61,5 +62,9 @@ public class RTTEstimator {
     } else {
       return rto;
     }
+  }
+  
+  public void details(Logger logger) {
+    logger.info("rto:{}, rrtvar:{}", new Object[]{rto, rttvar});
   }
 }

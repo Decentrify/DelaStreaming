@@ -24,7 +24,6 @@ import java.util.UUID;
 import se.sics.dela.network.DelaSerializerSetup;
 import se.sics.dela.network.ledbat.LedbatSenderComp;
 import se.sics.dela.network.ledbat.LedbatSenderPort;
-import se.sics.dela.network.ledbat.LedbatSerializerSetup;
 import se.sics.kompics.Channel;
 import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.Component;
@@ -46,7 +45,7 @@ import se.sics.ktoolbox.omngr.OMngrSerializerSetup;
 import se.sics.ktoolbox.util.config.options.BasicAddressOption;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
-import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -126,6 +125,7 @@ public class HostComp extends ComponentDefinition {
     driverComp = create(DriverComp.class, Init.NONE);
     connect(driverComp.getNegative(LedbatSenderPort.class), ledbatSenderComp.getPositive(LedbatSenderPort.class),
       Channel.TWO_WAY);
+    connect(driverComp.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
   }
 
   public static class HostConfig {
@@ -150,13 +150,13 @@ public class HostComp extends ComponentDefinition {
     serializerId = DelaSerializerSetup.registerSerializers(serializerId);
   }
   
-  private static OverlayIdFactory setupOverlayIdFactory() {
+  private static OverlayIdFactory setupOverlayIdFactory(long seed) {
     OverlayRegistry.initiate(new SystemOverlays.TypeFactory(), new SystemOverlays.Comparator());
 
     byte torrentOwnerId = 1;
     OverlayRegistry.registerPrefix(TorrentIds.TORRENT_OVERLAYS, torrentOwnerId);
 
-    IdentifierFactory torrentBaseIdFactory = IdentifierRegistry.lookup(BasicIdentifiers.Values.OVERLAY.toString());
+    IdentifierFactory torrentBaseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, java.util.Optional.of(seed));
     return new OverlayIdFactory(torrentBaseIdFactory, TorrentIds.Types.TORRENT, torrentOwnerId);
   }
 
@@ -172,8 +172,8 @@ public class HostComp extends ComponentDefinition {
     Config.Impl config = (Config.Impl) Kompics.getConfig();
     Config.Builder builder = Kompics.getConfig().modify(UUID.randomUUID());
     setupBasic(builder);
-    TorrentIds.registerDefaults(builder.getValue("system.seed", Long.class));
-    OverlayIdFactory torrentIdFactory = setupOverlayIdFactory();
+    IdentifierRegistryV2.registerBaseDefaults1(64);
+    OverlayIdFactory torrentIdFactory = setupOverlayIdFactory(builder.getValue("system.seed", Long.class));
     setupSerializers();
     config.apply(builder.finalise(), (Optional) Optional.absent());
     Kompics.setConfig(config);

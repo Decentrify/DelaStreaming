@@ -27,7 +27,7 @@ import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 
 /**
  *
@@ -42,7 +42,7 @@ public class LedbatMsgSerializer {
 
     public Data(int id) {
       this.id = id;
-      this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
+      this.msgIdType = IdentifierRegistryV2.idType(BasicIdentifiers.Values.MSG);
     }
 
     @Override
@@ -77,7 +77,7 @@ public class LedbatMsgSerializer {
 
     public Ack(int id) {
       this.id = id;
-      this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
+      this.msgIdType = IdentifierRegistryV2.idType(BasicIdentifiers.Values.MSG);
     }
 
     @Override

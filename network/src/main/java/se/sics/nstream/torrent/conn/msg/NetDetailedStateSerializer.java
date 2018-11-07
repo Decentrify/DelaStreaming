@@ -24,7 +24,7 @@ import se.sics.kompics.util.Identifier;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.IdentifierRegistry;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.transfer.MyTorrent;
 import se.sics.nstream.util.BlockDetails;
@@ -42,7 +42,7 @@ public class NetDetailedStateSerializer {
 
         public Request(int id) {
             this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
+            this.msgIdType = IdentifierRegistryV2.idType(BasicIdentifiers.Values.MSG);
         }
 
         @Override
@@ -72,7 +72,7 @@ public class NetDetailedStateSerializer {
 
         public Response(int id) {
             this.id = id;
-            this.msgIdType = IdentifierRegistry.lookup(BasicIdentifiers.Values.MSG.toString()).idType();
+            this.msgIdType = IdentifierRegistryV2.idType(BasicIdentifiers.Values.MSG);
         }
 
         @Override

@@ -21,21 +21,18 @@ package se.sics.dela.network.ledbat;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
  *
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LedbatSenderEvent {
-
   public static class Request<D extends Identifiable> extends Direct.Request<Indication> implements Identifiable {
-
     public final Identifier eventId;
     public final D data;
 
-    public Request(D data) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Request(Identifier eventId, D data) {
+      this.eventId = eventId;
       this.data = data;
     }
 
@@ -44,12 +41,12 @@ public class LedbatSenderEvent {
       return eventId;
     }
 
-    public Acked ack() {
-      return new Acked(this);
+    public Acked ack(int maxInFlight) {
+      return new Acked(this, maxInFlight);
     }
-    
-    public Timeout timeout() {
-      return new Timeout(this);
+
+    public Timeout timeout(int maxInFlight) {
+      return new Timeout(this, maxInFlight);
     }
 
     @Override
@@ -59,24 +56,27 @@ public class LedbatSenderEvent {
   }
 
   public static class Indication<D extends Identifiable> implements Direct.Response, Identifiable {
+
     public final Request<D> req;
-    
-    public Indication(Request<D> req) {
+    public final int maxInFlight;
+
+    public Indication(Request<D> req, int maxInFlight) {
       this.req = req;
+      this.maxInFlight = maxInFlight;
     }
-    
+
     @Override
     public Identifier getId() {
       return req.getId();
     }
   }
-
+  
   public static class Acked<D extends Identifiable> extends Indication<D> {
 
-    public Acked(Request<D> req) {
-      super(req);
+    public Acked(Request<D> req, int maxInFlight) {
+      super(req, maxInFlight);
     }
-    
+
     @Override
     public String toString() {
       return "LedbatSenderAck{" + "data=" + req.data.getId() + '}';
@@ -85,13 +85,25 @@ public class LedbatSenderEvent {
 
   public static class Timeout<D extends Identifiable> extends Indication<D> {
 
-    public Timeout(Request<D> req) {
-      super(req);
+    public Timeout(Request<D> req, int maxInFlight) {
+      super(req, maxInFlight);
     }
-    
+
     @Override
     public String toString() {
       return "LedbatSenderTimeout{" + "data=" + req.data.getId() + '}';
+    }
+  }
+
+  public static class Overloaded<D extends Identifiable> extends Indication<D> {
+
+    public Overloaded(Request<D> req, int maxInFlight) {
+      super(req, maxInFlight);
+    }
+
+    @Override
+    public String toString() {
+      return "LedbatSenderOverloaded{" + "data=" + req.data.getId() + '}';
     }
   }
 }

@@ -22,19 +22,19 @@ import se.sics.dela.network.ledbat.util.OneWayDelay;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LedbatMsg {
+  
   public static class Data<D extends Identifiable> implements Identifiable, KompicsEvent {
     public final Identifier msgId;
     public final D data;
     public final OneWayDelay dataDelay;
     
-    public Data(D data) {
-      this(BasicIdentifiers.msgId(), data, new OneWayDelay());
+    public Data(Identifier msgId, D data) {
+      this(msgId, data, new OneWayDelay());
     }
     
     public Data(Identifier msgId, D data, OneWayDelay dataDelay) {
