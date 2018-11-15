@@ -41,6 +41,9 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifiable;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
@@ -86,6 +89,7 @@ public class UpldConnComp extends ComponentDefinition {
   private KContentMsg<?, ?, CacheHint.Request> pendingCacheReq;
   //**************************************************************************
   private UUID reportTid;
+  private final IdentifierFactory eventIds;
 
   public UpldConnComp(Init init) {
     connId = init.connId;
@@ -93,7 +97,7 @@ public class UpldConnComp extends ComponentDefinition {
     defaultBlock = init.defaultBlock;
     withHashes = init.withHashes;
     logPrefix = "<" + connId.toString() + ">";
-
+    this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, java.util.Optional.empty());
     networkQueueLoad = NetworkQueueLoadProxy.instance("load_upld" + logPrefix, proxy, config(), Optional.
       fromNullable((String) null));
     subscribe(handleStart, control);
@@ -128,7 +132,7 @@ public class UpldConnComp extends ComponentDefinition {
     public void handle(ReportTimeout event) {
       double queueAdjustment = networkQueueLoad.adjustment();
       Pair<Integer, Integer> queueDelay = networkQueueLoad.queueDelay();
-      trigger(new UpldConnReport(connId, queueDelay, queueAdjustment), connPort);
+      trigger(new UpldConnReport(eventIds.randomId(), connId, queueDelay, queueAdjustment), connPort);
     }
   };
 
@@ -147,7 +151,7 @@ public class UpldConnComp extends ComponentDefinition {
           Set<Integer> delCache = new HashSet<>(Sets.difference(servedBlocks.keySet(), content.requestCache.blocks));
 
           if (!newCache.isEmpty()) {
-            trigger(new GetBlocks.Request(connId, newCache, withHashes, content.requestCache), connPort);
+            trigger(new GetBlocks.Request(eventIds.randomId(), connId, newCache, withHashes, content.requestCache), connPort);
           } else {
             answerCacheHint();
           }

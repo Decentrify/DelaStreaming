@@ -40,6 +40,7 @@ import se.sics.kompics.timer.CancelPeriodicTimeout;
 import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
@@ -85,9 +86,10 @@ public class SimpleKCache implements KCache {
     final Map<Long, List<Pair<KRange, ReadCallback>>> delayedReads = new HashMap<>();
     //**************************************************************************
     private UUID extendedCacheCleanTid;
+    private final IdentifierFactory eventIds;
 
     public SimpleKCache(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExHandling, ComponentLoadTracking loadTracker,
-            Pair<StreamId, MyStream> stream) {
+            Pair<StreamId, MyStream> stream, IdentifierFactory eventIds) {
         this.cacheConfig = new KCacheConfig(config);
         this.proxy = proxy;
         this.stream = stream;
@@ -99,6 +101,7 @@ public class SimpleKCache implements KCache {
         this.proxy.subscribe(handleReadResp, readPort);
         this.logPrefix = "<" + stream.getValue1().endpoint.getEndpointName() + ":" + stream.getValue1().resource.getSinkName() + ">";
         LOG.info("{}initiating...", logPrefix);
+        this.eventIds = eventIds;
     }
 
     //********************************CONTROL***********************************
@@ -209,7 +212,7 @@ public class SimpleKCache implements KCache {
             cacheFetch = Pair.with(blockRange, rhList);
             pendingCacheFetch.put(blockPos, cacheFetch);
             //read from external resource
-            proxy.trigger(new DStorageRead.Request(stream.getValue0(), blockRange), readPort);
+            proxy.trigger(new DStorageRead.Request(eventIds.randomId(), stream.getValue0(), blockRange), readPort);
         }
         cacheFetch.getValue1().add(reader);
     }

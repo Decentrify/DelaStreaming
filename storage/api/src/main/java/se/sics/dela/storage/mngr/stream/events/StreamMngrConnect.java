@@ -21,7 +21,6 @@ package se.sics.dela.storage.mngr.stream.events;
 import se.sics.dela.storage.StreamStorage;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.nstream.StreamId;
 
 /**
@@ -36,8 +35,8 @@ public class StreamMngrConnect {
     public final StreamId streamId;
     public final StreamStorage stream;
 
-    public Request(Identifier clientId, StreamId streamId, StreamStorage stream) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Request(Identifier eventId, Identifier clientId, StreamId streamId, StreamStorage stream) {
+      this.eventId = eventId;
       this.clientId = clientId;
       this.streamId = streamId;
       this.stream = stream;

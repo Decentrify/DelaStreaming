@@ -19,7 +19,6 @@
 package se.sics.nstream.torrent.conn.msg;
 
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 
@@ -27,57 +26,56 @@ import se.sics.ktoolbox.util.overlays.OverlayEvent;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class NetConnect {
-    public static class Request implements OverlayEvent {
-        public final Identifier msgId;
-        public final OverlayId torrentId;
-        
-        protected Request(Identifier msgId, OverlayId torrentId) {
-            this.msgId = msgId;
-            this.torrentId = torrentId;
-        }
-        
-        public Request(OverlayId torrentId) {
-            this(BasicIdentifiers.msgId(), torrentId);
-        }
-        
-        @Override
-        public OverlayId overlayId() {
-            return torrentId;
-        }
 
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
-        
-        public Response answer(boolean result) {
-            return new Response(this, result);
-        }
+  public static class Request implements OverlayEvent {
+
+    public final Identifier msgId;
+    public final OverlayId torrentId;
+
+    public Request(Identifier msgId, OverlayId torrentId) {
+      this.msgId = msgId;
+      this.torrentId = torrentId;
     }
-    
-    public static class Response implements OverlayEvent {
-        public final Identifier msgId;
-        public final OverlayId torrentId;
-        public final boolean result;
-        
-        protected Response(Identifier msgId, OverlayId torrentId, boolean result) {
-            this.msgId = msgId;
-            this.torrentId = torrentId;
-            this.result = result;
-        }
-        
-        private Response(Request req, boolean result) {
-            this(req.msgId, req.torrentId, result);
-        }
 
-        @Override
-        public OverlayId overlayId() {
-            return torrentId;
-        }
-
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
+    @Override
+    public OverlayId overlayId() {
+      return torrentId;
     }
+
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+
+    public Response answer(boolean result) {
+      return new Response(this, result);
+    }
+  }
+
+  public static class Response implements OverlayEvent {
+
+    public final Identifier msgId;
+    public final OverlayId torrentId;
+    public final boolean result;
+
+    protected Response(Identifier msgId, OverlayId torrentId, boolean result) {
+      this.msgId = msgId;
+      this.torrentId = torrentId;
+      this.result = result;
+    }
+
+    private Response(Request req, boolean result) {
+      this(req.msgId, req.torrentId, result);
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return torrentId;
+    }
+
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+  }
 }

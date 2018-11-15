@@ -22,7 +22,6 @@ import java.util.List;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.util.TorrentExtendedStatus;
 
@@ -30,49 +29,48 @@ import se.sics.nstream.util.TorrentExtendedStatus;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LibraryContentsEvent {
-    public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
-        public final Identifier eventId;
-        
-        public Request(Identifier eventId) {
-            this.eventId = eventId;
-        }
-        
-        public Request() {
-            this(BasicIdentifiers.eventId());
-        }
-        
-        public Response success(List<TorrentExtendedStatus> content) {
-            return new Response(this, Result.success(content));
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        @Override
-        public String toString() {
-            return "LibraryContentsRequest<" + getId() + ">";
-        }
+
+  public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+
+    public final Identifier eventId;
+
+    public Request(Identifier eventId) {
+      this.eventId = eventId;
     }
-    
-    public static class Response implements Direct.Response, VoDMngrEvent {
-        public final Request req;
-        public final Result<List<TorrentExtendedStatus>> content;
-        
-        private Response(Request req, Result<List<TorrentExtendedStatus>> content) {
-            this.req = req;
-            this.content = content;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
-        
-         @Override
-        public String toString() {
-            return "LibraryContentsResponse<" + getId() + ">";
-        }
+
+    public Response success(List<TorrentExtendedStatus> content) {
+      return new Response(this, Result.success(content));
     }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    @Override
+    public String toString() {
+      return "LibraryContentsRequest<" + getId() + ">";
+    }
+  }
+
+  public static class Response implements Direct.Response, VoDMngrEvent {
+
+    public final Request req;
+    public final Result<List<TorrentExtendedStatus>> content;
+
+    private Response(Request req, Result<List<TorrentExtendedStatus>> content) {
+      this.req = req;
+      this.content = content;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public String toString() {
+      return "LibraryContentsResponse<" + getId() + ">";
+    }
+  }
 }

@@ -24,7 +24,6 @@ import java.util.Map;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
@@ -61,11 +60,6 @@ public class HopsTorrentDownloadEvent {
       this.hdfsEndpoint = hdfsEndpoint;
       this.manifest = manifest;
       this.partners = partners;
-    }
-
-    public StartRequest(OverlayId torrentId, String torrentName, Integer projectId, Integer datasetId, 
-      HDFSEndpoint hdfsEndpoint, HDFSResource manifest, List<KAddress> partners) {
-      this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, datasetId, hdfsEndpoint, manifest, partners);
     }
 
     @Override
@@ -160,11 +154,6 @@ public class HopsTorrentDownloadEvent {
       this.kafkaEndpoint = kafkaEndpoint;
       this.hdfsDetails = hdfsDetails;
       this.kafkaDetails = kafkaDetails;
-    }
-
-    public AdvanceRequest(OverlayId torrentId, HDFSEndpoint hdfsEndpoint, Optional<KafkaEndpoint> kafkaEndpoint,
-      Map<String, HDFSResource> hdfsDetails, Map<String, KafkaResource> kafkaDetails) {
-      this(BasicIdentifiers.eventId(), torrentId, hdfsEndpoint, kafkaEndpoint, hdfsDetails, kafkaDetails);
     }
 
     @Override

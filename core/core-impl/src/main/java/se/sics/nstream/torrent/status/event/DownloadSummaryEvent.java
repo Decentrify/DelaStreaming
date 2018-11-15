@@ -19,7 +19,6 @@
 package se.sics.nstream.torrent.status.event;
 
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.StreamEvent;
@@ -41,10 +40,6 @@ public class DownloadSummaryEvent implements StreamEvent, OverlayEvent, LibTFSME
     this.transferSize = transferSize;
     this.transferTime = transferTime;
     this.torrentId = torrentId;
-  }
-
-  public DownloadSummaryEvent(OverlayId torrentId, long transferSize, long transferTime) {
-    this(BasicIdentifiers.eventId(), torrentId, transferSize, transferTime);
   }
 
   @Override

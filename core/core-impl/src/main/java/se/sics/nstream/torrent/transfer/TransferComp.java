@@ -47,6 +47,9 @@ import se.sics.kompics.timer.SchedulePeriodicTimeout;
 import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.idextractor.MsgOverlayIdExtractor;
 import se.sics.ktoolbox.util.idextractor.SourceHostIdExtractor;
@@ -150,6 +153,7 @@ public class TransferComp extends ComponentDefinition {
   //**************************************************************************
   private GetRawTorrent.Request rawTorrentReq;
   private SetupTransfer.Request setupTransferReq;
+  private final IdentifierFactory eventIds;
 
   public TransferComp(Init init) {
     torrentId = init.torrentId;
@@ -159,7 +163,8 @@ public class TransferComp extends ComponentDefinition {
 
     componentTracking = new ComponentLoadTracking("torrent", this.proxy, new QueueLoadConfig(config()));
     buildChannels();
-    connMngr = new TorrentConnMngr(componentTracking, init.partners);
+    this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, java.util.Optional.empty());
+    connMngr = new TorrentConnMngr(componentTracking, init.partners, eventIds);
 
     subscribe(handleStart, control);
     subscribe(handleKilled, control);
@@ -231,7 +236,7 @@ public class TransferComp extends ComponentDefinition {
     public void handle(GetRawTorrent.Request req) {
       rawTorrentReq = req;
       if (connMngr.hasConnCandidates()) {
-        trigger(new Seeder.Connect(connMngr.getConnCandidate(), torrentId), connPort);
+        trigger(new Seeder.Connect(eventIds.randomId(), connMngr.getConnCandidate(), torrentId), connPort);
       } else {
         answer(req, req.success(Result.timeout(new IllegalArgumentException("no peers to download manifest def"))));
       }
@@ -276,7 +281,7 @@ public class TransferComp extends ComponentDefinition {
       KAddress peer = connMngr.randomPeer();
       FileId fileId = TorrentIds.fileId(torrentId, DEF_FILE_NR);
       ConnId connId = TorrentIds.connId(fileId, peer.getId(), true);
-      trigger(new OpenTransfer.LeecherRequest(peer, connId), connPort);
+      trigger(new OpenTransfer.LeecherRequest(eventIds.randomId(), peer, connId), connPort);
       getDefState = new GetDefinitionState(event.manifestDef.getValue());
     }
   };
@@ -288,9 +293,9 @@ public class TransferComp extends ComponentDefinition {
       setupTransferReq = req;
       serveDefState = new ServeDefinitionState(req.torrent);
       if (getDefState == null) {
-        trigger(new DetailedState.Set(req.torrent.manifest.getDef()), connPort);
+        trigger(new DetailedState.Set(eventIds.randomId(), req.torrent.manifest.getDef()), connPort);
       }
-      trigger(new PrepareResources.Request(torrentId, serveDefState.td), resourceMngrPort);
+      trigger(new PrepareResources.Request(eventIds.randomId(), torrentId, serveDefState.td), resourceMngrPort);
     }
   };
 
@@ -305,7 +310,7 @@ public class TransferComp extends ComponentDefinition {
       trigger(Start.event, transferTrackingComp.control());
 
       answer(setupTransferReq, setupTransferReq.success(Result.success(true)));
-      trigger(new TorrentTracking.TransferSetUp(torrentId, fileMngr.report()), statusPort);
+      trigger(new TorrentTracking.TransferSetUp(eventIds.randomId(), torrentId, fileMngr.report()), statusPort);
       scheduleAdvance();
       tryAdvance();
     }
@@ -319,7 +324,7 @@ public class TransferComp extends ComponentDefinition {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
       }
     };
-    fileMngr = TorrentFileMngr.create(config(), proxy, deh, componentTracking, torrent, streamsInfo);
+    fileMngr = TorrentFileMngr.create(config(), proxy, deh, componentTracking, eventIds, torrent, streamsInfo);
     fileMngr.start();
 
     //transfer report
@@ -352,7 +357,7 @@ public class TransferComp extends ComponentDefinition {
     }
     if (fileMngr.complete()) {
       cancelAdvance();
-      trigger(new TorrentTracking.DownloadDone(torrentId, fileMngr.report()), statusPort);
+      trigger(new TorrentTracking.DownloadDone(eventIds.randomId(), torrentId, fileMngr.report()), statusPort);
     }
 
     FileId fileId = connMngr.canAdvanceFile();
@@ -395,7 +400,7 @@ public class TransferComp extends ComponentDefinition {
 
   private void fileWriteClose(FileId fileId) {
     fileMngr.resources(fileId).keySet().stream()
-      .map((streamId) -> new DStorageWrite.Complete(streamId))
+      .map((streamId) -> new DStorageWrite.Complete(eventIds.randomId(), streamId))
       .forEach((indication) -> trigger(indication, storagePort));
   }
 
@@ -643,7 +648,7 @@ public class TransferComp extends ComponentDefinition {
         blocks.add(i);
       }
       irregularBlockDetails.put(lastBlockNr, tdBuilder.manifestBuilder.lastBlock);
-      trigger(new DownloadBlocks(connId, blocks, irregularBlockDetails), dwnlConnPort);
+      trigger(new DownloadBlocks(eventIds.randomId(), connId, blocks, irregularBlockDetails), dwnlConnPort);
     }
 
     private void killInstance() {
@@ -679,9 +684,9 @@ public class TransferComp extends ComponentDefinition {
     }
 
     private void interpretManifest(Manifest manifest) {
-      trigger(new TorrentTracking.DownloadedManifest(torrentId, Result.success(manifest)), statusPort);
+      trigger(new TorrentTracking.DownloadedManifest(eventIds.randomId(), torrentId, Result.success(manifest)), statusPort);
       answer(rawTorrentReq, rawTorrentReq.success(Result.success(manifest)));
-      trigger(new CloseTransfer.Request(connId), connPort);
+      trigger(new CloseTransfer.Request(eventIds.randomId(), connId), connPort);
       killInstance();
     }
   }
@@ -780,7 +785,7 @@ public class TransferComp extends ComponentDefinition {
         pc = new LinkedList<>();
         pendingPeerConnection.put(peerConnect.peer.getId(), pc);
         LOG.info("{}get files - connecting to peer:{}", logPrefix, peerConnect.peer);
-        trigger(new Seeder.Connect(peerConnect.peer, torrentId), connPort);
+        trigger(new Seeder.Connect(eventIds.randomId(), peerConnect.peer, torrentId), connPort);
       }
       pc.add(peerConnect);
       LOG.info("{}get files - waiting to establish peer connection:{}", logPrefix, peerConnect.peer);

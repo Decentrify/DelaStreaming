@@ -19,7 +19,6 @@
 package se.sics.nstream.torrent.conn.msg;
 
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.FileId;
@@ -30,27 +29,23 @@ import se.sics.nstream.FileId;
  */
 public class NetCloseTransfer implements OverlayEvent {
 
-    public final Identifier msgId;
-    public final FileId fileId;
-    public final boolean leecher;
+  public final Identifier msgId;
+  public final FileId fileId;
+  public final boolean leecher;
 
-    protected NetCloseTransfer(Identifier msgId, FileId fileId, boolean leecher) {
-        this.msgId = msgId;
-        this.fileId = fileId;
-        this.leecher = leecher;
-    }
-    
-    public NetCloseTransfer(FileId fileId, boolean leecher) {
-        this(BasicIdentifiers.msgId(), fileId, leecher);
-    }
+  public NetCloseTransfer(Identifier msgId, FileId fileId, boolean leecher) {
+    this.msgId = msgId;
+    this.fileId = fileId;
+    this.leecher = leecher;
+  }
 
-    @Override
-    public Identifier getId() {
-        return msgId;
-    }
+  @Override
+  public Identifier getId() {
+    return msgId;
+  }
 
-    @Override
-    public OverlayId overlayId() {
-        return fileId.torrentId;
-    }
+  @Override
+  public OverlayId overlayId() {
+    return fileId.torrentId;
+  }
 }

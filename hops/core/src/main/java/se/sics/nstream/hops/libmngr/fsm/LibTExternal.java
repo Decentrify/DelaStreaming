@@ -22,6 +22,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
 import se.sics.kompics.fsm.FSMExternalState;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.hops.library.Details;
 import se.sics.nstream.hops.library.LibraryCtrl;
@@ -42,13 +43,15 @@ public class LibTExternal implements FSMExternalState {
   public final LibraryCtrl library;
   public final EndpointIdRegistry endpointIdRegistry;
   public final Details.Types fsmType;
+  public final IdentifierFactory eventIds;
 
   public LibTExternal(KAddress selfAdr, LibraryCtrl library, EndpointIdRegistry endpointIdRegistry,
-    Details.Types fsmType) {
+    Details.Types fsmType, IdentifierFactory eventIds) {
     this.selfAdr = selfAdr;
     this.library = library;
     this.endpointIdRegistry = endpointIdRegistry;
     this.fsmType = fsmType;
+    this.eventIds = eventIds;
   }
 
   @Override

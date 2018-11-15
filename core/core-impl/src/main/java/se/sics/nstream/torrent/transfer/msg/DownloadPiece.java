@@ -21,7 +21,6 @@ package se.sics.nstream.torrent.transfer.msg;
 import org.javatuples.Pair;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.Either;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.ConnId;
@@ -39,14 +38,10 @@ public class DownloadPiece {
     public final FileId fileId;
     public final Pair<Integer, Integer> piece;
 
-    protected Request(Identifier msgId, FileId fileId, Pair<Integer, Integer> piece) {
+    public Request(Identifier msgId, FileId fileId, Pair<Integer, Integer> piece) {
       this.msgId = msgId;
       this.fileId = fileId;
       this.piece = piece;
-    }
-
-    public Request(FileId fileId, Pair<Integer, Integer> piece) {
-      this(BasicIdentifiers.msgId(), fileId, piece);
     }
 
     @Override
@@ -118,8 +113,9 @@ public class DownloadPiece {
 
     @Override
     public String toString() {
-      return "DwnlPieceSuccess<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + msgId.
-        toString() + ">";
+      return "DwnlPieceSuccess<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + ","
+        + msgId.
+          toString() + ">";
     }
   }
 
@@ -134,7 +130,7 @@ public class DownloadPiece {
       this.fileId = fileId;
       this.piece = piece;
     }
-    
+
     private BadRequest(Request req) {
       this(req.msgId, req.fileId, req.piece);
     }
@@ -156,8 +152,9 @@ public class DownloadPiece {
 
     @Override
     public String toString() {
-      return "DwnlPieceBadReq<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + "," + msgId.
-        toString() + ">";
+      return "DwnlPieceBadReq<" + fileId.toString() + ",b:" + piece.getValue0() + ",p:" + piece.getValue1() + ","
+        + msgId.
+          toString() + ">";
     }
   }
 }

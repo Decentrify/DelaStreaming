@@ -181,7 +181,7 @@ public class LibTHandlers {
     public FSMStateName handle(FSMStateName state, LibTExternal es, LibTInternal is,
       TorrentExtendedStatusEvent.Request event) throws FSMException {
       is.statusReq = Optional.of(event);
-      es.getProxy().trigger(new StatusSummaryEvent.Request(is.getTorrentId()), es.torrentStatusPort());
+      es.getProxy().trigger(new StatusSummaryEvent.Request(es.eventIds.randomId(), is.getTorrentId()), es.torrentStatusPort());
       return state;
     }
   };
@@ -499,7 +499,7 @@ public class LibTHandlers {
       }
       is.storageRegistry.addWaiting(endpointName, endpointId, provider.getEndpoint());
       es.endpointIdRegistry.use(endpointId);
-      es.getProxy().trigger(new DEndpoint.Connect(is.getTorrentId(), endpointId, provider), es.endpointPort());
+      es.getProxy().trigger(new DEndpoint.Connect(es.eventIds.randomId(), is.getTorrentId(), endpointId, provider), es.endpointPort());
       waiting = true;
     }
     return waiting;
@@ -508,7 +508,7 @@ public class LibTHandlers {
   private static void cleanStorage(LibTExternal es, LibTInternal is) {
     Set<Identifier> endpoints = is.storageRegistry.selfCleaning();
     for (Identifier endpointId : endpoints) {
-      es.getProxy().trigger(new DEndpoint.Disconnect(is.getTorrentId(), endpointId), es.endpointPort());
+      es.getProxy().trigger(new DEndpoint.Disconnect(es.eventIds.randomId(), is.getTorrentId(), endpointId), es.endpointPort());
     }
   }
 
@@ -530,22 +530,22 @@ public class LibTHandlers {
   }
 
   private static void setupTransfer(LibTExternal es, LibTInternal is) {
-    StartTorrent.Request req = new StartTorrent.Request(is.getTorrentId(), is.getPartners());
+    StartTorrent.Request req = new StartTorrent.Request(es.eventIds.randomId(), is.getTorrentId(), is.getPartners());
     es.getProxy().trigger(req, es.torrentMngrPort());
   }
 
   private static void cleanTransfer(LibTExternal es, LibTInternal is) {
-    StopTorrent.Request req = new StopTorrent.Request(is.getTorrentId());
+    StopTorrent.Request req = new StopTorrent.Request(es.eventIds.randomId(), is.getTorrentId());
     es.getProxy().trigger(req, es.torrentMngrPort());
   }
 
   private static void getManifest(LibTExternal es, LibTInternal is) {
-    GetRawTorrent.Request req = new GetRawTorrent.Request(is.getTorrentId());
+    GetRawTorrent.Request req = new GetRawTorrent.Request(es.eventIds.randomId(), is.getTorrentId());
     es.getProxy().trigger(req, es.transferCtrlPort());
   }
 
   private static void advanceTransfer(LibTExternal es, LibTInternal is) {
-    SetupTransfer.Request req = new SetupTransfer.Request(is.getTorrentId(), is.getCompleteState().torrent);
+    SetupTransfer.Request req = new SetupTransfer.Request(es.eventIds.randomId(), is.getTorrentId(), is.getCompleteState().torrent);
     es.getProxy().trigger(req, es.transferCtrlPort());
   }
 

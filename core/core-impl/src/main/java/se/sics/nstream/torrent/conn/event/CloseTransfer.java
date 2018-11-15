@@ -21,37 +21,40 @@ package se.sics.nstream.torrent.conn.event;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.nstream.ConnId;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class CloseTransfer {
-    public static abstract class Base implements KompicsEvent, Identifiable {
-        public final Identifier eventId;
-        public final ConnId connId;
 
-        public Base(ConnId connId) {
-            this.eventId = BasicIdentifiers.eventId();
-            this.connId = connId;
-        }
+  public static abstract class Base implements KompicsEvent, Identifiable {
 
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
+    public final Identifier eventId;
+    public final ConnId connId;
+
+    public Base(Identifier eventId, ConnId connId) {
+      this.eventId = eventId;
+      this.connId = connId;
     }
-    
-    public static class Request extends Base {
-        public Request(ConnId connId) {
-            super(connId);
-        }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
-    
-    public static class Indication extends Base {
-        public Indication(ConnId connId) {
-            super(connId);
-        }
+  }
+
+  public static class Request extends Base {
+
+    public Request(Identifier eventId, ConnId connId) {
+      super(eventId, connId);
     }
+  }
+
+  public static class Indication extends Base {
+
+    public Indication(Identifier eventId, ConnId connId) {
+      super(eventId, connId);
+    }
+  }
 }

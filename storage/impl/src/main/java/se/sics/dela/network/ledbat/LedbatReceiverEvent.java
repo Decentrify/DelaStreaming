@@ -21,7 +21,6 @@ package se.sics.dela.network.ledbat;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -31,8 +30,8 @@ public class LedbatReceiverEvent {
     public final Identifier eventId;
     public final D data;
     
-    public Received(D data) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Received(Identifier eventId, D data) {
+      this.eventId = eventId;
       this.data = data;
     }
     

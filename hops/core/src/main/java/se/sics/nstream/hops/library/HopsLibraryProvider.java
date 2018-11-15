@@ -24,6 +24,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.PortType;
 import se.sics.kompics.config.Config;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.hops.libmngr.HopsLibraryMngr;
 import se.sics.nstream.library.LibraryProvider;
@@ -45,9 +46,10 @@ public class HopsLibraryProvider implements LibraryProvider {
     }
     
     @Override
-    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, OnFSMExceptionAction oexa) {
+    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, 
+      OnFSMExceptionAction oexa, IdentifierFactory eventIds) {
         hopsHelper = new HopsHelperMngr(proxy, logPrefix);
-        hopsTorrent = new HopsLibraryMngr(oexa, proxy, config, logPrefix, selfAdr);
+        hopsTorrent = new HopsLibraryMngr(oexa, proxy, config, logPrefix, selfAdr, eventIds);
     }
     
     @Override

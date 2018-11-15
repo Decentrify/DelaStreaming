@@ -16,7 +16,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-
 package se.sics.gvod.core.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
@@ -27,21 +26,22 @@ import se.sics.kompics.util.Identifier;
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class PlayReady implements GVoDEvent {
-    public final Identifier id;
-    public final String videoName;
-    public final Identifier overlayId;
+
+  public final Identifier eventId;
+  public final String videoName;
+  public final Identifier overlayId;
 //    public final VideoStreamManager vsMngr;
-    
-    public PlayReady(Identifier id, String videoName, Identifier overlayId) {
-//    public PlayReady(Identifier id, String videoName, Identifier overlayId, VideoStreamManager vsMngr) {
-        this.id = id;
-        this.videoName = videoName;
-        this.overlayId = overlayId;
+
+  public PlayReady(Identifier eventId, String videoName, Identifier overlayId) {
+//    public PlayReady(Identifier eventId, String videoName, Identifier overlayId, VideoStreamManager vsMngr) {
+    this.eventId = eventId;
+    this.videoName = videoName;
+    this.overlayId = overlayId;
 //        this.vsMngr = vsMngr;
-    }
-    
-    @Override
-    public Identifier getId() {
-        return id;
-    }
+  }
+
+  @Override
+  public Identifier getId() {
+    return eventId;
+  }
 }

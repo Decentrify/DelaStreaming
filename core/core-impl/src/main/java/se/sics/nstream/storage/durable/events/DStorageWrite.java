@@ -43,10 +43,6 @@ public class DStorageWrite {
       this.value = value;
     }
 
-    public Request(StreamId streamId, long pos, byte[] value) {
-      this(BasicIdentifiers.eventId(), streamId, pos, value);
-    }
-
     @Override
     public Identifier getId() {
       return eventId;
@@ -94,13 +90,15 @@ public class DStorageWrite {
   }
 
   public static class Complete implements DStreamEvent {
+
     public final Identifier eventId;
     public final StreamId streamId;
-    
-    public Complete(StreamId streamId) {
-      this.eventId = BasicIdentifiers.eventId();
+
+    public Complete(Identifier eventId, StreamId streamId) {
+      this.eventId = eventId;
       this.streamId = streamId;
     }
+
     @Override
     public StreamId getStreamId() {
       return streamId;

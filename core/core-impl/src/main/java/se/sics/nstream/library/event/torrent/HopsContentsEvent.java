@@ -23,7 +23,6 @@ import java.util.Map;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.mngr.util.ElementSummary;
 
@@ -32,52 +31,51 @@ import se.sics.nstream.mngr.util.ElementSummary;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class HopsContentsEvent {
-    public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
-        public final Identifier eventId;
-        //an empty list means all projects;
-        public final List<Integer> projectIds;
-        
-        public Request(Identifier eventId, List<Integer> projectIds) {
-            this.eventId = eventId;
-            this.projectIds = projectIds;
-        }
-        
-        public Request(List<Integer> projectIds) {
-            this(BasicIdentifiers.eventId(), projectIds);
-        }
-        
-        public Response success(Map<Integer, List<ElementSummary>> value) {
-            return new Response(this, Result.success(value));
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        @Override
-        public String toString() {
-            return "ContentsSummaryRequest<" + getId() + ">";
-        }
+
+  public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+
+    public final Identifier eventId;
+    //an empty list means all projects;
+    public final List<Integer> projectIds;
+
+    public Request(Identifier eventId, List<Integer> projectIds) {
+      this.eventId = eventId;
+      this.projectIds = projectIds;
     }
-    
-    public static class Response implements Direct.Response, VoDMngrEvent {
-        public final Request req;
-        public final Result<Map<Integer, List<ElementSummary>>> result;
-        
-        private Response(Request req, Result<Map<Integer, List<ElementSummary>>> result) {
-            this.req = req;
-            this.result = result;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
-        
-         @Override
-        public String toString() {
-            return "ContentsSummaryResponse<" + getId() + ">";
-        }
+
+    public Response success(Map<Integer, List<ElementSummary>> value) {
+      return new Response(this, Result.success(value));
     }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    @Override
+    public String toString() {
+      return "ContentsSummaryRequest<" + getId() + ">";
+    }
+  }
+
+  public static class Response implements Direct.Response, VoDMngrEvent {
+
+    public final Request req;
+    public final Result<Map<Integer, List<ElementSummary>>> result;
+
+    private Response(Request req, Result<Map<Integer, List<ElementSummary>>> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public String toString() {
+      return "ContentsSummaryResponse<" + getId() + ">";
+    }
+  }
 }

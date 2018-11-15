@@ -42,6 +42,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.config.Config;
 import se.sics.ktoolbox.nutil.timer.TimerProxy;
 import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
@@ -76,7 +77,8 @@ public class OldStreamOpMngr {
   }
 
   public static OldStreamOpMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
-    OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo, Logger logger) throws KReferenceException {
+    OverlayId torrentId, MyTorrent torrent, Map<StreamId, Long> streamsInfo, Logger logger, IdentifierFactory eventIds) 
+    throws KReferenceException {
     Map<FileId, StreamComplete> completed = new HashMap<>();
     Map<FileId, StreamOngoing> ongoing = new HashMap<>();
     TreeMap<FileId, StreamOngoing> pending = new TreeMap<>();
@@ -84,7 +86,7 @@ public class OldStreamOpMngr {
     for (Map.Entry<FileId, FileExtendedDetails> entry : torrent.extended.entrySet()) {
       Map<StreamId, Long> fileStreams = new HashMap<>();
 
-      StreamStorageOpProxy storageProxy = new StreamStorageOpProxy().setup(proxy);
+      StreamStorageOpProxy storageProxy = new StreamStorageOpProxy().setup(proxy, eventIds);
       TimerProxy timerProxy = new TimerProxyImpl().setup(proxy);
 
       FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
@@ -116,7 +118,7 @@ public class OldStreamOpMngr {
       }
     }
     StorageOpProxy.Old streamOpProxy = new StorageOpProxy.Old();
-    streamOpProxy.setup(proxy, logger);
+    streamOpProxy.setup(proxy, logger, eventIds);
     return new OldStreamOpMngr(torrentId, torrent, streamOpProxy, completed, ongoing, pending);
   }
 

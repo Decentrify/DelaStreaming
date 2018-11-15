@@ -23,6 +23,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.PortType;
 import se.sics.kompics.config.Config;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
@@ -31,7 +32,8 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public interface LibraryProvider {
     public List<Class<PortType>> providesPorts();
-    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, OnFSMExceptionAction oexa);
+    public void create(ComponentProxy proxy, Config config, String logPrefix, KAddress selfAdr, 
+      OnFSMExceptionAction oexa, IdentifierFactory eventIds);
     public void start();
     public void close();
 }

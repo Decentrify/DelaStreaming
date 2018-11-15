@@ -46,6 +46,7 @@ import se.sics.nstream.test.CacheHintResponseEC;
  */
 public class CacheHintSerializerTest {
     private static OverlayIdFactory overlayIdFactory;
+    private static IdentifierFactory msgIds;
     
      @BeforeClass
     public static void setup() {
@@ -59,6 +60,7 @@ public class CacheHintSerializerTest {
         byte ownerId = 1;
         IdentifierFactory baseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, java.util.Optional.of(1234l));
         overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
+        msgIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.MSG, java.util.Optional.of(1234l));
     }
     
     @Test
@@ -72,7 +74,7 @@ public class CacheHintSerializerTest {
         blocks.add(0);
         blocks.add(1);
         KHint.Summary cacheHint = new KHint.Summary(1l, blocks);
-        original = new CacheHint.Request(TorrentIds.fileId(overlayIdFactory.randomId(), 2), cacheHint);
+        original = new CacheHint.Request(msgIds.randomId(), TorrentIds.fileId(overlayIdFactory.randomId(), 2), cacheHint);
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
@@ -95,7 +97,7 @@ public class CacheHintSerializerTest {
         blocks.add(0);
         blocks.add(1);
         KHint.Summary cacheHint = new KHint.Summary(1l, blocks);
-        CacheHint.Request request = new CacheHint.Request(TorrentIds.fileId(overlayIdFactory.randomId(), 2), cacheHint);
+        CacheHint.Request request = new CacheHint.Request(msgIds.randomId(), TorrentIds.fileId(overlayIdFactory.randomId(), 2), cacheHint);
         original = request.success();
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);

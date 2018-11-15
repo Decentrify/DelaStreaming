@@ -23,7 +23,6 @@ import se.sics.kompics.Promise;
 import se.sics.kompics.fsm.FSMEvent;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
@@ -40,8 +39,8 @@ public class Seeder {
     public final KAddress peer;
     public final OverlayId torrentId;
 
-    public Connect(KAddress peer, OverlayId torrentId) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Connect(Identifier eventId, KAddress peer, OverlayId torrentId) {
+      this.eventId = eventId;
       this.peer = peer;
       this.torrentId = torrentId;
     }

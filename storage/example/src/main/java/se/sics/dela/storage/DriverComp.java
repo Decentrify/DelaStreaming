@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
@@ -46,6 +47,8 @@ import se.sics.kompics.Start;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.TupleHelper;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.FileId;
 import se.sics.nstream.transfer.MyTorrent;
@@ -68,6 +71,8 @@ public class DriverComp extends ComponentDefinition {
 
   private final Identifier selfId;
   private final String testPath;
+  private final IdentifierFactory eventIds;
+  private final IdentifierFactory clientIds;
 
   public DriverComp(Init init) {
     selfId = init.selfId;
@@ -79,6 +84,8 @@ public class DriverComp extends ComponentDefinition {
     streamMngrProxy = new StreamMngrProxy();
     torrentStorageMngr = new TorrentEndpointHandlers(config(), logger, streamMngrProxy);
     endpointCtrl = new EndpointCtrl(startTorrent());
+    this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
+    this.clientIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
 
     subscribe(handleStart, control);
   }
@@ -86,8 +93,8 @@ public class DriverComp extends ComponentDefinition {
   Handler<Start> handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
-      endpointMngrProxy.setup(proxy, logger);
-      streamMngrProxy.setup(proxy);
+      endpointMngrProxy.setup(proxy, logger, eventIds);
+      streamMngrProxy.setup(proxy, eventIds);
       prepareTorrents();
     }
   };
@@ -103,7 +110,7 @@ public class DriverComp extends ComponentDefinition {
   }
 
   private void connectDisk() {
-    Identifier clientId = BasicIdentifiers.eventId();
+    Identifier clientId = clientIds.randomId();
     TupleHelper.PairConsumer diskConnected
       = new TupleHelper.PairConsumer<Identifier, Identifier>() {
       @Override

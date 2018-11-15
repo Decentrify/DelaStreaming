@@ -20,7 +20,6 @@ package se.sics.nstream.torrent.transfer.upld.event;
 
 import org.javatuples.Pair;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
@@ -30,30 +29,30 @@ import se.sics.nstream.torrent.transfer.TorrentConnEvent;
  */
 public class UpldConnReport implements TorrentConnEvent {
 
-    public final Identifier eventId;
-    public final ConnId connId;
-    public final Pair<Integer, Integer> queueDelay;
-    public final double queueAdjustment;
+  public final Identifier eventId;
+  public final ConnId connId;
+  public final Pair<Integer, Integer> queueDelay;
+  public final double queueAdjustment;
 
-    public UpldConnReport(ConnId connId, Pair<Integer, Integer> queueDelay, double queueAdjustment) {
-        this.eventId = BasicIdentifiers.eventId();
-        this.connId = connId;
-        this.queueDelay = queueDelay;
-        this.queueAdjustment = queueAdjustment;
-    }
+  public UpldConnReport(Identifier eventId, ConnId connId, Pair<Integer, Integer> queueDelay, double queueAdjustment) {
+    this.eventId = eventId;
+    this.connId = connId;
+    this.queueDelay = queueDelay;
+    this.queueAdjustment = queueAdjustment;
+  }
 
-    @Override
-    public Identifier getId() {
-        return eventId;
-    }
+  @Override
+  public Identifier getId() {
+    return eventId;
+  }
 
-    @Override
-    public OverlayId overlayId() {
-        return connId.fileId.torrentId;
-    }
+  @Override
+  public OverlayId overlayId() {
+    return connId.fileId.torrentId;
+  }
 
-    @Override
-    public ConnId connId() {
-        return connId;
-    }
+  @Override
+  public ConnId connId() {
+    return connId;
+  }
 }

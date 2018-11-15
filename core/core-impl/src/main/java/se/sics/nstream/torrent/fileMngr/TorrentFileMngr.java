@@ -28,6 +28,7 @@ import java.util.TreeMap;
 import org.javatuples.Pair;
 import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.config.Config;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
@@ -65,7 +66,7 @@ public class TorrentFileMngr {
   }
 
   public static TorrentFileMngr create(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler exSyncHandler,
-    ComponentLoadTracking loadTracker,
+    ComponentLoadTracking loadTracker, IdentifierFactory eventIds,
     MyTorrent torrent, Map<StreamId, Long> streamsInfo) {
     Map<FileId, TFileComplete> completed = new HashMap<>();
     Map<FileId, TFileIncomplete> ongoing = new HashMap<>();
@@ -77,13 +78,13 @@ public class TorrentFileMngr {
       FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
       Pair<StreamId, MyStream> mainStream = entry.getValue().getMainStream();
       fileStreams.put(mainStream.getValue0(), streamsInfo.get(mainStream.getValue0()));
-      SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream);
+      SimpleKCache cache = new SimpleKCache(config, proxy, exSyncHandler, loadTracker, mainStream, eventIds);
 
       List<KBuffer> bufs = new ArrayList<>();
-      bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainStream, 0));
+      bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, mainStream, 0, eventIds));
       for (Pair<StreamId, MyStream> secondaryStream : entry.getValue().getSecondaryStreams()) {
         fileStreams.put(secondaryStream.getValue0(), streamsInfo.get(secondaryStream.getValue0()));
-        bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, secondaryStream, 0));
+        bufs.add(new SimpleAppendKBuffer(config, proxy, exSyncHandler, loadTracker, secondaryStream, 0, eventIds));
       }
       KBuffer buffer = new MultiKBuffer(bufs);
       AsyncIncompleteStorage file = new AsyncIncompleteStorage(cache, buffer);

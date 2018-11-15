@@ -22,7 +22,6 @@ import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 
@@ -43,10 +42,6 @@ public class Connection {
             this.desc = desc;
         }
         
-        public Request(OverlayId overlayId, VodDescriptor desc) {
-            this(BasicIdentifiers.msgId(), overlayId, desc);
-        }
-
         @Override
         public String toString() {
             return "Connect.Request<" + overlayId + ", " + msgId + ">";
@@ -111,10 +106,6 @@ public class Connection {
             this.downloadConnection = downloadConnection;
         }
         
-        public Update(OverlayId overlayId, VodDescriptor desc, boolean downloadConnection) {
-            this(BasicIdentifiers.msgId(), overlayId, desc, downloadConnection);
-        }
-
         @Override
         public String toString() {
             return "Connect.Update<" + overlayId + ", " + msgId + ">";
@@ -141,10 +132,6 @@ public class Connection {
             this.eventId = msgId;
             this.overlayId = overlayId;
             this.downloadConnection = downloadConnection;
-        }
-        
-        public Close(OverlayId overlayId, boolean downloadConnection) {
-            this(BasicIdentifiers.msgId(), overlayId, downloadConnection);
         }
 
         @Override

@@ -21,7 +21,6 @@ package se.sics.nstream.torrent.conn.event;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.transfer.MyTorrent;
 
@@ -30,34 +29,36 @@ import se.sics.nstream.transfer.MyTorrent;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DetailedState {
-    public static class Set implements KompicsEvent, Identifiable {
-        public final Identifier eventId;
-        public final MyTorrent.ManifestDef manifestDef;
-        
-        public Set(MyTorrent.ManifestDef manifestDef) {
-            eventId = BasicIdentifiers.eventId();
-            this.manifestDef = manifestDef;
-        }
 
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
+  public static class Set implements KompicsEvent, Identifiable {
+
+    public final Identifier eventId;
+    public final MyTorrent.ManifestDef manifestDef;
+
+    public Set(Identifier eventId, MyTorrent.ManifestDef manifestDef) {
+      this.eventId = eventId;
+      this.manifestDef = manifestDef;
     }
-    
-    public static class Deliver implements KompicsEvent, Identifiable {
 
-        public final Identifier eventId;
-        public final Result<MyTorrent.ManifestDef> manifestDef;
-
-        public Deliver(Result<MyTorrent.ManifestDef> manifestDef) {
-            eventId = BasicIdentifiers.eventId();
-            this.manifestDef = manifestDef;
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+  }
+
+  public static class Deliver implements KompicsEvent, Identifiable {
+
+    public final Identifier eventId;
+    public final Result<MyTorrent.ManifestDef> manifestDef;
+
+    public Deliver(Identifier eventId, Result<MyTorrent.ManifestDef> manifestDef) {
+      this.eventId = eventId;
+      this.manifestDef = manifestDef;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+  }
 }

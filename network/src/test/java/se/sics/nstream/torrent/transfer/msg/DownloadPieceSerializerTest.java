@@ -47,6 +47,7 @@ import se.sics.nstream.test.DownloadPieceResponseEC;
 public class DownloadPieceSerializerTest {
 
     private static OverlayIdFactory overlayIdFactory;
+    private static IdentifierFactory msgIds;
 
     @BeforeClass
     public static void setup() {
@@ -60,6 +61,7 @@ public class DownloadPieceSerializerTest {
         byte ownerId = 1;
         IdentifierFactory baseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, java.util.Optional.of(1234l));
         overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
+        msgIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.MSG, java.util.Optional.of(1234l));
     }
 
     @Test
@@ -69,7 +71,7 @@ public class DownloadPieceSerializerTest {
         DownloadPiece.Request original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        original = new DownloadPiece.Request(TorrentIds.fileId(overlayIdFactory.randomId(), 2), Pair.with(1, 2));
+        original = new DownloadPiece.Request(msgIds.randomId(), TorrentIds.fileId(overlayIdFactory.randomId(), 2), Pair.with(1, 2));
         serializedOriginal = Unpooled.buffer();
         serializer.toBinary(original, serializedOriginal);
 
@@ -88,7 +90,7 @@ public class DownloadPieceSerializerTest {
         DownloadPiece.Success original, copy;
         ByteBuf serializedOriginal, serializedCopy;
 
-        DownloadPiece.Request request = new DownloadPiece.Request(TorrentIds.fileId(overlayIdFactory.randomId(), 2), Pair.with(1, 2));
+        DownloadPiece.Request request = new DownloadPiece.Request(msgIds.randomId(), TorrentIds.fileId(overlayIdFactory.randomId(), 2), Pair.with(1, 2));
         byte[] piece = new byte[]{1, 2, 3, 4};
         KReference<byte[]> ref = KReferenceFactory.getReference(piece);
         ref.retain(); //serializer releases the ref and we cannot compare with it anymore

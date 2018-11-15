@@ -43,6 +43,9 @@ import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.kompics.util.PatternExtractorHelper;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
 import se.sics.ktoolbox.util.network.KHeader;
@@ -107,6 +110,8 @@ public class DwnlConnComp extends ComponentDefinition {
   private final Map<Identifier, Identifiable> pendingMsgs = new HashMap<>();
   //**************************************************************************
   private final LedbatConfig ledbatConfig;
+  private final IdentifierFactory msgIds;
+  private final IdentifierFactory eventIds;
 
   public DwnlConnComp(Init init) {
     connId = init.connId;
@@ -129,7 +134,8 @@ public class DwnlConnComp extends ComponentDefinition {
       LOG.info("{}setting s:{} t:{}", new Object[]{logPrefix, s, t});
     }
     logPrefix = "<" + connId.toString() + ">";
-
+    this.msgIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.MSG, java.util.Optional.of(sc.seed));
+    this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, java.util.Optional.of(sc.seed));
     DwnlConnConfig dConfig = new DwnlConnConfig(config());
 
     ledbatConfig = new LedbatConfig(config());
@@ -356,7 +362,7 @@ public class DwnlConnComp extends ComponentDefinition {
       Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
       LOG.debug("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.
         getValue1().keySet()});
-      trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
+      trigger(new CompletedBlocks(eventIds.randomId(), connId, completed.getValue0(), completed.getValue1()), connPort);
     }
   }
 
@@ -378,21 +384,21 @@ public class DwnlConnComp extends ComponentDefinition {
       Pair<Map<Integer, byte[]>, Map<Integer, byte[]>> completed = workController.getComplete();
       LOG.trace("{}completed hashes:{} blocks:{}", new Object[]{logPrefix, completed.getValue0().keySet(), completed.
         getValue1().keySet()});
-      trigger(new CompletedBlocks(connId, completed.getValue0(), completed.getValue1()), connPort);
+      trigger(new CompletedBlocks(eventIds.randomId(), connId, completed.getValue0(), completed.getValue1()), connPort);
     }
   }
 
   //**************************************************************************
   private void tryDownload(long now) {
     if (workController.hasNewHint()) {
-      CacheHint.Request req = new CacheHint.Request(connId.fileId, workController.newHint());
+      CacheHint.Request req = new CacheHint.Request(msgIds.randomId(), connId.fileId, workController.newHint());
       LOG.debug("{}cache hint:{} ts:{} blocks:{}", new Object[]{logPrefix, req.getId(), req.requestCache.lStamp,
         req.requestCache.blocks});
       sendSimpleUDP(req, CACHE_RETRY, CACHE_BASE_TIMEOUT);
       pendingMsgs.put(req.getId(), req);
     }
     while (workController.hasHashes() && cwnd.canSend()) {
-      DownloadHash.Request req = new DownloadHash.Request(connId.fileId, workController.nextHashes());
+      DownloadHash.Request req = new DownloadHash.Request(msgIds.randomId(), connId.fileId, workController.nextHashes());
       sendSimpleLedbat(req, 5);
       pendingMsgs.put(req.getId(), req);
       cwnd.request(now, ledbatConfig.mss);
@@ -400,7 +406,7 @@ public class DwnlConnComp extends ComponentDefinition {
     int batch =2;
     while (workController.hasPiece() && cwnd.canSend() && batch > 0) {
       batch--;
-      DownloadPiece.Request req = new DownloadPiece.Request(connId.fileId, workController.nextPiece());
+      DownloadPiece.Request req = new DownloadPiece.Request(msgIds.randomId(), connId.fileId, workController.nextPiece());
       sendSimpleLedbat(req, 1);
       pendingMsgs.put(req.getId(), req);
       cwnd.request(now, ledbatConfig.mss);

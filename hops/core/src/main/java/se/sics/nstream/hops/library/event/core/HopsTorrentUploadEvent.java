@@ -22,7 +22,6 @@ import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
@@ -54,11 +53,6 @@ public class HopsTorrentUploadEvent {
       this.datasetId = datasetId;
       this.hdfsEndpoint = hdfsEndpoint;
       this.manifestResource = manifestResource;
-    }
-
-    public Request(OverlayId torrentId, String torrentName, Integer projectId, Integer datasetId, HDFSEndpoint hdfsEndpoint,
-      HDFSResource hdfsResource) {
-      this(BasicIdentifiers.eventId(), torrentId, torrentName, projectId, datasetId, hdfsEndpoint, hdfsResource);
     }
 
     @Override

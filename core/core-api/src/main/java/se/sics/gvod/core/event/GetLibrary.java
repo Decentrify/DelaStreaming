@@ -24,47 +24,45 @@ import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.core.util.FileStatus;
 import se.sics.gvod.core.util.ResponseStatus;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class GetLibrary {
-    public static class Request implements GVoDEvent {
-        public final Identifier id;
-        
-        public Request() {
-            this.id = BasicIdentifiers.eventId();
-        }
 
-        @Override
-        public Identifier getId() {
-            return id;
-        }
-        
-        public Indication answer(ResponseStatus respStatus, Map<String, Pair<FileStatus, Identifier>> fileStatusMap) {
-            return new Indication(id, respStatus, fileStatusMap);
-        }
-    }
-    
-    public static class Indication implements GVoDEvent {
-        public final Identifier id;
-        public final ResponseStatus respStatus;
-        public final Map<String, Pair<FileStatus, Identifier>> fileStatusMap;
-        
-        public Indication(Identifier id, ResponseStatus respStatus, Map<String, Pair<FileStatus, Identifier>> fileStatusMap) {
-            this.id = id;
-            this.respStatus = respStatus;
-            this.fileStatusMap = fileStatusMap;
-        }
-        
-        public Indication(ResponseStatus respStatus, Map<String, Pair<FileStatus, Identifier>> fileStatusMap) {
-            this(BasicIdentifiers.eventId(), respStatus, fileStatusMap);
-        }
+  public static class Request implements GVoDEvent {
 
-        @Override
-        public Identifier getId() {
-            return id;
-        }
+    public final Identifier eventId;
+
+    public Request(Identifier eventId) {
+      this.eventId = eventId;
     }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    public Indication answer(ResponseStatus respStatus, Map<String, Pair<FileStatus, Identifier>> fileStatusMap) {
+      return new Indication(eventId, respStatus, fileStatusMap);
+    }
+  }
+
+  public static class Indication implements GVoDEvent {
+
+    public final Identifier eventId;
+    public final ResponseStatus respStatus;
+    public final Map<String, Pair<FileStatus, Identifier>> fileStatusMap;
+
+    public Indication(Identifier eventId, ResponseStatus respStatus, Map<String, Pair<FileStatus, Identifier>> fileStatusMap) {
+      this.eventId = eventId;
+      this.respStatus = respStatus;
+      this.fileStatusMap = fileStatusMap;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+  }
 }

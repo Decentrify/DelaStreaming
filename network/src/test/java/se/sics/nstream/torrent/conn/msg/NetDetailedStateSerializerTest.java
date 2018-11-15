@@ -43,58 +43,62 @@ import se.sics.nstream.util.BlockDetails;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class NetDetailedStateSerializerTest {
-     private static OverlayIdFactory overlayIdFactory;
 
-    @BeforeClass
-    public static void setup() {
-        IdentifierRegistryV2.registerBaseDefaults1(64);
-        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte)0), new OverlayId.BasicTypeComparator());
-        
-        int serializerId = 128;
-        serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
-        serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
-        
-        byte ownerId = 1;
-        IdentifierFactory baseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, java.util.Optional.of(1234l));
-        overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
-    }
+  private static OverlayIdFactory overlayIdFactory;
+  private static IdentifierFactory msgIds;
 
-    @Test
-    public void simpleReq() {
-        Serializer serializer = Serializers.lookupSerializer(NetDetailedState.Request.class);
-        NetDetailedStateRequestEC ec = new NetDetailedStateRequestEC();
-        NetDetailedState.Request original, copy;
-        ByteBuf serializedOriginal, serializedCopy;
+  @BeforeClass
+  public static void setup() {
+    IdentifierRegistryV2.registerBaseDefaults1(64);
+    OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
 
-        original = new NetDetailedState.Request(overlayIdFactory.randomId());
-        serializedOriginal = Unpooled.buffer();
-        serializer.toBinary(original, serializedOriginal);
+    int serializerId = 128;
+    serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
+    serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
 
-        serializedCopy = Unpooled.buffer();
-        serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (NetDetailedState.Request) serializer.fromBinary(serializedCopy, Optional.absent());
+    byte ownerId = 1;
+    IdentifierFactory baseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, java.util.Optional.
+      of(1234l));
+    overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
+    msgIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.MSG, java.util.Optional.of(1234l));
+  }
 
-        Assert.assertTrue(ec.isEqual(original, copy));
-        Assert.assertEquals(0, serializedCopy.readableBytes());
-    }
+  @Test
+  public void simpleReq() {
+    Serializer serializer = Serializers.lookupSerializer(NetDetailedState.Request.class);
+    NetDetailedStateRequestEC ec = new NetDetailedStateRequestEC();
+    NetDetailedState.Request original, copy;
+    ByteBuf serializedOriginal, serializedCopy;
 
-    @Test
-    public void simpleResp() {
-        Serializer serializer = Serializers.lookupSerializer(NetDetailedState.Response.class);
-        NetDetailedStateResponseEC ec = new NetDetailedStateResponseEC();
-        NetDetailedState.Response original, copy;
-        ByteBuf serializedOriginal, serializedCopy;
+    original = new NetDetailedState.Request(msgIds.randomId(), overlayIdFactory.randomId());
+    serializedOriginal = Unpooled.buffer();
+    serializer.toBinary(original, serializedOriginal);
 
-        NetDetailedState.Request request = new NetDetailedState.Request(overlayIdFactory.randomId());
-        original = request.success(new MyTorrent.ManifestDef(2, new BlockDetails(5, 3, 2, 1)));
-        serializedOriginal = Unpooled.buffer();
-        serializer.toBinary(original, serializedOriginal);
+    serializedCopy = Unpooled.buffer();
+    serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
+    copy = (NetDetailedState.Request) serializer.fromBinary(serializedCopy, Optional.absent());
 
-        serializedCopy = Unpooled.buffer();
-        serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (NetDetailedState.Response) serializer.fromBinary(serializedCopy, Optional.absent());
+    Assert.assertTrue(ec.isEqual(original, copy));
+    Assert.assertEquals(0, serializedCopy.readableBytes());
+  }
 
-        Assert.assertTrue(ec.isEqual(original, copy));
-        Assert.assertEquals(0, serializedCopy.readableBytes());
-    }
+  @Test
+  public void simpleResp() {
+    Serializer serializer = Serializers.lookupSerializer(NetDetailedState.Response.class);
+    NetDetailedStateResponseEC ec = new NetDetailedStateResponseEC();
+    NetDetailedState.Response original, copy;
+    ByteBuf serializedOriginal, serializedCopy;
+
+    NetDetailedState.Request request = new NetDetailedState.Request(msgIds.randomId(), overlayIdFactory.randomId());
+    original = request.success(new MyTorrent.ManifestDef(2, new BlockDetails(5, 3, 2, 1)));
+    serializedOriginal = Unpooled.buffer();
+    serializer.toBinary(original, serializedOriginal);
+
+    serializedCopy = Unpooled.buffer();
+    serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
+    copy = (NetDetailedState.Response) serializer.fromBinary(serializedCopy, Optional.absent());
+
+    Assert.assertTrue(ec.isEqual(original, copy));
+    Assert.assertEquals(0, serializedCopy.readableBytes());
+  }
 }

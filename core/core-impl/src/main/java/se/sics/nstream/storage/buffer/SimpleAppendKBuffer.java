@@ -30,6 +30,7 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.config.Config;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.result.DelayedExceptionSyncHandler;
@@ -68,9 +69,9 @@ public class SimpleAppendKBuffer implements KBuffer {
     private final Map<Long, Pair<KReference<byte[]>, WriteCallback>> buffer = new HashMap<>();
     private final Set<Identifier> pendingWriteReqs = new HashSet<>(); 
     //**************************************************************************
-
+    private final IdentifierFactory eventIds;
     public SimpleAppendKBuffer(Config config, ComponentProxy proxy, DelayedExceptionSyncHandler syncExceptionHandling, ComponentLoadTracking loadTracker,
-            Pair<StreamId, MyStream> stream, long appendPos) {
+            Pair<StreamId, MyStream> stream, long appendPos, IdentifierFactory eventIds) {
         this.bufferConfig = new KBufferConfig(config);
         this.stream = stream;
         this.proxy = proxy;
@@ -81,6 +82,7 @@ public class SimpleAppendKBuffer implements KBuffer {
         this.blockPos = 0;
         this.answeredBlockPos = 0;
         proxy.subscribe(handleWriteResp, writePort);
+        this.eventIds = eventIds;
     }
 
     @Override
@@ -122,7 +124,8 @@ public class SimpleAppendKBuffer implements KBuffer {
             if (next == null) {
                 break;
             }
-            DStorageWrite.Request req = new DStorageWrite.Request(stream.getValue0(), appendPos, next.getValue0().getValue().get());
+            DStorageWrite.Request req = new DStorageWrite.Request(eventIds.randomId(), stream.getValue0(), appendPos, 
+              next.getValue0().getValue().get());
             pendingWriteReqs.add(req.eventId);
             proxy.trigger(req, writePort);
             appendPos += next.getValue0().getValue().get().length;

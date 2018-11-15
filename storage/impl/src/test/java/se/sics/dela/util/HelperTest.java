@@ -2,7 +2,7 @@
  * Copyright (C) 2009 Swedish Institute of Computer Science (SICS) Copyright (C)
  * 2009 Royal Institute of Technology (KTH)
  *
- * GVoD is free software; you can redistribute it and/or
+ * KompicsToolbox is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
@@ -13,36 +13,27 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
+ * along with this program; if not, loss to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.nstream.torrent.status.event;
+package se.sics.dela.util;
 
-import se.sics.kompics.KompicsEvent;
-import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.overlays.OverlayEvent;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.junit.Test;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TorrentReady implements KompicsEvent, OverlayEvent {
-
-  public final Identifier eventId;
-  public final OverlayId torrentId;
-
-  public TorrentReady(Identifier eventId, OverlayId torrentId) {
-    this.eventId = eventId;
-    this.torrentId = torrentId;
-  }
-
-  @Override
-  public Identifier getId() {
-    return eventId;
-  }
-
-  @Override
-  public OverlayId overlayId() {
-    return torrentId;
+public class HelperTest {
+  @Test
+  public void testTimeMillis() {
+    SummaryStatistics s1 = new SummaryStatistics();
+    for (int i = 0; i < 1000000; i++) {
+      long start = System.nanoTime();
+      System.currentTimeMillis();
+      long stop = System.nanoTime();
+      s1.addValue(stop-start);
+    }
+    System.err.println("wheel timeout:" + s1.getMean());
   }
 }

@@ -19,7 +19,6 @@
 package se.sics.nstream.old.torrent.event;
 
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.util.event.StreamMsg;
@@ -29,69 +28,66 @@ import se.sics.nstream.util.event.StreamMsg;
  */
 public class TorrentGet {
 
-    public static class Request implements StreamMsg.Request {
+  public static class Request implements StreamMsg.Request {
 
-        public final Identifier msgId;
-        public final OverlayId overlayId;
+    public final Identifier msgId;
+    public final OverlayId overlayId;
 
-        public Request(Identifier msgId, OverlayId overlayId) {
-            this.msgId = msgId;
-            this.overlayId = overlayId;
-        }
-
-        public Request(OverlayId overlayId) {
-            this(BasicIdentifiers.msgId(), overlayId);
-        }
-
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
-        
-        @Override
-        public OverlayId overlayId() {
-            return overlayId;
-        }
-
-        public Response success(byte[] torrent) {
-            return new Response(this, Result.Status.SUCCESS, torrent);
-        }
-        
-        public Response busy() {
-            return new Response(this, Result.Status.BUSY, null);
-        }
+    public Request(Identifier msgId, OverlayId overlayId) {
+      this.msgId = msgId;
+      this.overlayId = overlayId;
     }
 
-    public static class Response implements StreamMsg.Response {
-
-        public final Identifier msgId;
-        public final OverlayId overlayId;
-        public final Result.Status status;
-        public final byte[] torrent;
-        
-        Response(Identifier msgId, OverlayId overlayId, Result.Status status, byte[] torrent) {
-            this.msgId = msgId;
-            this.overlayId = overlayId;
-            this.status = status;
-            this.torrent = torrent;
-        }
-        public Response(Request req, Result.Status status, byte[] torrent) {
-            this(req.msgId, req.overlayId, status, torrent);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
-        
-         @Override
-        public OverlayId overlayId() {
-            return overlayId;
-        }
-
-        @Override
-        public Result.Status getStatus() {
-            return status;
-        }
+    @Override
+    public Identifier getId() {
+      return msgId;
     }
+
+    @Override
+    public OverlayId overlayId() {
+      return overlayId;
+    }
+
+    public Response success(byte[] torrent) {
+      return new Response(this, Result.Status.SUCCESS, torrent);
+    }
+
+    public Response busy() {
+      return new Response(this, Result.Status.BUSY, null);
+    }
+  }
+
+  public static class Response implements StreamMsg.Response {
+
+    public final Identifier msgId;
+    public final OverlayId overlayId;
+    public final Result.Status status;
+    public final byte[] torrent;
+
+    Response(Identifier msgId, OverlayId overlayId, Result.Status status, byte[] torrent) {
+      this.msgId = msgId;
+      this.overlayId = overlayId;
+      this.status = status;
+      this.torrent = torrent;
+    }
+
+    public Response(Request req, Result.Status status, byte[] torrent) {
+      this(req.msgId, req.overlayId, status, torrent);
+    }
+
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return overlayId;
+    }
+
+    @Override
+    public Result.Status getStatus() {
+      return status;
+    }
+  }
 }

@@ -33,6 +33,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.FileId;
@@ -57,16 +58,18 @@ public class StorageOpProxy {
   private final Map<FileId, Set<Identifier>> pendingDisconnect = new HashMap<>();
   //<streamId, fileId>
   private final Map<Identifier, FileId> pendingDisconnectRev = new HashMap<>();
+  private IdentifierFactory eventIds;
 
   public StorageOpProxy() {
   }
   
-  public StorageOpProxy setup(ComponentProxy proxy, Logger logger) {
+  public StorageOpProxy setup(ComponentProxy proxy, Logger logger, IdentifierFactory eventIds) {
     this.proxy = proxy;
     this.logger = logger;
     streamMngr = proxy.getPositive(StreamMngrPort.class);
     proxy.subscribe(handleStreamConnected, streamMngr);
     proxy.subscribe(handleStreamConnected, streamMngr);
+    this.eventIds = eventIds;
     return this;
   }
 
@@ -79,7 +82,8 @@ public class StorageOpProxy {
   }
 
   private void prepareStream(Identifier clientId, FileId fileId, Pair<StreamId, StreamStorage> stream) {
-    StreamMngrConnect.Request req = new StreamMngrConnect.Request(clientId, stream.getValue0(), stream.getValue1());
+    StreamMngrConnect.Request req 
+      = new StreamMngrConnect.Request(eventIds.randomId(), clientId, stream.getValue0(), stream.getValue1());
     pendingConnect.get(fileId).add(req.getId());
     pendingConnectRev.put(req.getId(), fileId);
     proxy.trigger(req, streamMngr);

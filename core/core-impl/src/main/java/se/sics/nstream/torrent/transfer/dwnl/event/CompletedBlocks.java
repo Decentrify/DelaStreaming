@@ -20,7 +20,6 @@ package se.sics.nstream.torrent.transfer.dwnl.event;
 
 import java.util.Map;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
@@ -29,30 +28,31 @@ import se.sics.nstream.torrent.transfer.TorrentConnEvent;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class CompletedBlocks implements TorrentConnEvent {
-    public final Identifier eventId;
-    public final ConnId connId;
-    public final Map<Integer, byte[]> hashes;
-    public final Map<Integer, byte[]> blocks;
-    
-    public CompletedBlocks(ConnId connId, Map<Integer, byte[]> hashes, Map<Integer, byte[]> blocks) {
-        this.eventId = BasicIdentifiers.eventId();
-        this.connId = connId;
-        this.hashes = hashes;
-        this.blocks = blocks;
-    }
-    
-    @Override
-    public OverlayId overlayId() {
-        return connId.fileId.torrentId;
-    }
 
-    @Override
-    public Identifier getId() {
-        return eventId;
-    }
+  public final Identifier eventId;
+  public final ConnId connId;
+  public final Map<Integer, byte[]> hashes;
+  public final Map<Integer, byte[]> blocks;
 
-    @Override
-    public ConnId connId() {
-        return connId;
-    }
+  public CompletedBlocks(Identifier eventId, ConnId connId, Map<Integer, byte[]> hashes, Map<Integer, byte[]> blocks) {
+    this.eventId = eventId;
+    this.connId = connId;
+    this.hashes = hashes;
+    this.blocks = blocks;
+  }
+
+  @Override
+  public OverlayId overlayId() {
+    return connId.fileId.torrentId;
+  }
+
+  @Override
+  public Identifier getId() {
+    return eventId;
+  }
+
+  @Override
+  public ConnId connId() {
+    return connId;
+  }
 }

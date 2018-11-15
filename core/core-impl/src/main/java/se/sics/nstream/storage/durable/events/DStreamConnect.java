@@ -22,7 +22,6 @@ import org.javatuples.Pair;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.storage.durable.util.MyStream;
 
@@ -36,8 +35,8 @@ public class DStreamConnect {
     public final Identifier eventId;
     public final Pair<StreamId, MyStream> stream;
 
-    public Request(Pair<StreamId, MyStream> stream) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Request(Identifier eventId, Pair<StreamId, MyStream> stream) {
+      this.eventId = eventId;
       this.stream = stream;
     }
 

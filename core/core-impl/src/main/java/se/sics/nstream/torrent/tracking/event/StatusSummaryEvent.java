@@ -20,7 +20,6 @@ package se.sics.nstream.torrent.tracking.event;
 
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.nstream.StreamEvent;
@@ -31,56 +30,55 @@ import se.sics.nstream.util.TorrentExtendedStatus;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class StatusSummaryEvent {
-    public static class Request extends Direct.Request<Response> implements StreamEvent, OverlayEvent {
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        
-        public Request(Identifier eventId, OverlayId torrentId) {
-            this.eventId = eventId;
-            this.torrentId = torrentId;
-        }
-        
-        public Request(OverlayId torrentId) {
-            this(BasicIdentifiers.eventId(), torrentId);
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        @Override
-        public OverlayId overlayId() {
-            return torrentId;
-        }
-        
-        public Response success(TorrentExtendedStatus value) {
-            return new Response(this, value);
-        }
+
+  public static class Request extends Direct.Request<Response> implements StreamEvent, OverlayEvent {
+
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+
+    public Request(Identifier eventId, OverlayId torrentId) {
+      this.eventId = eventId;
+      this.torrentId = torrentId;
     }
-    
-    public static class Response implements Direct.Response, StreamEvent, OverlayEvent, LibTFSMEvent {
-        public final Request req;
-        public final TorrentExtendedStatus result;
 
-        public Response(Request req, TorrentExtendedStatus result) {
-            this.req = req;
-            this.result = result;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
 
-        @Override
-        public OverlayId overlayId() {
-            return req.overlayId();
-        }
+    @Override
+    public OverlayId overlayId() {
+      return torrentId;
+    }
+
+    public Response success(TorrentExtendedStatus value) {
+      return new Response(this, value);
+    }
+  }
+
+  public static class Response implements Direct.Response, StreamEvent, OverlayEvent, LibTFSMEvent {
+
+    public final Request req;
+    public final TorrentExtendedStatus result;
+
+    public Response(Request req, TorrentExtendedStatus result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return req.overlayId();
+    }
 
     @Override
     public Identifier getLibTFSMId() {
       return req.torrentId.baseId;
     }
-    }
+  }
 }

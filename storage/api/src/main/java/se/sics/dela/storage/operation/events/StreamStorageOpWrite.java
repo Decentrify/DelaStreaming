@@ -20,10 +20,8 @@ package se.sics.dela.storage.operation.events;
 
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamId;
-import se.sics.dela.storage.operation.events.StreamStorageOpEvent;
 import se.sics.ktoolbox.util.trysf.Try;
 
 /**
@@ -43,10 +41,6 @@ public class StreamStorageOpWrite {
       this.streamId = streamId;
       this.pos = pos;
       this.value = value;
-    }
-
-    public Request(StreamId streamId, long pos, byte[] value) {
-      this(BasicIdentifiers.eventId(), streamId, pos, value);
     }
 
     @Override
@@ -109,8 +103,8 @@ public class StreamStorageOpWrite {
     public final Identifier eventId;
     public final StreamId streamId;
 
-    public Complete(StreamId streamId) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Complete(Identifier eventId, StreamId streamId) {
+      this.eventId = eventId;
       this.streamId = streamId;
     }
 

@@ -28,67 +28,72 @@ import se.sics.nstream.storage.durable.util.MyStream;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class StorageControl {
-    public static class OpenRequest extends Direct.Request<OpenSuccess> implements Identifiable {
-        public final Identifier eventId;
-        public final MyStream stream;
-        
-        public OpenRequest(MyStream stream) {
-            this.eventId = BasicIdentifiers.eventId();
-            this.stream = stream;
-        }
 
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        public OpenSuccess success() {
-            return new OpenSuccess(this);
-        }
+  public static class OpenRequest extends Direct.Request<OpenSuccess> implements Identifiable {
+
+    public final Identifier eventId;
+    public final MyStream stream;
+
+    public OpenRequest(Identifier eventId, MyStream stream) {
+      this.eventId = eventId;
+      this.stream = stream;
     }
-    
-    public static class OpenSuccess implements Direct.Response, Identifiable {
-        public final OpenRequest req;
-        
-        public OpenSuccess(OpenRequest req) {
-            this.req = req;
-        } 
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
-    
-    public static class CloseRequest extends Direct.Request<CloseSuccess> implements Identifiable {
-        public final Identifier eventId;
-        public final MyStream stream;
-        
-        public CloseRequest(MyStream stream) {
-            this.eventId = BasicIdentifiers.eventId();
-            this.stream = stream;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        public CloseSuccess success() {
-            return new CloseSuccess(this);
-        }
+
+    public OpenSuccess success() {
+      return new OpenSuccess(this);
     }
-    
-    public static class CloseSuccess implements Direct.Response, Identifiable {
-        public final CloseRequest req;
-        
-        public CloseSuccess(CloseRequest req) {
-            this.req = req;
-        } 
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
+  }
+
+  public static class OpenSuccess implements Direct.Response, Identifiable {
+
+    public final OpenRequest req;
+
+    public OpenSuccess(OpenRequest req) {
+      this.req = req;
     }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+  }
+
+  public static class CloseRequest extends Direct.Request<CloseSuccess> implements Identifiable {
+
+    public final Identifier eventId;
+    public final MyStream stream;
+
+    public CloseRequest(Identifier eventId, MyStream stream) {
+      this.eventId = eventId;
+      this.stream = stream;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    public CloseSuccess success() {
+      return new CloseSuccess(this);
+    }
+  }
+
+  public static class CloseSuccess implements Direct.Response, Identifiable {
+
+    public final CloseRequest req;
+
+    public CloseSuccess(CloseRequest req) {
+      this.req = req;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+  }
 }

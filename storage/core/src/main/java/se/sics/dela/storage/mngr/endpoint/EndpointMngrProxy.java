@@ -32,6 +32,7 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.TupleHelper;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -45,17 +46,20 @@ public class EndpointMngrProxy {
   public final EndpointRegistry registry;
   private final BiMap<Identifier, Identifier> eventToEndpoint = HashBiMap.create();
 
+  private IdentifierFactory eventIds;
+  
   public EndpointMngrProxy(MyIdentifierFactory idFactory, List<StorageProvider> providers) {
     this.registry = new EndpointRegistry(idFactory, providers, connectAction, disconnectAction);
   }
 
-  public EndpointMngrProxy setup(ComponentProxy proxy, Logger logger) {
+  public EndpointMngrProxy setup(ComponentProxy proxy, Logger logger, IdentifierFactory eventIds) {
     this.proxy = proxy;
     this.logger = logger;
     this.mngrPort = proxy.getNegative(EndpointMngrPort.class).getPair();
     proxy.subscribe(handleConnected, mngrPort);
     proxy.subscribe(handleConnectFail, mngrPort);
     proxy.subscribe(handleDisconnected, mngrPort);
+    this.eventIds = eventIds;
     return this;
   }
 
@@ -75,7 +79,7 @@ public class EndpointMngrProxy {
     public void accept(Identifier clientId, Identifier endpointId, StorageProvider provider) {
       logger.debug("mngr proxy - endpoint:{} client:{} - connecting provider:{}", 
         new Object[]{endpointId, clientId, provider.getName()});
-      EndpointMngrConnect.Request req = new EndpointMngrConnect.Request(clientId, endpointId, provider);
+      EndpointMngrConnect.Request req = new EndpointMngrConnect.Request(eventIds.randomId(), clientId, endpointId, provider);
       proxy.trigger(req, mngrPort);
       eventToEndpoint.put(req.getId(), endpointId);
     }
@@ -86,7 +90,7 @@ public class EndpointMngrProxy {
     @Override
     public void accept(Identifier clientId, Identifier endpointId) {
       logger.debug("mngr proxy - endpoint:{} client:{} - disconnecting", new Object[]{endpointId, clientId});
-      EndpointMngrDisconnect.Request req = new EndpointMngrDisconnect.Request(clientId, endpointId);
+      EndpointMngrDisconnect.Request req = new EndpointMngrDisconnect.Request(eventIds.randomId(), clientId, endpointId);
       proxy.trigger(req, mngrPort);
       eventToEndpoint.put(req.getId(), endpointId);
     }

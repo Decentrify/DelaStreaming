@@ -35,6 +35,7 @@ import se.sics.kompics.fsm.MultiFSM;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
 import se.sics.kompics.fsm.id.FSMIdentifierFactory;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -75,15 +76,17 @@ public class HopsLibraryMngr {
   private final LibraryCtrl library;
   private final Restart restart;
   private final LibraryDetails libraryDetails;
+  private final IdentifierFactory eventIds;
 
   public HopsLibraryMngr(OnFSMExceptionAction oexa, ComponentProxy proxy, Config config, String logPrefix,
-    KAddress selfAdr) {
+    KAddress selfAdr, IdentifierFactory eventIds) {
     systemConfig = new SystemKCWrapper(config);
     LOG.info("{}initing", logPrefix);
     this.logPrefix = logPrefix;
     this.config = config;
     this.selfAdr = selfAdr;
     this.restart = new Restart(proxy);
+    this.eventIds = eventIds;
 
     try {
       hopsLibraryConfig = HopsLibraryKConfig.read(config).checkedGet();
@@ -100,11 +103,11 @@ public class HopsLibraryMngr {
       throw new RuntimeException("incomplete");
     }
 
-    this.libraryDetails = new LibraryDetails(proxy, library);
+    this.libraryDetails = new LibraryDetails(proxy, library, eventIds);
 
     try {
       FSMIdentifierFactory fsmIdFactory = config.getValue(FSMIdentifierFactory.CONFIG_KEY, FSMIdentifierFactory.class);
-      LibTExternal es = new LibTExternal(selfAdr, library, new EndpointIdRegistry(), hopsLibraryConfig.storageType);
+      LibTExternal es = new LibTExternal(selfAdr, library, new EndpointIdRegistry(), hopsLibraryConfig.storageType, eventIds);
       es.setProxy(proxy);
       es.setConfig(config);
       fsm = LibTFSM.multifsm(fsmIdFactory, es, oexa);
@@ -207,9 +210,12 @@ public class HopsLibraryMngr {
 
     private final Map<OverlayId, TorrentExtendedStatusEvent.Request> pendingTESE = new HashMap<>();
 
-    public LibraryDetails(ComponentProxy proxy, LibraryCtrl library) {
+    private final IdentifierFactory eventIds;
+    
+    public LibraryDetails(ComponentProxy proxy, LibraryCtrl library, IdentifierFactory eventIds) {
       this.proxy = proxy;
       this.library = library;
+      this.eventIds = eventIds;
     }
 
     public void setup() {
@@ -250,7 +256,7 @@ public class HopsLibraryMngr {
           case DOWNLOADING:
           case UPLOADING:
             pendingTESE.put(req.torrentId, req);
-            proxy.trigger(new StatusSummaryEvent.Request(req.torrentId), torrentStatusPort);
+            proxy.trigger(new StatusSummaryEvent.Request(eventIds.randomId(), req.torrentId), torrentStatusPort);
             break;
           default:
             proxy.answer(req, req.succes(new TorrentExtendedStatus(req.torrentId, ts, 0, 0)));

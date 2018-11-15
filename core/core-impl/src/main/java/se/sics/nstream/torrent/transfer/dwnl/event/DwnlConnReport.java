@@ -20,7 +20,6 @@ package se.sics.nstream.torrent.transfer.dwnl.event;
 
 import org.javatuples.Pair;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
@@ -29,28 +28,29 @@ import se.sics.nstream.torrent.transfer.TorrentConnEvent;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DwnlConnReport implements TorrentConnEvent {
-    public final Identifier eventId;
-    public final ConnId connId;
-    public final Pair<Integer, Integer> queueDelay;
-    
-    public DwnlConnReport(ConnId connId, Pair<Integer, Integer> queueDelay) {
-        this.eventId = BasicIdentifiers.eventId();
-        this.connId = connId;
-        this.queueDelay = queueDelay;
-    }
-    
-    @Override
-    public OverlayId overlayId() {
-        return connId.fileId.torrentId;
-    }
 
-    @Override
-    public Identifier getId() {
-        return eventId;
-    }
+  public final Identifier eventId;
+  public final ConnId connId;
+  public final Pair<Integer, Integer> queueDelay;
 
-    @Override
-    public ConnId connId() {
-        return connId;
-    }
+  public DwnlConnReport(Identifier eventId, ConnId connId, Pair<Integer, Integer> queueDelay) {
+    this.eventId = eventId;
+    this.connId = connId;
+    this.queueDelay = queueDelay;
+  }
+
+  @Override
+  public OverlayId overlayId() {
+    return connId.fileId.torrentId;
+  }
+
+  @Override
+  public Identifier getId() {
+    return eventId;
+  }
+
+  @Override
+  public ConnId connId() {
+    return connId;
+  }
 }

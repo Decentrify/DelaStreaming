@@ -20,7 +20,6 @@ package se.sics.nstream.torrent.event;
 
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
@@ -35,8 +34,8 @@ public class StopTorrent {
     public final Identifier eventId;
     public final OverlayId torrentId;
 
-    public Request(OverlayId torrentId) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Request(Identifier eventId, OverlayId torrentId) {
+      this.eventId = eventId;
       this.torrentId = torrentId;
     }
 

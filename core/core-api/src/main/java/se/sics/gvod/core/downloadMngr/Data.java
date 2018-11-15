@@ -16,62 +16,61 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-
 package se.sics.gvod.core.downloadMngr;
 
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.gvod.common.event.ReqStatus;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class Data {
-     public static class Request extends Direct.Request<Response> implements GVoDEvent  {
 
-        public final Identifier id;
-        public final Identifier overlayId;
-        public final long readPos;
-        public final int readBlockSize;
+  public static class Request extends Direct.Request<Response> implements GVoDEvent {
 
-        public Request(Identifier overlayId, long readPos, int readBlockSize) {
-            this.id = BasicIdentifiers.eventId();
-            this.overlayId = overlayId;
-            this.readPos = readPos;
-            this.readBlockSize = readBlockSize;
-        }
+    public final Identifier eventId;
+    public final Identifier overlayId;
+    public final long readPos;
+    public final int readBlockSize;
 
-        @Override
-        public Identifier getId() {
-            return id;
-        }
-        
-        public Response fail(ReqStatus status) {
-            return new Response(this, status, null);
-        }
-        
-        public Response success(byte[] block) {
-            return new Response(this, ReqStatus.SUCCESS, block);
-        }
+    public Request(Identifier eventId, Identifier overlayId, long readPos, int readBlockSize) {
+      this.eventId = eventId;
+      this.overlayId = overlayId;
+      this.readPos = readPos;
+      this.readBlockSize = readBlockSize;
     }
 
-    public static class Response implements Direct.Response, GVoDEvent {
-        
-        public final Request req;
-        public final ReqStatus status;
-        public final byte[] block;
-        
-        private Response(Request req, ReqStatus status, byte[] block) {
-            this.req = req;
-            this.status = status;
-            this.block = block;
-        }
-
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+
+    public Response fail(ReqStatus status) {
+      return new Response(this, status, null);
+    }
+
+    public Response success(byte[] block) {
+      return new Response(this, ReqStatus.SUCCESS, block);
+    }
+  }
+
+  public static class Response implements Direct.Response, GVoDEvent {
+
+    public final Request req;
+    public final ReqStatus status;
+    public final byte[] block;
+
+    private Response(Request req, ReqStatus status, byte[] block) {
+      this.req = req;
+      this.status = status;
+      this.block = block;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+  }
 }

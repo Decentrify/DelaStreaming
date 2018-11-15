@@ -64,260 +64,265 @@ import se.sics.nutil.tracking.load.QueueLoadConfig;
  */
 public class TestSimpleAppendKBuffer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TestSimpleAppendKBuffer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSimpleAppendKBuffer.class);
 
-    private static Pair<StreamId, MyStream> writeStream;
-    private static Identifier readerId;
+  private static Pair<StreamId, MyStream> writeStream;
+  private static Identifier readerId;
+  private static IdentifierFactory eventIds;
 
-    @BeforeClass
-    public static void setup() {
-        systemSetup();
-        experimentSetup();
+  @BeforeClass
+  public static void setup() {
+    systemSetup();
+    experimentSetup();
+    eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
+  }
+
+  private static void systemSetup() {
+    IdentifierRegistryV2.registerBaseDefaults1(64);
+    OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
+  }
+
+  private static void experimentSetup() {
+    IntIdFactory endpointIdFactory = new IntIdFactory(Optional.of(1234l));
+    Identifier endpointId = endpointIdFactory.randomId();
+
+    IdentifierFactory nodeIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.NODE, Optional.of(1234l));
+    readerId = nodeIdFactory.randomId();
+
+    byte owner = 1;
+    IdentifierFactory baseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, Optional.of(1234l));
+    OverlayIdFactory overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, owner);
+
+    OverlayId torrentId = overlayIdFactory.randomId();
+    FileId fileId = TorrentIds.fileId(torrentId, 1);
+    StreamId streamId = TorrentIds.streamId(endpointId, fileId);
+
+    MockStreamEndpoint writeEndpoint = new MockStreamEndpoint();
+    MockStreamResource writeResource = new MockStreamResource("mock1");
+    writeStream = Pair.with(streamId, new MyStream(writeEndpoint, writeResource));
+  }
+
+  @Test
+  public void simpleTest() throws KReferenceException {
+    LOG.info("simple test");
+    //setup
+    Config config = TypesafeConfig.load();
+    MockComponentProxy proxy = new MockComponentProxy();
+    MockExceptionHandler syncExHandler = new MockExceptionHandler();
+
+    MockWC allWriteResult = new MockWC();
+
+    long appendPos = 0;
+    Validator validator;
+    KReference<byte[]> ref1, ref2, ref3;
+    DStorageWrite.Request swr1, swr2, swr3;
+
+    KBlock b1 = new KBlockImpl(0, 0, 2);
+    ref1 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
+    swr1 = new DStorageWrite.Request(eventIds.randomId(), writeStream.getValue0(), b1.lowerAbsEndpoint(), ref1.getValue().get());
+
+    KBlock b2 = new KBlockImpl(2, 6, 8);
+    ref2 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
+    swr2 = new DStorageWrite.Request(eventIds.randomId(), writeStream.getValue0(), b2.lowerAbsEndpoint(), ref2.getValue().get());
+
+    KBlock b3 = new KBlockImpl(1, 3, 5);
+    ref3 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
+    swr3 = new DStorageWrite.Request(eventIds.randomId(), writeStream.getValue0(), b3.lowerAbsEndpoint(), ref3.getValue().get());
+
+    //settig up validators;
+    proxy.expect(new PortValidator(MockStreamPort.class, false));
+    EventContentValidator ecv1 = new EventContentValidator(new DStorageWriteReqEC(), swr1);
+    EventContentValidator ecv3 = new EventContentValidator(new DStorageWriteReqEC(), swr3);
+    EventContentValidator ecv2 = new EventContentValidator(new DStorageWriteReqEC(), swr2);
+    proxy.expect(ecv1);
+    proxy.expect(ecv3);
+    proxy.expect(ecv2);
+
+    //actual run
+    SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, 
+      new ComponentLoadTracking("test", proxy, new QueueLoadConfig(config)), writeStream, 0, eventIds);
+
+    //write1
+    sakBuf.write(b1, ref1, allWriteResult);
+    ref1.release();
+    Assert.assertTrue(ref1.isValid());
+    //answer to write1
+    DStorageWrite.Request req1 = (DStorageWrite.Request) ecv1.getFound();
+    sakBuf.handleWriteResp.handle(req1.respond(Result.success(true)));
+    Assert.assertFalse(ref1.isValid());
+    Assert.assertTrue(sakBuf.isIdle());
+    //write2
+    sakBuf.write(b2, ref2, allWriteResult);
+    ref2.release();
+    Assert.assertTrue(ref2.isValid());
+    //write3
+    sakBuf.write(b3, ref3, allWriteResult);
+    ref3.release();
+    Assert.assertTrue(ref3.isValid());
+    //answer to write3
+    DStorageWrite.Request req3 = (DStorageWrite.Request) ecv3.getFound();
+    sakBuf.handleWriteResp.handle(req3.respond(Result.success(true)));
+    Assert.assertTrue(ref2.isValid());
+    Assert.assertFalse(ref3.isValid());
+    Assert.assertFalse(sakBuf.isIdle());
+    //answer to write2
+    DStorageWrite.Request req2 = (DStorageWrite.Request) ecv2.getFound();
+    sakBuf.handleWriteResp.handle(req2.respond(Result.success(true)));
+    Assert.assertFalse(ref2.isValid());
+    Assert.assertTrue(sakBuf.isIdle());
+
+    sakBuf.close();
+    Assert.assertEquals(0, syncExHandler.getExceptionCounter());
+
+    //validation
+    validator = proxy.validate();
+    if (validator != null) {
+      Assert.fail(validator.toString());
     }
+  }
 
-    private static void systemSetup() {
-        IdentifierRegistryV2.registerBaseDefaults1(64);
-        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
+  @Test
+  public void closeBeforeFinish() throws KReferenceException {
+    LOG.info("close before finish");
+    //setup
+    Config config = TypesafeConfig.load();
+    MockComponentProxy proxy = new MockComponentProxy();
+    MockExceptionHandler syncExHandler = new MockExceptionHandler();
+    MockWC allWriteResult = new MockWC();
+
+    long appendPos = 0;
+    Validator validator;
+    KReference<byte[]> ref1, ref2, ref3;
+    DStorageWrite.Request swr1, swr2, swr3;
+
+    KBlock b1 = new KBlockImpl(0, 0, 2);
+    ref1 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
+    swr1 = new DStorageWrite.Request(eventIds.randomId(), writeStream.getValue0(), b1.lowerAbsEndpoint(), ref1.getValue().get());
+
+    KBlock b2 = new KBlockImpl(2, 6, 8);
+    ref2 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
+    swr2 = new DStorageWrite.Request(eventIds.randomId(), writeStream.getValue0(), b2.lowerAbsEndpoint(), ref2.getValue().get());
+
+    KBlock b3 = new KBlockImpl(1, 3, 5);
+    ref3 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
+    swr3 = new DStorageWrite.Request(eventIds.randomId(), writeStream.getValue0(), b3.lowerAbsEndpoint(), ref3.getValue().get());
+
+    //settig up validators;
+    proxy.expect(new PortValidator(MockStreamPort.class, false));
+    EventContentValidator ecv1 = new EventContentValidator(new DStorageWriteReqEC(), swr1);
+    EventContentValidator ecv3 = new EventContentValidator(new DStorageWriteReqEC(), swr3);
+    EventContentValidator ecv2 = new EventContentValidator(new DStorageWriteReqEC(), swr2);
+    proxy.expect(ecv1);
+    proxy.expect(ecv3);
+    proxy.expect(ecv2);
+
+    //actual run
+    SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, 
+      new ComponentLoadTracking("test",proxy, new QueueLoadConfig(config)), writeStream, 0, eventIds);
+
+    //write1
+    sakBuf.write(b1, ref1, allWriteResult);
+    ref1.release();
+    Assert.assertTrue(ref1.isValid());
+    //answer to write1
+    DStorageWrite.Request req1 = (DStorageWrite.Request) ecv1.getFound();
+    sakBuf.handleWriteResp.handle(req1.respond(Result.success(true)));
+    Assert.assertFalse(ref1.isValid());
+    Assert.assertTrue(sakBuf.isIdle());
+    //write2
+    sakBuf.write(b2, ref2, allWriteResult);
+    ref2.release();
+    Assert.assertTrue(ref2.isValid());
+    //write3
+    sakBuf.write(b3, ref3, allWriteResult);
+    ref3.release();
+    Assert.assertTrue(ref3.isValid());
+    //answer to write3
+    DStorageWrite.Request req3 = (DStorageWrite.Request) ecv3.getFound();
+    sakBuf.handleWriteResp.handle(req3.respond(Result.success(true)));
+    Assert.assertTrue(ref2.isValid());
+    Assert.assertFalse(ref3.isValid());
+    Assert.assertFalse(sakBuf.isIdle());
+    //close before answer to write2
+    sakBuf.close();
+    Assert.assertFalse(ref2.isValid());
+    Assert.assertEquals(0, syncExHandler.getExceptionCounter());
+
+    //validation
+    validator = proxy.validate();
+    if (validator != null) {
+      Assert.fail(validator.toString());
     }
+  }
 
-    private static void experimentSetup() {
-        IntIdFactory endpointIdFactory = new IntIdFactory(Optional.of(1234l));
-        Identifier endpointId = endpointIdFactory.randomId();
+  @Test
+  public void errorOnWrite() throws KReferenceException {
+    LOG.info("error on write");
+    //setup
+    Config config = TypesafeConfig.load();
+    MockComponentProxy proxy = new MockComponentProxy();
+    MockExceptionHandler syncExHandler = new MockExceptionHandler();
 
-        IdentifierFactory nodeIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.NODE, Optional.of(1234l));
-        readerId = nodeIdFactory.randomId();
+    MockWC allWriteResult = new MockWC();
+    long appendPos = 0;
+    Validator validator;
+    KReference<byte[]> ref1, ref2, ref3;
+    DStorageWrite.Request swr1, swr2, swr3;
 
-        byte owner = 1;
-        IdentifierFactory baseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, Optional.of(1234l));
-        OverlayIdFactory overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, owner);
+    KBlock b1 = new KBlockImpl(0, 0, 2);
+    ref1 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
+    swr1 = new DStorageWrite.Request(eventIds.randomId(), writeStream.getValue0(), b1.lowerAbsEndpoint(), ref1.getValue().get());
 
-        OverlayId torrentId = overlayIdFactory.randomId();
-        FileId fileId = TorrentIds.fileId(torrentId, 1);
-        StreamId streamId = TorrentIds.streamId(endpointId, fileId);
+    KBlock b2 = new KBlockImpl(2, 6, 8);
+    ref2 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
+    swr2 = new DStorageWrite.Request(eventIds.randomId(), writeStream.getValue0(), b2.lowerAbsEndpoint(), ref2.getValue().get());
 
-        MockStreamEndpoint writeEndpoint = new MockStreamEndpoint();
-        MockStreamResource writeResource = new MockStreamResource("mock1");
-        writeStream = Pair.with(streamId, new MyStream(writeEndpoint, writeResource));
+    KBlock b3 = new KBlockImpl(1, 3, 5);
+    ref3 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
+    swr3 = new DStorageWrite.Request(eventIds.randomId(), writeStream.getValue0(), b3.lowerAbsEndpoint(), ref3.getValue().get());
+
+    //settig up validators;
+    proxy.expect(new PortValidator(MockStreamPort.class, false));
+    EventContentValidator ecv1 = new EventContentValidator(new DStorageWriteReqEC(), swr1);
+    EventContentValidator ecv3 = new EventContentValidator(new DStorageWriteReqEC(), swr3);
+    EventContentValidator ecv2 = new EventContentValidator(new DStorageWriteReqEC(), swr2);
+    proxy.expect(ecv1);
+    proxy.expect(ecv3);
+    proxy.expect(ecv2);
+
+    //actual run
+    SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, 
+      new ComponentLoadTracking("test",proxy, new QueueLoadConfig(config)), writeStream, 0, eventIds);
+
+    //write1
+    sakBuf.write(b1, ref1, allWriteResult);
+    ref1.release();
+    Assert.assertTrue(ref1.isValid());
+    //answer to write1
+    DStorageWrite.Request req1 = (DStorageWrite.Request) ecv1.getFound();
+    sakBuf.handleWriteResp.handle(req1.respond(Result.success(true)));
+    Assert.assertFalse(ref1.isValid());
+    Assert.assertTrue(sakBuf.isIdle());
+    //write2
+    sakBuf.write(b2, ref2, allWriteResult);
+    ref2.release();
+    Assert.assertTrue(ref2.isValid());
+    //write3
+    sakBuf.write(b3, ref3, allWriteResult);
+    ref3.release();
+    Assert.assertTrue(ref3.isValid());
+    //answer to write3
+    DStorageWrite.Request req3 = (DStorageWrite.Request) ecv3.getFound();
+    sakBuf.handleWriteResp.handle(req3.respond(Result.externalUnsafeFailure(new IllegalStateException("test failure"))));
+    Assert.assertFalse(ref2.isValid());
+    Assert.assertFalse(ref3.isValid());
+    Assert.assertTrue(sakBuf.isIdle());
+    Assert.assertEquals(1, syncExHandler.getExceptionCounter());
+
+    //validation
+    validator = proxy.validate();
+    if (validator != null) {
+      Assert.fail(validator.toString());
     }
-
-    @Test
-    public void simpleTest() throws KReferenceException {
-        LOG.info("simple test");
-        //setup
-        Config config = TypesafeConfig.load();
-        MockComponentProxy proxy = new MockComponentProxy();
-        MockExceptionHandler syncExHandler = new MockExceptionHandler();
-
-        MockWC allWriteResult = new MockWC();
-
-        long appendPos = 0;
-        Validator validator;
-        KReference<byte[]> ref1, ref2, ref3;
-        DStorageWrite.Request swr1, swr2, swr3;
-
-        KBlock b1 = new KBlockImpl(0, 0, 2);
-        ref1 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
-        swr1 = new DStorageWrite.Request(writeStream.getValue0(), b1.lowerAbsEndpoint(), ref1.getValue().get());
-
-        KBlock b2 = new KBlockImpl(2, 6, 8);
-        ref2 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
-        swr2 = new DStorageWrite.Request(writeStream.getValue0(), b2.lowerAbsEndpoint(), ref2.getValue().get());
-
-        KBlock b3 = new KBlockImpl(1, 3, 5);
-        ref3 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
-        swr3 = new DStorageWrite.Request(writeStream.getValue0(), b3.lowerAbsEndpoint(), ref3.getValue().get());
-
-        //settig up validators;
-        proxy.expect(new PortValidator(MockStreamPort.class, false));
-        EventContentValidator ecv1 = new EventContentValidator(new DStorageWriteReqEC(), swr1);
-        EventContentValidator ecv3 = new EventContentValidator(new DStorageWriteReqEC(), swr3);
-        EventContentValidator ecv2 = new EventContentValidator(new DStorageWriteReqEC(), swr2);
-        proxy.expect(ecv1);
-        proxy.expect(ecv3);
-        proxy.expect(ecv2);
-
-        //actual run
-        SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, new ComponentLoadTracking("test", proxy, new QueueLoadConfig(config)), writeStream, 0);
-
-        //write1
-        sakBuf.write(b1, ref1, allWriteResult);
-        ref1.release();
-        Assert.assertTrue(ref1.isValid());
-        //answer to write1
-        DStorageWrite.Request req1 = (DStorageWrite.Request) ecv1.getFound();
-        sakBuf.handleWriteResp.handle(req1.respond(Result.success(true)));
-        Assert.assertFalse(ref1.isValid());
-        Assert.assertTrue(sakBuf.isIdle());
-        //write2
-        sakBuf.write(b2, ref2, allWriteResult);
-        ref2.release();
-        Assert.assertTrue(ref2.isValid());
-        //write3
-        sakBuf.write(b3, ref3, allWriteResult);
-        ref3.release();
-        Assert.assertTrue(ref3.isValid());
-        //answer to write3
-        DStorageWrite.Request req3 = (DStorageWrite.Request) ecv3.getFound();
-        sakBuf.handleWriteResp.handle(req3.respond(Result.success(true)));
-        Assert.assertTrue(ref2.isValid());
-        Assert.assertFalse(ref3.isValid());
-        Assert.assertFalse(sakBuf.isIdle());
-        //answer to write2
-        DStorageWrite.Request req2 = (DStorageWrite.Request) ecv2.getFound();
-        sakBuf.handleWriteResp.handle(req2.respond(Result.success(true)));
-        Assert.assertFalse(ref2.isValid());
-        Assert.assertTrue(sakBuf.isIdle());
-
-        sakBuf.close();
-        Assert.assertEquals(0, syncExHandler.getExceptionCounter());
-
-        //validation
-        validator = proxy.validate();
-        if (validator != null) {
-            Assert.fail(validator.toString());
-        }
-    }
-
-    @Test
-    public void closeBeforeFinish() throws KReferenceException {
-        LOG.info("close before finish");
-        //setup
-        Config config = TypesafeConfig.load();
-        MockComponentProxy proxy = new MockComponentProxy();
-        MockExceptionHandler syncExHandler = new MockExceptionHandler();
-        MockWC allWriteResult = new MockWC();
-
-        long appendPos = 0;
-        Validator validator;
-        KReference<byte[]> ref1, ref2, ref3;
-        DStorageWrite.Request swr1, swr2, swr3;
-
-        KBlock b1 = new KBlockImpl(0, 0, 2);
-        ref1 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
-        swr1 = new DStorageWrite.Request(writeStream.getValue0(), b1.lowerAbsEndpoint(), ref1.getValue().get());
-
-        KBlock b2 = new KBlockImpl(2, 6, 8);
-        ref2 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
-        swr2 = new DStorageWrite.Request(writeStream.getValue0(), b2.lowerAbsEndpoint(), ref2.getValue().get());
-
-        KBlock b3 = new KBlockImpl(1, 3, 5);
-        ref3 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
-        swr3 = new DStorageWrite.Request(writeStream.getValue0(), b3.lowerAbsEndpoint(), ref3.getValue().get());
-
-        //settig up validators;
-        proxy.expect(new PortValidator(MockStreamPort.class, false));
-        EventContentValidator ecv1 = new EventContentValidator(new DStorageWriteReqEC(), swr1);
-        EventContentValidator ecv3 = new EventContentValidator(new DStorageWriteReqEC(), swr3);
-        EventContentValidator ecv2 = new EventContentValidator(new DStorageWriteReqEC(), swr2);
-        proxy.expect(ecv1);
-        proxy.expect(ecv3);
-        proxy.expect(ecv2);
-
-        //actual run
-        SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, new ComponentLoadTracking("test", proxy, new QueueLoadConfig(config)), writeStream, 0);
-
-        //write1
-        sakBuf.write(b1, ref1, allWriteResult);
-        ref1.release();
-        Assert.assertTrue(ref1.isValid());
-        //answer to write1
-        DStorageWrite.Request req1 = (DStorageWrite.Request) ecv1.getFound();
-        sakBuf.handleWriteResp.handle(req1.respond(Result.success(true)));
-        Assert.assertFalse(ref1.isValid());
-        Assert.assertTrue(sakBuf.isIdle());
-        //write2
-        sakBuf.write(b2, ref2, allWriteResult);
-        ref2.release();
-        Assert.assertTrue(ref2.isValid());
-        //write3
-        sakBuf.write(b3, ref3, allWriteResult);
-        ref3.release();
-        Assert.assertTrue(ref3.isValid());
-        //answer to write3
-        DStorageWrite.Request req3 = (DStorageWrite.Request) ecv3.getFound();
-        sakBuf.handleWriteResp.handle(req3.respond(Result.success(true)));
-        Assert.assertTrue(ref2.isValid());
-        Assert.assertFalse(ref3.isValid());
-        Assert.assertFalse(sakBuf.isIdle());
-        //close before answer to write2
-        sakBuf.close();
-        Assert.assertFalse(ref2.isValid());
-        Assert.assertEquals(0, syncExHandler.getExceptionCounter());
-
-        //validation
-        validator = proxy.validate();
-        if (validator != null) {
-            Assert.fail(validator.toString());
-        }
-    }
-
-    @Test
-    public void errorOnWrite() throws KReferenceException {
-        LOG.info("error on write");
-        //setup
-        Config config = TypesafeConfig.load();
-        MockComponentProxy proxy = new MockComponentProxy();
-        MockExceptionHandler syncExHandler = new MockExceptionHandler();
-
-        MockWC allWriteResult = new MockWC();
-        long appendPos = 0;
-        Validator validator;
-        KReference<byte[]> ref1, ref2, ref3;
-        DStorageWrite.Request swr1, swr2, swr3;
-
-        KBlock b1 = new KBlockImpl(0, 0, 2);
-        ref1 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
-        swr1 = new DStorageWrite.Request(writeStream.getValue0(), b1.lowerAbsEndpoint(), ref1.getValue().get());
-
-        KBlock b2 = new KBlockImpl(2, 6, 8);
-        ref2 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
-        swr2 = new DStorageWrite.Request(writeStream.getValue0(), b2.lowerAbsEndpoint(), ref2.getValue().get());
-
-        KBlock b3 = new KBlockImpl(1, 3, 5);
-        ref3 = KReferenceFactory.getReference(new byte[]{1, 2, 3});
-        swr3 = new DStorageWrite.Request(writeStream.getValue0(), b3.lowerAbsEndpoint(), ref3.getValue().get());
-
-        //settig up validators;
-        proxy.expect(new PortValidator(MockStreamPort.class, false));
-        EventContentValidator ecv1 = new EventContentValidator(new DStorageWriteReqEC(), swr1);
-        EventContentValidator ecv3 = new EventContentValidator(new DStorageWriteReqEC(), swr3);
-        EventContentValidator ecv2 = new EventContentValidator(new DStorageWriteReqEC(), swr2);
-        proxy.expect(ecv1);
-        proxy.expect(ecv3);
-        proxy.expect(ecv2);
-
-        //actual run
-        SimpleAppendKBuffer sakBuf = new SimpleAppendKBuffer(config, proxy, syncExHandler, new ComponentLoadTracking("test", proxy, new QueueLoadConfig(config)), writeStream, 0);
-
-        //write1
-        sakBuf.write(b1, ref1, allWriteResult);
-        ref1.release();
-        Assert.assertTrue(ref1.isValid());
-        //answer to write1
-        DStorageWrite.Request req1 = (DStorageWrite.Request) ecv1.getFound();
-        sakBuf.handleWriteResp.handle(req1.respond(Result.success(true)));
-        Assert.assertFalse(ref1.isValid());
-        Assert.assertTrue(sakBuf.isIdle());
-        //write2
-        sakBuf.write(b2, ref2, allWriteResult);
-        ref2.release();
-        Assert.assertTrue(ref2.isValid());
-        //write3
-        sakBuf.write(b3, ref3, allWriteResult);
-        ref3.release();
-        Assert.assertTrue(ref3.isValid());
-        //answer to write3
-        DStorageWrite.Request req3 = (DStorageWrite.Request) ecv3.getFound();
-        sakBuf.handleWriteResp.handle(req3.respond(Result.externalUnsafeFailure(new IllegalStateException("test failure"))));
-        Assert.assertFalse(ref2.isValid());
-        Assert.assertFalse(ref3.isValid());
-        Assert.assertTrue(sakBuf.isIdle());
-        Assert.assertEquals(1, syncExHandler.getExceptionCounter());
-
-        //validation
-        validator = proxy.validate();
-        if (validator != null) {
-            Assert.fail(validator.toString());
-        }
-    }
+  }
 }

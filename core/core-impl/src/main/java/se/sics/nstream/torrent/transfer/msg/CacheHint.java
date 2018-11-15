@@ -19,7 +19,6 @@
 package se.sics.nstream.torrent.transfer.msg;
 
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.ConnId;
 import se.sics.nstream.FileId;
@@ -31,79 +30,75 @@ import se.sics.nstream.storage.cache.KHint;
  */
 public class CacheHint {
 
-    public static class Request implements ConnectionMsg {
+  public static class Request implements ConnectionMsg {
 
-        public final Identifier msgId;
-        public final FileId fileId;
-        public final KHint.Summary requestCache;
+    public final Identifier msgId;
+    public final FileId fileId;
+    public final KHint.Summary requestCache;
 
-        protected Request(Identifier msgId, FileId fileId, KHint.Summary requestCache) {
-            this.msgId = msgId;
-            this.fileId = fileId;
-            this.requestCache = requestCache;
-        }
-
-        public Request(FileId fileId, KHint.Summary requestCache) {
-            this(BasicIdentifiers.msgId(), fileId, requestCache);
-        }
-
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
-
-        @Override
-        public OverlayId overlayId() {
-            return fileId.torrentId;
-        }
-
-        @Override
-        public ConnId getConnectionId(Identifier peer) {
-            return TorrentIds.connId(fileId, peer, false);
-        }
-
-        public Response success() {
-            return new Response(this);
-        }
-
-        @Override
-        public String toString() {
-            return "CHReq<" + fileId.toString() + ",ts:" + requestCache.lStamp + "," + msgId.toString() + ">";
-        }
+    public Request(Identifier msgId, FileId fileId, KHint.Summary requestCache) {
+      this.msgId = msgId;
+      this.fileId = fileId;
+      this.requestCache = requestCache;
     }
 
-    public static class Response implements ConnectionMsg {
-
-        public final Identifier msgId;
-        public final FileId fileId;
-
-        protected Response(Identifier msgId, FileId fileId) {
-            this.msgId = msgId;
-            this.fileId = fileId;
-        }
-
-        private Response(Request req) {
-            this(req.msgId, req.fileId);
-        }
-
-        @Override
-        public OverlayId overlayId() {
-            return fileId.torrentId;
-        }
-
-        @Override
-        public Identifier getId() {
-            return msgId;
-        }
-
-        @Override
-        public ConnId getConnectionId(Identifier peer) {
-            return TorrentIds.connId(fileId, peer, true);
-        }
-        
-         @Override
-        public String toString() {
-            return "CHResp<" + fileId.toString() + "," + msgId.toString() + ">";
-        }
+    @Override
+    public Identifier getId() {
+      return msgId;
     }
+
+    @Override
+    public OverlayId overlayId() {
+      return fileId.torrentId;
+    }
+
+    @Override
+    public ConnId getConnectionId(Identifier peer) {
+      return TorrentIds.connId(fileId, peer, false);
+    }
+
+    public Response success() {
+      return new Response(this);
+    }
+
+    @Override
+    public String toString() {
+      return "CHReq<" + fileId.toString() + ",ts:" + requestCache.lStamp + "," + msgId.toString() + ">";
+    }
+  }
+
+  public static class Response implements ConnectionMsg {
+
+    public final Identifier msgId;
+    public final FileId fileId;
+
+    protected Response(Identifier msgId, FileId fileId) {
+      this.msgId = msgId;
+      this.fileId = fileId;
+    }
+
+    private Response(Request req) {
+      this(req.msgId, req.fileId);
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return fileId.torrentId;
+    }
+
+    @Override
+    public Identifier getId() {
+      return msgId;
+    }
+
+    @Override
+    public ConnId getConnectionId(Identifier peer) {
+      return TorrentIds.connId(fileId, peer, true);
+    }
+
+    @Override
+    public String toString() {
+      return "CHResp<" + fileId.toString() + "," + msgId.toString() + ">";
+    }
+  }
 }

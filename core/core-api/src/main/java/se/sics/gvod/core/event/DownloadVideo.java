@@ -20,33 +20,32 @@ package se.sics.gvod.core.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class DownloadVideo {
 
-    public static class Request implements GVoDEvent {
+  public static class Request implements GVoDEvent {
 
-        public final Identifier id;
-        public final String videoName;
-        public final Identifier overlayId;
+    public final Identifier eventId;
+    public final String videoName;
+    public final Identifier overlayId;
 
-        public Request(String videoName, Identifier overlayId) {
-            this.id = BasicIdentifiers.eventId();
-            this.videoName = videoName;
-            this.overlayId = overlayId;
-        }
-        
-        @Override
-        public String toString() {
-            return "DownloadVideo.Request " + id.toString();
-        }
-
-        @Override
-        public Identifier getId() {
-            return id;
-        }
+    public Request(Identifier eventId, String videoName, Identifier overlayId) {
+      this.eventId = eventId;
+      this.videoName = videoName;
+      this.overlayId = overlayId;
     }
+
+    @Override
+    public String toString() {
+      return "DownloadVideo.Request " + eventId.toString();
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+  }
 }

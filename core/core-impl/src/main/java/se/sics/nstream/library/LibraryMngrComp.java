@@ -20,6 +20,7 @@ package se.sics.nstream.library;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Channel;
@@ -31,6 +32,9 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.fsm.FSMException;
 import se.sics.kompics.fsm.OnFSMExceptionAction;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.library.event.system.SystemAddressEvent;
 import se.sics.nstream.library.restart.TorrentRestartPort;
@@ -62,6 +66,7 @@ public class LibraryMngrComp extends ComponentDefinition {
     private final KAddress selfAdr;
     //**************************INTERNAL_STATE**********************************
     private final LibraryProvider torrentProvider;
+    private final IdentifierFactory eventIds;
 
     public LibraryMngrComp(Init init) {
         LOG.info("{}initiating...", logPrefix);
@@ -71,6 +76,7 @@ public class LibraryMngrComp extends ComponentDefinition {
         setupLibraryProvider();
         LOG.info("{}initiated", logPrefix);
         
+        this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.empty());
         connect(proxy.getPositive(TorrentRestartPort.class), proxy.getNegative(TorrentRestartPort.class), Channel.TWO_WAY);
 
         subscribe(handleStart, control);
@@ -88,7 +94,7 @@ public class LibraryMngrComp extends ComponentDefinition {
             throw new RuntimeException(ex);
           }
         };
-        torrentProvider.create(proxy, config(), logPrefix, selfAdr, oexa);
+        torrentProvider.create(proxy, config(), logPrefix, selfAdr, oexa, eventIds);
     }
 
     Handler handleStart = new Handler<Start>() {

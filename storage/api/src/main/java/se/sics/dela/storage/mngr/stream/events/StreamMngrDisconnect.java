@@ -20,7 +20,6 @@ package se.sics.dela.storage.mngr.stream.events;
 
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.nstream.StreamId;
 
 /**
@@ -35,8 +34,8 @@ public class StreamMngrDisconnect {
     public final Identifier clientId;
     public final StreamId streamId;
 
-    public Request(Identifier clientId, StreamId streamId) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Request(Identifier eventId, Identifier clientId, StreamId streamId) {
+      this.eventId = eventId;
       this.clientId = clientId;
       this.streamId = streamId;
     }

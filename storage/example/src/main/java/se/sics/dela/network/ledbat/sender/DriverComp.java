@@ -48,7 +48,7 @@ public class DriverComp extends ComponentDefinition {
   Positive<Timer> timerPort = requires(Timer.class);
 
   private TimerProxy timer;
-
+  
   private Random rand = new Random(123);
   private int acked = 0;
   private int timedout = 0;
@@ -58,11 +58,13 @@ public class DriverComp extends ComponentDefinition {
   private UUID reportTid;
 
   private IdentifierFactory eventIds;
+  private IdentifierFactory dataIds;
 
   public DriverComp() {
     SystemKCWrapper systemConfig = new SystemKCWrapper(config());
     long driverSeed = systemConfig.seed;
     this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(driverSeed));
+    this.dataIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(driverSeed));
 
     timer = new TimerProxyImpl().setup(proxy);
     subscribe(handleStart, control);
@@ -131,7 +133,7 @@ public class DriverComp extends ComponentDefinition {
 
   private void send(byte[] data) {
     inFlight++;
-    Identifier dataId = BasicIdentifiers.eventId();
+    Identifier dataId = dataIds.randomId();
     LedbatContainer dataContainer = new LedbatContainer(dataId, data);
     LedbatSenderEvent.Request req = new LedbatSenderEvent.Request(eventIds.randomId(), dataContainer);
     logger.trace("sending:{}", req.data.getId());

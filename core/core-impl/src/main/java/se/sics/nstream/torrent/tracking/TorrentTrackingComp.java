@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.util.Optional;
 import java.util.TreeMap;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.core.MediaType;
@@ -38,6 +39,9 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.webclient.AsyncWebResponse;
 import se.sics.ktoolbox.webclient.WebClient;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
@@ -88,6 +92,8 @@ public class TorrentTrackingComp extends ComponentDefinition {
   private TorrentTracking.DownloadedManifest pendingAdvance;
   private final TreeMap<FileId, String> reportOrder = new TreeMap<>();
 
+  private final IdentifierFactory eventIds;
+  
   public TorrentTrackingComp(Init init) {
     selfAdr = init.selfAdr;
     torrentId = init.torrentId;
@@ -98,7 +104,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
 
     reportConfig = new TorrentTrackingConfig(config());
     LOG.info("reporting in:{} and/or to:{}", new Object[]{reportConfig.reportDir, reportConfig.reportTracker});
-
+    this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.empty());
     subscribe(handleStart, control);
     subscribe(handleDownloadedManifest, trackingPort);
     subscribe(handleDownloadStarting, trackingPort);
@@ -135,7 +141,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
     public void handle(TorrentTracking.DownloadedManifest req) {
       LOG.info("{}download - got manifest", logPrefix);
       pendingAdvance = req;
-      trigger(new TorrentStatus.DownloadedManifest(req), statusPort);
+      trigger(new TorrentStatus.DownloadedManifest(eventIds.randomId(), req), statusPort);
     }
   };
 
@@ -160,7 +166,7 @@ public class TorrentTrackingComp extends ComponentDefinition {
       dataReport = event.dataReport;
       LOG.info("{}download completed in:{} avg dwnl speed:{} B/s", new Object[]{logPrefix, transferTime,
         (double) dataReport.totalSize.getValue1() / transferTime});
-      trigger(new DownloadSummaryEvent(torrentId, dataReport.totalSize.getValue1(), transferTime), statusPort);
+      trigger(new DownloadSummaryEvent(eventIds.randomId(), torrentId, dataReport.totalSize.getValue1(), transferTime), statusPort);
       status = TorrentState.UPLOADING;
       finalizeReportAction(transferTime);
     }

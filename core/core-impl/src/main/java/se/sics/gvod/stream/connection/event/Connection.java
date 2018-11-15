@@ -22,7 +22,6 @@ import java.util.Map;
 import se.sics.gvod.common.util.VodDescriptor;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.StreamEvent;
 
@@ -30,67 +29,64 @@ import se.sics.nstream.StreamEvent;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class Connection {
-    public static class Request extends Direct.Request<Response> implements StreamEvent {
 
-        public final Identifier eventId;
-        
-        public Request(Identifier eventId) {
-            this.eventId = eventId;
-        }
-        
-        public Request() {
-            this(BasicIdentifiers.eventId());
-        }
-            
-        public Response answer(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
-            return new Response(eventId, connections, descriptors);
-        }
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
+  public static class Request extends Direct.Request<Response> implements StreamEvent {
 
-        @Override
-        public String toString() {
-            return "Connection.Request<" + getId() + ">";
-        }
+    public final Identifier eventId;
+
+    public Request(Identifier eventId) {
+      this.eventId = eventId;
     }
 
-    public static class Indication implements StreamEvent {
-
-        public final Identifier eventId;
-        public final Map<Identifier, KAddress> connections;
-        public final Map<Identifier, VodDescriptor> descriptors;
-
-        public Indication(Identifier eventId, Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
-            this.eventId = eventId;
-            this.connections = connections;
-            this.descriptors = descriptors;
-        }
-
-        public Indication(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
-            this(BasicIdentifiers.eventId(), connections, descriptors);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        @Override
-        public String toString() {
-            return "Connection.Indication<" + getId() + ">";
-        }
+    public Response answer(Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
+      return new Response(eventId, connections, descriptors);
     }
-    
-    public static class Response extends Indication implements Direct.Response {
-        public Response(Identifier eventId, Map<Identifier, KAddress> connections, Map<Identifier, VodDescriptor> descriptors) {
-            super(eventId, connections, descriptors);
-        }
-        
-        @Override
-        public String toString() {
-            return "Connection.Response<" + getId() + ">";
-        }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+
+    @Override
+    public String toString() {
+      return "Connection.Request<" + getId() + ">";
+    }
+  }
+
+  public static class Indication implements StreamEvent {
+
+    public final Identifier eventId;
+    public final Map<Identifier, KAddress> connections;
+    public final Map<Identifier, VodDescriptor> descriptors;
+
+    public Indication(Identifier eventId, Map<Identifier, KAddress> connections,
+      Map<Identifier, VodDescriptor> descriptors) {
+      this.eventId = eventId;
+      this.connections = connections;
+      this.descriptors = descriptors;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    @Override
+    public String toString() {
+      return "Connection.Indication<" + getId() + ">";
+    }
+  }
+
+  public static class Response extends Indication implements Direct.Response {
+
+    public Response(Identifier eventId, Map<Identifier, KAddress> connections,
+      Map<Identifier, VodDescriptor> descriptors) {
+      super(eventId, connections, descriptors);
+    }
+
+    @Override
+    public String toString() {
+      return "Connection.Response<" + getId() + ">";
+    }
+  }
 }

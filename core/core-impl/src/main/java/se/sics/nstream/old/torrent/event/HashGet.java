@@ -22,7 +22,6 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Set;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.storage.cache.KHint;
@@ -33,81 +32,79 @@ import se.sics.nstream.util.event.StreamMsg;
  */
 public class HashGet {
 
-    public static class Request implements StreamMsg.Request {
+  public static class Request implements StreamMsg.Request {
 
-        public final Identifier eventId;
-        public final OverlayId overlayId;
-        public final Map<String, KHint.Summary> cacheHints;
-        public final String fileName;
-        public final int targetPos;
-        public final Set<Integer> hashes;
+    public final Identifier eventId;
+    public final OverlayId overlayId;
+    public final Map<String, KHint.Summary> cacheHints;
+    public final String fileName;
+    public final int targetPos;
+    public final Set<Integer> hashes;
 
-        protected Request(Identifier eventId, OverlayId overlayId, Map<String, KHint.Summary> cacheHints, String fileName, int targetPos, Set<Integer> hashes) {
-            this.eventId = eventId;
-            this.overlayId = overlayId;
-            this.cacheHints = cacheHints;
-            this.fileName = fileName;
-            this.targetPos = targetPos;
-            this.hashes = hashes;
-        }
-
-        public Request(OverlayId overlayId, Map<String, KHint.Summary> hints, String fileName, int targetPos, Set<Integer> hashes) {
-            this(BasicIdentifiers.eventId(), overlayId, hints, fileName, targetPos, hashes);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        @Override
-        public OverlayId overlayId() {
-            return overlayId;
-        }
-        
-        public Response success(Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
-            return new Response(this, Result.Status.SUCCESS, hashes, missingHashes);
-        }
+    protected Request(Identifier eventId, OverlayId overlayId, Map<String, KHint.Summary> cacheHints, String fileName,
+      int targetPos, Set<Integer> hashes) {
+      this.eventId = eventId;
+      this.overlayId = overlayId;
+      this.cacheHints = cacheHints;
+      this.fileName = fileName;
+      this.targetPos = targetPos;
+      this.hashes = hashes;
     }
 
-    public static class Response implements StreamMsg.Response {
-
-        public final Identifier eventId;
-        public final OverlayId overlayId;
-        public final Result.Status status;
-        public final String fileName;
-        public final int targetPos;
-        public final Map<Integer, ByteBuffer> hashes;
-        public final Set<Integer> missingHashes;
-
-        protected Response(Identifier eventId, OverlayId overlayId, Result.Status status, String fileName, 
-                int targetPos, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
-            this.eventId = eventId;
-            this.overlayId = overlayId;
-            this.status = status;
-            this.fileName = fileName;
-            this.targetPos = targetPos;
-            this.hashes = hashes;
-            this.missingHashes = missingHashes;
-        }
-
-        public Response(HashGet.Request req, Result.Status status, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
-            this(req.eventId, req.overlayId, status, req.fileName, req.targetPos, hashes, missingHashes);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        @Override
-        public OverlayId overlayId() {
-            return overlayId;
-        }
-
-        @Override
-        public Result.Status getStatus() {
-            return status;
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+
+    @Override
+    public OverlayId overlayId() {
+      return overlayId;
+    }
+
+    public Response success(Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+      return new Response(this, Result.Status.SUCCESS, hashes, missingHashes);
+    }
+  }
+
+  public static class Response implements StreamMsg.Response {
+
+    public final Identifier eventId;
+    public final OverlayId overlayId;
+    public final Result.Status status;
+    public final String fileName;
+    public final int targetPos;
+    public final Map<Integer, ByteBuffer> hashes;
+    public final Set<Integer> missingHashes;
+
+    protected Response(Identifier eventId, OverlayId overlayId, Result.Status status, String fileName,
+      int targetPos, Map<Integer, ByteBuffer> hashes, Set<Integer> missingHashes) {
+      this.eventId = eventId;
+      this.overlayId = overlayId;
+      this.status = status;
+      this.fileName = fileName;
+      this.targetPos = targetPos;
+      this.hashes = hashes;
+      this.missingHashes = missingHashes;
+    }
+
+    public Response(HashGet.Request req, Result.Status status, Map<Integer, ByteBuffer> hashes,
+      Set<Integer> missingHashes) {
+      this(req.eventId, req.overlayId, status, req.fileName, req.targetPos, hashes, missingHashes);
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return overlayId;
+    }
+
+    @Override
+    public Result.Status getStatus() {
+      return status;
+    }
+  }
 }

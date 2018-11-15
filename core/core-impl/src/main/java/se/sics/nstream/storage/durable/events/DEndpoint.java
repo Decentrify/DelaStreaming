@@ -22,7 +22,6 @@ import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.library.restart.LibTFSMEvent;
@@ -41,8 +40,8 @@ public class DEndpoint {
     public final Identifier endpointId;
     public final DurableStorageProvider endpointProvider;
 
-    public Connect(OverlayId torrentId, Identifier endpointId, DurableStorageProvider endpointProvider) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Connect(Identifier eventId, OverlayId torrentId, Identifier endpointId, DurableStorageProvider endpointProvider) {
+      this.eventId = eventId;
       this.torrentId = torrentId;
       this.endpointId = endpointId;
       this.endpointProvider = endpointProvider;
@@ -109,8 +108,8 @@ public class DEndpoint {
     public final OverlayId torrentId;
     public final Identifier endpointId;
 
-    public Disconnect(OverlayId torrentId, Identifier endpointId) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Disconnect(Identifier eventId, OverlayId torrentId, Identifier endpointId) {
+      this.eventId = eventId;
       this.torrentId = torrentId;
       this.endpointId = endpointId;
     }

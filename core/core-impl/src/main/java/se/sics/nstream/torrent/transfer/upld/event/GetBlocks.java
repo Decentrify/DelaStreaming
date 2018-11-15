@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Set;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.nstream.ConnId;
@@ -35,72 +34,74 @@ import se.sics.nstream.util.BlockDetails;
  */
 public class GetBlocks {
 
-    public static class Request extends Direct.Request<Response> implements TorrentConnEvent {
+  public static class Request extends Direct.Request<Response> implements TorrentConnEvent {
 
-        public final Identifier eventId;
-        public final ConnId connId;
-        public final Set<Integer> blocks;
-        public final boolean withHashes;
-        
-        public final KHint.Summary cacheHint;
+    public final Identifier eventId;
+    public final ConnId connId;
+    public final Set<Integer> blocks;
+    public final boolean withHashes;
 
-        public Request(ConnId connId, Set<Integer> blocks, boolean withHashes, KHint.Summary cacheHint) {
-            this.eventId = BasicIdentifiers.eventId();
-            this.connId = connId;
-            this.blocks = blocks;
-            this.withHashes = withHashes;
-            this.cacheHint = cacheHint;
-        }
+    public final KHint.Summary cacheHint;
 
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        @Override
-        public OverlayId overlayId() {
-            return connId.fileId.torrentId;
-        }
-
-        @Override
-        public ConnId connId() {
-            return connId;
-        }
-
-        public Response success(Map<Integer, byte[]> hashes, Map<Integer, KReference<byte[]>> blocks, Map<Integer, BlockDetails> irregularBlocks) {
-            return new Response(this, hashes, blocks, irregularBlocks);
-        }
+    public Request(Identifier eventId, ConnId connId, Set<Integer> blocks, boolean withHashes, KHint.Summary cacheHint) {
+      this.eventId = eventId;
+      this.connId = connId;
+      this.blocks = blocks;
+      this.withHashes = withHashes;
+      this.cacheHint = cacheHint;
     }
 
-    public static class Response implements Direct.Response, TorrentConnEvent {
-
-        public final Identifier eventId;
-        public final ConnId connId;
-        public final Map<Integer, byte[]> hashes;
-        public final Map<Integer, BlockDetails> irregularBlocks;
-        public final Map<Integer, KReference<byte[]>> blocks;
-
-        private Response(Request req, Map<Integer, byte[]> hashes, Map<Integer, KReference<byte[]>> blocks, Map<Integer, BlockDetails> irregularBlocks) {
-            this.eventId = req.eventId;
-            this.connId = req.connId;
-            this.hashes = hashes;
-            this.blocks = blocks;
-            this.irregularBlocks = irregularBlocks;
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        @Override
-        public OverlayId overlayId() {
-            return connId.fileId.torrentId;
-        }
-
-        @Override
-        public ConnId connId() {
-            return connId;
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+
+    @Override
+    public OverlayId overlayId() {
+      return connId.fileId.torrentId;
+    }
+
+    @Override
+    public ConnId connId() {
+      return connId;
+    }
+
+    public Response success(Map<Integer, byte[]> hashes, Map<Integer, KReference<byte[]>> blocks,
+      Map<Integer, BlockDetails> irregularBlocks) {
+      return new Response(this, hashes, blocks, irregularBlocks);
+    }
+  }
+
+  public static class Response implements Direct.Response, TorrentConnEvent {
+
+    public final Identifier eventId;
+    public final ConnId connId;
+    public final Map<Integer, byte[]> hashes;
+    public final Map<Integer, BlockDetails> irregularBlocks;
+    public final Map<Integer, KReference<byte[]>> blocks;
+
+    private Response(Request req, Map<Integer, byte[]> hashes, Map<Integer, KReference<byte[]>> blocks,
+      Map<Integer, BlockDetails> irregularBlocks) {
+      this.eventId = req.eventId;
+      this.connId = req.connId;
+      this.hashes = hashes;
+      this.blocks = blocks;
+      this.irregularBlocks = irregularBlocks;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    @Override
+    public OverlayId overlayId() {
+      return connId.fileId.torrentId;
+    }
+
+    @Override
+    public ConnId connId() {
+      return connId;
+    }
+  }
 }

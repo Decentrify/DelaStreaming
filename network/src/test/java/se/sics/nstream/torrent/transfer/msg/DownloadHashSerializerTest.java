@@ -47,67 +47,71 @@ import se.sics.nstream.test.DownloadHashResponseEC;
  */
 public class DownloadHashSerializerTest {
 
-    private static OverlayIdFactory overlayIdFactory;
+  private static OverlayIdFactory overlayIdFactory;
+  private static IdentifierFactory msgIds;
 
-    @BeforeClass
-    public static void setup() {
-        IdentifierRegistryV2.registerBaseDefaults1(64);
-        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte)0), new OverlayId.BasicTypeComparator());
+  @BeforeClass
+  public static void setup() {
+    IdentifierRegistryV2.registerBaseDefaults1(64);
+    OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
 
-        int serializerId = 128;
-        serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
-        serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
+    int serializerId = 128;
+    serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
+    serializerId = GVoDSerializerSetup.registerSerializers(serializerId);
 
-        byte ownerId = 1;
-        IdentifierFactory baseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, java.util.Optional.of(1234l));
-        overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
-    }
+    byte ownerId = 1;
+    IdentifierFactory baseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, java.util.Optional.
+      of(1234l));
+    overlayIdFactory = new OverlayIdFactory(baseIdFactory, OverlayId.BasicTypes.OTHER, ownerId);
+    msgIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.MSG, java.util.Optional.of(1234l));
+  }
 
-    @Test
-    public void simpleReq() {
-        Serializer serializer = Serializers.lookupSerializer(DownloadHash.Request.class);
-        DownloadHashRequestEC ec = new DownloadHashRequestEC();
-        DownloadHash.Request original, copy;
-        ByteBuf serializedOriginal, serializedCopy;
+  @Test
+  public void simpleReq() {
+    Serializer serializer = Serializers.lookupSerializer(DownloadHash.Request.class);
+    DownloadHashRequestEC ec = new DownloadHashRequestEC();
+    DownloadHash.Request original, copy;
+    ByteBuf serializedOriginal, serializedCopy;
 
-        Set<Integer> hashes = new TreeSet<>();
-        hashes.add(1);
-        hashes.add(2);
-        original = new DownloadHash.Request(TorrentIds.fileId(overlayIdFactory.randomId(), 2), hashes);
-        serializedOriginal = Unpooled.buffer();
-        serializer.toBinary(original, serializedOriginal);
+    Set<Integer> hashes = new TreeSet<>();
+    hashes.add(1);
+    hashes.add(2);
+    original = new DownloadHash.Request(msgIds.randomId(), TorrentIds.fileId(overlayIdFactory.randomId(), 2), hashes);
+    serializedOriginal = Unpooled.buffer();
+    serializer.toBinary(original, serializedOriginal);
 
-        serializedCopy = Unpooled.buffer();
-        serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (DownloadHash.Request) serializer.fromBinary(serializedCopy, Optional.absent());
+    serializedCopy = Unpooled.buffer();
+    serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
+    copy = (DownloadHash.Request) serializer.fromBinary(serializedCopy, Optional.absent());
 
-        Assert.assertTrue(ec.isEqual(original, copy));
-        Assert.assertEquals(0, serializedCopy.readableBytes());
-    }
+    Assert.assertTrue(ec.isEqual(original, copy));
+    Assert.assertEquals(0, serializedCopy.readableBytes());
+  }
 
-    @Test
-    public void simpleResp() {
-        Serializer serializer = Serializers.lookupSerializer(DownloadHash.Success.class);
-        DownloadHashResponseEC ec = new DownloadHashResponseEC();
-        DownloadHash.Success original, copy;
-        ByteBuf serializedOriginal, serializedCopy;
+  @Test
+  public void simpleResp() {
+    Serializer serializer = Serializers.lookupSerializer(DownloadHash.Success.class);
+    DownloadHashResponseEC ec = new DownloadHashResponseEC();
+    DownloadHash.Success original, copy;
+    ByteBuf serializedOriginal, serializedCopy;
 
-        Set<Integer> hashes = new TreeSet<>();
-        hashes.add(1);
-        hashes.add(2);
-        DownloadHash.Request request = new DownloadHash.Request(TorrentIds.fileId(overlayIdFactory.randomId(), 2), hashes);
-        Map<Integer, byte[]> hashValues = new TreeMap<>();
-        hashValues.put(1, new byte[]{1, 2, 3, 4});
-        hashValues.put(2, new byte[]{1, 2, 3, 4, 5});
-        original = request.success(hashValues);
-        serializedOriginal = Unpooled.buffer();
-        serializer.toBinary(original, serializedOriginal);
+    Set<Integer> hashes = new TreeSet<>();
+    hashes.add(1);
+    hashes.add(2);
+    DownloadHash.Request request = new DownloadHash.Request(msgIds.randomId(), TorrentIds.fileId(overlayIdFactory.
+      randomId(), 2), hashes);
+    Map<Integer, byte[]> hashValues = new TreeMap<>();
+    hashValues.put(1, new byte[]{1, 2, 3, 4});
+    hashValues.put(2, new byte[]{1, 2, 3, 4, 5});
+    original = request.success(hashValues);
+    serializedOriginal = Unpooled.buffer();
+    serializer.toBinary(original, serializedOriginal);
 
-        serializedCopy = Unpooled.buffer();
-        serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
-        copy = (DownloadHash.Success) serializer.fromBinary(serializedCopy, Optional.absent());
+    serializedCopy = Unpooled.buffer();
+    serializedOriginal.getBytes(0, serializedCopy, serializedOriginal.readableBytes());
+    copy = (DownloadHash.Success) serializer.fromBinary(serializedCopy, Optional.absent());
 
-        Assert.assertTrue(ec.isEqual(original, copy));
-        Assert.assertEquals(0, serializedCopy.readableBytes());
-    }
+    Assert.assertTrue(ec.isEqual(original, copy));
+    Assert.assertEquals(0, serializedCopy.readableBytes());
+  }
 }

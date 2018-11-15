@@ -21,7 +21,6 @@ package se.sics.nstream.torrent.transfer.event.ctrl;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
 import se.sics.ktoolbox.util.result.Result;
@@ -38,9 +37,9 @@ public class GetRawTorrent {
     public final Identifier eventId;
     public final OverlayId torrentId;
 
-    public Request(OverlayId torrentId) {
+    public Request(Identifier eventId, OverlayId torrentId) {
       super();
-      eventId = BasicIdentifiers.eventId();
+      this.eventId = eventId;
       this.torrentId = torrentId;
     }
 

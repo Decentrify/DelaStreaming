@@ -20,7 +20,6 @@ package se.sics.dela.storage.operation.events;
 
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.StreamId;
@@ -37,14 +36,10 @@ public class StreamStorageOpRead {
     public final StreamId streamId;
     public final KBlock readRange;
 
-    protected Request(Identifier eventId, StreamId streamId, KBlock readRange) {
+    public Request(Identifier eventId, StreamId streamId, KBlock readRange) {
       this.eventId = eventId;
       this.streamId = streamId;
       this.readRange = readRange;
-    }
-
-    public Request(StreamId streamId, KBlock readRange) {
-      this(BasicIdentifiers.eventId(), streamId, readRange);
     }
 
     @Override
@@ -107,8 +102,8 @@ public class StreamStorageOpRead {
     public final Identifier eventId;
     public final StreamId streamId;
 
-    public Complete(StreamId streamId) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Complete(Identifier eventId, StreamId streamId) {
+      this.eventId = eventId;
       this.streamId = streamId;
     }
 

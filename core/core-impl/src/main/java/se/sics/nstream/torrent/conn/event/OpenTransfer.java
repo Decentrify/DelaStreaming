@@ -21,7 +21,6 @@ package se.sics.nstream.torrent.conn.event;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.ConnId;
 
@@ -30,105 +29,106 @@ import se.sics.nstream.ConnId;
  */
 public class OpenTransfer {
 
-    public static class LeecherRequest extends Direct.Request<LeecherResponse> implements Identifiable {
+  public static class LeecherRequest extends Direct.Request<LeecherResponse> implements Identifiable {
 
-        public final Identifier eventId;
-        public final ConnId connId;
-        public final KAddress peer;
+    public final Identifier eventId;
+    public final ConnId connId;
+    public final KAddress peer;
 
-        public LeecherRequest(KAddress peer, ConnId connId) {
-            this.eventId = BasicIdentifiers.eventId();
-            this.connId = connId;
-            this.peer = peer;
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        public LeecherResponse answer(boolean result) {
-            return new LeecherResponse(this, result);
-        }
-        
-        public LeecherTimeout timeout() {
-            return new LeecherTimeout(this);
-        }
+    public LeecherRequest(Identifier eventId, KAddress peer, ConnId connId) {
+      this.eventId = eventId;
+      this.connId = connId;
+      this.peer = peer;
     }
 
-    public static abstract class LeecherIndication implements Direct.Response, Identifiable {
-
-        public final Identifier eventId;
-        public final ConnId connId;
-        public final KAddress peer;
-
-        public LeecherIndication(LeecherRequest req) {
-            this.eventId = req.eventId;
-            this.connId = req.connId;
-            this.peer = req.peer;
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
 
-    public static class LeecherResponse extends LeecherIndication {
-
-        public final boolean result;
-
-        private LeecherResponse(LeecherRequest req, boolean result) {
-            super(req);
-            this.result = result;
-        }
-    }
-    
-    public static class LeecherTimeout extends LeecherIndication {
-        private LeecherTimeout(LeecherRequest req) {
-            super(req);
-        }
+    public LeecherResponse answer(boolean result) {
+      return new LeecherResponse(this, result);
     }
 
-    public static class SeederRequest extends Direct.Request<SeederResponse> implements Identifiable {
+    public LeecherTimeout timeout() {
+      return new LeecherTimeout(this);
+    }
+  }
 
-        public final Identifier eventId;
-        public final ConnId connId;
-        public final KAddress peer;
+  public static abstract class LeecherIndication implements Direct.Response, Identifiable {
 
-        public SeederRequest(KAddress peer, ConnId connId) {
-            this.eventId = BasicIdentifiers.eventId();
-            this.connId = connId;
-            this.peer = peer;
-        }
+    public final Identifier eventId;
+    public final ConnId connId;
+    public final KAddress peer;
 
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        public SeederResponse answer(boolean result) {
-            return new SeederResponse(this, result);
-        }
+    public LeecherIndication(LeecherRequest req) {
+      this.eventId = req.eventId;
+      this.connId = req.connId;
+      this.peer = req.peer;
     }
 
-    public static class SeederResponse implements Direct.Response, Identifiable {
-
-        public final Identifier eventId;
-        public final ConnId connId;
-        public final KAddress peer;
-        public final boolean result;
-
-        private SeederResponse(SeederRequest req, boolean result) {
-            this.eventId = req.eventId;
-            this.connId = req.connId;
-            this.peer = req.peer;
-            this.result = result;
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+  }
+
+  public static class LeecherResponse extends LeecherIndication {
+
+    public final boolean result;
+
+    private LeecherResponse(LeecherRequest req, boolean result) {
+      super(req);
+      this.result = result;
+    }
+  }
+
+  public static class LeecherTimeout extends LeecherIndication {
+
+    private LeecherTimeout(LeecherRequest req) {
+      super(req);
+    }
+  }
+
+  public static class SeederRequest extends Direct.Request<SeederResponse> implements Identifiable {
+
+    public final Identifier eventId;
+    public final ConnId connId;
+    public final KAddress peer;
+
+    public SeederRequest(Identifier eventId, KAddress peer, ConnId connId) {
+      this.eventId = eventId;
+      this.connId = connId;
+      this.peer = peer;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    public SeederResponse answer(boolean result) {
+      return new SeederResponse(this, result);
+    }
+  }
+
+  public static class SeederResponse implements Direct.Response, Identifiable {
+
+    public final Identifier eventId;
+    public final ConnId connId;
+    public final KAddress peer;
+    public final boolean result;
+
+    private SeederResponse(SeederRequest req, boolean result) {
+      this.eventId = req.eventId;
+      this.connId = req.connId;
+      this.peer = req.peer;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+  }
 }

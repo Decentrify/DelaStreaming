@@ -21,6 +21,7 @@ package se.sics.nstream.torrent.resourceMngr;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.javatuples.Pair;
 import org.slf4j.Logger;
@@ -31,6 +32,9 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
@@ -54,12 +58,14 @@ public class ResourceMngrComp extends ComponentDefinition {
     //**************************************************************************
     private final Map<OverlayId, Op> preparingResources = new HashMap<>();
     private final Map<Identifier, Op> eventsToOp = new HashMap<>();
+    private final IdentifierFactory eventIds;
     
     public ResourceMngrComp(Init init) {
         self = init.self;
         logPrefix = "<nid:" + self + ">";
         LOG.info("{}initiating...", logPrefix);
 
+        this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.empty());
         subscribe(handleStart, control);
         subscribe(handlePrepare, resourceMngrPort);
         subscribe(handlePrepareSuccess, streamControlPort);
@@ -92,7 +98,7 @@ public class ResourceMngrComp extends ComponentDefinition {
     private void prepareResource(Op op, FileId fileId, Pair<StreamId, MyStream> stream) {
         LOG.info("{}preparing file:{} resource:{} endpoint:{}", new Object[]{logPrefix, fileId, stream.getValue1().resource.getSinkName(), stream.getValue1().endpoint.getEndpointName()});
         
-        DStreamConnect.Request req = new DStreamConnect.Request(stream);
+        DStreamConnect.Request req = new DStreamConnect.Request(eventIds.randomId(), stream);
         op.preparing(req.getId());
         eventsToOp.put(req.getId(), op);
         trigger(req, streamControlPort);

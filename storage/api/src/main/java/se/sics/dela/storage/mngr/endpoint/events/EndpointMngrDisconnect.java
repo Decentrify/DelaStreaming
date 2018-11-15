@@ -20,20 +20,20 @@ package se.sics.dela.storage.mngr.endpoint.events;
 
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class EndpointMngrDisconnect {
+
   public static class Request extends Direct.Request<Success> implements EndpointMngrEvent {
 
     public final Identifier eventId;
     public final Identifier clientId;
     public final Identifier endpointId;
 
-    public Request(Identifier clientId, Identifier endpointId) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Request(Identifier eventId, Identifier clientId, Identifier endpointId) {
+      this.eventId = eventId;
       this.clientId = clientId;
       this.endpointId = endpointId;
     }
@@ -75,7 +75,7 @@ public class EndpointMngrDisconnect {
     public Identifier getEndpointId() {
       return req.getEndpointId();
     }
-    
+
     @Override
     public Identifier getClientId() {
       return req.getClientId();

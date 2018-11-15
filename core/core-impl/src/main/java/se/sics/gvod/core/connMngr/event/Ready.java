@@ -16,27 +16,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-
 package se.sics.gvod.core.connMngr.event;
 
 import se.sics.gvod.common.event.GVoDEvent;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 
 /**
  * @author Alex Ormenisan <aaor@sics.se>
  */
 public class Ready implements GVoDEvent {
-    public final Identifier id;
-    public final int slots;
-    
-    public Ready(int slots) {
-        this.id = BasicIdentifiers.eventId();
-        this.slots = slots;
-    }
 
-    @Override
-    public Identifier getId() {
-        return id;
-    }
+  public final Identifier eventId;
+  public final int slots;
+
+  public Ready(Identifier eventId, int slots) {
+    this.eventId = eventId;
+    this.slots = slots;
+  }
+
+  @Override
+  public Identifier getId() {
+    return eventId;
+  }
 }

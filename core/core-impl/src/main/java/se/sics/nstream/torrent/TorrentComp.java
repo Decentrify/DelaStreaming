@@ -19,6 +19,7 @@
 package se.sics.nstream.torrent;
 
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import se.sics.kompics.Channel;
@@ -30,6 +31,9 @@ import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.nstream.storage.durable.DStoragePort;
@@ -67,13 +71,14 @@ public class TorrentComp extends ComponentDefinition {
     private Component networkRetryComp;
     private Component transferComp;
     private Component reportComp;
+    private final IdentifierFactory eventIds;
 
     public TorrentComp(Init init) {
         selfAdr = init.selfAdr;
         torrentId = init.torrentId;
         logPrefix = "<nid:" + selfAdr.getId() + ",tid:" + torrentId + ">";
         LOG.info("{}initiating...", logPrefix);
-
+        this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.empty());
         partners = init.partners;
         subscribe(handleStart, control);
     }
@@ -84,7 +89,7 @@ public class TorrentComp extends ComponentDefinition {
             LOG.info("{}starting...", logPrefix);
             connectComp();
             startComp();
-            trigger(new TorrentReady(torrentId), statusPort);
+            trigger(new TorrentReady(eventIds.randomId(), torrentId), statusPort);
         }
     };
     

@@ -19,7 +19,6 @@
 package se.sics.nstream.torrent.transfer.dwnl.event;
 
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
@@ -29,28 +28,28 @@ import se.sics.nstream.torrent.transfer.TorrentConnEvent;
  */
 public class FPDControl implements TorrentConnEvent {
 
-    public final Identifier eventId;
-    public final ConnId connId;
-    public final double appCwndAdjustment;
+  public final Identifier eventId;
+  public final ConnId connId;
+  public final double appCwndAdjustment;
 
-    public FPDControl(ConnId connId, double appCwndAdjustment) {
-        this.eventId = BasicIdentifiers.eventId();
-        this.connId = connId;
-        this.appCwndAdjustment = appCwndAdjustment;
-    }
+  public FPDControl(Identifier eventId, ConnId connId, double appCwndAdjustment) {
+    this.eventId = eventId;
+    this.connId = connId;
+    this.appCwndAdjustment = appCwndAdjustment;
+  }
 
-    @Override
-    public OverlayId overlayId() {
-        return connId.fileId.torrentId;
-    }
+  @Override
+  public OverlayId overlayId() {
+    return connId.fileId.torrentId;
+  }
 
-    @Override
-    public Identifier getId() {
-        return eventId;
-    }
+  @Override
+  public Identifier getId() {
+    return eventId;
+  }
 
-    @Override
-    public ConnId connId() {
-        return connId;
-    }
+  @Override
+  public ConnId connId() {
+    return connId;
+  }
 }

@@ -21,7 +21,6 @@ package se.sics.nstream.library.event.system;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.result.Result;
 
@@ -29,39 +28,38 @@ import se.sics.ktoolbox.util.result.Result;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class SystemAddressEvent {
-    public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
-        public final Identifier eventId;
-        
-        public Request(Identifier eventId) {
-            this.eventId = eventId;
-        }
-        
-        public Request() {
-            this(BasicIdentifiers.eventId());
-        }
-        
-        public Response success(KAddress systemAdr) {
-            return new Response(this, Result.success(systemAdr));
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
+
+  public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+
+    public final Identifier eventId;
+
+    public Request(Identifier eventId) {
+      this.eventId = eventId;
     }
-    
-    public static class Response implements Direct.Response, VoDMngrEvent {
-        public final Request req;
-        public final Result<KAddress> systemAdr;
-        
-        private Response(Request req, Result<KAddress> systemAdr) {
-            this.req = req;
-            this.systemAdr = systemAdr;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
+
+    public Response success(KAddress systemAdr) {
+      return new Response(this, Result.success(systemAdr));
     }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+  }
+
+  public static class Response implements Direct.Response, VoDMngrEvent {
+
+    public final Request req;
+    public final Result<KAddress> systemAdr;
+
+    private Response(Request req, Result<KAddress> systemAdr) {
+      this.req = req;
+      this.systemAdr = systemAdr;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+  }
 }

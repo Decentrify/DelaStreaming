@@ -21,7 +21,6 @@ package se.sics.nstream.library.event.torrent;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.library.restart.LibTFSMEvent;
@@ -40,10 +39,6 @@ public class TorrentExtendedStatusEvent {
     public Request(Identifier eventId, OverlayId torrentId) {
       this.eventId = eventId;
       this.torrentId = torrentId;
-    }
-
-    public Request(OverlayId torrentId) {
-      this(BasicIdentifiers.eventId(), torrentId);
     }
 
     @Override

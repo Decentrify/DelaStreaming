@@ -21,7 +21,6 @@ package se.sics.nstream.torrent.transfer.msg;
 import java.util.Map;
 import java.util.Set;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.ConnId;
 import se.sics.nstream.FileId;
@@ -38,14 +37,10 @@ public class DownloadHash {
     public final FileId fileId;
     public final Set<Integer> hashes;
 
-    protected Request(Identifier msgId, FileId fileId, Set<Integer> hashes) {
+    public Request(Identifier msgId, FileId fileId, Set<Integer> hashes) {
       this.msgId = msgId;
       this.fileId = fileId;
       this.hashes = hashes;
-    }
-
-    public Request(FileId fileId, Set<Integer> hashes) {
-      this(BasicIdentifiers.eventId(), fileId, hashes);
     }
 
     @Override
@@ -115,11 +110,11 @@ public class DownloadHash {
       this.fileId = fileId;
       this.hashes = hashes;
     }
-    
+
     private BadRequest(Request req) {
       this(req.msgId, req.fileId, req.hashes);
     }
-    
+
     @Override
     public Identifier getId() {
       return msgId;

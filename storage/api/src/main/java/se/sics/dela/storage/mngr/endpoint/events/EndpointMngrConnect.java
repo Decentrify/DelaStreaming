@@ -22,7 +22,6 @@ import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
 
 /**
@@ -36,8 +35,8 @@ public class EndpointMngrConnect {
     public final Identifier endpointId;
     public final StorageProvider endpointProvider;
 
-    public Request(Identifier clientId, Identifier endpointId, StorageProvider endpointProvider) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Request(Identifier eventId, Identifier clientId, Identifier endpointId, StorageProvider endpointProvider) {
+      this.eventId = eventId;
       this.clientId = clientId;
       this.endpointId = endpointId;
       this.endpointProvider = endpointProvider;

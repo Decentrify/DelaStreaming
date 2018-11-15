@@ -22,7 +22,6 @@ import java.util.List;
 import se.sics.kompics.Direct;
 import se.sics.kompics.Promise;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.overlays.OverlayEvent;
@@ -40,8 +39,8 @@ public class StartTorrent {
     public final OverlayId torrentId;
     public final List<KAddress> partners;
 
-    public Request(OverlayId torrentId, List<KAddress> partners) {
-      this.eventId = BasicIdentifiers.eventId();
+    public Request(Identifier eventId, OverlayId torrentId, List<KAddress> partners) {
+      this.eventId = eventId;
       this.torrentId = torrentId;
       this.partners = partners;
     }

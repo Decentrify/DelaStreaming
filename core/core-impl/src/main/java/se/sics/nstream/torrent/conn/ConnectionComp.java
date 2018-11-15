@@ -36,6 +36,9 @@ import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.KContentMsg;
@@ -79,6 +82,9 @@ public class ConnectionComp extends ComponentDefinition {
     //**************************************************************************
     private LeecherConnectionState leecherConnState;
     private SeederConnectionState seederConnState;
+    
+    private final IdentifierFactory eventIds;
+    private final IdentifierFactory msgIds;
 
     public ConnectionComp(Init init) {
         torrentId = init.torrentId;
@@ -88,7 +94,8 @@ public class ConnectionComp extends ComponentDefinition {
         networkQueueLoad = NetworkQueueLoadProxy.instance("load_conn" + logPrefix, proxy, config(), 
           Optional.fromNullable((String)null));
         seederConnState = new SeederConnectionState();
-
+        this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, java.util.Optional.empty());
+        this.msgIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.MSG, java.util.Optional.empty());
         subscribe(handleStart, control);
         subscribe(handlePeerConnect, connPort);
         subscribe(handleSetDetailedState, connPort);
@@ -315,7 +322,7 @@ public class ConnectionComp extends ComponentDefinition {
 
         public void openTransfer(KAddress peer, FileId fileId, KContentMsg msg) {
             ConnId connId = TorrentIds.connId(fileId, peer.getId(), false);
-            OpenTransfer.SeederRequest localReq = new OpenTransfer.SeederRequest(peer, connId);
+            OpenTransfer.SeederRequest localReq = new OpenTransfer.SeederRequest(eventIds.randomId(), peer, connId);
             pendingOpenTransfer.put(localReq.getId(), msg);
             trigger(localReq, connPort);
         }
@@ -328,13 +335,13 @@ public class ConnectionComp extends ComponentDefinition {
         public void localClose(ConnId connId) {
             KAddress peer = connected.get(connId.peerId);
             if (peer != null) {
-                simpleUDPSend(new NetCloseTransfer(connId.fileId, !connId.leecher), peer);
+                simpleUDPSend(new NetCloseTransfer(msgIds.randomId(), connId.fileId, !connId.leecher), peer);
             }
         }
 
         public void remoteClose(FileId fileId, Identifier peerId) {
             ConnId connId = TorrentIds.connId(fileId, peerId, true);
-            trigger(new CloseTransfer.Indication(connId), connPort);
+            trigger(new CloseTransfer.Indication(eventIds.randomId(), connId), connPort);
         }
     }
 
@@ -355,7 +362,7 @@ public class ConnectionComp extends ComponentDefinition {
         //**********************************************************************
         public void connect(Seeder.Connect req) {
             LOG.debug("{}connecting to seeder:{}", logPrefix, req.peer);
-            NetConnect.Request netReq = new NetConnect.Request(torrentId);
+            NetConnect.Request netReq = new NetConnect.Request(msgIds.randomId(), torrentId);
             pendingConnect.put(netReq.getId(), req);
             bestEffortUDPSend(netReq, req.peer, DEFAULT_RETRIES);
         }
@@ -393,18 +400,19 @@ public class ConnectionComp extends ComponentDefinition {
         public void detailedState() {
             if (connected.isEmpty()) {
                 LOG.info("{}detailed state - no connection", logPrefix);
-                trigger(new DetailedState.Deliver(Result.timeout(new IllegalArgumentException("manifest def not found"))), connPort);
+                trigger(new DetailedState.Deliver(eventIds.randomId(), 
+                  Result.timeout(new IllegalArgumentException("manifest def not found"))), connPort);
                 return;
             }
             KAddress peer = connected.firstEntry().getValue();
             LOG.debug("{}detailed state - requesting from:{}", logPrefix, peer);
-            NetDetailedState.Request netReq = new NetDetailedState.Request(torrentId);
+            NetDetailedState.Request netReq = new NetDetailedState.Request(msgIds.randomId(), torrentId);
             bestEffortUDPSend(netReq, peer, DEFAULT_RETRIES);
         }
 
         public void detailedStateResp(Identifier reqId, ManifestDef manifestDef) {
             LOG.info("{}detailed state - received", logPrefix);
-            trigger(new DetailedState.Deliver(Result.success(manifestDef)), connPort);
+            trigger(new DetailedState.Deliver(eventIds.randomId(), Result.success(manifestDef)), connPort);
         }
 
         public void detailedStateTimeout(Identifier reqId, KAddress peer) {
@@ -421,7 +429,7 @@ public class ConnectionComp extends ComponentDefinition {
         //**********************************************************************
         public void openTransfer(OpenTransfer.LeecherRequest req) {
             LOG.debug("{}transfer leecher - requesting from:{}", logPrefix, req.peer);
-            NetOpenTransfer.Request netReq = new NetOpenTransfer.Request(req.connId.fileId);
+            NetOpenTransfer.Request netReq = new NetOpenTransfer.Request(msgIds.randomId(), req.connId.fileId);
             pendingOpenTransfer.put(netReq.getId(), req);
             bestEffortUDPSend(netReq, req.peer, DEFAULT_RETRIES);
         }
@@ -455,13 +463,13 @@ public class ConnectionComp extends ComponentDefinition {
         public void localClose(ConnId connId) {
             KAddress peer = connected.get(connId.peerId);
             if (peer != null) {
-                simpleUDPSend(new NetCloseTransfer(connId.fileId, !connId.leecher), peer);
+                simpleUDPSend(new NetCloseTransfer(msgIds.randomId(), connId.fileId, !connId.leecher), peer);
             }
         }
 
         public void remoteClose(FileId fileId, Identifier peerId) {
             ConnId connId = TorrentIds.connId(fileId, peerId, false);
-            trigger(new CloseTransfer.Indication(connId), connPort);
+            trigger(new CloseTransfer.Indication(eventIds.randomId(), connId), connPort);
         }
     }
 }

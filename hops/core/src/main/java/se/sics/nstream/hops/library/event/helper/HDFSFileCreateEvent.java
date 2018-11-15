@@ -21,7 +21,6 @@ package se.sics.nstream.hops.library.event.helper;
 import se.sics.gvod.stream.mngr.event.VoDMngrEvent;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.hops.storage.hdfs.HDFSEndpoint;
 import se.sics.nstream.hops.storage.hdfs.HDFSResource;
@@ -31,46 +30,43 @@ import se.sics.nstream.hops.storage.hdfs.HDFSResource;
  */
 public class HDFSFileCreateEvent {
 
-    public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
+  public static class Request extends Direct.Request<Response> implements VoDMngrEvent {
 
-        public final Identifier eventId;
-        public final HDFSEndpoint hdfsEndpoint;
-        public final HDFSResource hdfsResource; 
-        public final long fileSize;
+    public final Identifier eventId;
+    public final HDFSEndpoint hdfsEndpoint;
+    public final HDFSResource hdfsResource;
+    public final long fileSize;
 
-        public Request(Identifier eventId, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource, long fileSize) {
-            this.eventId = eventId;
-            this.hdfsEndpoint = hdfsEndpoint;
-            this.hdfsResource = hdfsResource;
-            this.fileSize = fileSize;
-        }
-
-        public Request(HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource, long fileSize) {
-            this(BasicIdentifiers.eventId(), hdfsEndpoint, hdfsResource, fileSize);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-        
-        public Response answer(Result<Boolean> result) {
-            return new Response(this,result);
-        }
+    public Request(Identifier eventId, HDFSEndpoint hdfsEndpoint, HDFSResource hdfsResource, long fileSize) {
+      this.eventId = eventId;
+      this.hdfsEndpoint = hdfsEndpoint;
+      this.hdfsResource = hdfsResource;
+      this.fileSize = fileSize;
     }
 
-    public static class Response implements Direct.Response, VoDMngrEvent {
-        public final Request req;
-        public final Result<Boolean> result;
-        
-        public Response(Request req, Result<Boolean> result) {
-            this.req = req;
-            this.result = result;
-        }
-
-        @Override
-        public Identifier getId() {
-            return req.eventId;
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+
+    public Response answer(Result<Boolean> result) {
+      return new Response(this, result);
+    }
+  }
+
+  public static class Response implements Direct.Response, VoDMngrEvent {
+
+    public final Request req;
+    public final Result<Boolean> result;
+
+    public Response(Request req, Result<Boolean> result) {
+      this.req = req;
+      this.result = result;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.eventId;
+    }
+  }
 }

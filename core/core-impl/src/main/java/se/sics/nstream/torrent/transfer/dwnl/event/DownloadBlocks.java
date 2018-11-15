@@ -21,7 +21,6 @@ package se.sics.nstream.torrent.transfer.dwnl.event;
 import java.util.Map;
 import java.util.Set;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.nstream.ConnId;
 import se.sics.nstream.torrent.transfer.TorrentConnEvent;
@@ -32,30 +31,32 @@ import se.sics.nstream.util.BlockDetails;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class DownloadBlocks implements TorrentConnEvent {
-    public final Identifier eventId;
-    public final ConnId connId;
-    public final Set<Integer> blocks;
-    public final Map<Integer, BlockDetails> irregularBlocks;
-    
-    public DownloadBlocks(ConnId connId, Set<Integer> blocks, Map<Integer, BlockDetails> irregularBlocks) {
-        this.eventId = BasicIdentifiers.eventId();
-        this.connId = connId;
-        this.blocks = blocks;
-        this.irregularBlocks = irregularBlocks;
-    }
-    
-    @Override
-    public OverlayId overlayId() {
-        return connId.fileId.torrentId;
-    }
 
-    @Override
-    public Identifier getId() {
-        return eventId;
-    }
+  public final Identifier eventId;
+  public final ConnId connId;
+  public final Set<Integer> blocks;
+  public final Map<Integer, BlockDetails> irregularBlocks;
 
-    @Override
-    public ConnId connId() {
-        return connId;
-    }
+  public DownloadBlocks(Identifier eventId, ConnId connId, Set<Integer> blocks,
+    Map<Integer, BlockDetails> irregularBlocks) {
+    this.eventId = eventId;
+    this.connId = connId;
+    this.blocks = blocks;
+    this.irregularBlocks = irregularBlocks;
+  }
+
+  @Override
+  public OverlayId overlayId() {
+    return connId.fileId.torrentId;
+  }
+
+  @Override
+  public Identifier getId() {
+    return eventId;
+  }
+
+  @Override
+  public ConnId connId() {
+    return connId;
+  }
 }

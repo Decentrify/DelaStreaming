@@ -38,6 +38,7 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.TupleHelper;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.nstream.FileId;
 import se.sics.nstream.StreamId;
 
@@ -56,15 +57,16 @@ public class StreamMngrProxy {
   //<eventId, callbacks>
   private final Map<Identifier, StreamStorageConnected> connectedCallbacks = new HashMap<>();
   private final Map<Identifier, StreamStorageDisconnected> disconnectedCallbacks = new HashMap<>();
-
+  private IdentifierFactory eventIds;
   public StreamMngrProxy() {
   }
 
-  public StreamMngrProxy setup(ComponentProxy proxy) {
+  public StreamMngrProxy setup(ComponentProxy proxy, IdentifierFactory eventIds) {
     this.proxy = proxy;
     streamMngr = proxy.getNegative(StreamMngrPort.class).getPair();
     proxy.subscribe(handleConnected, streamMngr);
     proxy.subscribe(handleDisconnected, streamMngr);
+    this.eventIds = eventIds;
     return this;
   }
 
@@ -168,7 +170,7 @@ public class StreamMngrProxy {
   private TupleHelper.TripletConsumer<StreamId, StreamStorage, StreamStorageConnected>
     connectedCallback(Identifier clientId) {
     return TupleHelper.tripletConsumer((streamId) -> (streamStorage) -> (callback) -> {
-      StreamMngrConnect.Request req = new StreamMngrConnect.Request(clientId, streamId, streamStorage);
+      StreamMngrConnect.Request req = new StreamMngrConnect.Request(eventIds.randomId(), clientId, streamId, streamStorage);
       proxy.trigger(req, streamMngr);
       connectedCallbacks.put(req.getId(), callback);
     });
@@ -177,7 +179,7 @@ public class StreamMngrProxy {
   private TupleHelper.PairConsumer<StreamId, StreamStorageDisconnected>
     disconnectedCallback(Identifier clientId) {
     return TupleHelper.pairConsumer((streamId) -> (callback) -> {
-      StreamMngrDisconnect.Request req = new StreamMngrDisconnect.Request(clientId, streamId);
+      StreamMngrDisconnect.Request req = new StreamMngrDisconnect.Request(eventIds.randomId(), clientId, streamId);
       proxy.trigger(req, streamMngr);
       disconnectedCallbacks.put(req.getId(), callback);
     });

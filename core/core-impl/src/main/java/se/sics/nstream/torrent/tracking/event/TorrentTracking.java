@@ -22,7 +22,6 @@ import se.sics.kompics.Direct;
 import se.sics.kompics.Direct.Response;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.result.Result;
 import se.sics.nstream.StreamEvent;
@@ -35,83 +34,78 @@ import se.sics.nstream.transfer.MyTorrent;
  */
 public class TorrentTracking {
 
-    public static class DownloadedManifest extends Direct.Request<Response> implements StreamEvent {
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        public final Result<MyTorrent.Manifest> manifest;
-        
-        public DownloadedManifest(OverlayId torrentId, Result<MyTorrent.Manifest> manifest) {
-            this.eventId = BasicIdentifiers.eventId();
-            this.torrentId = torrentId;
-            this.manifest = manifest;
-        }
-        
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
+  public static class DownloadedManifest extends Direct.Request<Response> implements StreamEvent {
+
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+    public final Result<MyTorrent.Manifest> manifest;
+
+    public DownloadedManifest(Identifier eventId, OverlayId torrentId, Result<MyTorrent.Manifest> manifest) {
+      this.eventId = eventId;
+      this.torrentId = torrentId;
+      this.manifest = manifest;
     }
-    
-     public static class TransferSetUp implements StreamEvent {
-        public final Identifier eventId;
-        public final OverlayId torrentId;
-        public final DataReport dataReport;
 
-        public TransferSetUp(Identifier eventId, OverlayId torrentId, DataReport dataReport) {
-            this.eventId = eventId;
-            this.torrentId = torrentId;
-            this.dataReport = dataReport;
-        }
-
-        public TransferSetUp(OverlayId torrentId, DataReport dataReport) {
-            this(BasicIdentifiers.eventId(), torrentId, dataReport);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        @Override
-        public String toString() {
-            return "Download<" + torrentId + ">Starting<" + getId() + ">";
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
-     
-    public static class DownloadDone implements StreamEvent {
+  }
 
-        public final Identifier eventId;
-        public final OverlayId overlayId;
-        public final DataReport dataReport;
+  public static class TransferSetUp implements StreamEvent {
 
-        public DownloadDone(Identifier eventId, OverlayId overlayId, DataReport dataReport) {
-            this.eventId = eventId;
-            this.overlayId = overlayId;
-            this.dataReport = dataReport;
-        }
+    public final Identifier eventId;
+    public final OverlayId torrentId;
+    public final DataReport dataReport;
 
-        public DownloadDone(OverlayId overlayId, DataReport dataReport) {
-            this(BasicIdentifiers.eventId(), overlayId, dataReport);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        @Override
-        public String toString() {
-            return "Download<" + overlayId + ">Finished<" + getId() + ">";
-        }
+    public TransferSetUp(Identifier eventId, OverlayId torrentId, DataReport dataReport) {
+      this.eventId = eventId;
+      this.torrentId = torrentId;
+      this.dataReport = dataReport;
     }
-    
-    public static class Indication implements KompicsEvent {
-        public final DataReport dataReport;
-        public final DownloadReport downloadReport;
-        
-        public Indication(DataReport dataReport, DownloadReport downloadReport) {
-            this.dataReport = dataReport;
-            this.downloadReport = downloadReport;
-        }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
+
+    @Override
+    public String toString() {
+      return "Download<" + torrentId + ">Starting<" + getId() + ">";
+    }
+  }
+
+  public static class DownloadDone implements StreamEvent {
+
+    public final Identifier eventId;
+    public final OverlayId overlayId;
+    public final DataReport dataReport;
+
+    public DownloadDone(Identifier eventId, OverlayId overlayId, DataReport dataReport) {
+      this.eventId = eventId;
+      this.overlayId = overlayId;
+      this.dataReport = dataReport;
+    }
+
+    @Override
+    public Identifier getId() {
+      return eventId;
+    }
+
+    @Override
+    public String toString() {
+      return "Download<" + overlayId + ">Finished<" + getId() + ">";
+    }
+  }
+
+  public static class Indication implements KompicsEvent {
+
+    public final DataReport dataReport;
+    public final DownloadReport downloadReport;
+
+    public Indication(DataReport dataReport, DownloadReport downloadReport) {
+      this.dataReport = dataReport;
+      this.downloadReport = downloadReport;
+    }
+  }
 }

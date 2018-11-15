@@ -21,7 +21,6 @@ package se.sics.gvod.stream.congestion.event.external;
 import se.sics.gvod.stream.congestion.PLedbatEvent;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
@@ -29,77 +28,75 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public class PLedbatConnection {
 
-    public static class TrackRequest extends Direct.Request<TrackResponse> implements PLedbatEvent {
+  public static class TrackRequest extends Direct.Request<TrackResponse> implements PLedbatEvent {
 
-        public final Identifier eventId;
-        public final KAddress target;
+    public final Identifier eventId;
+    public final KAddress target;
 
-        public TrackRequest(Identifier eventId, KAddress target) {
-            this.eventId = eventId;
-            this.target = target;
-        }
-        
-        public TrackRequest(KAddress target) {
-            this(BasicIdentifiers.eventId(), target);
-        }
-
-        @Override
-        public Identifier getId() {
-            return eventId;
-        }
-
-        @Override
-        public String toString() {
-            return "LedbatConnection.TrackRequest<" + getId() + ">";
-        }
-
-        public TrackResponse answer(TrackResponse.Status status) {
-            return new TrackResponse(this, status);
-        }
+    public TrackRequest(Identifier eventId, KAddress target) {
+      this.eventId = eventId;
+      this.target = target;
     }
 
-    public static class TrackResponse implements Direct.Response, PLedbatEvent {
-
-        public final TrackRequest req;
-        public final Status status;
-
-        TrackResponse(TrackRequest req, Status status) {
-            this.req = req;
-            this.status = status;
-        }
-
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
-
-        @Override
-        public String toString() {
-            return "LedbatConnection.TrackResponse<" + getId() + ">";
-        }
-
-        public static enum Status {
-
-            SPEED_UP, SLOW_DOWN, TIMEOUT;
-        }
+    @Override
+    public Identifier getId() {
+      return eventId;
     }
 
-    public static class Untrack implements PLedbatEvent {
-
-        public final TrackRequest req;
-
-        public Untrack(TrackRequest req) {
-            this.req = req;
-        }
-
-        @Override
-        public Identifier getId() {
-            return req.getId();
-        }
-
-        @Override
-        public String toString() {
-            return "LedbatConnection.Untrack<" + getId() + ">";
-        }
+    @Override
+    public String toString() {
+      return "LedbatConnection.TrackRequest<" + getId() + ">";
     }
+
+    public TrackResponse answer(TrackResponse.Status status) {
+      return new TrackResponse(this, status);
+    }
+  }
+
+  public static class TrackResponse implements Direct.Response, PLedbatEvent {
+
+    public final TrackRequest req;
+    public final Status status;
+
+    TrackResponse(TrackRequest req, Status status) {
+      this.req = req;
+      this.status = status;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public String toString() {
+      return "LedbatConnection.TrackResponse<" + getId() + ">";
+    }
+
+    public static enum Status {
+
+      SPEED_UP,
+      SLOW_DOWN,
+      TIMEOUT;
+    }
+  }
+
+  public static class Untrack implements PLedbatEvent {
+
+    public final TrackRequest req;
+
+    public Untrack(TrackRequest req) {
+      this.req = req;
+    }
+
+    @Override
+    public Identifier getId() {
+      return req.getId();
+    }
+
+    @Override
+    public String toString() {
+      return "LedbatConnection.Untrack<" + getId() + ">";
+    }
+  }
 }

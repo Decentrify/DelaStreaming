@@ -27,6 +27,7 @@ import se.sics.kompics.ComponentProxy;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.nstream.StreamId;
 import se.sics.nstream.util.range.KBlock;
@@ -37,6 +38,7 @@ import se.sics.nstream.util.range.KBlock;
 public class StreamStorageOpProxy {
   private ComponentProxy proxy;
   private Positive<StreamStorageOpPort> streamStorageOp;
+  private IdentifierFactory eventIds;
   
   private final Map<Identifier, Consumer<Try<byte[]>>> readCallbacks = new HashMap<>();
   private final Map<Identifier, Consumer<Try<Boolean>>> writeCallbacks = new HashMap<>();
@@ -44,33 +46,34 @@ public class StreamStorageOpProxy {
   public StreamStorageOpProxy() {
   }
   
-  public StreamStorageOpProxy setup(ComponentProxy proxy) {
+  public StreamStorageOpProxy setup(ComponentProxy proxy, IdentifierFactory eventIds) {
     this.proxy = proxy;
     streamStorageOp = this.proxy.getNegative(StreamStorageOpPort.class).getPair();
     proxy.subscribe(handleRead, streamStorageOp);
     proxy.subscribe(handleWrite, streamStorageOp);
+    this.eventIds = eventIds;
     return this;
   }
   
   public void read(StreamId streamId, KBlock readRange, Consumer<Try<byte[]>> callback) {
-    StreamStorageOpRead.Request req = new StreamStorageOpRead.Request(streamId, readRange);
+    StreamStorageOpRead.Request req = new StreamStorageOpRead.Request(eventIds.randomId(), streamId, readRange);
     proxy.trigger(req, streamStorageOp);
     readCallbacks.put(req.getId(), callback);
   }
   
   public void write(StreamId streamId, long pos, byte[] value, Consumer<Try<Boolean>> callback) {
-    StreamStorageOpWrite.Request req = new StreamStorageOpWrite.Request(streamId, pos, value);
+    StreamStorageOpWrite.Request req = new StreamStorageOpWrite.Request(eventIds.randomId(), streamId, pos, value);
     proxy.trigger(req, streamStorageOp);
     writeCallbacks.put(req.getId(), callback);
   }
   
   public void readCompleted(StreamId streamId) {
-    StreamStorageOpRead.Complete req = new StreamStorageOpRead.Complete(streamId);
+    StreamStorageOpRead.Complete req = new StreamStorageOpRead.Complete(eventIds.randomId(), streamId);
     proxy.trigger(req, streamStorageOp);
   }
   
   public void writeCompleted(StreamId streamId) {
-    StreamStorageOpWrite.Complete req = new StreamStorageOpWrite.Complete(streamId);
+    StreamStorageOpWrite.Complete req = new StreamStorageOpWrite.Complete(eventIds.randomId(), streamId);
     proxy.trigger(req, streamStorageOp);
   }
   

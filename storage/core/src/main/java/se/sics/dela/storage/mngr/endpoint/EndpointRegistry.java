@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import se.sics.dela.storage.mngr.StorageProvider;
 import se.sics.dela.util.IdRegistry;
@@ -33,6 +34,8 @@ import se.sics.dela.util.MyIdentifierFactory;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.TupleHelper;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
+import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 
 /**
  * It is expected that the requester will do one request at a time:
@@ -64,6 +67,7 @@ public class EndpointRegistry {
   //<endpointId, clientProxyId>
   final BiMap<Identifier, Identifier> clientProxies = HashBiMap.create();
   final Set<Identifier> postponedConnect = new HashSet<>();
+  private final IdentifierFactory proxyIds;
 
   public EndpointRegistry(MyIdentifierFactory idFactory, List<StorageProvider> providers,
     TupleHelper.TripletConsumer<Identifier, Identifier, StorageProvider> connectAction,
@@ -71,6 +75,7 @@ public class EndpointRegistry {
     this.connectAction = connectAction;
     this.disconnectAction = disconnectAction;
     this.idRegistry = new IdRegistry(idFactory);
+    this.proxyIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
     providers.forEach((provider) -> {
       Identifier endpointId = idRegistry.register(provider.getName());
       this.providers.put(endpointId, provider);
@@ -98,7 +103,7 @@ public class EndpointRegistry {
 
   private void proxyConnect(Identifier endpointId) {
     connecting.add(endpointId);
-    Identifier proxyId = BasicIdentifiers.eventId();
+    Identifier proxyId = proxyIds.randomId();
     StorageProvider provider = providers.get(endpointId);
     connectAction.accept(proxyId, endpointId, provider);
     clientProxies.put(endpointId, proxyId);
