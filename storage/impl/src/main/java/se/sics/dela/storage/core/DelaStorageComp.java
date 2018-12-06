@@ -71,7 +71,7 @@ public class DelaStorageComp extends ComponentDefinition {
     logger.info("{}init", logPrefix);
 
     timerProxy = new TimerProxyImpl();
-    timerProxy.setup(proxy);
+    timerProxy.setup(proxy, logger);
     file = init.storage;
     pendingPos = init.pos;
     confirmedPos = pendingPos;

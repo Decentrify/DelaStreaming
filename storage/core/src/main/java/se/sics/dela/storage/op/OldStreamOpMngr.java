@@ -87,7 +87,7 @@ public class OldStreamOpMngr {
       Map<StreamId, Long> fileStreams = new HashMap<>();
 
       StreamStorageOpProxy storageProxy = new StreamStorageOpProxy().setup(proxy, eventIds);
-      TimerProxy timerProxy = new TimerProxyImpl().setup(proxy);
+      TimerProxy timerProxy = new TimerProxyImpl().setup(proxy, logger);
 
       FileBaseDetails fileDetails = torrent.base.get(entry.getKey());
       Pair<StreamId, StreamStorage> mainStream = Converter.stream(entry.getValue().getMainStream());

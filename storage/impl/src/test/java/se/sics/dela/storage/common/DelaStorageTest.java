@@ -30,6 +30,7 @@ import java.util.function.Supplier;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
 import se.sics.dela.storage.StorageEndpoint;
 import se.sics.dela.storage.StorageResource;
 import se.sics.dela.storage.aws.AWSConfig;
@@ -271,7 +272,7 @@ public class DelaStorageTest {
   public static class TestTimer implements TimerProxy {
 
     @Override
-    public TimerProxy setup(ComponentProxy proxy) {
+    public TimerProxy setup(ComponentProxy proxy, Logger logger) {
       return this;
     }
 
@@ -282,6 +283,21 @@ public class DelaStorageTest {
 
     @Override
     public void cancelPeriodicTimer(UUID timeoutId) {
+    }
+
+    @Override
+    public void cancel() {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public UUID scheduleTimer(long delay, Consumer<Boolean> callback) {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void cancelTimer(UUID timeoutId) {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
   }
 }

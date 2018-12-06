@@ -27,6 +27,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
 import se.sics.dela.channel.bss.BlockSelectionStrategies;
 import se.sics.dela.channel.bss.BlockSelectionStrategy;
 import se.sics.dela.channel.resource.ChannelResources;
@@ -457,7 +458,7 @@ public class SimpleChannelTest {
     }
 
     @Override
-    public TimerProxyImpl setup(ComponentProxy proxy) {
+    public TimerProxyImpl setup(ComponentProxy proxy, Logger logger) {
       throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 
@@ -475,6 +476,21 @@ public class SimpleChannelTest {
     
     public void timeout() {
       timerCallback.accept(true);
+    }
+
+    @Override
+    public void cancel() {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public UUID scheduleTimer(long delay, Consumer<Boolean> callback) {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void cancelTimer(UUID timeoutId) {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
   }
 }

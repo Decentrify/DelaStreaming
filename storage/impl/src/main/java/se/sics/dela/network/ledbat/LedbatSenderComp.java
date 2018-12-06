@@ -18,8 +18,6 @@
  */
 package se.sics.dela.network.ledbat;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -54,7 +52,7 @@ public class LedbatSenderComp extends ComponentDefinition {
   Negative<LedbatSenderPort> appPort = provides(LedbatSenderPort.class);
   Positive<Network> networkPort = requires(Network.class);
   Positive<Timer> timerPort = requires(Timer.class);
-
+  TimerProxy timer;
   private final KAddress selfAdr;
   private final KAddress dstAdr;
   private final LedbatSender sender;
@@ -68,7 +66,7 @@ public class LedbatSenderComp extends ComponentDefinition {
   public LedbatSenderComp(Init init) {
     this.selfAdr = init.selfAdr;
     this.dstAdr = init.dstAdr;
-    TimerProxy timer = new TimerProxyImpl().setup(proxy);
+    timer = new TimerProxyImpl();
     sender = new LedbatSender().setup(timer, config(), logger, networkSend(), appSend());
 
     loggingCtxPutAlways("srcId", init.selfAdr.getId().toString());
@@ -89,12 +87,14 @@ public class LedbatSenderComp extends ComponentDefinition {
     @Override
     public void handle(Start event) {
       sender.start();
+      timer.setup(proxy, logger);
     }
   };
 
   @Override
   public void tearDown() {
     sender.stop();
+    timer.cancel();
   }
 
   Handler handleReq = new Handler<LedbatSenderEvent.Request>() {

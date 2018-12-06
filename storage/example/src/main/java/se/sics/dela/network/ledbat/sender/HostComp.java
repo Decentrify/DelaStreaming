@@ -47,7 +47,7 @@ import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistryV2;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.ktoolbox.util.status.Status;
@@ -151,10 +151,10 @@ public class HostComp extends ComponentDefinition {
   }
   
   private static OverlayIdFactory setupOverlayIdFactory(long seed) {
-    OverlayRegistry.initiate(new SystemOverlays.TypeFactory(), new SystemOverlays.Comparator());
+    OverlayRegistryV2.initiate(new SystemOverlays.TypeFactory(), new SystemOverlays.Comparator());
 
     byte torrentOwnerId = 1;
-    OverlayRegistry.registerPrefix(TorrentIds.TORRENT_OVERLAYS, torrentOwnerId);
+    OverlayRegistryV2.registerPrefix(TorrentIds.TORRENT_OVERLAYS, torrentOwnerId);
 
     IdentifierFactory torrentBaseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, java.util.Optional.of(seed));
     return new OverlayIdFactory(torrentBaseIdFactory, TorrentIds.Types.TORRENT, torrentOwnerId);

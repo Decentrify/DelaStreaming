@@ -66,7 +66,7 @@ public class DriverComp extends ComponentDefinition {
     this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(driverSeed));
     this.dataIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(driverSeed));
 
-    timer = new TimerProxyImpl().setup(proxy);
+    timer = new TimerProxyImpl();
     subscribe(handleStart, control);
     subscribe(handleAcked, ledbat);
     subscribe(handleTimeout, ledbat);
@@ -75,6 +75,7 @@ public class DriverComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
+      timer.setup(proxy, logger);
       reportTid = timer.schedulePeriodicTimer(1000, 1000, report());
       startTime = System.nanoTime();
       trySend(1);

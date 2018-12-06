@@ -18,26 +18,13 @@
  */
 package se.sics.dela.network.ledbat;
 
-import java.util.Optional;
 import java.util.UUID;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.javatuples.Pair;
-import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import se.sics.kompics.ComponentProxy;
-import se.sics.kompics.config.Config;
-import se.sics.kompics.config.TypesafeConfig;
-import se.sics.kompics.util.Identifiable;
-import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.timer.TimerProxy;
-import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
-import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 
 /**
@@ -57,7 +44,7 @@ public class LedbatSenderTest {
     Pair<UUID, Consumer<Boolean>> timer2 = null;
 
     @Override
-    public TimerProxy setup(ComponentProxy proxy) {
+    public TimerProxy setup(ComponentProxy proxy, Logger logger) {
       return null;
     }
 
@@ -74,6 +61,21 @@ public class LedbatSenderTest {
 
     @Override
     public void cancelPeriodicTimer(UUID timeoutId) {
+    }
+
+    @Override
+    public void cancel() {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public UUID scheduleTimer(long delay, Consumer<Boolean> callback) {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    @Override
+    public void cancelTimer(UUID timeoutId) {
+      throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
   }
 }
