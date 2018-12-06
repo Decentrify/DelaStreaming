@@ -34,7 +34,7 @@ import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistryV2;
 import se.sics.ktoolbox.util.reference.KReference;
 import se.sics.ktoolbox.util.reference.KReferenceException;
 import se.sics.ktoolbox.util.reference.KReferenceFactory;
@@ -79,7 +79,7 @@ public class TestSimpleAppendKBuffer {
 
   private static void systemSetup() {
     IdentifierRegistryV2.registerBaseDefaults1(64);
-    OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
+    OverlayRegistryV2.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
   }
 
   private static void experimentSetup() {

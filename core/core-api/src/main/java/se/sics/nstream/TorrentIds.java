@@ -27,7 +27,7 @@ import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistryV2;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -90,7 +90,7 @@ public class TorrentIds {
     }
 
     public static OverlayIdFactory torrentIdFactory(long seed) {
-        byte torrentOwnerId = OverlayRegistry.getPrefix(TORRENT_OVERLAYS);
+        byte torrentOwnerId = OverlayRegistryV2.getPrefix(TORRENT_OVERLAYS);
         IdentifierFactory torrentBaseIdFactory = IdentifierRegistryV2.instance(BasicIdentifiers.Values.OVERLAY, Optional.of(seed));
         return new OverlayIdFactory(torrentBaseIdFactory, TorrentIds.Types.TORRENT, torrentOwnerId);
     }

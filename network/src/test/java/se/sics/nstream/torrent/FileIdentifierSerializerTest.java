@@ -32,7 +32,7 @@ import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistryV2;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.FileId;
 import se.sics.nstream.TorrentIds;
@@ -47,7 +47,7 @@ public class FileIdentifierSerializerTest {
      @BeforeClass
     public static void setup() {
         IdentifierRegistryV2.registerBaseDefaults1(64);
-        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte)0), new OverlayId.BasicTypeComparator());
+        OverlayRegistryV2.initiate(new OverlayId.BasicTypeFactory((byte)0), new OverlayId.BasicTypeComparator());
         
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);

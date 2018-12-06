@@ -29,7 +29,7 @@ import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayId;
-import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistry;
+import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistryV2;
 import se.sics.ktoolbox.util.setup.BasicSerializerSetup;
 import se.sics.nstream.test.BlockDetailsEqc;
 
@@ -42,7 +42,7 @@ public class BlockDetailsSerializerTest {
     @BeforeClass
     public static void setup() {
         IdentifierRegistryV2.registerBaseDefaults1(64);
-        OverlayRegistry.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
+        OverlayRegistryV2.initiate(new OverlayId.BasicTypeFactory((byte) 0), new OverlayId.BasicTypeComparator());
 
         int serializerId = 128;
         serializerId = BasicSerializerSetup.registerBasicSerializers(serializerId);
