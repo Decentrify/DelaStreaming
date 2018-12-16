@@ -90,4 +90,11 @@ public class WorkCtrlConfig {
     }
     return new Try.Success(new WorkCtrlConfig(overlayId, batchId, baseId, updatePeriod, mngrAdr));
    }
+
+  @Override
+  public String toString() {
+    return "WorkCtrlConfig{" + "oId=" + overlayId + ", bId=" + batchId + ", iId=" + baseId +
+      ", up=" + updatePeriod + ", a=" + mngrAdr + '}';
+  }
+  
 }

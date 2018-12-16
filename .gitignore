@@ -42,3 +42,4 @@
 /storage/example/lib/bin/lib/x86_64-MacOSX-gpp/jni/libbarchart-udt-core-2.3.0-SNAPSHOT.jnilib
 /workers/msystem/lib/bin/lib/x86_64-MacOSX-gpp/jni/libbarchart-udt-core-2.3.0-SNAPSHOT.jnilib
 /workers/wsystem/lib/bin/lib/x86_64-MacOSX-gpp/jni/libbarchart-udt-core-2.3.0-SNAPSHOT.jnilib
+/workers/test/target/

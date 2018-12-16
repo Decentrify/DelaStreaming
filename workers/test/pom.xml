@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>se.sics.dela</groupId>
+    <artifactId>workers</artifactId>
+    <version>0.0.10-SNAPSHOT</version>
+  </parent>
+  <groupId>se.sics.dela.workers</groupId>
+  <artifactId>test</artifactId>
+  <packaging>jar</packaging>
+  <name>Dela Worker System Test</name>
+  <dependencies>
+    <dependency>
+      <groupId>se.sics.dela.workers</groupId>
+      <artifactId>wsystem</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>se.sics.dela.workers</groupId>
+      <artifactId>msystem</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+  </dependencies>
+</project>

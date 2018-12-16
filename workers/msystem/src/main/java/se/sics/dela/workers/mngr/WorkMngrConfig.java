@@ -77,4 +77,12 @@ public class WorkMngrConfig {
     }
     return new Try.Success(new WorkMngrConfig(overlayId, batchId, baseId, updatePeriod));
    }
+
+  @Override
+  public String toString() {
+    return "WorkMngrConfig{" + "oId=" + overlayId + ", bId=" + batchId + ", iId=" + baseId +
+      ", up=" + updatePeriod + '}';
+  }
+  
+  
 }

@@ -15,6 +15,7 @@
     <module>wsystem</module>
     <module>msystem</module>
     <module>network</module>
+    <module>test</module>
   </modules>
   
 </project>
