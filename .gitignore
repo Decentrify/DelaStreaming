@@ -30,4 +30,15 @@
 /storage/impl/target/
 /storage/network/target/
 
+/storage/workers/wsystem/target/
+/storage/workers/msystem/target/
+/storage/workers/common/target/
+/storage/workers/network/target/
+/workers/common/target/
+/workers/msystem/target/
+/workers/network/target/
+/workers/wsystem/target/
+
 /storage/example/lib/bin/lib/x86_64-MacOSX-gpp/jni/libbarchart-udt-core-2.3.0-SNAPSHOT.jnilib
+/workers/msystem/lib/bin/lib/x86_64-MacOSX-gpp/jni/libbarchart-udt-core-2.3.0-SNAPSHOT.jnilib
+/workers/wsystem/lib/bin/lib/x86_64-MacOSX-gpp/jni/libbarchart-udt-core-2.3.0-SNAPSHOT.jnilib
