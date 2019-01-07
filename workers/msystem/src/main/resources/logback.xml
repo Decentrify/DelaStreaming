@@ -37,7 +37,7 @@
   <logger name="se.sics.kompics.timer"                level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
   <logger name="se.sics.kompics.network.netty"        level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
   <logger name="se.sics.ktoolbox.netmngr"             level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
-  <logger name="se.sics.ktoolbox.nutil.conn.workers"  level="debug" additivity="false"><appender-ref ref="CONSOLE" /></logger>
+  <logger name="se.sics.ktoolbox.nutil.conn.workers"  level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
   <logger name="se.sics.dela.workers"                 level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
   <root                                               level="trace">                  <appender-ref ref="CONSOLE" /></root>
 

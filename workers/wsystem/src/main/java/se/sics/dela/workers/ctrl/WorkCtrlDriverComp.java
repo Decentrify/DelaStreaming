@@ -19,22 +19,28 @@
 package se.sics.dela.workers.ctrl;
 
 import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Consumer;
-import se.sics.dela.workers.DelaWorkTask;
+import se.sics.dela.workers.ctrl.util.ReceiverTaskComp;
+import se.sics.dela.workers.ctrl.util.SenderTaskComp;
+import se.sics.dela.workers.ctrl.util.WorkerStackType;
+import se.sics.dela.workers.task.DelaWorkTask;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.conn.workers.WorkCtrlCenterEvents;
 import se.sics.ktoolbox.nutil.conn.workers.WorkCtrlCenterPort;
-import se.sics.ktoolbox.nutil.conn.workers.WorkTask;
+import se.sics.ktoolbox.nutil.nxcomp.NxMngrEvents;
+import se.sics.ktoolbox.nutil.nxcomp.NxMngrPort;
+import se.sics.ktoolbox.nutil.nxcomp.NxStackId;
+import se.sics.ktoolbox.nutil.nxcomp.NxStackInit;
 import se.sics.ktoolbox.nutil.timer.TimerProxy;
 import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
+import se.sics.ktoolbox.util.identifiable.basic.SimpleByteIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
@@ -43,20 +49,29 @@ import se.sics.ktoolbox.util.network.KAddress;
  */
 public class WorkCtrlDriverComp extends ComponentDefinition {
 
+  Positive<NxMngrPort> taskMngr = requires(NxMngrPort.class);
   Positive<WorkCtrlCenterPort> appPort = requires(WorkCtrlCenterPort.class);
   Positive<Timer> timerPort = requires(Timer.class);
   TimerProxy timer;
 
   private final KAddress selfAdr;
 
-  private IdentifierFactory eventIds;
+  private final IdentifierFactory eventIds;
+  private final Identifier receiverStackId;
+  private final Identifier senderStackId;
 
   public WorkCtrlDriverComp(Init init) {
     this.selfAdr = init.selfAdr;
     this.timer = new TimerProxyImpl().setup(proxy, logger);
+    
     eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
+    SimpleByteIdFactory stackIds = new SimpleByteIdFactory(Optional.empty(), 0);
+    receiverStackId = WorkerStackType.RECEIVER.getId(stackIds);
+    senderStackId = WorkerStackType.SENDER.getId(stackIds);
+    
     subscribe(handleStart, control);
     subscribe(handleNewTask, appPort);
+    subscribe(handleTaskStarted, taskMngr);
   }
 
   Handler handleStart = new Handler<Start>() {
@@ -68,27 +83,34 @@ public class WorkCtrlDriverComp extends ComponentDefinition {
   Handler handleNewTask = new Handler<WorkCtrlCenterEvents.NewTask>() {
     @Override
     public void handle(WorkCtrlCenterEvents.NewTask req) {
-      logger.info("task:{} new", req.task.taskId());
-      counter = 0;
-      taskTId = timer.schedulePeriodicTimer(1000, 1000, taskUpdate(req));
+      logger.info("task:{}", req.task);
+      NxMngrEvents.CreateReq createReq;
+      if (req.task instanceof DelaWorkTask.LReceiver) {
+        DelaWorkTask.LReceiver task = (DelaWorkTask.LReceiver) req.task;
+        ReceiverTaskComp.Init init = new ReceiverTaskComp.Init(selfAdr);
+        NxStackInit initWrapper = new NxStackInit.OneComp<>(init);
+        Identifier stackId = new NxStackId(receiverStackId, eventIds.randomId());
+        createReq = new NxMngrEvents.CreateReq(eventIds.randomId(), stackId, initWrapper);
+      } else if (req.task instanceof DelaWorkTask.LSender) {
+        DelaWorkTask.LSender task = (DelaWorkTask.LSender) req.task;
+        SenderTaskComp.Init init = new SenderTaskComp.Init(selfAdr, task.receiver);
+        NxStackInit initWrapper = new NxStackInit.OneComp<>(init);
+        Identifier stackId = new NxStackId(senderStackId, eventIds.randomId());
+        createReq = new NxMngrEvents.CreateReq(eventIds.randomId(), stackId, initWrapper);
+      } else {
+        throw new RuntimeException("unknown task");
+      }
+      logger.info("task:{} starting", createReq.eventId);
+      trigger(createReq, taskMngr);
     }
   };
-
-  int counter = 0;
-  UUID taskTId;
-
-  private Consumer<Boolean> taskUpdate(WorkCtrlCenterEvents.NewTask req) {
-    return (_ignore) -> {
-      if (counter++ < 5) {
-        WorkTask.Status status = new DelaWorkTask.Status(req.task.taskId());
-        trigger(req.update(status), appPort);
-      } else {
-        WorkTask.Result result = new DelaWorkTask.Success(req.task.taskId());
-        trigger(req.completed(result), appPort);
-        timer.cancelPeriodicTimer(taskTId);
-      }
-    };
-  }
+  
+  Handler handleTaskStarted = new Handler<NxMngrEvents.CreateAck>() {
+    @Override
+    public void handle(NxMngrEvents.CreateAck event) {
+      logger.info("task:{} started", event.req.eventId);
+    }
+  };
 
   public static class Init extends se.sics.kompics.Init<WorkCtrlDriverComp> {
 

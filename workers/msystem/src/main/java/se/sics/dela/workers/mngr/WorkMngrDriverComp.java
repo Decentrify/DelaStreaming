@@ -18,13 +18,18 @@
  */
 package se.sics.dela.workers.mngr;
 
+import java.util.Iterator;
 import java.util.Optional;
+import se.sics.dela.workers.mngr.util.ConfFileTaskReader;
+import se.sics.dela.workers.task.DelaWorkTask;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.conn.workers.WorkMngrCenterEvents;
 import se.sics.ktoolbox.nutil.conn.workers.WorkMngrCenterPort;
+import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
@@ -48,6 +53,7 @@ public class WorkMngrDriverComp extends ComponentDefinition {
     subscribe(handleStart, control);
     subscribe(handleReady, appPort);
     subscribe(handleNotReady, appPort);
+    subscribe(handleWorkers, appPort);
     subscribe(handleStatus, appPort);
     subscribe(handleResult, appPort);
   }
@@ -71,7 +77,22 @@ public class WorkMngrDriverComp extends ComponentDefinition {
       logger.info("ready");
     }
   };
-  
+
+  Handler handleWorkers = new Handler<WorkMngrCenterEvents.Workers>() {
+    @Override
+    public void handle(WorkMngrCenterEvents.Workers event) {
+      logger.info("workers:{}", event.workers);
+      Either<DelaWorkTask.LReceiver, DelaWorkTask.LSender> task = ConfFileTaskReader.readTask(config(), eventIds);
+      if(task.isLeft()) {
+        logger.info("receiver");
+        trigger(new WorkMngrCenterEvents.TaskNew(eventIds.randomId(), task.getLeft()), appPort);
+      } else {
+        logger.info("sender");
+        trigger(new WorkMngrCenterEvents.TaskNew(eventIds.randomId(), task.getRight()), appPort);
+      }
+    }
+  };
+
   Handler handleStatus = new Handler<WorkMngrCenterEvents.TaskStatus>() {
     @Override
     public void handle(WorkMngrCenterEvents.TaskStatus event) {

@@ -18,8 +18,8 @@
  */
 package se.sics.dela.workers.setup;
 
-import se.sics.dela.workers.DelaWorkTask;
 import se.sics.dela.workers.DelaWorkTaskSerializer;
+import se.sics.dela.workers.task.DelaWorkTask;
 import se.sics.kompics.network.netty.serialization.Serializers;
 
 /**
@@ -29,10 +29,11 @@ public class DelaWorkerSerializerSetup {
 
   //You may add up to max serializers without the need to recompile all the projects that use the serializer space after gvod
   public static final int MAX_SERIALIZERS = 10;
-  public static final int SERIALIZERS = 3;
+  public static final int SERIALIZERS = 4;
 
   public static enum BasicSerializers {
-    DelaWorkTaskRequest(DelaWorkTask.Request.class, "delaWorkTaskRequest"),
+    DelaWorkTaskLSender(DelaWorkTask.LSender.class, "delaWorkTaskLSender"),
+    DelaWorkTaskLReceiver(DelaWorkTask.LReceiver.class, "delaWorkTaskLReceiver"),
     DelaWorkTaskStatus(DelaWorkTask.Status.class, "delaWorkTaskStatus"),
     DelaWorkTaskSuccess(DelaWorkTask.Success.class, "delaWorkTaskSuccess"),
     DelaWorkTaskFail(DelaWorkTask.Fail.class, "delaWorkTaskFail");
@@ -61,10 +62,15 @@ public class DelaWorkerSerializerSetup {
     }
     int currentId = startingId;
 
-    Serializers.register(new DelaWorkTaskSerializer.Request(currentId++),
-      BasicSerializers.DelaWorkTaskRequest.serializerName);
-    Serializers.register(BasicSerializers.DelaWorkTaskRequest.serializedClass,
-      BasicSerializers.DelaWorkTaskRequest.serializerName);
+    Serializers.register(new DelaWorkTaskSerializer.LSender(currentId++),
+      BasicSerializers.DelaWorkTaskLSender.serializerName);
+    Serializers.register(BasicSerializers.DelaWorkTaskLSender.serializedClass,
+      BasicSerializers.DelaWorkTaskLSender.serializerName);
+    
+    Serializers.register(new DelaWorkTaskSerializer.LReceiver(currentId++),
+      BasicSerializers.DelaWorkTaskLReceiver.serializerName);
+    Serializers.register(BasicSerializers.DelaWorkTaskLReceiver.serializedClass,
+      BasicSerializers.DelaWorkTaskLReceiver.serializerName);
 
     Serializers.register(new DelaWorkTaskSerializer.Status(currentId++),
       BasicSerializers.DelaWorkTaskStatus.serializerName);

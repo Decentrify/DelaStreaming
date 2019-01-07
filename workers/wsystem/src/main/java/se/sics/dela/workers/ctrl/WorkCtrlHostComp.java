@@ -19,14 +19,29 @@
 package se.sics.dela.workers.ctrl;
 
 import java.net.InetAddress;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
+import se.sics.dela.workers.ctrl.util.NxStackTypeIdExtractor;
+import se.sics.dela.workers.ctrl.util.ReceiverTaskComp;
+import se.sics.dela.workers.ctrl.util.ReceiverTaskNetIdExtractor;
+import se.sics.dela.workers.ctrl.util.SenderTaskComp;
+import se.sics.dela.workers.ctrl.util.SenderTaskNetIdExtractor;
+import se.sics.dela.workers.ctrl.util.TimerChannelIdExtractor;
+import se.sics.dela.workers.ctrl.util.WorkerStackType;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Init;
+import se.sics.kompics.PortType;
 import se.sics.kompics.Start;
+import se.sics.kompics.network.Msg;
+import se.sics.kompics.network.Network;
+import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.timer.java.JavaTimer;
 import se.sics.ktoolbox.netmngr.NetworkConfig;
@@ -34,10 +49,19 @@ import se.sics.ktoolbox.netmngr.driver.NxNetProxy;
 import se.sics.ktoolbox.nutil.conn.ConnConfig;
 import se.sics.ktoolbox.nutil.conn.workers.WorkCtrlCenterComp;
 import se.sics.ktoolbox.nutil.conn.workers.WorkCtrlCenterPort;
+import se.sics.ktoolbox.nutil.network.portsv2.EventIdExtractorV2;
+import se.sics.ktoolbox.nutil.network.portsv2.EventTypeExtractorsV2;
+import se.sics.ktoolbox.nutil.network.portsv2.One2NEventChannelV2;
+import se.sics.ktoolbox.nutil.nxcomp.NxChannelIdExtractor;
+import se.sics.ktoolbox.nutil.nxcomp.NxMngrComp;
+import se.sics.ktoolbox.nutil.nxcomp.NxMngrEvents;
+import se.sics.ktoolbox.nutil.nxcomp.NxMngrPort;
+import se.sics.ktoolbox.nutil.nxcomp.NxStackDefinition;
 import se.sics.ktoolbox.util.config.impl.SystemConfig;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
+import se.sics.ktoolbox.util.identifiable.basic.SimpleByteIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicAddress;
 import se.sics.ktoolbox.util.trysf.Try;
@@ -52,15 +76,21 @@ public class WorkCtrlHostComp extends ComponentDefinition {
   private NxNetProxy nxNetProxy;
   private Component ctrlCenter;
   private Component ctrlDriver;
+  private Component senderTasks;
+  private Component receiverTasks;
+  private One2NEventChannelV2 taskMngrChannel;
 
   private SystemConfig systemConfig;
   private NetworkConfig networkConfig;
   private WorkCtrlConfig ctrlConfig;
   private KAddress selfAdr;
 
-  private IdentifierFactory eventIds;
+  private final IdentifierFactory eventIds;
+  private final SimpleByteIdFactory nxStackIds;
+
   public WorkCtrlHostComp() {
     eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
+    nxStackIds = new SimpleByteIdFactory(Optional.empty(), 0);
     subscribe(handleStart, control);
   }
 
@@ -99,18 +129,66 @@ public class WorkCtrlHostComp extends ComponentDefinition {
   private Consumer<Boolean> networkReady() {
     return (_ignore) -> {
       ConnConfig connConfig = new ConnConfig(ctrlConfig.updatePeriod);
-      ctrlCenter = create(WorkCtrlCenterComp.class, new WorkCtrlCenterComp.Init(selfAdr, 
+      ctrlCenter = create(WorkCtrlCenterComp.class, new WorkCtrlCenterComp.Init(selfAdr,
         ctrlConfig.overlayId, ctrlConfig.batchId, ctrlConfig.baseId, connConfig, ctrlConfig.mngrAdr));
       nxNetProxy.connect(ctrlCenter);
       connect(timerComp.getPositive(Timer.class), ctrlCenter.getNegative(Timer.class), Channel.TWO_WAY);
-      
+
       ctrlDriver = create(WorkCtrlDriverComp.class, new WorkCtrlDriverComp.Init(selfAdr));
       connect(timerComp.getPositive(Timer.class), ctrlDriver.getNegative(Timer.class), Channel.TWO_WAY);
-      connect(ctrlCenter.getPositive(WorkCtrlCenterPort.class), ctrlDriver.getNegative(WorkCtrlCenterPort.class), 
+      connect(ctrlCenter.getPositive(WorkCtrlCenterPort.class), ctrlDriver.getNegative(WorkCtrlCenterPort.class),
         Channel.TWO_WAY);
-      
+
+      createTaskMngrChannel();
+      createTaskMngrReceiver();
+      createTaskMngrSender();
       trigger(Start.event, ctrlCenter.control());
       trigger(Start.event, ctrlDriver.control());
+      trigger(Start.event, receiverTasks.control());
+      trigger(Start.event, senderTasks.control());
     };
+  }
+
+  private void createTaskMngrChannel() {
+    Map<String, EventIdExtractorV2> channelSelectors = new HashMap<>();
+    channelSelectors.put(NxMngrEvents.EVENT_TYPE, new NxStackTypeIdExtractor());
+    taskMngrChannel = One2NEventChannelV2.getChannel("worker nx stacks channel", logger,
+      ctrlDriver.getNegative(NxMngrPort.class), new EventTypeExtractorsV2.Base(), channelSelectors);
+  }
+
+  private void createTaskMngrReceiver() {
+    List<Class<PortType>> negativePorts = new LinkedList<>();
+    List<NxChannelIdExtractor> negativeIdExtractors = new LinkedList<>();
+    List<Class<PortType>> positivePorts = new LinkedList<>();
+    List<NxChannelIdExtractor> positiveIdExtractors = new LinkedList<>();
+    positivePorts.add((Class) Network.class);
+    positiveIdExtractors.add(new ReceiverTaskNetIdExtractor(Msg.class));
+    positivePorts.add((Class) Timer.class);
+    positiveIdExtractors.add(new TimerChannelIdExtractor(Timeout.class));
+
+    NxStackDefinition stackDefintion = new NxStackDefinition.OneComp<>(ReceiverTaskComp.class);
+    receiverTasks = create(NxMngrComp.class, new NxMngrComp.Init(stackDefintion, negativePorts, negativeIdExtractors,
+      positivePorts, positiveIdExtractors));
+    taskMngrChannel.addChannel(WorkerStackType.RECEIVER.getId(nxStackIds), receiverTasks.getPositive(NxMngrPort.class));
+    nxNetProxy.connect(receiverTasks);
+    connect(receiverTasks.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
+  }
+
+  private void createTaskMngrSender() {
+    List<Class<PortType>> negativePorts = new LinkedList<>();
+    List<NxChannelIdExtractor> negativeIdExtractors = new LinkedList<>();
+    List<Class<PortType>> positivePorts = new LinkedList<>();
+    List<NxChannelIdExtractor> positiveIdExtractors = new LinkedList<>();
+    positivePorts.add((Class) Network.class);
+    positiveIdExtractors.add(new SenderTaskNetIdExtractor(Msg.class));
+    positivePorts.add((Class) Timer.class);
+    positiveIdExtractors.add(new TimerChannelIdExtractor(Timeout.class));
+
+    NxStackDefinition stackDefintion = new NxStackDefinition.OneComp<>(SenderTaskComp.class);
+    senderTasks = create(NxMngrComp.class, new NxMngrComp.Init(stackDefintion, negativePorts, negativeIdExtractors,
+      positivePorts, positiveIdExtractors));
+    taskMngrChannel.addChannel(WorkerStackType.SENDER.getId(nxStackIds), senderTasks.getPositive(NxMngrPort.class));
+    nxNetProxy.connect(senderTasks);
+    connect(senderTasks.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
   }
 }

@@ -13,6 +13,14 @@ You can copy and paste the single properties, into the pom.xml file and the IDE 
 That way multiple projects can share the same settings (useful for formatting rules for example).
 Any value defined here will override the pom.xml file value but is only applicable to the current project.
 -->
-        <netbeans.hint.licensePath>${project.basedir}/../../../license-gpl20.txt</netbeans.hint.licensePath>
+        <netbeans.hint.licensePath>${project.basedir}/../../license-gpl20.txt</netbeans.hint.licensePath>
     </properties>
+    <config-data xmlns="http://www.netbeans.org/ns/maven-config-data/1">
+        <configurations>
+            <configuration id="mngr_a" profiles=""/>
+            <configuration id="mngr_b" profiles=""/>
+            <configuration id="mngr_w_a" profiles=""/>
+            <configuration id="mngr_w_b" profiles=""/>
+        </configurations>
+    </config-data>
 </project-shared-configuration>
