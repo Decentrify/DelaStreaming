@@ -27,12 +27,14 @@ import se.sics.kompics.util.Identifier;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LedbatSenderEvent {
-  public static class Request<D extends Identifiable> extends Direct.Request<Indication> implements Identifiable {
+  public static class Request<D extends Identifiable> extends Direct.Request<Indication> implements LedbatEvent {
     public final Identifier eventId;
+    public final Identifier connId;
     public final D data;
 
-    public Request(Identifier eventId, D data) {
+    public Request(Identifier eventId, Identifier connId, D data) {
       this.eventId = eventId;
+      this.connId = connId;
       this.data = data;
     }
 
@@ -53,21 +55,27 @@ public class LedbatSenderEvent {
     public String toString() {
       return "LedbatSenderRequest{" + "data=" + data.getId() + '}';
     }
+
+    @Override
+    public Identifier connId() {
+      return connId;
+    }
+
+    @Override
+    public String eventType() {
+      return LedbatEvent.EVENT_TYPE;
+    }
   }
 
-  public static class Indication<D extends Identifiable> implements Direct.Response, Identifiable {
+  public static class Indication<D extends Identifiable> extends LedbatEvent.Basic implements Direct.Response {
 
     public final Request<D> req;
     public final int maxInFlight;
 
     public Indication(Request<D> req, int maxInFlight) {
+      super(req.eventId, req.connId);
       this.req = req;
       this.maxInFlight = maxInFlight;
-    }
-
-    @Override
-    public Identifier getId() {
-      return req.getId();
     }
   }
   

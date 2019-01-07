@@ -16,23 +16,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.workers.ctrl.util;
+package se.sics.dela.network.conn;
 
-import se.sics.kompics.timer.Timeout;
-import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.nutil.nxcomp.NxChannelIdExtractor;
+import se.sics.kompics.PortType;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class TimerChannelIdExtractor extends NxChannelIdExtractor<Timeout> {
-
-  public TimerChannelIdExtractor(Class<Timeout> eventType) {
-    super(eventType);
-  }
-
-  @Override
-  public Identifier getValue(Timeout event) {
-    return null;
+public class NetConnPort extends PortType {
+  {
+    request(NetConnEvents.LedbatReceiverCreate.class);
+    indication(NetConnEvents.LedbatReceiverCreateAck.class);
+    request(NetConnEvents.LedbatSenderCreate.class);
+    indication(NetConnEvents.LedbatSenderCreateAck.class);
+    request(NetConnEvents.LedbatReceiverKill.class);
+    indication(NetConnEvents.LedbatReceiverKillAck.class);
+    request(NetConnEvents.LedbatSenderKill.class);
+    indication(NetConnEvents.LedbatSenderKillAck.class);
   }
 }

@@ -19,6 +19,7 @@
 package se.sics.dela.workers.ctrl;
 
 import java.util.Optional;
+import se.sics.dela.network.conn.NetConnPort;
 import se.sics.dela.workers.ctrl.util.ReceiverTaskComp;
 import se.sics.dela.workers.ctrl.util.SenderTaskComp;
 import se.sics.dela.workers.ctrl.util.WorkerStackType;
@@ -50,6 +51,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 public class WorkCtrlDriverComp extends ComponentDefinition {
 
   Positive<NxMngrPort> taskMngr = requires(NxMngrPort.class);
+  Positive<NetConnPort> netConnMngr = requires(NetConnPort.class);
   Positive<WorkCtrlCenterPort> appPort = requires(WorkCtrlCenterPort.class);
   Positive<Timer> timerPort = requires(Timer.class);
   TimerProxy timer;

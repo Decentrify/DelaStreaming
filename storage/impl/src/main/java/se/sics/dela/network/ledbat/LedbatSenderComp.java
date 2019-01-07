@@ -32,6 +32,7 @@ import se.sics.kompics.network.Network;
 import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifiable;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.timer.TimerProxy;
 import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 import se.sics.ktoolbox.util.config.impl.SystemKCWrapper;
@@ -55,17 +56,19 @@ public class LedbatSenderComp extends ComponentDefinition {
   TimerProxy timer;
   private final KAddress selfAdr;
   private final KAddress dstAdr;
+  private final Identifier connId;
   private final LedbatSender sender;
   private final IdentifierFactory msgIds;
 
-  private SummaryStatistics s1 = new SummaryStatistics();
-  private SummaryStatistics s2 = new SummaryStatistics();
-  private SummaryStatistics s3 = new SummaryStatistics();
-  private SummaryStatistics s4 = new SummaryStatistics();
+//  private SummaryStatistics s1 = new SummaryStatistics();
+//  private SummaryStatistics s2 = new SummaryStatistics();
+//  private SummaryStatistics s3 = new SummaryStatistics();
+//  private SummaryStatistics s4 = new SummaryStatistics();
 
   public LedbatSenderComp(Init init) {
     this.selfAdr = init.selfAdr;
     this.dstAdr = init.dstAdr;
+    this.connId = init.connId;
     timer = new TimerProxyImpl();
     sender = new LedbatSender().setup(timer, config(), logger, networkSend(), appSend());
 
@@ -122,7 +125,7 @@ public class LedbatSenderComp extends ComponentDefinition {
   //mean 11-12 micros
   private Consumer<Identifiable> networkSend() {
     return (Identifiable data) -> {
-      LedbatMsg.Data content = new LedbatMsg.Data(msgIds.randomId(), data);
+      LedbatMsg.Data content = new LedbatMsg.Data(msgIds.randomId(), connId, data);
       KHeader header = new BasicHeader(selfAdr, dstAdr, Transport.UDP);
       KContentMsg msg = new BasicContentMsg(header, content);
       logger.trace("sending:{}", msg);
@@ -135,10 +138,12 @@ public class LedbatSenderComp extends ComponentDefinition {
 
     public final KAddress selfAdr;
     public final KAddress dstAdr;
+    public final Identifier connId;
 
-    public Init(KAddress selfAdr, KAddress dstAdr) {
+    public Init(KAddress selfAdr, KAddress dstAdr, Identifier connId) {
       this.selfAdr = selfAdr;
       this.dstAdr = dstAdr;
+      this.connId = connId;
     }
   }
 }

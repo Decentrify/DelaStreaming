@@ -18,42 +18,37 @@
  */
 package se.sics.dela.workers.ctrl.util;
 
-import se.sics.dela.network.ledbat.LedbatReceiverPort;
-import se.sics.kompics.ComponentDefinition;
-import se.sics.kompics.Handler;
-import se.sics.kompics.Positive;
-import se.sics.kompics.Start;
-import se.sics.kompics.timer.Timer;
-import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.dela.network.ledbat.LedbatEvent;
+import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
+import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ReceiverTaskComp extends ComponentDefinition {
-  private final Positive<Timer> timerPort = requires(Timer.class);
-  private final Positive<LedbatReceiverPort> ledbatPort = requires(LedbatReceiverPort.class);
+public class NetTaskIdExtractor {
+  public static class LedbatSender extends ChannelIdExtractor<LedbatEvent, Identifier> {
 
-  private final KAddress selfAdr;
+    public LedbatSender() {
+      super(LedbatEvent.class);
+    }
 
-  public ReceiverTaskComp(Init init) {
-    this.selfAdr = init.selfAdr;
     
-    subscribe(handleStart, control);
+    @Override
+    public Identifier getValue(LedbatEvent event) {
+      return ((PairIdentifier) event.connId()).id1;
+    }
   }
   
-  Handler handleStart = new Handler<Start>() {
-    @Override
-    public void handle(Start event) {
+  public static class LedbatReceiver extends ChannelIdExtractor<LedbatEvent, Identifier> {
+
+    public LedbatReceiver() {
+      super(LedbatEvent.class);
     }
-  };
 
-  public static class Init extends se.sics.kompics.Init<ReceiverTaskComp> {
-
-    public final KAddress selfAdr;
-
-    public Init(KAddress selfAdr) {
-      this.selfAdr = selfAdr;
+    @Override
+    public Identifier getValue(LedbatEvent event) {
+      return ((PairIdentifier) event.connId()).id2;
     }
   }
 }

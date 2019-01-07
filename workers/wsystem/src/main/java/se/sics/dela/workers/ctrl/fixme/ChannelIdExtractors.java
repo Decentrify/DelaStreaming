@@ -16,44 +16,39 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.workers.ctrl.util;
+package se.sics.dela.workers.ctrl.fixme;
 
-import se.sics.dela.network.ledbat.LedbatReceiverPort;
-import se.sics.kompics.ComponentDefinition;
-import se.sics.kompics.Handler;
-import se.sics.kompics.Positive;
-import se.sics.kompics.Start;
-import se.sics.kompics.timer.Timer;
+import se.sics.kompics.KompicsEvent;
+import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.ktoolbox.util.network.KAddress;
-
+import se.sics.ktoolbox.util.network.KContentMsg;
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ReceiverTaskComp extends ComponentDefinition {
-  private final Positive<Timer> timerPort = requires(Timer.class);
-  private final Positive<LedbatReceiverPort> ledbatPort = requires(LedbatReceiverPort.class);
+public class ChannelIdExtractors {
+  
+  public static class NoExtractor<E extends KompicsEvent> extends ChannelIdExtractor<E, Identifier> {
 
-  private final KAddress selfAdr;
-
-  public ReceiverTaskComp(Init init) {
-    this.selfAdr = init.selfAdr;
+    public NoExtractor(Class<E> eventType) {
+      super(eventType);
+    }
     
-    subscribe(handleStart, control);
+    @Override
+    public Identifier getValue(E event) {
+      return null;
+    }
   }
   
-  Handler handleStart = new Handler<Start>() {
-    @Override
-    public void handle(Start event) {
+  public static class Destination extends ChannelIdExtractor<KContentMsg, Identifier> {
+
+    public Destination() {
+      super(KContentMsg.class);
     }
-  };
 
-  public static class Init extends se.sics.kompics.Init<ReceiverTaskComp> {
-
-    public final KAddress selfAdr;
-
-    public Init(KAddress selfAdr) {
-      this.selfAdr = selfAdr;
+    @Override
+    public Identifier getValue(KContentMsg msg) {
+      return ((KAddress)msg.getHeader().getDestination()).getId();
     }
   }
 }

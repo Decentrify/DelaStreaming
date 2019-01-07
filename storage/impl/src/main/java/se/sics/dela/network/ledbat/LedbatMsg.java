@@ -18,69 +18,87 @@
  */
 package se.sics.dela.network.ledbat;
 
+import static se.sics.dela.network.ledbat.LedbatEvent.EVENT_TYPE;
 import se.sics.dela.network.ledbat.util.OneWayDelay;
-import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.nutil.network.portsv2.SelectableMsgV2;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LedbatMsg {
+public interface LedbatMsg extends Identifiable, SelectableMsgV2 {
+  public static final String MSG_TYPE = "LEDBAT_MSG";
   
-  public static class Data<D extends Identifiable> implements Identifiable, KompicsEvent {
-    public final Identifier msgId;
+  public Identifier connId();
+
+  public static abstract class Basic implements LedbatEvent {
+
+    public final Identifier id;
+    public final Identifier connId;
+
+    public Basic(Identifier id, Identifier connId) {
+      this.id = id;
+      this.connId = connId;
+    }
+
+    @Override
+    public Identifier getId() {
+      return id;
+    }
+
+    @Override
+    public String eventType() {
+      return EVENT_TYPE;
+    }
+
+    @Override
+    public Identifier connId() {
+      return connId;
+    }
+  }
+  
+  public static class Data<D extends Identifiable> extends Basic {
     public final D data;
     public final OneWayDelay dataDelay;
     
-    public Data(Identifier msgId, D data) {
-      this(msgId, data, new OneWayDelay());
+    public Data(Identifier msgId, Identifier connId, D data) {
+      this(msgId, connId, data, new OneWayDelay());
     }
     
-    public Data(Identifier msgId, D data, OneWayDelay dataDelay) {
-      this.msgId = msgId;
+    public Data(Identifier msgId, Identifier connId, D data, OneWayDelay dataDelay) {
+      super(msgId, connId);
       this.data = data;
       this.dataDelay = dataDelay;
     }
     
     public Ack answer() {
-      return new Ack(msgId, data.getId(), dataDelay);
+      return new Ack(id, connId, data.getId(), dataDelay);
     }
 
-    @Override
-    public Identifier getId() {
-      return msgId;
-    }
-    
     @Override
     public String toString() {
       return "LedbatMsgData{" + "data=" + data.getId() + '}';
     }
   }
   
-  public static class Ack implements Identifiable {
+  public static class Ack extends Basic {
 
-    public final Identifier msgId;
     public final Identifier dataId;
     public final OneWayDelay dataDelay;
     public final OneWayDelay ackDelay;
 
-    public Ack(Identifier msgId, Identifier dataId, OneWayDelay dataDelay) {
-      this(msgId, dataId, dataDelay, new OneWayDelay());
+    public Ack(Identifier msgId, Identifier connId, Identifier dataId, OneWayDelay dataDelay) {
+      this(msgId, connId, dataId, dataDelay, new OneWayDelay());
     }
     
-    public Ack(Identifier msgId, Identifier dataId, OneWayDelay dataDelay, OneWayDelay ackDelay) {
-      this.msgId = msgId;
+    public Ack(Identifier msgId, Identifier connId, Identifier dataId, OneWayDelay dataDelay, OneWayDelay ackDelay) {
+      super(msgId, connId);
       this.dataId = dataId;
       this.dataDelay = dataDelay;
       this.ackDelay = ackDelay;
     }
 
-    @Override
-    public Identifier getId() {
-      return msgId;
-    }
-    
     @Override
     public String toString() {
       return "LedbatMsgAck{" + "data=" + dataId + '}';

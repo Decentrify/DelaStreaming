@@ -18,11 +18,11 @@
  */
 package se.sics.dela.workers.ctrl.util;
 
+import se.sics.dela.network.ledbat.LedbatSenderPort;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
-import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.ktoolbox.util.network.KAddress;
 
@@ -32,7 +32,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 public class SenderTaskComp extends ComponentDefinition {
 
   private final Positive<Timer> timerPort = requires(Timer.class);
-  private final Positive<Network> networkPort = requires(Network.class);
+  private final Positive<LedbatSenderPort> ledbatPort = requires(LedbatSenderPort.class);
 
   private final KAddress selfAdr;
   private final KAddress receiverAdr;

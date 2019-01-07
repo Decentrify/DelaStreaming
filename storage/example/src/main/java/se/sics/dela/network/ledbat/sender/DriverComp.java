@@ -27,6 +27,7 @@ import se.sics.dela.network.ledbat.LedbatSenderPort;
 import se.sics.dela.network.ledbat.util.LedbatContainer;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
+import se.sics.kompics.Init;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
@@ -60,7 +61,10 @@ public class DriverComp extends ComponentDefinition {
   private IdentifierFactory eventIds;
   private IdentifierFactory dataIds;
 
-  public DriverComp() {
+  private final Identifier connId;
+  
+  public DriverComp(Init init) {
+    this.connId = init.connId;
     SystemKCWrapper systemConfig = new SystemKCWrapper(config());
     long driverSeed = systemConfig.seed;
     this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(driverSeed));
@@ -136,8 +140,17 @@ public class DriverComp extends ComponentDefinition {
     inFlight++;
     Identifier dataId = dataIds.randomId();
     LedbatContainer dataContainer = new LedbatContainer(dataId, data);
-    LedbatSenderEvent.Request req = new LedbatSenderEvent.Request(eventIds.randomId(), dataContainer);
+    //TODO Alex fix connId
+    LedbatSenderEvent.Request req = new LedbatSenderEvent.Request(eventIds.randomId(), connId, dataContainer);
     logger.trace("sending:{}", req.data.getId());
     trigger(req, ledbat);
+  }
+  
+  public static class Init extends se.sics.kompics.Init<DriverComp> {
+    public final Identifier connId;
+    
+    public Init(Identifier connId) {
+      this.connId = connId;
+    }
   }
 }

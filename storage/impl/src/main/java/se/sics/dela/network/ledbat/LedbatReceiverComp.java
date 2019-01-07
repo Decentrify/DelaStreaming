@@ -26,6 +26,7 @@ import se.sics.kompics.Negative;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.network.Network;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
@@ -42,12 +43,14 @@ public class LedbatReceiverComp extends ComponentDefinition {
 
   private final KAddress selfAdr;
   private final KAddress srcAdr;
+  private final Identifier connId;
   
   private final IdentifierFactory eventIds;
 
   public LedbatReceiverComp(Init init) {
     this.selfAdr = init.selfAdr;
     this.srcAdr = init.srcAdr;
+    this.connId = init.connId;
     loggingCtxPutAlways("dstId", init.selfAdr.getId().toString());
     loggingCtxPutAlways("srcId", init.srcAdr.getId().toString());
     this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
@@ -81,17 +84,18 @@ public class LedbatReceiverComp extends ComponentDefinition {
   }
   
   private void answerApp(LedbatMsg.Data content) {
-    trigger(new LedbatReceiverEvent.Received(eventIds.randomId(), content.data), appPort);
+    trigger(new LedbatReceiverEvent.Received(eventIds.randomId(), connId, content.data), appPort);
   }
 
   public static class Init extends se.sics.kompics.Init<LedbatReceiverComp> {
-
     public final KAddress selfAdr;
     public final KAddress srcAdr;
+    public final Identifier connId;
 
-    public Init(KAddress selfAdr, KAddress srcAdr) {
+    public Init(KAddress selfAdr, KAddress srcAdr, Identifier connId) {
       this.selfAdr = selfAdr;
       this.srcAdr = srcAdr;
+      this.connId = connId;
     }
   }
 }

@@ -89,6 +89,10 @@ public class Cwnd {
     return cwnd;
   }
   
+  public long flightSize() {
+    return flightSize;
+  }
+  
   public void send(long bytesToSend) {
     flightSize += bytesToSend;
   }

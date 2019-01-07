@@ -20,12 +20,12 @@ package se.sics.dela.workers.ctrl.util;
 
 import se.sics.kompics.network.Msg;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.nutil.nxcomp.NxChannelIdExtractor;
+import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class SenderTaskNetIdExtractor extends NxChannelIdExtractor<Msg> {
+public class SenderTaskNetIdExtractor extends ChannelIdExtractor<Msg, Identifier> {
 
   public SenderTaskNetIdExtractor(Class<Msg> eventType) {
     super(eventType);

@@ -26,8 +26,9 @@ import se.sics.ktoolbox.util.identifiable.basic.SimpleByteIdFactory;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public enum WorkerStackType {
-  SENDER((byte) 0),
-  RECEIVER((byte) 1);
+  NET_CONN((byte) 0),
+  SENDER((byte) 1),
+  RECEIVER((byte) 2);
 
   private final byte id;
 

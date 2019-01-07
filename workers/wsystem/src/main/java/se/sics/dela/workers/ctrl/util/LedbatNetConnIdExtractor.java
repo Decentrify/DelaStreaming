@@ -18,21 +18,15 @@
  */
 package se.sics.dela.workers.ctrl.util;
 
-import se.sics.kompics.network.Msg;
+import se.sics.dela.network.ledbat.LedbatEvent;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.nutil.nxcomp.NxChannelIdExtractor;
+import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
+import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class ReceiverTaskNetIdExtractor extends NxChannelIdExtractor<Msg> {
+public class LedbatNetConnIdExtractor {
 
-  public ReceiverTaskNetIdExtractor(Class<Msg> eventType) {
-    super(eventType);
-  }
-
-  @Override
-  public Identifier getValue(Msg msg) {
-    return null;
-  }
+  
 }

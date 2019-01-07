@@ -37,6 +37,7 @@ import se.sics.kompics.config.Config;
 import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.timer.java.JavaTimer;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.croupier.CroupierSerializerSetup;
 import se.sics.ktoolbox.gradient.GradientSerializerSetup;
 import se.sics.ktoolbox.netmngr.NetworkMngrSerializerSetup;
@@ -47,6 +48,7 @@ import se.sics.ktoolbox.util.config.options.BasicAddressOption;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
+import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayIdFactory;
 import se.sics.ktoolbox.util.identifiable.overlay.OverlayRegistryV2;
 import se.sics.ktoolbox.util.network.KAddress;
@@ -116,7 +118,10 @@ public class HostComp extends ComponentDefinition {
 
   private void setLedbatReceiver() {
     logger.info("setting up ledbat receiver");
-    ledbatReceiverComp = create(LedbatReceiverComp.class, new LedbatReceiverComp.Init(selfAdr, srcAdr));
+    Identifier sender = srcAdr.getId();
+    Identifier receiver = selfAdr.getId();
+    Identifier connId = new PairIdentifier(sender, receiver);
+    ledbatReceiverComp = create(LedbatReceiverComp.class, new LedbatReceiverComp.Init(selfAdr, srcAdr, connId));
     connect(ledbatReceiverComp.getNegative(Network.class), networkMngrComp.getPositive(Network.class), Channel.TWO_WAY);
   }
 
