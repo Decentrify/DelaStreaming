@@ -25,9 +25,9 @@ import java.util.function.Consumer;
 import se.sics.dela.network.ledbat.LedbatSenderEvent;
 import se.sics.dela.network.ledbat.LedbatSenderPort;
 import se.sics.dela.network.ledbat.util.LedbatContainer;
+import se.sics.dela.network.util.DatumId;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
-import se.sics.kompics.Init;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
@@ -100,7 +100,7 @@ public class DriverComp extends ComponentDefinition {
   Handler handleAcked = new Handler<LedbatSenderEvent.Acked>() {
     @Override
     public void handle(LedbatSenderEvent.Acked event) {
-      logger.debug("received:{}", event.req.data.getId());
+      logger.debug("received:{}", event.req.datum.getId());
       acked++;
       inFlight--;
       if (acked == TOTAL_MSGS) {
@@ -119,7 +119,7 @@ public class DriverComp extends ComponentDefinition {
   Handler handleTimeout = new Handler<LedbatSenderEvent.Timeout>() {
     @Override
     public void handle(LedbatSenderEvent.Timeout event) {
-      logger.debug("timeout:{}", event.req.data.getId());
+      logger.debug("timeout:{}", event.req.datum.getId());
       inFlight--;
       timedout++;
       trySend(event.maxInFlight);
@@ -139,10 +139,12 @@ public class DriverComp extends ComponentDefinition {
   private void send(byte[] data) {
     inFlight++;
     Identifier dataId = dataIds.randomId();
-    LedbatContainer dataContainer = new LedbatContainer(dataId, data);
-    //TODO Alex fix connId
+    Identifier unitId = dataIds.randomId();
+    DatumId datumId = new DatumId(dataId, unitId);
+    LedbatContainer dataContainer = new LedbatContainer(datumId, data);
+    //TODO Alex fix rivuletId
     LedbatSenderEvent.Request req = new LedbatSenderEvent.Request(eventIds.randomId(), connId, dataContainer);
-    logger.trace("sending:{}", req.data.getId());
+    logger.trace("sending:{}", req.datum.getId());
     trigger(req, ledbat);
   }
   

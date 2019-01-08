@@ -16,22 +16,24 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.network.conn;
-  
+package se.sics.dela.network.ledbat;
+
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NetConnIdExtractor extends ChannelIdExtractor<NetConnEvents.Base, Identifier> {
 
-  public NetConnIdExtractor() {
-    super(NetConnEvents.Base.class);
+public class LedbatRivuletIdExtractor extends ChannelIdExtractor<LedbatEvent, Identifier> {
+
+  public LedbatRivuletIdExtractor() {
+    super(LedbatEvent.class);
   }
 
+  
   @Override
-  public Identifier getValue(NetConnEvents.Base event) {
-    return event.connId();
+  public Identifier getValue(LedbatEvent event) {
+    return event.rivuletId();
   }
 }

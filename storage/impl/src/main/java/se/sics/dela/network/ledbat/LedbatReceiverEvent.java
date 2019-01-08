@@ -28,8 +28,8 @@ public class LedbatReceiverEvent {
   public static class Received<D extends Identifiable> extends LedbatEvent.Basic {
     public final D data;
     
-    public Received(Identifier eventId, Identifier connId, D data) {
-      super(eventId, connId);
+    public Received(Identifier eventId, Identifier rivuletId, D data) {
+      super(eventId, rivuletId);
       this.data = data;
     }
   }

@@ -106,7 +106,7 @@ public class LedbatSender {
       for (WheelContainer c : timeouts) {
         //mean 0.7 micros
         WheelContainer rc = (WheelContainer) c;
-        logger.debug("msg data:{} timed out", rc.req.data.getId());
+        logger.debug("msg data:{} timed out", rc.req.datum.getId());
         cwnd.loss(now, rttEstimator.rto(), ledbatConfig.base.MSS);
         //
         appSend.accept(rc.req, rc.req.timeout(maxAppMsgs()));
@@ -136,9 +136,9 @@ public class LedbatSender {
 
   public void ackData(LedbatMsg.Ack content) {
     //mean 0.7 micros
-    Optional<WheelContainer> ringContainer = wheelTimer.cancelTimeout(content.dataId);
+    Optional<WheelContainer> ringContainer = wheelTimer.cancelTimeout(content.datumId);
     if (!ringContainer.isPresent()) {
-      logger.debug("data:{} is late", content.dataId);
+      logger.debug("data:{} is late", content.datumId);
       return;
     }
     //mean 1.7 micros
@@ -157,7 +157,7 @@ public class LedbatSender {
     while (!pendingData.isEmpty() && cwnd.canSend(ledbatConfig.base.MSS)) {
       LedbatSenderEvent.Request req = pendingData.removeFirst();
       //mean 11 micros
-      networkSend.accept(req.data);
+      networkSend.accept(req.datum);
       //mean 0.4 micros
       cwnd.send(ledbatConfig.base.MSS);
       wheelTimer.setTimeout(rttEstimator.rto(), new WheelContainer(req));
@@ -174,7 +174,7 @@ public class LedbatSender {
 
     @Override
     public Identifier getId() {
-      return req.data.getId();
+      return req.datum.getId();
     }
   }
 }

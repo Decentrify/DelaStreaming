@@ -18,22 +18,22 @@
  */
 package se.sics.dela.network.ledbat.util;
 
+import se.sics.dela.network.util.DatumId;
 import se.sics.kompics.util.Identifiable;
-import se.sics.kompics.util.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LedbatContainer implements Identifiable {
-  public final Identifier dataId;
+public class LedbatContainer implements Identifiable<DatumId> {
+  public final DatumId datumId;
   public final byte[] data;
-  public LedbatContainer(Identifier dataId, byte[] data) {
-    this.dataId = dataId;
+  public LedbatContainer(DatumId datumId, byte[] data) {
+    this.datumId = datumId;
     this.data = data;
   }
 
   @Override
-  public Identifier getId() {
-    return dataId;
+  public DatumId getId() {
+    return datumId;
   }
 }

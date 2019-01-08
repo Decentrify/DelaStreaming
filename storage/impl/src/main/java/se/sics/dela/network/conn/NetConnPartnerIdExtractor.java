@@ -16,44 +16,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.network.ledbat;
-
-import se.sics.kompics.util.Identifiable;
+package se.sics.dela.network.conn;
+  
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.nutil.network.portsv2.SelectableEventV2;
+import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface LedbatEvent extends Identifiable, SelectableEventV2 {
+public class NetConnPartnerIdExtractor extends ChannelIdExtractor<NetConnEvents.Base, Identifier> {
 
-  public static final String EVENT_TYPE = "LEDBAT_EVENT";
+  public NetConnPartnerIdExtractor() {
+    super(NetConnEvents.Base.class);
+  }
 
-  public Identifier rivuletId();
-
-  public static abstract class Basic implements LedbatEvent {
-
-    public final Identifier id;
-    public final Identifier rivuletId;
-
-    public Basic(Identifier id, Identifier rivuletId) {
-      this.id = id;
-      this.rivuletId = rivuletId;
-    }
-
-    @Override
-    public Identifier getId() {
-      return id;
-    }
-
-    @Override
-    public String eventType() {
-      return EVENT_TYPE;
-    }
-
-    @Override
-    public Identifier rivuletId() {
-      return rivuletId;
-    }
+  @Override
+  public Identifier getValue(NetConnEvents.Base event) {
+    return event.partnerId();
   }
 }

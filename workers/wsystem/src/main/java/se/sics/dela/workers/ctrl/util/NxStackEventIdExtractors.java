@@ -16,44 +16,29 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.network.ledbat;
+package se.sics.dela.workers.ctrl.util;
 
-import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.nutil.network.portsv2.SelectableEventV2;
+import se.sics.ktoolbox.nutil.network.portsv2.EventIdExtractorV2;
+import se.sics.ktoolbox.nutil.nxcomp.NxStackId;
+import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface LedbatEvent extends Identifiable, SelectableEventV2 {
+public class NxStackEventIdExtractors {
 
-  public static final String EVENT_TYPE = "LEDBAT_EVENT";
+  public static class TimerProxy implements EventIdExtractorV2<TimerProxyImpl.Timeout> {
 
-  public Identifier rivuletId();
+    private final Identifier stackId;
 
-  public static abstract class Basic implements LedbatEvent {
-
-    public final Identifier id;
-    public final Identifier rivuletId;
-
-    public Basic(Identifier id, Identifier rivuletId) {
-      this.id = id;
-      this.rivuletId = rivuletId;
+    public TimerProxy(Identifier stackId) {
+      this.stackId = stackId;
     }
 
     @Override
-    public Identifier getId() {
-      return id;
-    }
-
-    @Override
-    public String eventType() {
-      return EVENT_TYPE;
-    }
-
-    @Override
-    public Identifier rivuletId() {
-      return rivuletId;
+    public NxStackId getValue(TimerProxyImpl.Timeout timeout) {
+      return new NxStackId(stackId, timeout.timerProxyId());
     }
   }
 }

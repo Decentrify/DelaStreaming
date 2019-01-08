@@ -29,13 +29,13 @@ import se.sics.kompics.util.Identifier;
 public class LedbatSenderEvent {
   public static class Request<D extends Identifiable> extends Direct.Request<Indication> implements LedbatEvent {
     public final Identifier eventId;
-    public final Identifier connId;
-    public final D data;
+    public final Identifier rivuletId;
+    public final D datum;
 
-    public Request(Identifier eventId, Identifier connId, D data) {
+    public Request(Identifier eventId, Identifier rivuletId, D datum) {
       this.eventId = eventId;
-      this.connId = connId;
-      this.data = data;
+      this.rivuletId = rivuletId;
+      this.datum = datum;
     }
 
     @Override
@@ -53,12 +53,12 @@ public class LedbatSenderEvent {
 
     @Override
     public String toString() {
-      return "LedbatSenderRequest{" + "data=" + data.getId() + '}';
+      return "LedbatSenderRequest{" + "data=" + datum.getId() + '}';
     }
 
     @Override
-    public Identifier connId() {
-      return connId;
+    public Identifier rivuletId() {
+      return rivuletId;
     }
 
     @Override
@@ -73,7 +73,7 @@ public class LedbatSenderEvent {
     public final int maxInFlight;
 
     public Indication(Request<D> req, int maxInFlight) {
-      super(req.eventId, req.connId);
+      super(req.eventId, req.rivuletId);
       this.req = req;
       this.maxInFlight = maxInFlight;
     }
@@ -87,7 +87,7 @@ public class LedbatSenderEvent {
 
     @Override
     public String toString() {
-      return "LedbatSenderAck{" + "data=" + req.data.getId() + '}';
+      return "LedbatSenderAck{" + "data=" + req.datum.getId() + '}';
     }
   }
 
@@ -99,7 +99,7 @@ public class LedbatSenderEvent {
 
     @Override
     public String toString() {
-      return "LedbatSenderTimeout{" + "data=" + req.data.getId() + '}';
+      return "LedbatSenderTimeout{" + "data=" + req.datum.getId() + '}';
     }
   }
 
@@ -111,7 +111,7 @@ public class LedbatSenderEvent {
 
     @Override
     public String toString() {
-      return "LedbatSenderOverloaded{" + "data=" + req.data.getId() + '}';
+      return "LedbatSenderOverloaded{" + "data=" + req.datum.getId() + '}';
     }
   }
 }

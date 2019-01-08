@@ -21,16 +21,14 @@ package se.sics.dela.workers.ctrl.fixme;
 import se.sics.kompics.KompicsEvent;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
-import se.sics.ktoolbox.util.network.KAddress;
-import se.sics.ktoolbox.util.network.KContentMsg;
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ChannelIdExtractors {
   
-  public static class NoExtractor<E extends KompicsEvent> extends ChannelIdExtractor<E, Identifier> {
+  public static class PassNone<E extends KompicsEvent> extends ChannelIdExtractor<E, Identifier> {
 
-    public NoExtractor(Class<E> eventType) {
+    public PassNone(Class<E> eventType) {
       super(eventType);
     }
     
@@ -40,15 +38,16 @@ public class ChannelIdExtractors {
     }
   }
   
-  public static class Destination extends ChannelIdExtractor<KContentMsg, Identifier> {
-
-    public Destination() {
-      super(KContentMsg.class);
+  public static class PassAll<E extends KompicsEvent> extends ChannelIdExtractor<E, Identifier> {
+    private final Identifier expected;
+    public PassAll(Class<E> eventType, Identifier expected) {
+      super(eventType);
+      this.expected = expected;
     }
-
+    
     @Override
-    public Identifier getValue(KContentMsg msg) {
-      return ((KAddress)msg.getHeader().getDestination()).getId();
+    public Identifier getValue(E event) {
+      return expected;
     }
   }
 }

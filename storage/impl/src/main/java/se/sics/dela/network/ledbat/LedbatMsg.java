@@ -18,8 +18,8 @@
  */
 package se.sics.dela.network.ledbat;
 
-import static se.sics.dela.network.ledbat.LedbatEvent.EVENT_TYPE;
 import se.sics.dela.network.ledbat.util.OneWayDelay;
+import se.sics.dela.network.util.DatumId;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.network.portsv2.SelectableMsgV2;
@@ -28,18 +28,15 @@ import se.sics.ktoolbox.nutil.network.portsv2.SelectableMsgV2;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public interface LedbatMsg extends Identifiable, SelectableMsgV2 {
-  public static final String MSG_TYPE = "LEDBAT_MSG";
-  
-  public Identifier connId();
 
-  public static abstract class Basic implements LedbatEvent {
+  public static final String MSG_TYPE = "LEDBAT_MSG";
+
+  public static abstract class Basic implements LedbatMsg {
 
     public final Identifier id;
-    public final Identifier connId;
 
-    public Basic(Identifier id, Identifier connId) {
+    public Basic(Identifier id) {
       this.id = id;
-      this.connId = connId;
     }
 
     @Override
@@ -49,59 +46,55 @@ public interface LedbatMsg extends Identifiable, SelectableMsgV2 {
 
     @Override
     public String eventType() {
-      return EVENT_TYPE;
-    }
-
-    @Override
-    public Identifier connId() {
-      return connId;
+      return MSG_TYPE;
     }
   }
-  
-  public static class Data<D extends Identifiable> extends Basic {
-    public final D data;
+
+  public static class Datum<D extends Identifiable<DatumId>> extends Basic {
+
+    public final D datum;
     public final OneWayDelay dataDelay;
-    
-    public Data(Identifier msgId, Identifier connId, D data) {
-      this(msgId, connId, data, new OneWayDelay());
+
+    public Datum(Identifier msgId, D datum) {
+      this(msgId, datum, new OneWayDelay());
     }
-    
-    public Data(Identifier msgId, Identifier connId, D data, OneWayDelay dataDelay) {
-      super(msgId, connId);
-      this.data = data;
+
+    public Datum(Identifier msgId, D datum, OneWayDelay dataDelay) {
+      super(msgId);
+      this.datum = datum;
       this.dataDelay = dataDelay;
     }
-    
+
     public Ack answer() {
-      return new Ack(id, connId, data.getId(), dataDelay);
+      return new Ack(id, datum.getId(), dataDelay);
     }
 
     @Override
     public String toString() {
-      return "LedbatMsgData{" + "data=" + data.getId() + '}';
+      return "LedbatMsgDatum{" + "datumId=" + datum.getId() + '}';
     }
   }
-  
+
   public static class Ack extends Basic {
 
-    public final Identifier dataId;
+    public final DatumId datumId;
     public final OneWayDelay dataDelay;
     public final OneWayDelay ackDelay;
 
-    public Ack(Identifier msgId, Identifier connId, Identifier dataId, OneWayDelay dataDelay) {
-      this(msgId, connId, dataId, dataDelay, new OneWayDelay());
+    public Ack(Identifier msgId, DatumId datumId, OneWayDelay dataDelay) {
+      this(msgId, datumId, dataDelay, new OneWayDelay());
     }
-    
-    public Ack(Identifier msgId, Identifier connId, Identifier dataId, OneWayDelay dataDelay, OneWayDelay ackDelay) {
-      super(msgId, connId);
-      this.dataId = dataId;
+
+    public Ack(Identifier msgId, DatumId datumId, OneWayDelay dataDelay, OneWayDelay ackDelay) {
+      super(msgId);
+      this.datumId = datumId;
       this.dataDelay = dataDelay;
       this.ackDelay = ackDelay;
     }
 
     @Override
     public String toString() {
-      return "LedbatMsgAck{" + "data=" + dataId + '}';
+      return "LedbatMsgAck{" + "datum=" + datumId + '}';
     }
   }
 }

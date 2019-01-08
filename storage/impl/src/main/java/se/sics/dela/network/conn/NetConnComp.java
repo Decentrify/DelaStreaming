@@ -78,7 +78,9 @@ public class NetConnComp extends ComponentDefinition {
     public void handle(NetConnEvents.LedbatSenderCreate req) {
       if (ledbatSenderChannels.isEmpty()) {
         createLedbatSender();
+        logger.info("creating sender");
       }
+      logger.info("using sender");
       ledbatSenderChannels.add(req.channelId);
       answer(req, req.ack());
     }
@@ -89,7 +91,9 @@ public class NetConnComp extends ComponentDefinition {
     public void handle(NetConnEvents.LedbatReceiverCreate req) {
       if (ledbatReceiverChannels.isEmpty()) {
         createLedbatReceiver();
+        logger.info("creating receiver");
       }
+      logger.info("using receiver");
       ledbatReceiverChannels.add(req.channelId);
       answer(req, req.ack());
     }
@@ -135,8 +139,7 @@ public class NetConnComp extends ComponentDefinition {
     ledbatReceiver = create(LedbatReceiverComp.class, init);
     connect(ledbatReceiverPort, ledbatReceiver.getPositive(LedbatReceiverPort.class), Channel.TWO_WAY);
     connect(ledbatReceiver.getNegative(Network.class), networkPort, Channel.TWO_WAY);
-    connect(ledbatReceiver.getNegative(Timer.class), timerPort, Channel.TWO_WAY);
-    trigger(Start.event, ledbatSender.control());
+    trigger(Start.event, ledbatReceiver.control());
   }
 
   private void killLedbatSender() {
@@ -151,7 +154,6 @@ public class NetConnComp extends ComponentDefinition {
     trigger(Kill.event, ledbatReceiver.control());
     disconnect(ledbatReceiverPort, ledbatReceiver.getPositive(LedbatReceiverPort.class));
     disconnect(ledbatReceiver.getNegative(Network.class), networkPort);
-    disconnect(ledbatReceiver.getNegative(Timer.class), timerPort);
     ledbatReceiver = null;
   }
 

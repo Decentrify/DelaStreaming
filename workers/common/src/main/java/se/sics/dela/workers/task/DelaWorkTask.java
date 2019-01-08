@@ -30,9 +30,11 @@ public class DelaWorkTask {
   public static abstract class Request implements WorkTask.Request {
 
     public Identifier taskId;
+    public final Identifier dataId;
 
-    public Request(Identifier taskId) {
+    public Request(Identifier taskId, Identifier dataId) {
       this.taskId = taskId;
+      this.dataId = dataId;
     }
 
     @Override
@@ -47,8 +49,11 @@ public class DelaWorkTask {
   }
 
   public static class LReceiver extends Request {
-    public LReceiver(Identifier taskId) {
-      super(taskId);
+    public final KAddress sender;
+    
+    public LReceiver(Identifier taskId, KAddress sender, Identifier dataId) {
+      super(taskId, dataId);
+      this.sender = sender;
     }
     
     @Override
@@ -59,11 +64,9 @@ public class DelaWorkTask {
 
   public static class LSender extends Request {
     public final KAddress receiver;
-    public final int nrBlocks;
-    public LSender(Identifier taskId, KAddress receiver, int nrBlocks) {
-      super(taskId);
+    public LSender(Identifier taskId, KAddress receiver, Identifier dataId) {
+      super(taskId, dataId);
       this.receiver = receiver;
-      this.nrBlocks = nrBlocks;
     }
 
     @Override

@@ -16,44 +16,29 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.network.ledbat;
+package se.sics.dela.network.util;
 
-import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.nutil.network.portsv2.SelectableEventV2;
+import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface LedbatEvent extends Identifiable, SelectableEventV2 {
-
-  public static final String EVENT_TYPE = "LEDBAT_EVENT";
-
-  public Identifier rivuletId();
-
-  public static abstract class Basic implements LedbatEvent {
-
-    public final Identifier id;
-    public final Identifier rivuletId;
-
-    public Basic(Identifier id, Identifier rivuletId) {
-      this.id = id;
-      this.rivuletId = rivuletId;
-    }
-
-    @Override
-    public Identifier getId() {
-      return id;
-    }
-
-    @Override
-    public String eventType() {
-      return EVENT_TYPE;
-    }
-
-    @Override
-    public Identifier rivuletId() {
-      return rivuletId;
-    }
+public class ChannelId extends PairIdentifier<Identifier, PairIdentifier<Identifier, Identifier>> {
+  
+  public ChannelId(Identifier dataId, Identifier sender, Identifier receiver) {
+    super(dataId, new PairIdentifier(sender, receiver));
+  }
+  
+  public Identifier dataId() {
+    return id1;
+  }
+  
+  public Identifier senderId() {
+    return id2.id1;
+  }
+  
+  public Identifier receiverId() {
+    return id2.id2;
   }
 }

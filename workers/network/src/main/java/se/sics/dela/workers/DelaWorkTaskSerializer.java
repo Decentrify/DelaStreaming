@@ -48,12 +48,16 @@ public class DelaWorkTaskSerializer {
     public void toBinary(Object o, ByteBuf buf) {
       DelaWorkTask.LReceiver obj = (DelaWorkTask.LReceiver) o;
       Serializers.toBinary(obj.taskId, buf);
+      Serializers.toBinary(obj.sender, buf);
+      Serializers.toBinary(obj.dataId, buf);
     }
 
     @Override
     public DelaWorkTask.LReceiver fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier taskId = (Identifier) Serializers.fromBinary(buf, hint);
-      return new DelaWorkTask.LReceiver(taskId);
+      KAddress sender = (KAddress)Serializers.fromBinary(buf, hint);
+      Identifier dataId = (Identifier)Serializers.fromBinary(buf, hint);
+      return new DelaWorkTask.LReceiver(taskId, sender, dataId);
     }
   }
   
@@ -75,15 +79,15 @@ public class DelaWorkTaskSerializer {
       DelaWorkTask.LSender obj = (DelaWorkTask.LSender) o;
       Serializers.toBinary(obj.taskId, buf);
       Serializers.toBinary(obj.receiver, buf);
-      buf.writeInt(obj.nrBlocks);
+      Serializers.toBinary(obj.dataId, buf);
     }
 
     @Override
     public DelaWorkTask.LSender fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier taskId = (Identifier) Serializers.fromBinary(buf, hint);
       KAddress receiver = (KAddress) Serializers.fromBinary(buf, hint);
-      int nrBlocks = buf.readInt();
-      return new DelaWorkTask.LSender(taskId, receiver, nrBlocks);
+      Identifier dataId = (Identifier)Serializers.fromBinary(buf, hint);
+      return new DelaWorkTask.LSender(taskId, receiver, dataId);
     }
   }
 

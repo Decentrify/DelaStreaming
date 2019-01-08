@@ -34,7 +34,7 @@ public class LedbatSerializerSetup {
   public static int serializerIds = 3;
 
   public static enum LedbatSerializers {
-    LedbatMsgData(LedbatMsg.Data.class, "delaLedbatMsgData"),
+    LedbatMsgDatum(LedbatMsg.Datum.class, "delaLedbatMsgDatum"),
     LedbatMsgAck(LedbatMsg.Ack.class, "delaLedbatMsgAck"),
     LedbatContainer(LedbatContainer.class, "delaLedbatContainer");
 
@@ -62,10 +62,10 @@ public class LedbatSerializerSetup {
   public static int registerSerializers(int startingId) {
     int currentId = startingId;
 
-    LedbatMsgSerializer.Data ledbatMsgDataSerializer = new LedbatMsgSerializer.Data(currentId++);
-    Serializers.register(ledbatMsgDataSerializer, LedbatSerializers.LedbatMsgData.serializerName);
-    Serializers.register(LedbatSerializers.LedbatMsgData.serializedClass,
-      LedbatSerializers.LedbatMsgData.serializerName);
+    LedbatMsgSerializer.Datum ledbatMsgDataSerializer = new LedbatMsgSerializer.Datum(currentId++);
+    Serializers.register(ledbatMsgDataSerializer, LedbatSerializers.LedbatMsgDatum.serializerName);
+    Serializers.register(LedbatSerializers.LedbatMsgDatum.serializedClass,
+      LedbatSerializers.LedbatMsgDatum.serializerName);
 
     LedbatMsgSerializer.Ack ledbatMsgAckSerializer = new LedbatMsgSerializer.Ack(currentId++);
     Serializers.register(ledbatMsgAckSerializer, LedbatSerializers.LedbatMsgAck.serializerName);

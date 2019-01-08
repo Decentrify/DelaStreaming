@@ -19,6 +19,7 @@
 package se.sics.dela.workers.mngr;
 
 import java.io.IOException;
+import se.sics.dela.network.DelaStorageSerializerSetup;
 import se.sics.dela.workers.setup.DelaWorkerSerializerSetup;
 import se.sics.kompics.Init;
 import se.sics.kompics.Kompics;
@@ -45,6 +46,7 @@ public class WorkMngrLauncher {
     serializerId = OMngrSerializerSetup.registerSerializers(serializerId);
     serializerId = NetworkMngrSerializerSetup.registerSerializers(serializerId);
     serializerId = StunSerializerSetup.registerSerializers(serializerId);
+    serializerId = DelaStorageSerializerSetup.registerSerializers(serializerId);
     serializerId = DelaWorkerSerializerSetup.registerBasicSerializers(serializerId);
   }
 

@@ -26,20 +26,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import se.sics.dela.network.conn.NetConnComp;
-import se.sics.dela.network.conn.NetConnIdExtractor;
+import se.sics.dela.network.conn.NetConnEvents;
+import se.sics.dela.network.conn.NetConnPartnerIdExtractorV2;
 import se.sics.dela.network.conn.NetConnPort;
-import se.sics.dela.network.ledbat.LedbatEventConnIdExtractor;
+import se.sics.dela.network.ledbat.LedbatEvent;
 import se.sics.dela.network.ledbat.LedbatMsg;
 import se.sics.dela.network.ledbat.LedbatReceiverPort;
+import se.sics.dela.network.ledbat.LedbatRivuletIdExtractorV2;
 import se.sics.dela.network.ledbat.LedbatSenderPort;
-import se.sics.dela.workers.ctrl.fixme.ChannelIdExtractors;
-import se.sics.dela.workers.ctrl.util.LedbatNetConnIdExtractor;
-import se.sics.dela.workers.ctrl.util.NetTaskId;
-import se.sics.dela.workers.ctrl.util.NetTaskIdExtractor;
+import se.sics.dela.workers.ctrl.util.NxStackEventIdExtractors;
+import se.sics.dela.workers.ctrl.util.NxStackMsgIdExtractors;
 import se.sics.dela.workers.ctrl.util.NxStackTypeIdExtractor;
 import se.sics.dela.workers.ctrl.util.ReceiverTaskComp;
 import se.sics.dela.workers.ctrl.util.SenderTaskComp;
-import se.sics.dela.workers.ctrl.util.SenderTaskNetIdExtractor;
 import se.sics.dela.workers.ctrl.util.WorkerStackType;
 import se.sics.kompics.Channel;
 import se.sics.kompics.Component;
@@ -48,11 +47,9 @@ import se.sics.kompics.Handler;
 import se.sics.kompics.Init;
 import se.sics.kompics.PortType;
 import se.sics.kompics.Start;
-import se.sics.kompics.network.Msg;
-import se.sics.kompics.network.Network;
-import se.sics.kompics.timer.Timeout;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.timer.java.JavaTimer;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.netmngr.NetworkConfig;
 import se.sics.ktoolbox.netmngr.driver.NxNetProxy;
 import se.sics.ktoolbox.nutil.conn.ConnConfig;
@@ -60,12 +57,13 @@ import se.sics.ktoolbox.nutil.conn.workers.WorkCtrlCenterComp;
 import se.sics.ktoolbox.nutil.conn.workers.WorkCtrlCenterPort;
 import se.sics.ktoolbox.nutil.network.portsv2.EventIdExtractorV2;
 import se.sics.ktoolbox.nutil.network.portsv2.EventTypeExtractorsV2;
-import se.sics.ktoolbox.nutil.network.portsv2.MsgIdExtractorsV2;
+import se.sics.ktoolbox.nutil.network.portsv2.MsgIdExtractorV2;
 import se.sics.ktoolbox.nutil.network.portsv2.One2NEventChannelV2;
-import se.sics.ktoolbox.nutil.nxcomp.NxMngrComp;
 import se.sics.ktoolbox.nutil.nxcomp.NxMngrEvents;
 import se.sics.ktoolbox.nutil.nxcomp.NxMngrPort;
-import se.sics.ktoolbox.nutil.nxcomp.NxStackDefinition;
+import se.sics.ktoolbox.nutil.nxcomp.v2.NxMngrCompV2;
+import se.sics.ktoolbox.nutil.nxcomp.v2.NxStackDefinitionV2;
+import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 import se.sics.ktoolbox.util.config.impl.SystemConfig;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
@@ -73,7 +71,6 @@ import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.basic.SimpleByteIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 import se.sics.ktoolbox.util.network.basic.BasicAddress;
-import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 import se.sics.ktoolbox.util.trysf.Try;
 import se.sics.ktoolbox.util.trysf.TryHelper;
 
@@ -171,25 +168,40 @@ public class WorkCtrlHostComp extends ComponentDefinition {
 
   
   private void createNetConnMngr() {
-    List<Class<PortType>> negativePorts = new LinkedList<>();
-    List<ChannelIdExtractor> negativeIdExtractors = new LinkedList<>();
-    List<Class<PortType>> positivePorts = new LinkedList<>();
-    List<ChannelIdExtractor> positiveIdExtractors = new LinkedList<>();
-    positivePorts.add((Class) Network.class);
-    positiveIdExtractors.add(new ChannelIdExtractors.Destination());
-    positivePorts.add((Class) Timer.class);
-    positiveIdExtractors.add(new ChannelIdExtractors.NoExtractor(Timeout.class));
-
-    negativePorts.add((Class) NetConnPort.class);
-    negativeIdExtractors.add(new NetConnIdExtractor());
-    negativePorts.add((Class) LedbatSenderPort.class);
-    negativeIdExtractors.add(new NetTaskIdExtractor.LedbatReceiver());
-    negativePorts.add((Class) LedbatReceiverPort.class);
-    negativeIdExtractors.add(new NetTaskIdExtractor.LedbatSender());
+    Identifier netConnStackId = WorkerStackType.NET_CONN.getId(nxStackIds);
     
-    NxStackDefinition stackDefintion = new NxStackDefinition.OneComp<>(NetConnComp.class);
-    netConnMngr = create(NxMngrComp.class, new NxMngrComp.Init(stackDefintion, negativePorts, negativeIdExtractors,
-      positivePorts, positiveIdExtractors));
+    List<Class<PortType>> negativePorts = new LinkedList<>();
+    List<Map<String, EventIdExtractorV2>> negativeEvents = new LinkedList<>();
+    List<Class<PortType>> positivePorts = new LinkedList<>();
+    List<Map<String, EventIdExtractorV2>> positiveEvents = new LinkedList<>();
+    
+    Map<String, MsgIdExtractorV2> positiveNetworkMsgs = new HashMap<>();
+    positiveNetworkMsgs.put(LedbatMsg.MSG_TYPE, new NxStackMsgIdExtractors.Source(netConnStackId));
+    NxStackDefinitionV2.NetworkPort posNetPort = new NxStackDefinitionV2.NetworkPort(positiveNetworkMsgs);
+    
+    positivePorts.add((Class) Timer.class);
+    Map<String, EventIdExtractorV2> timerEvents = new HashMap<>();
+    timerEvents.put(TimerProxyImpl.Timeout.EVENT_TYPE, new NxStackEventIdExtractors.TimerProxy(netConnStackId));
+    positiveEvents.add(timerEvents);
+    
+    negativePorts.add((Class) NetConnPort.class);
+    Map<String, EventIdExtractorV2> netConnEvents = new HashMap<>();
+    netConnEvents.put(NetConnEvents.EVENT_TYPE, new NetConnPartnerIdExtractorV2());
+    negativeEvents.add(netConnEvents);
+    
+    negativePorts.add((Class) LedbatSenderPort.class);
+    Map<String, EventIdExtractorV2> ledbatSenderEvents = new HashMap<>();
+    ledbatSenderEvents.put(LedbatEvent.EVENT_TYPE, new LedbatRivuletIdExtractorV2());
+    negativeEvents.add(ledbatSenderEvents);
+    
+    negativePorts.add((Class) LedbatReceiverPort.class);
+    Map<String, EventIdExtractorV2> ledbatReceiverEvents = new HashMap<>();
+    ledbatReceiverEvents.put(LedbatEvent.EVENT_TYPE, new LedbatRivuletIdExtractorV2());
+    negativeEvents.add(ledbatReceiverEvents);
+    
+    NxStackDefinitionV2 stackDefintion = new NxStackDefinitionV2.OneComp<>(NetConnComp.class);
+    netConnMngr = create(NxMngrCompV2.class, new NxMngrCompV2.Init("net conn", stackDefintion, negativePorts, negativeEvents,
+      positivePorts, positiveEvents, Optional.of(posNetPort)));
     nxNetProxy.connect(netConnMngr);
     connect(netConnMngr.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
     nxStackChannel.addChannel(WorkerStackType.NET_CONN.getId(nxStackIds), netConnMngr.getPositive(NxMngrPort.class));
@@ -197,18 +209,26 @@ public class WorkCtrlHostComp extends ComponentDefinition {
   }
   
   private void createTaskMngrReceiver() {
+    Identifier ledbatReceiverStackId = WorkerStackType.RECEIVER.getId(nxStackIds);
+    
     List<Class<PortType>> negativePorts = new LinkedList<>();
-    List<ChannelIdExtractor> negativeIdExtractors = new LinkedList<>();
+    List<Map<String, EventIdExtractorV2>> negativeIdExtractors = new LinkedList<>();
     List<Class<PortType>> positivePorts = new LinkedList<>();
-    List<ChannelIdExtractor> positiveIdExtractors = new LinkedList<>();
+    List<Map<String, EventIdExtractorV2>> positiveIdExtractors = new LinkedList<>();
+    
     positivePorts.add((Class) LedbatReceiverPort.class);
-    positiveIdExtractors.add(new LedbatEventConnIdExtractor());
+    Map<String, EventIdExtractorV2> ledbatReceiverEvents = new HashMap<>();
+    ledbatReceiverEvents.put(LedbatEvent.EVENT_TYPE, new LedbatRivuletIdExtractorV2());
+    positiveIdExtractors.add(ledbatReceiverEvents);
+    
     positivePorts.add((Class) Timer.class);
-    positiveIdExtractors.add(new ChannelIdExtractors.NoExtractor(Timeout.class));
-
-    NxStackDefinition stackDefintion = new NxStackDefinition.OneComp<>(ReceiverTaskComp.class);
-    receiverTasks = create(NxMngrComp.class, new NxMngrComp.Init(stackDefintion, negativePorts, negativeIdExtractors,
-      positivePorts, positiveIdExtractors));
+    Map<String, EventIdExtractorV2> timerEvents = new HashMap<>();
+    timerEvents.put(TimerProxyImpl.Timeout.EVENT_TYPE, new NxStackEventIdExtractors.TimerProxy(ledbatReceiverStackId));
+    positiveIdExtractors.add(timerEvents);
+    
+    NxStackDefinitionV2 stackDefintion = new NxStackDefinitionV2.OneComp<>(ReceiverTaskComp.class);
+    receiverTasks = create(NxMngrCompV2.class, new NxMngrCompV2.Init("task mngr receiver", stackDefintion, negativePorts, negativeIdExtractors,
+      positivePorts, positiveIdExtractors, Optional.empty()));
     connect(receiverTasks.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
     nxStackChannel.addChannel(WorkerStackType.RECEIVER.getId(nxStackIds), receiverTasks.getPositive(NxMngrPort.class));
     connect(receiverTasks.getNegative(LedbatReceiverPort.class), netConnMngr.getPositive(LedbatReceiverPort.class), 
@@ -216,18 +236,26 @@ public class WorkCtrlHostComp extends ComponentDefinition {
   }
 
   private void createTaskMngrSender() {
+    Identifier ledbatSenderStackId = WorkerStackType.SENDER.getId(nxStackIds);
+    
     List<Class<PortType>> negativePorts = new LinkedList<>();
-    List<ChannelIdExtractor> negativeIdExtractors = new LinkedList<>();
+    List<Map<String, EventIdExtractorV2>> negativeIdExtractors = new LinkedList<>();
     List<Class<PortType>> positivePorts = new LinkedList<>();
-    List<ChannelIdExtractor> positiveIdExtractors = new LinkedList<>();
+    List<Map<String, EventIdExtractorV2>> positiveIdExtractors = new LinkedList<>();
+    
     positivePorts.add((Class) LedbatSenderPort.class);
-    positiveIdExtractors.add(new LedbatEventConnIdExtractor());
+    Map<String, EventIdExtractorV2> ledbatSenderEvents = new HashMap<>();
+    ledbatSenderEvents.put(LedbatEvent.EVENT_TYPE, new LedbatRivuletIdExtractorV2());
+    positiveIdExtractors.add(ledbatSenderEvents);
+    
     positivePorts.add((Class) Timer.class);
-    positiveIdExtractors.add(new ChannelIdExtractors.NoExtractor(Timeout.class));
-
-    NxStackDefinition stackDefintion = new NxStackDefinition.OneComp<>(SenderTaskComp.class);
-    senderTasks = create(NxMngrComp.class, new NxMngrComp.Init(stackDefintion, negativePorts, negativeIdExtractors,
-      positivePorts, positiveIdExtractors));
+    Map<String, EventIdExtractorV2> timerEvents = new HashMap<>();
+    timerEvents.put(TimerProxyImpl.Timeout.EVENT_TYPE, new NxStackEventIdExtractors.TimerProxy(ledbatSenderStackId));
+    positiveIdExtractors.add(timerEvents);
+    
+    NxStackDefinitionV2 stackDefintion = new NxStackDefinitionV2.OneComp<>(SenderTaskComp.class);
+    senderTasks = create(NxMngrCompV2.class, new NxMngrCompV2.Init("task mngr sender", stackDefintion, 
+      negativePorts, negativeIdExtractors, positivePorts, positiveIdExtractors, Optional.empty()));
     connect(senderTasks.getNegative(Timer.class), timerComp.getPositive(Timer.class), Channel.TWO_WAY);
     nxStackChannel.addChannel(WorkerStackType.SENDER.getId(nxStackIds), senderTasks.getPositive(NxMngrPort.class));
     connect(senderTasks.getNegative(LedbatSenderPort.class), netConnMngr.getPositive(LedbatSenderPort.class), 

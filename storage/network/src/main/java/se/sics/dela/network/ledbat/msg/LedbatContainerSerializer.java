@@ -20,11 +20,10 @@ package se.sics.dela.network.ledbat.msg;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
-import se.sics.dela.network.ledbat.LedbatMsg;
 import se.sics.dela.network.ledbat.util.LedbatContainer;
+import se.sics.dela.network.util.DatumId;
 import se.sics.kompics.network.netty.serialization.Serializer;
 import se.sics.kompics.network.netty.serialization.Serializers;
-import se.sics.kompics.util.Identifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -45,17 +44,17 @@ public class LedbatContainerSerializer implements Serializer {
   @Override
   public void toBinary(Object o, ByteBuf buf) {
     LedbatContainer obj = (LedbatContainer) o;
-    Serializers.toBinary(obj.dataId, buf);
+    Serializers.lookupSerializer(DatumId.class).toBinary(obj.datumId, buf);
     buf.writeInt(obj.data.length);
     buf.writeBytes(obj.data);
   }
 
   @Override
   public LedbatContainer fromBinary(ByteBuf buf, Optional<Object> hint) {
-    Identifier dataId = (Identifier)Serializers.fromBinary(buf, hint);
+    DatumId datumId = (DatumId)Serializers.lookupSerializer(DatumId.class).fromBinary(buf, hint);
     int size = buf.readInt();
     byte[] data = new byte[size];
     buf.readBytes(data);
-    return new LedbatContainer(dataId, data);
+    return new LedbatContainer(datumId, data);
   }
 }

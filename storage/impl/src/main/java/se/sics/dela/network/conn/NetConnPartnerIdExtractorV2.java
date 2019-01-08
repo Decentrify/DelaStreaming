@@ -16,17 +16,21 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.workers.ctrl.util;
-
-import se.sics.dela.network.ledbat.LedbatEvent;
+package se.sics.dela.network.conn;
+  
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
-import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
+import se.sics.ktoolbox.nutil.network.portsv2.EventIdExtractorV2;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class LedbatNetConnIdExtractor {
+public class NetConnPartnerIdExtractorV2 implements EventIdExtractorV2<NetConnEvents.Base> {
 
-  
+  public NetConnPartnerIdExtractorV2() {
+  }
+
+  @Override
+  public Identifier getValue(NetConnEvents.Base event) {
+    return event.partnerId();
+  }
 }

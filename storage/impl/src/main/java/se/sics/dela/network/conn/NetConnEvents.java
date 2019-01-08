@@ -18,11 +18,11 @@
  */
 package se.sics.dela.network.conn;
 
+import se.sics.dela.network.util.ChannelId;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.network.portsv2.SelectableEventV2;
-import se.sics.ktoolbox.util.network.KAddress;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -33,24 +33,31 @@ public class NetConnEvents {
 
   public static interface Base extends Identifiable, SelectableEventV2 {
 
-    public Identifier connId();
+    public Identifier partnerId();
+
+    public Identifier channelId();
+
+    public Identifier dataId();
   }
 
   public static abstract class Req extends Direct.Request<Resp> implements Base {
 
     public final Identifier eventId;
-    public final Identifier channelId;
-    public final Identifier partnerId;
+    public final ChannelId channelId;
 
-    public Req(Identifier eventId, Identifier channelId, Identifier partnerId) {
+    public Req(Identifier eventId, ChannelId channelId) {
       this.eventId = eventId;
       this.channelId = channelId;
-      this.partnerId = partnerId;
     }
 
     @Override
-    public Identifier connId() {
-      return partnerId;
+    public Identifier channelId() {
+      return channelId;
+    }
+
+    @Override
+    public Identifier dataId() {
+      return channelId.dataId();
     }
 
     @Override
@@ -73,8 +80,18 @@ public class NetConnEvents {
     }
 
     @Override
-    public Identifier connId() {
-      return req.connId();
+    public Identifier partnerId() {
+      return req.partnerId();
+    }
+
+    @Override
+    public Identifier channelId() {
+      return req.channelId();
+    }
+
+    @Override
+    public Identifier dataId() {
+      return req.dataId();
     }
 
     @Override
@@ -90,8 +107,8 @@ public class NetConnEvents {
 
   public static class LedbatSenderCreate extends Req {
 
-    public LedbatSenderCreate(Identifier eventId, Identifier channelId, Identifier partnerId) {
-      super(eventId, channelId, partnerId);
+    public LedbatSenderCreate(Identifier eventId, ChannelId channelId) {
+      super(eventId, channelId);
     }
 
     public LedbatSenderCreateAck ack() {
@@ -101,6 +118,11 @@ public class NetConnEvents {
     @Override
     public String toString() {
       return "LedbatSenderCreate{}";
+    }
+
+    @Override
+    public Identifier partnerId() {
+      return channelId.receiverId();
     }
   }
 
@@ -118,8 +140,8 @@ public class NetConnEvents {
 
   public static class LedbatSenderKill extends Req {
 
-    public LedbatSenderKill(Identifier eventId, Identifier channelId, Identifier partnerId) {
-      super(eventId, channelId, partnerId);
+    public LedbatSenderKill(Identifier eventId, ChannelId channelId) {
+      super(eventId, channelId);
     }
 
     @Override
@@ -129,6 +151,11 @@ public class NetConnEvents {
 
     public LedbatSenderKillAck ack() {
       return new LedbatSenderKillAck(this);
+    }
+
+    @Override
+    public Identifier partnerId() {
+      return channelId.receiverId();
     }
   }
 
@@ -143,11 +170,11 @@ public class NetConnEvents {
       return "LedbatSenderKillAck{}";
     }
   }
-  
+
   public static class LedbatReceiverCreate extends Req {
 
-    public LedbatReceiverCreate(Identifier eventId, Identifier channelId, Identifier partnerId) {
-      super(eventId, channelId, partnerId);
+    public LedbatReceiverCreate(Identifier eventId, ChannelId channelId) {
+      super(eventId, channelId);
     }
 
     public LedbatReceiverCreateAck ack() {
@@ -157,6 +184,11 @@ public class NetConnEvents {
     @Override
     public String toString() {
       return "LedbatReceiverCreate{}";
+    }
+
+    @Override
+    public Identifier partnerId() {
+      return channelId.senderId();
     }
   }
 
@@ -174,8 +206,8 @@ public class NetConnEvents {
 
   public static class LedbatReceiverKill extends Req {
 
-    public LedbatReceiverKill(Identifier eventId, Identifier channelId, Identifier partnerId) {
-      super(eventId, channelId, partnerId);
+    public LedbatReceiverKill(Identifier eventId, ChannelId channelId) {
+      super(eventId, channelId);
     }
 
     @Override
@@ -185,6 +217,11 @@ public class NetConnEvents {
 
     public LedbatReceiverKillAck ack() {
       return new LedbatReceiverKillAck(this);
+    }
+
+    @Override
+    public Identifier partnerId() {
+      return channelId.senderId();
     }
   }
 

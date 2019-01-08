@@ -21,7 +21,7 @@ package se.sics.dela.network.ledbat.sender;
 import com.google.common.base.Optional;
 import java.util.Random;
 import java.util.UUID;
-import se.sics.dela.network.DelaSerializerSetup;
+import se.sics.dela.network.DelaStorageSerializerSetup;
 import se.sics.dela.network.ledbat.LedbatSenderComp;
 import se.sics.dela.network.ledbat.LedbatSenderPort;
 import se.sics.kompics.Channel;
@@ -152,7 +152,7 @@ public class HostComp extends ComponentDefinition {
     serializerId = OMngrSerializerSetup.registerSerializers(serializerId);
     serializerId = NetworkMngrSerializerSetup.registerSerializers(serializerId);
     serializerId = StunSerializerSetup.registerSerializers(serializerId);
-    serializerId = DelaSerializerSetup.registerSerializers(serializerId);
+    serializerId = DelaStorageSerializerSetup.registerSerializers(serializerId);
   }
   
   private static OverlayIdFactory setupOverlayIdFactory(long seed) {

@@ -16,44 +16,30 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.network.ledbat;
+package se.sics.dela.workers.ctrl.util;
 
-import se.sics.kompics.util.Identifiable;
+import se.sics.dela.network.ledbat.LedbatMsg;
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.nutil.network.portsv2.SelectableEventV2;
+import se.sics.ktoolbox.nutil.network.portsv2.MsgIdExtractorV2;
+import se.sics.ktoolbox.nutil.nxcomp.NxStackId;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.KHeader;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public interface LedbatEvent extends Identifiable, SelectableEventV2 {
-
-  public static final String EVENT_TYPE = "LEDBAT_EVENT";
-
-  public Identifier rivuletId();
-
-  public static abstract class Basic implements LedbatEvent {
-
-    public final Identifier id;
-    public final Identifier rivuletId;
-
-    public Basic(Identifier id, Identifier rivuletId) {
-      this.id = id;
-      this.rivuletId = rivuletId;
+public class NxStackMsgIdExtractors {
+  public static class Source implements MsgIdExtractorV2<LedbatMsg> {
+    private final Identifier netConnStackId;
+    
+    public Source(Identifier netConnStackId) {
+      this.netConnStackId = netConnStackId;
     }
 
     @Override
-    public Identifier getId() {
-      return id;
-    }
-
-    @Override
-    public String eventType() {
-      return EVENT_TYPE;
-    }
-
-    @Override
-    public Identifier rivuletId() {
-      return rivuletId;
+    public NxStackId getValue(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg> msg) {
+      return new NxStackId(netConnStackId, msg.getHeader().getSource().getId());
     }
   }
 }

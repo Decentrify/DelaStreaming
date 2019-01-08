@@ -16,39 +16,22 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-package se.sics.dela.workers.ctrl.util;
-
-import se.sics.dela.network.ledbat.LedbatEvent;
+package se.sics.dela.network.conn;
+  
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.network.ports.ChannelIdExtractor;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class NetTaskIdExtractor {
-  public static class LedbatSender extends ChannelIdExtractor<LedbatEvent, Identifier> {
+public class NetConnDataIdExtractor extends ChannelIdExtractor<NetConnEvents.Base, Identifier> {
 
-    public LedbatSender() {
-      super(LedbatEvent.class);
-    }
-
-    
-    @Override
-    public Identifier getValue(LedbatEvent event) {
-      return ((PairIdentifier) event.connId()).id1;
-    }
+  public NetConnDataIdExtractor() {
+    super(NetConnEvents.Base.class);
   }
-  
-  public static class LedbatReceiver extends ChannelIdExtractor<LedbatEvent, Identifier> {
 
-    public LedbatReceiver() {
-      super(LedbatEvent.class);
-    }
-
-    @Override
-    public Identifier getValue(LedbatEvent event) {
-      return ((PairIdentifier) event.connId()).id2;
-    }
+  @Override
+  public Identifier getValue(NetConnEvents.Base event) {
+    return event.dataId();
   }
 }

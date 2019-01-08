@@ -56,7 +56,7 @@ public class LedbatSenderComp extends ComponentDefinition {
   TimerProxy timer;
   private final KAddress selfAdr;
   private final KAddress dstAdr;
-  private final Identifier connId;
+  private final Identifier rivuletId;
   private final LedbatSender sender;
   private final IdentifierFactory msgIds;
 
@@ -68,8 +68,8 @@ public class LedbatSenderComp extends ComponentDefinition {
   public LedbatSenderComp(Init init) {
     this.selfAdr = init.selfAdr;
     this.dstAdr = init.dstAdr;
-    this.connId = init.connId;
-    timer = new TimerProxyImpl();
+    this.rivuletId = init.rivuletId;
+    timer = new TimerProxyImpl(rivuletId).setup(proxy, logger);
     sender = new LedbatSender().setup(timer, config(), logger, networkSend(), appSend());
 
     loggingCtxPutAlways("srcId", init.selfAdr.getId().toString());
@@ -125,7 +125,7 @@ public class LedbatSenderComp extends ComponentDefinition {
   //mean 11-12 micros
   private Consumer<Identifiable> networkSend() {
     return (Identifiable data) -> {
-      LedbatMsg.Data content = new LedbatMsg.Data(msgIds.randomId(), connId, data);
+      LedbatMsg.Datum content = new LedbatMsg.Datum(msgIds.randomId(), data);
       KHeader header = new BasicHeader(selfAdr, dstAdr, Transport.UDP);
       KContentMsg msg = new BasicContentMsg(header, content);
       logger.trace("sending:{}", msg);
@@ -138,12 +138,12 @@ public class LedbatSenderComp extends ComponentDefinition {
 
     public final KAddress selfAdr;
     public final KAddress dstAdr;
-    public final Identifier connId;
+    public final Identifier rivuletId;
 
-    public Init(KAddress selfAdr, KAddress dstAdr, Identifier connId) {
+    public Init(KAddress selfAdr, KAddress dstAdr, Identifier rivuletId) {
       this.selfAdr = selfAdr;
       this.dstAdr = dstAdr;
-      this.connId = connId;
+      this.rivuletId = rivuletId;
     }
   }
 }

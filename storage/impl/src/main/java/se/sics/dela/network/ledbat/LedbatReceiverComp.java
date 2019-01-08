@@ -43,14 +43,14 @@ public class LedbatReceiverComp extends ComponentDefinition {
 
   private final KAddress selfAdr;
   private final KAddress srcAdr;
-  private final Identifier connId;
+  private final Identifier rivuletId;
   
   private final IdentifierFactory eventIds;
 
   public LedbatReceiverComp(Init init) {
     this.selfAdr = init.selfAdr;
     this.srcAdr = init.srcAdr;
-    this.connId = init.connId;
+    this.rivuletId = init.rivuletId;
     loggingCtxPutAlways("dstId", init.selfAdr.getId().toString());
     loggingCtxPutAlways("srcId", init.srcAdr.getId().toString());
     this.eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
@@ -69,33 +69,33 @@ public class LedbatReceiverComp extends ComponentDefinition {
   }
   
   ClassMatchedHandler handleData
-    = new ClassMatchedHandler<LedbatMsg.Data, KContentMsg<?, ?, LedbatMsg.Data>>() {
+    = new ClassMatchedHandler<LedbatMsg.Datum, KContentMsg<?, ?, LedbatMsg.Datum>>() {
 
       @Override
-      public void handle(LedbatMsg.Data content, KContentMsg<?, ?, LedbatMsg.Data> msg) {
+      public void handle(LedbatMsg.Datum content, KContentMsg<?, ?, LedbatMsg.Datum> msg) {
         answerNetwork(msg);
         answerApp(content);
       }
     };
   
-  private void answerNetwork(KContentMsg<?, ?, LedbatMsg.Data> msg) {
+  private void answerNetwork(KContentMsg<?, ?, LedbatMsg.Datum> msg) {
     KContentMsg<?, ?, LedbatMsg.Ack> resp = msg.answer(msg.getContent().answer());
     trigger(resp, networkPort);
   }
   
-  private void answerApp(LedbatMsg.Data content) {
-    trigger(new LedbatReceiverEvent.Received(eventIds.randomId(), connId, content.data), appPort);
+  private void answerApp(LedbatMsg.Datum content) {
+    trigger(new LedbatReceiverEvent.Received(eventIds.randomId(), rivuletId, content.datum), appPort);
   }
 
   public static class Init extends se.sics.kompics.Init<LedbatReceiverComp> {
     public final KAddress selfAdr;
     public final KAddress srcAdr;
-    public final Identifier connId;
+    public final Identifier rivuletId;
 
-    public Init(KAddress selfAdr, KAddress srcAdr, Identifier connId) {
+    public Init(KAddress selfAdr, KAddress srcAdr, Identifier rivuletId) {
       this.selfAdr = selfAdr;
       this.srcAdr = srcAdr;
-      this.connId = connId;
+      this.rivuletId = rivuletId;
     }
   }
 }

@@ -18,12 +18,14 @@
  */
 package se.sics.dela.workers.ctrl.util;
 
+import se.sics.dela.network.ledbat.LedbatReceiverEvent;
 import se.sics.dela.network.ledbat.LedbatReceiverPort;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
 import se.sics.kompics.timer.Timer;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.network.KAddress;
 
 /**
@@ -31,6 +33,7 @@ import se.sics.ktoolbox.util.network.KAddress;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class ReceiverTaskComp extends ComponentDefinition {
+
   private final Positive<Timer> timerPort = requires(Timer.class);
   private final Positive<LedbatReceiverPort> ledbatPort = requires(LedbatReceiverPort.class);
 
@@ -38,22 +41,36 @@ public class ReceiverTaskComp extends ComponentDefinition {
 
   public ReceiverTaskComp(Init init) {
     this.selfAdr = init.selfAdr;
-    
+
     subscribe(handleStart, control);
+    subscribe(handleReceived, ledbatPort);
   }
-  
+
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
     }
   };
 
+  Handler handleReceived = new Handler<LedbatReceiverEvent.Received>() {
+    @Override
+    public void handle(LedbatReceiverEvent.Received event) {
+      logger.debug("received:", event.data.getId());
+    }
+  };
+
   public static class Init extends se.sics.kompics.Init<ReceiverTaskComp> {
 
     public final KAddress selfAdr;
+    public final KAddress senderAdr;
+    public final Identifier dataId;
+    public final Identifier rivuletId;
 
-    public Init(KAddress selfAdr) {
+    public Init(KAddress selfAdr, KAddress senderAdr, Identifier dataId, Identifier rivuletId) {
       this.selfAdr = selfAdr;
+      this.senderAdr = senderAdr;
+      this.dataId = dataId;
+      this.rivuletId = rivuletId;
     }
   }
 }

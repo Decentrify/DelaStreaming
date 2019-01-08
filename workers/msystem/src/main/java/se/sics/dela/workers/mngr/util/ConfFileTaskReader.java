@@ -21,9 +21,12 @@ package se.sics.dela.workers.mngr.util;
 import com.google.common.base.Optional;
 import se.sics.dela.workers.task.DelaWorkTask;
 import se.sics.kompics.config.Config;
+import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.util.Either;
 import se.sics.ktoolbox.util.config.options.BasicAddressOption;
+import se.sics.ktoolbox.util.identifiable.BasicBuilders;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
+import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.network.basic.BasicAddress;
 
 /**
@@ -32,29 +35,31 @@ import se.sics.ktoolbox.util.network.basic.BasicAddress;
 public class ConfFileTaskReader {
 
   public static final String TASK_TYPE = "dela.worker.task.type";
-  public static final String SENDER_BLOCKS = "dela.worker.task.blocks";
-  public static final BasicAddressOption SENDER_PARTNER = new BasicAddressOption("dela.worker.task.receiver");
+  public static final String DATA_ID = "dela.worker.task.dataId";
+  public static final BasicAddressOption PARTNER = new BasicAddressOption("dela.worker.task.partner");
 
   public static Either<DelaWorkTask.LReceiver, DelaWorkTask.LSender> readTask(Config config, IdentifierFactory taskIds) {
     Optional<String> taskTypeOpt = config.readValue(TASK_TYPE, String.class);
-    if (taskTypeOpt.isPresent()) {
-      switch (taskTypeOpt.get()) {
-        case "SENDER":
-          Optional<BasicAddress> receiverOpt = SENDER_PARTNER.readValue(config);
-          if (!receiverOpt.isPresent()) {
-            throw new RuntimeException("missing receiver");
-          }
-          Optional<Integer> nrBlocksOpt = config.readValue(SENDER_BLOCKS, Integer.class);
-          if (!nrBlocksOpt.isPresent()) {
-            throw new RuntimeException("missing blocks");
-          }
-          return Either.right(new DelaWorkTask.LSender(taskIds.randomId(), receiverOpt.get(), nrBlocksOpt.get()));
-        case "RECEIVER":
-          return Either.left(new DelaWorkTask.LReceiver(taskIds.randomId()));
-        default: throw new RuntimeException("unknown task");
-      }
-    } else {
+    if (!taskTypeOpt.isPresent()) {
       throw new RuntimeException("no task");
+    }
+    Optional<Integer> dataIdOpt = config.readValue(DATA_ID, Integer.class);
+    if (!dataIdOpt.isPresent()) {
+      throw new RuntimeException("missing dataId");
+    }
+    IntIdFactory dataIds = new IntIdFactory(java.util.Optional.empty());
+    Identifier dataId = dataIds.id(new BasicBuilders.IntBuilder(dataIdOpt.get()));
+    Optional<BasicAddress> partnerOpt = PARTNER.readValue(config);
+    if (!partnerOpt.isPresent()) {
+      throw new RuntimeException("missing partner");
+    }
+    switch (taskTypeOpt.get()) {
+      case "SENDER":
+        return Either.right(new DelaWorkTask.LSender(taskIds.randomId(), partnerOpt.get(), dataId));
+      case "RECEIVER":
+        return Either.left(new DelaWorkTask.LReceiver(taskIds.randomId(), partnerOpt.get(), dataId));
+      default:
+        throw new RuntimeException("unknown task");
     }
   }
 }
