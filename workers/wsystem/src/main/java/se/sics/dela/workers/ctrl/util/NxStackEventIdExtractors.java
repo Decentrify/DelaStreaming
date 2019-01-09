@@ -18,10 +18,12 @@
  */
 package se.sics.dela.workers.ctrl.util;
 
+import se.sics.dela.network.ledbat.LedbatEvent;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.network.portsv2.EventIdExtractorV2;
 import se.sics.ktoolbox.nutil.nxcomp.NxStackId;
 import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
+import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -39,6 +41,48 @@ public class NxStackEventIdExtractors {
     @Override
     public NxStackId getValue(TimerProxyImpl.Timeout timeout) {
       return new NxStackId(stackId, timeout.timerProxyId());
+    }
+  }
+
+  public static class LedbatData implements EventIdExtractorV2<LedbatEvent> {
+
+    private final Identifier stackId;
+
+    public LedbatData(Identifier stackId) {
+      this.stackId = stackId;
+    }
+    
+    @Override
+    public Identifier getValue(LedbatEvent event) {
+      return new NxStackId(stackId, event.dataId());
+    }
+  }
+  
+  public static class LedbatSenderRivulet implements EventIdExtractorV2<LedbatEvent> {
+
+    private final Identifier stackId;
+
+    public LedbatSenderRivulet(Identifier stackId) {
+      this.stackId = stackId;
+    }
+    
+    @Override
+    public Identifier getValue(LedbatEvent event) {
+      return new NxStackId(stackId, ((PairIdentifier)event.rivuletId()).id2);
+    }
+  }
+  
+  public static class LedbatReceiverRivulet implements EventIdExtractorV2<LedbatEvent> {
+
+    private final Identifier stackId;
+
+    public LedbatReceiverRivulet(Identifier stackId) {
+      this.stackId = stackId;
+    }
+    
+    @Override
+    public Identifier getValue(LedbatEvent event) {
+      return new NxStackId(stackId, ((PairIdentifier)event.rivuletId()).id1);
     }
   }
 }

@@ -116,8 +116,8 @@ public class LedbatSender {
   }
 
   private int maxAppMsgs() {
-    int inFlightMsgs = (int) (cwnd.size() / ledbatConfig.base.MSS);
-    return Math.min(ledbatConfig.bufferSize, 2 * inFlightMsgs);
+    int cwndAsMsgs = (int) (cwnd.size() / ledbatConfig.base.MSS);
+    return Math.min(ledbatConfig.bufferSize, cwndAsMsgs);
   }
 
   private Consumer<Boolean> reportTimer() {
@@ -145,7 +145,7 @@ public class LedbatSender {
     long now = System.currentTimeMillis();
     long rtt = content.ackDelay.receive - content.dataDelay.send;
     long dataDelay = content.dataDelay.receive - content.dataDelay.send;
-    cwnd.ack(now, dataDelay, ledbatConfig.base.MSS);
+    cwnd.ack(logger, now, dataDelay, ledbatConfig.base.MSS);
     rttEstimator.update(rtt);
     //mean 4-5 micros
     appSend.accept(ringContainer.get().req, ringContainer.get().req.ack(maxAppMsgs()));

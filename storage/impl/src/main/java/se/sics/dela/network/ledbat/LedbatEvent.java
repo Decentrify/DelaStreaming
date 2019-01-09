@@ -30,15 +30,19 @@ public interface LedbatEvent extends Identifiable, SelectableEventV2 {
   public static final String EVENT_TYPE = "LEDBAT_EVENT";
 
   public Identifier rivuletId();
+  
+  public Identifier dataId();
 
   public static abstract class Basic implements LedbatEvent {
 
     public final Identifier id;
     public final Identifier rivuletId;
+    public final Identifier dataId;
 
-    public Basic(Identifier id, Identifier rivuletId) {
+    public Basic(Identifier id, Identifier rivuletId, Identifier dataId) {
       this.id = id;
       this.rivuletId = rivuletId;
+      this.dataId = dataId;
     }
 
     @Override
@@ -54,6 +58,11 @@ public interface LedbatEvent extends Identifiable, SelectableEventV2 {
     @Override
     public Identifier rivuletId() {
       return rivuletId;
+    }
+    
+    @Override
+    public Identifier dataId() {
+      return dataId;
     }
   }
 }

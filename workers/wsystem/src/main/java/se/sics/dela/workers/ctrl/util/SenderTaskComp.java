@@ -54,18 +54,19 @@ public class SenderTaskComp extends ComponentDefinition {
   private final Identifier dataId;
   private final Identifier rivuletId;
   private final IdentifierFactory eventIds;
-  
+
   private TimerProxy timer;
   private UUID reportTid;
-  
+
   private final Random rand = new Random(1234);
-  
+
   private int acked = 0;
   private int timedout = 0;
   private int inFlight = 0;
   private long startTime;
   private static final int TOTAL_MSGS = 1000000;
   private int unitCounter = 0;
+  private int timeWindowUnitCounter = 0;
   private IntIdFactory unitIds = new IntIdFactory(Optional.empty());
 
   public SenderTaskComp(Init init) {
@@ -80,7 +81,7 @@ public class SenderTaskComp extends ComponentDefinition {
     subscribe(handleAcked, ledbatPort);
     subscribe(handleTimeout, ledbatPort);
   }
-  
+
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
@@ -91,7 +92,7 @@ public class SenderTaskComp extends ComponentDefinition {
       trySend(1);
     }
   };
-  
+
   @Override
   public void tearDown() {
     timer.cancelPeriodicTimer(reportTid);
@@ -99,7 +100,9 @@ public class SenderTaskComp extends ComponentDefinition {
 
   Consumer<Boolean> report() {
     return (_in) -> {
-      logger.info("{}%", Math.round(100 * unitCounter / TOTAL_MSGS));
+      logger.info("{}% window:{}KB/s", Math.round(100 * unitCounter / TOTAL_MSGS), timeWindowUnitCounter);
+      logger.info("timedout:{}, acked:{} sent:{}", new Object[]{timedout, acked, unitCounter});
+      timeWindowUnitCounter = 0;
     };
   }
 
@@ -116,7 +119,7 @@ public class SenderTaskComp extends ComponentDefinition {
         double time = (double) (stopTime - startTime) / (1000 * 1000 * 1000);
         logger.info("send time(s):" + time);
         logger.info("send avg speed(MB/s):" + sizeMB / time);
-        logger.info("timedout:{}/{}", timedout, TOTAL_MSGS);
+        logger.info("timedout:{}, acked:{} sent:{}", new Object[]{timedout, acked, unitCounter});
       }
       trySend(event.maxInFlight);
     }
@@ -136,9 +139,12 @@ public class SenderTaskComp extends ComponentDefinition {
     while (inFlight < maxInFlight) {
       if (unitCounter < TOTAL_MSGS) {
         unitCounter++;
+        timeWindowUnitCounter++;
         byte[] dataBytes = new byte[1024];
         rand.nextBytes(dataBytes);
         send(dataBytes);
+      } else {
+        break;
       }
     }
   }
@@ -154,12 +160,12 @@ public class SenderTaskComp extends ComponentDefinition {
   }
 
   public static class Init extends se.sics.kompics.Init<SenderTaskComp> {
-    
+
     public final KAddress selfAdr;
     public final KAddress receiverAdr;
     public final Identifier dataId;
     public final Identifier rivuletId;
-    
+
     public Init(KAddress selfAdr, KAddress receiverAdr, Identifier dataId, Identifier rivuletId) {
       this.selfAdr = selfAdr;
       this.receiverAdr = receiverAdr;

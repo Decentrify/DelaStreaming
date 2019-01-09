@@ -191,12 +191,12 @@ public class WorkCtrlHostComp extends ComponentDefinition {
     
     negativePorts.add((Class) LedbatSenderPort.class);
     Map<String, EventIdExtractorV2> ledbatSenderEvents = new HashMap<>();
-    ledbatSenderEvents.put(LedbatEvent.EVENT_TYPE, new LedbatRivuletIdExtractorV2());
+    ledbatSenderEvents.put(LedbatEvent.EVENT_TYPE, new NxStackEventIdExtractors.LedbatSenderRivulet(netConnStackId));
     negativeEvents.add(ledbatSenderEvents);
     
     negativePorts.add((Class) LedbatReceiverPort.class);
     Map<String, EventIdExtractorV2> ledbatReceiverEvents = new HashMap<>();
-    ledbatReceiverEvents.put(LedbatEvent.EVENT_TYPE, new LedbatRivuletIdExtractorV2());
+    ledbatReceiverEvents.put(LedbatEvent.EVENT_TYPE, new NxStackEventIdExtractors.LedbatReceiverRivulet(netConnStackId));
     negativeEvents.add(ledbatReceiverEvents);
     
     NxStackDefinitionV2 stackDefintion = new NxStackDefinitionV2.OneComp<>(NetConnComp.class);
@@ -218,7 +218,7 @@ public class WorkCtrlHostComp extends ComponentDefinition {
     
     positivePorts.add((Class) LedbatReceiverPort.class);
     Map<String, EventIdExtractorV2> ledbatReceiverEvents = new HashMap<>();
-    ledbatReceiverEvents.put(LedbatEvent.EVENT_TYPE, new LedbatRivuletIdExtractorV2());
+    ledbatReceiverEvents.put(LedbatEvent.EVENT_TYPE, new NxStackEventIdExtractors.LedbatData(ledbatReceiverStackId));
     positiveIdExtractors.add(ledbatReceiverEvents);
     
     positivePorts.add((Class) Timer.class);
@@ -245,7 +245,7 @@ public class WorkCtrlHostComp extends ComponentDefinition {
     
     positivePorts.add((Class) LedbatSenderPort.class);
     Map<String, EventIdExtractorV2> ledbatSenderEvents = new HashMap<>();
-    ledbatSenderEvents.put(LedbatEvent.EVENT_TYPE, new LedbatRivuletIdExtractorV2());
+    ledbatSenderEvents.put(LedbatEvent.EVENT_TYPE, new NxStackEventIdExtractors.LedbatData(ledbatSenderStackId));
     positiveIdExtractors.add(ledbatSenderEvents);
     
     positivePorts.add((Class) Timer.class);

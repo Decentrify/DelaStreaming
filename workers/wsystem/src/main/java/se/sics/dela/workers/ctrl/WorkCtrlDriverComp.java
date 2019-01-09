@@ -46,6 +46,7 @@ import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 import se.sics.ktoolbox.util.identifiable.BasicIdentifiers;
 import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
+import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
 import se.sics.ktoolbox.util.identifiable.basic.SimpleByteIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
 
@@ -215,7 +216,8 @@ public class WorkCtrlDriverComp extends ComponentDefinition {
     }
 
     void createSenderCtrlComp() {
-      SenderTaskComp.Init init = new SenderTaskComp.Init(selfAdr, task.receiver, task.dataId, channelId.receiverId());
+      Identifier rivuletId = new PairIdentifier(selfAdr.getId(), task.receiver.getId());
+      SenderTaskComp.Init init = new SenderTaskComp.Init(selfAdr, task.receiver, task.dataId, rivuletId);
       NxStackInit initWrapper = new NxStackInit.OneComp<>(init);
       senderCtrlCreateReq = new NxMngrEvents.CreateReq(eventIds.randomId(), channelId.dataId(), initWrapper);
       logger.info("sender:{} starting", senderCtrlCreateReq.eventId);
@@ -289,7 +291,8 @@ public class WorkCtrlDriverComp extends ComponentDefinition {
     }
 
     void createReceiverCtrlComp() {
-      ReceiverTaskComp.Init init = new ReceiverTaskComp.Init(selfAdr, task.sender, task.dataId, channelId.senderId());
+      Identifier rivuletId = new PairIdentifier(task.sender.getId(), selfAdr.getId());
+      ReceiverTaskComp.Init init = new ReceiverTaskComp.Init(selfAdr, task.sender, task.dataId, rivuletId);
       NxStackInit initWrapper = new NxStackInit.OneComp<>(init);
       receiverCtrlCreateReq = new NxMngrEvents.CreateReq(eventIds.randomId(), channelId.dataId(), initWrapper);
       logger.info("receiver:{} starting", receiverCtrlCreateReq.eventId);

@@ -69,7 +69,7 @@ public class LedbatSenderComp extends ComponentDefinition {
     this.selfAdr = init.selfAdr;
     this.dstAdr = init.dstAdr;
     this.rivuletId = init.rivuletId;
-    timer = new TimerProxyImpl(rivuletId).setup(proxy, logger);
+    timer = new TimerProxyImpl(dstAdr.getId()).setup(proxy, logger);
     sender = new LedbatSender().setup(timer, config(), logger, networkSend(), appSend());
 
     loggingCtxPutAlways("srcId", init.selfAdr.getId().toString());

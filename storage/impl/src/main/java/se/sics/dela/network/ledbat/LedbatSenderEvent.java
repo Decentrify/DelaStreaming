@@ -18,6 +18,7 @@
  */
 package se.sics.dela.network.ledbat;
 
+import se.sics.dela.network.util.DatumId;
 import se.sics.kompics.Direct;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
@@ -27,7 +28,10 @@ import se.sics.kompics.util.Identifier;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LedbatSenderEvent {
-  public static class Request<D extends Identifiable> extends Direct.Request<Indication> implements LedbatEvent {
+
+  public static class Request<D extends Identifiable<DatumId>>
+    extends Direct.Request<Indication> implements LedbatEvent {
+
     public final Identifier eventId;
     public final Identifier rivuletId;
     public final D datum;
@@ -53,7 +57,7 @@ public class LedbatSenderEvent {
 
     @Override
     public String toString() {
-      return "LedbatSenderRequest{" + "data=" + datum.getId() + '}';
+      return "LedbatSenderRequest{" + "data=" + datum.getId() + "," + rivuletId.toString() +'}';
     }
 
     @Override
@@ -62,24 +66,30 @@ public class LedbatSenderEvent {
     }
 
     @Override
+    public Identifier dataId() {
+      return datum.getId().dataId();
+    }
+
+    @Override
     public String eventType() {
       return LedbatEvent.EVENT_TYPE;
     }
   }
 
-  public static class Indication<D extends Identifiable> extends LedbatEvent.Basic implements Direct.Response {
+  public static class Indication<D extends Identifiable<DatumId>> 
+    extends LedbatEvent.Basic implements Direct.Response {
 
     public final Request<D> req;
     public final int maxInFlight;
 
     public Indication(Request<D> req, int maxInFlight) {
-      super(req.eventId, req.rivuletId);
+      super(req.eventId, req.rivuletId, req.dataId());
       this.req = req;
       this.maxInFlight = maxInFlight;
     }
   }
-  
-  public static class Acked<D extends Identifiable> extends Indication<D> {
+
+  public static class Acked<D extends Identifiable<DatumId>> extends Indication<D> {
 
     public Acked(Request<D> req, int maxInFlight) {
       super(req, maxInFlight);
@@ -91,7 +101,7 @@ public class LedbatSenderEvent {
     }
   }
 
-  public static class Timeout<D extends Identifiable> extends Indication<D> {
+  public static class Timeout<D extends Identifiable<DatumId>> extends Indication<D> {
 
     public Timeout(Request<D> req, int maxInFlight) {
       super(req, maxInFlight);
@@ -103,7 +113,7 @@ public class LedbatSenderEvent {
     }
   }
 
-  public static class Overloaded<D extends Identifiable> extends Indication<D> {
+  public static class Overloaded<D extends Identifiable<DatumId>> extends Indication<D> {
 
     public Overloaded(Request<D> req, int maxInFlight) {
       super(req, maxInFlight);

@@ -54,13 +54,14 @@ public class Cwnd {
     resetDelays();
   }
 
-  public void ack(long now, long oneWayDelay, long bytesNewlyAcked) {
+  public void ack(Logger logger, long now, long oneWayDelay, long bytesNewlyAcked) {
     updateBaseDelay(now, oneWayDelay);
     updateCurrentDelay(oneWayDelay);
 
     long queuingDelay = Arrays.stream(currentDelays).min().getAsLong()
       - Arrays.stream(baseDelays).min().getAsLong();
     double offTarget = (config.TARGET - queuingDelay) / config.TARGET;
+//    logger.info("cwnd:{} ot:{}", cwnd, offTarget);
     if (offTarget < 0) {
       cwnd = (long) (cwnd * config.DTL_BETA);
     } else {
@@ -76,7 +77,7 @@ public class Cwnd {
   public void loss(long now, long rtt, long bytesNotToBeRetransmitted) {
     if (now - lastLoss > rtt) {
       lastLoss = now;
-      cwnd = Math.max(cwnd / 2, config.MIN_RTO * config.MSS);
+      cwnd = Math.max(cwnd / 2, config.MIN_CWND * config.MSS);
     }
     flightSize -= bytesNotToBeRetransmitted;
   }

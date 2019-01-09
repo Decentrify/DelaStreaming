@@ -43,7 +43,9 @@ public class RTTEstimator {
       updateNext(r);
     }
     rto = srtt + Math.max(config.G, config.K*rttvar);
-    rto = Math.min(config.MAX_RTO, Math.max(config.MIN_RTO, rto));
+    rto = Math.min(config.MAX_RTO, config.MIN_RTO + rto);
+    //modified rot
+//    rto = 
   }
   
   private void updateFirst(long r) {
@@ -65,6 +67,7 @@ public class RTTEstimator {
   }
   
   public void details(Logger logger) {
-    logger.info("rto:{}, rrtvar:{}", new Object[]{rto, rttvar});
+    long r = srtt + Math.max(config.G, config.K*rttvar);
+    logger.info("rto:{}, rrtvar:{} r:{}", new Object[]{rto, rttvar, r});
   }
 }

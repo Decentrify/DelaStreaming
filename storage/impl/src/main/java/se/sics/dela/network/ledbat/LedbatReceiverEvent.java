@@ -18,6 +18,7 @@
  */
 package se.sics.dela.network.ledbat;
 
+import se.sics.dela.network.util.DatumId;
 import se.sics.kompics.util.Identifiable;
 import se.sics.kompics.util.Identifier;
 
@@ -25,11 +26,11 @@ import se.sics.kompics.util.Identifier;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class LedbatReceiverEvent {
-  public static class Received<D extends Identifiable> extends LedbatEvent.Basic {
+  public static class Received<D extends Identifiable<DatumId>> extends LedbatEvent.Basic {
     public final D data;
     
     public Received(Identifier eventId, Identifier rivuletId, D data) {
-      super(eventId, rivuletId);
+      super(eventId, rivuletId, data.getId().dataId());
       this.data = data;
     }
   }

@@ -25,10 +25,10 @@ import se.sics.ktoolbox.nutil.network.portsv2.EventIdExtractorV2;
  * @author Alex Ormenisan <aaor@kth.se>
  */
 
-public class LedbatRivuletIdExtractorV2 implements EventIdExtractorV2<LedbatEvent> {
+public class LedbatDataIdExtractorV2 implements EventIdExtractorV2<LedbatEvent> {
 
   @Override
   public Identifier getValue(LedbatEvent event) {
-    return event.rivuletId();
+    return event.dataId();
   }
 }

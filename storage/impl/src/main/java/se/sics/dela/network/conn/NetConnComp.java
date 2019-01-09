@@ -120,10 +120,10 @@ public class NetConnComp extends ComponentDefinition {
   };
 
   private void createLedbatSender() {
-    Identifier sender = self.getId();
-    Identifier receiver = partner.getId();
-    Identifier connId = new PairIdentifier(sender, receiver);
-    LedbatSenderComp.Init init = new LedbatSenderComp.Init(self, partner, connId);
+    Identifier senderId = self.getId();
+    Identifier receiverId = partner.getId();
+    Identifier rivuletId = new PairIdentifier(senderId, receiverId);
+    LedbatSenderComp.Init init = new LedbatSenderComp.Init(self, partner, rivuletId);
     ledbatSender = create(LedbatSenderComp.class, init);
     connect(ledbatSenderPort, ledbatSender.getPositive(LedbatSenderPort.class), Channel.TWO_WAY);
     connect(ledbatSender.getNegative(Network.class), networkPort, Channel.TWO_WAY);
@@ -132,10 +132,10 @@ public class NetConnComp extends ComponentDefinition {
   }
 
   private void createLedbatReceiver() {
-    Identifier sender = partner.getId();
-    Identifier receiver = self.getId();
-    Identifier connId = new PairIdentifier(sender, receiver);
-    LedbatReceiverComp.Init init = new LedbatReceiverComp.Init(self, partner, connId);
+    Identifier senderId = partner.getId();
+    Identifier receiverId = self.getId();
+    Identifier rivuletId = new PairIdentifier(senderId, receiverId);
+    LedbatReceiverComp.Init init = new LedbatReceiverComp.Init(self, partner, rivuletId);
     ledbatReceiver = create(LedbatReceiverComp.class, init);
     connect(ledbatReceiverPort, ledbatReceiver.getPositive(LedbatReceiverPort.class), Channel.TWO_WAY);
     connect(ledbatReceiver.getNegative(Network.class), networkPort, Channel.TWO_WAY);
