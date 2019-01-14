@@ -69,17 +69,17 @@ public class LedbatSenderComp extends ComponentDefinition {
     this.selfAdr = init.selfAdr;
     this.dstAdr = init.dstAdr;
     this.rivuletId = init.rivuletId;
-    timer = new TimerProxyImpl(dstAdr.getId()).setup(proxy, logger);
-    sender = new LedbatSender().setup(timer, config(), logger, networkSend(), appSend());
-
-    loggingCtxPutAlways("srcId", init.selfAdr.getId().toString());
-    loggingCtxPutAlways("dstId", init.dstAdr.getId().toString());
-
     SystemKCWrapper systemConfig = new SystemKCWrapper(config());
     long ledbatSeed = systemConfig.seed
       + init.selfAdr.getId().partition(Integer.MAX_VALUE)
       + init.dstAdr.getId().partition(Integer.MAX_VALUE);
+    
     this.msgIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.MSG, Optional.of(ledbatSeed));
+    timer = new TimerProxyImpl(dstAdr.getId()).setup(proxy, logger);
+    sender = new LedbatSender().setup(timer, config(), logger, msgIds, networkSend(), appSend());
+
+    loggingCtxPutAlways("srcId", init.selfAdr.getId().toString());
+    loggingCtxPutAlways("dstId", init.dstAdr.getId().toString());
 
     subscribe(handleStart, control);
     subscribe(handleReq, appPort);
@@ -123,9 +123,8 @@ public class LedbatSenderComp extends ComponentDefinition {
   }
 
   //mean 11-12 micros
-  private Consumer<Identifiable> networkSend() {
-    return (Identifiable data) -> {
-      LedbatMsg.Datum content = new LedbatMsg.Datum(msgIds.randomId(), data);
+  private Consumer<LedbatMsg.Datum> networkSend() {
+    return (LedbatMsg.Datum content) -> {
       KHeader header = new BasicHeader(selfAdr, dstAdr, Transport.UDP);
       KContentMsg msg = new BasicContentMsg(header, content);
       logger.trace("sending:{}", msg);

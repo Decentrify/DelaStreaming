@@ -54,19 +54,21 @@ public interface LedbatMsg extends Identifiable, SelectableMsgV2 {
 
     public final D datum;
     public final OneWayDelay dataDelay;
+    public final long ledbatSendTime; 
 
-    public Datum(Identifier msgId, D datum) {
-      this(msgId, datum, new OneWayDelay());
+    public Datum(Identifier msgId, D datum, long ledbatSendTime) {
+      this(msgId, datum, new OneWayDelay(), ledbatSendTime);
     }
 
-    public Datum(Identifier msgId, D datum, OneWayDelay dataDelay) {
+    public Datum(Identifier msgId, D datum, OneWayDelay dataDelay, long ledbatSendTime) {
       super(msgId);
       this.datum = datum;
       this.dataDelay = dataDelay;
+      this.ledbatSendTime = ledbatSendTime;
     }
 
     public Ack answer() {
-      return new Ack(id, datum.getId(), dataDelay);
+      return new Ack(id, datum.getId(), dataDelay, ledbatSendTime);
     }
 
     @Override
@@ -80,16 +82,18 @@ public interface LedbatMsg extends Identifiable, SelectableMsgV2 {
     public final DatumId datumId;
     public final OneWayDelay dataDelay;
     public final OneWayDelay ackDelay;
+    public final long ledbatSendTime;
 
-    public Ack(Identifier msgId, DatumId datumId, OneWayDelay dataDelay) {
-      this(msgId, datumId, dataDelay, new OneWayDelay());
+    public Ack(Identifier msgId, DatumId datumId, OneWayDelay dataDelay, long ledbatSendDelay) {
+      this(msgId, datumId, dataDelay, new OneWayDelay(), ledbatSendDelay);
     }
 
-    public Ack(Identifier msgId, DatumId datumId, OneWayDelay dataDelay, OneWayDelay ackDelay) {
+    public Ack(Identifier msgId, DatumId datumId, OneWayDelay dataDelay, OneWayDelay ackDelay, long ledbatSendTime) {
       super(msgId);
       this.datumId = datumId;
       this.dataDelay = dataDelay;
       this.ackDelay = ackDelay;
+      this.ledbatSendTime = ledbatSendTime;
     }
 
     @Override

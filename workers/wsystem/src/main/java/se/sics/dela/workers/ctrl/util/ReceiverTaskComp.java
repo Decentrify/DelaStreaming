@@ -38,9 +38,11 @@ public class ReceiverTaskComp extends ComponentDefinition {
   private final Positive<LedbatReceiverPort> ledbatPort = requires(LedbatReceiverPort.class);
 
   private final KAddress selfAdr;
+  public final KAddress senderAdr;
 
   public ReceiverTaskComp(Init init) {
     this.selfAdr = init.selfAdr;
+    this.senderAdr = init.senderAdr;
 
     subscribe(handleStart, control);
     subscribe(handleReceived, ledbatPort);
@@ -49,6 +51,8 @@ public class ReceiverTaskComp extends ComponentDefinition {
   Handler handleStart = new Handler<Start>() {
     @Override
     public void handle(Start event) {
+      logger.info("starting transfer sender:{} receiver:{}", senderAdr, selfAdr);
+      
     }
   };
 

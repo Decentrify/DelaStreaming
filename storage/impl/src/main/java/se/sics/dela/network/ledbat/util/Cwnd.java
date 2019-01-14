@@ -18,127 +18,109 @@
  */
 package se.sics.dela.network.ledbat.util;
 
-import java.util.Arrays;
 import org.slf4j.Logger;
+import se.sics.dela.network.ledbat.DelayHistory;
 import se.sics.dela.network.ledbat.LedbatConfig;
+import se.sics.dela.network.ledbat.LedbatLossCtrl;
+import se.sics.kompics.util.Identifier;
 
 /**
- *
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public class Cwnd {
+public interface Cwnd {
 
-  private final LedbatConfig config;
-  private long[] currentDelays;
-  private int currentDelaysPointer = -1;
-  private long[] baseDelays;
-  private int baseDelaysPointer = -1;
-  private long cwnd;
-  private long flightSize;
-  private long lastLoss;
-  private long lastRolloverMinute;
+  public void connectionIdle(Logger logger);
 
-  public Cwnd(LedbatConfig config) {
-    this.config = config;
-    init();
-  }
+  public void ack(Logger logger, Identifier msgId, long now, long rtt, long oneWayDelay, long bytesNewlyAcked);
 
-  private void init() {
-    currentDelays = new long[config.CURRENT_FILTER];
-    baseDelays = new long[config.BASE_HISTORY];
-    resetDelays();
-    cwnd = config.INIT_CWND * config.MSS;
-  }
+  public void loss(Logger logger, Identifier msgId, long now, long rtt, long bytesNotToBeRetransmitted);
 
-  public void connectionIdle() {
-    resetDelays();
-  }
+  public boolean canSend(long now, long rtt, long bytesToSend);
 
-  public void ack(Logger logger, long now, long oneWayDelay, long bytesNewlyAcked) {
-    updateBaseDelay(now, oneWayDelay);
-    updateCurrentDelay(oneWayDelay);
+  public long size();
 
-    long queuingDelay = Arrays.stream(currentDelays).min().getAsLong()
-      - Arrays.stream(baseDelays).min().getAsLong();
-    double offTarget = (config.TARGET - queuingDelay) / config.TARGET;
-//    logger.info("cwnd:{} ot:{}", cwnd, offTarget);
-    if (offTarget < 0) {
-      cwnd = (long) (cwnd * config.DTL_BETA);
-    } else {
-      cwnd = cwnd + (long) ((config.GAIN * offTarget * bytesNewlyAcked * config.MSS) / cwnd);
-    }
+  public long flightSize();
 
-    long maxAllowedCwnd = flightSize + (long) (config.ALLOWED_INCREASE * config.MSS);
-    cwnd = Math.min(cwnd, maxAllowedCwnd);
-    cwnd = Math.max(cwnd, config.MIN_CWND * config.MSS);
-    flightSize -= bytesNewlyAcked;
-  }
-
-  public void loss(long now, long rtt, long bytesNotToBeRetransmitted) {
-    if (now - lastLoss > rtt) {
-      lastLoss = now;
-      cwnd = Math.max(cwnd / 2, config.MIN_CWND * config.MSS);
-    }
-    flightSize -= bytesNotToBeRetransmitted;
-  }
+  public void send(Identifier msgId, long now, long rtt, long bytesToSend);
   
-  public boolean canSend(long bytesToSend) {
-    return (flightSize + bytesToSend) <= cwnd;
-  }
-  
-  public long size() {
-    return cwnd;
-  }
-  
-  public long flightSize() {
-    return flightSize;
-  }
-  
-  public void send(long bytesToSend) {
-    flightSize += bytesToSend;
-  }
+  public void details(Logger logger);
 
-  private void resetDelays() {
-    lastRolloverMinute = Long.MIN_VALUE;
-    for (int i = 0; i < config.CURRENT_FILTER; i++) {
-      currentDelays[i] = Long.MAX_VALUE;
-    }
-    for (int i = 0; i < config.BASE_HISTORY; i++) {
-      baseDelays[i] = Long.MAX_VALUE;
-    }
-  }
+  public static class Basic implements Cwnd {
 
-  private void updateCurrentDelay(long r) {
-    currentDelaysPointer += 1;
-    if (currentDelaysPointer >= config.CURRENT_FILTER) {
-      currentDelaysPointer = 0;
-    }
-    currentDelays[currentDelaysPointer] = r;
-  }
+    private final LedbatConfig config;
+    private final DelayHistory delayHistory;
+    private long cwnd;
+    private long flightSize;
+    private final LedbatLossCtrl lossCtrl;
 
-  private void updateBaseDelay(long now, long r) {
-    long nowMinute = roundToMinute(now);
-    if (nowMinute > lastRolloverMinute) {
-      baseDelaysPointer += 1;
-      if (baseDelaysPointer >= config.BASE_HISTORY) {
-        baseDelaysPointer = 0;
+    public Basic(LedbatConfig config, LedbatLossCtrl lossCtrl, Logger logger) {
+      this.config = config;
+      this.delayHistory = new DelayHistory(config);
+      this.lossCtrl = lossCtrl;
+      init(logger);
+    }
+
+    private void init(Logger logger) {
+      delayHistory.resetDelays();
+      cwnd = config.INIT_CWND * config.MSS;
+    }
+
+    @Override
+    public void connectionIdle(Logger logger) {
+      delayHistory.resetDelays();
+    }
+
+    @Override
+    public void ack(Logger logger, Identifier msgId, long now, long rtt, long oneWayDelay, long bytesNewlyAcked) {
+      double offTarget = delayHistory.offTarget(now, oneWayDelay);
+      long aux = cwnd;
+      if (offTarget < 0) {
+        cwnd = (long) (cwnd * config.DTL_BETA);
+      } else {
+        cwnd = cwnd + (long) ((config.GAIN * offTarget * bytesNewlyAcked * config.MSS) / cwnd);
       }
-      baseDelays[baseDelaysPointer] = r;
-      lastRolloverMinute = roundToMinute(lastRolloverMinute);
-    } else {
-      baseDelays[baseDelaysPointer] = Math.min(baseDelays[baseDelaysPointer], r);
-    }
-  }
 
-  private long roundToMinute(long timeInMillis) {
-    return timeInMillis / 60000;
-  }
-  
-  public void details(Logger logger) {
-    long queuingDelay = Arrays.stream(currentDelays).min().getAsLong()
-      - Arrays.stream(baseDelays).min().getAsLong();
-    double offTarget = (config.TARGET - queuingDelay) / config.TARGET;
-    int cwndMsgs = (int)cwnd/config.MSS;
-    logger.info("cwnd:{} qd:{} offTarget:{}", new Object[]{cwndMsgs, queuingDelay, offTarget});
+      long maxAllowedCwnd = flightSize + (long) (config.ALLOWED_INCREASE * config.MSS);
+      cwnd = Math.min(cwnd, maxAllowedCwnd);
+      cwnd = Math.max(cwnd, config.MIN_CWND * config.MSS);
+      logger.info("cwnd pre:{} post:{} ot:{}", new Object[]{aux, cwnd, offTarget});
+      flightSize -= bytesNewlyAcked;
+    }
+
+    @Override
+    public void loss(Logger logger, Identifier msgId, long now, long rtt, long bytesNotToBeRetransmitted) {
+      if (lossCtrl.loss(logger, now, rtt)) {
+        cwnd = Math.max(cwnd / 2, config.MIN_CWND * config.MSS);
+      }
+      flightSize -= bytesNotToBeRetransmitted;
+    }
+
+    @Override
+    public boolean canSend(long now, long rtt, long bytesToSend) {
+      return (flightSize + bytesToSend) <= cwnd;
+    }
+
+    @Override
+    public long size() {
+      return cwnd;
+    }
+
+    @Override
+    public long flightSize() {
+      return flightSize;
+    }
+
+    @Override
+    public void send(Identifier msgId, long now, long rtt, long bytesToSend) {
+      flightSize += bytesToSend;
+    }
+
+    @Override
+    public void details(Logger logger) {
+      long queuingDelay = delayHistory.queuingDelay();
+      double offTarget = delayHistory.offTarget(queuingDelay);
+      int cwndMsgs = (int) cwnd / config.MSS;
+      logger.info("cwnd:{} qd:{} offTarget:{}", new Object[]{cwndMsgs, queuingDelay, offTarget});
+    }
   }
 }

@@ -56,6 +56,7 @@ public class LedbatMsgSerializer {
       LedbatMsg.Datum obj = (LedbatMsg.Datum) o;
       Serializers.lookupSerializer(msgIdType).toBinary(obj.getId(), buf);
       Serializers.toBinary(obj.datum, buf);
+      buf.writeLong(obj.ledbatSendTime);
       long sendTime = System.currentTimeMillis();
       buf.writeLong(sendTime);
     }
@@ -63,11 +64,12 @@ public class LedbatMsgSerializer {
     @Override
     public LedbatMsg.Datum fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
-      Identifiable data = (Identifiable) Serializers.fromBinary(buf, hint);
+      Identifiable datum = (Identifiable) Serializers.fromBinary(buf, hint);
+      long ledbatSendTime = buf.readLong();
       long sendTime = buf.readLong();
       long receiveTime = System.currentTimeMillis();
       OneWayDelay dataDelay = new OneWayDelay(sendTime, receiveTime);
-      return new LedbatMsg.Datum(msgId, data, dataDelay);
+      return new LedbatMsg.Datum(msgId, datum, dataDelay, ledbatSendTime);
     }
   }
 
@@ -91,6 +93,7 @@ public class LedbatMsgSerializer {
       LedbatMsg.Ack obj = (LedbatMsg.Ack) o;
       Serializers.lookupSerializer(msgIdType).toBinary(obj.getId(), buf);
       Serializers.lookupSerializer(DatumId.class).toBinary(obj.datumId, buf);
+      buf.writeLong(obj.ledbatSendTime);
       buf.writeLong(obj.dataDelay.send);
       buf.writeLong(obj.dataDelay.receive);
       long sendAckTime = System.currentTimeMillis();
@@ -101,13 +104,14 @@ public class LedbatMsgSerializer {
     public LedbatMsg.Ack fromBinary(ByteBuf buf, Optional<Object> hint) {
       Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
       DatumId datumId = (DatumId) Serializers.lookupSerializer(DatumId.class).fromBinary(buf, hint);
+      long ledbatSendTime = buf.readLong();
       long sendTime = buf.readLong();
       long receiveTime = buf.readLong();
       OneWayDelay dataDelay = new OneWayDelay(sendTime, receiveTime);
       long sendAckTime = buf.readLong();
       long receiveAckTime = System.currentTimeMillis();
       OneWayDelay ackDelay = new OneWayDelay(sendAckTime, receiveAckTime);
-      return new LedbatMsg.Ack(msgId, datumId, dataDelay, ackDelay);
+      return new LedbatMsg.Ack(msgId, datumId, dataDelay, ackDelay, ledbatSendTime);
     }
   }
 }

@@ -75,8 +75,8 @@ public class SenderTaskComp extends ComponentDefinition {
     this.dataId = init.dataId;
     this.rivuletId = init.rivuletId;
     eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
-
     timer = new TimerProxyImpl(dataId).setup(proxy, logger);
+
     subscribe(handleStart, control);
     subscribe(handleAcked, ledbatPort);
     subscribe(handleTimeout, ledbatPort);
@@ -88,7 +88,7 @@ public class SenderTaskComp extends ComponentDefinition {
       reportTid = timer.schedulePeriodicTimer(1000, 1000, report());
       logger.info("report tid: {}", reportTid);
       startTime = System.nanoTime();
-      logger.info("starting transfer");
+      logger.info("starting transfer sender:{} receiver:{}", selfAdr, receiverAdr);
       trySend(1);
     }
   };

@@ -43,9 +43,7 @@ public class RTTEstimator {
       updateNext(r);
     }
     rto = srtt + Math.max(config.G, config.K*rttvar);
-    rto = Math.min(config.MAX_RTO, config.MIN_RTO + rto);
-    //modified rot
-//    rto = 
+    rto = Math.min(config.MAX_RTO, Math.max(config.MIN_RTO, rto));
   }
   
   private void updateFirst(long r) {
@@ -60,7 +58,7 @@ public class RTTEstimator {
   
   public long rto() {
     if(rto == -1) {
-      return config.MIN_RTO;
+      return config.INIT_RTO;
     } else {
       return rto;
     }

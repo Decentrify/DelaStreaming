@@ -42,7 +42,7 @@
   <logger name="se.sics.ktoolbox.nutil.nxcomp.v2"     level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
   <logger name="se.sics.ktoolbox.util.network.ports"  level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
   <logger name="se.sics.dela.network.conn"            level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
-  <logger name="se.sics.dela.network.ledbat"          level="warn" additivity="false"><appender-ref ref="CONSOLE" /></logger>
+  <logger name="se.sics.dela.network.ledbat"          level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
   <logger name="se.sics.dela.workers"                 level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
   <logger name="se.sics.dela.workers.ctrl.util"       level="info" additivity="false"><appender-ref ref="CONSOLE" /></logger>
   <root                                               level="trace">                  <appender-ref ref="CONSOLE" /></root>
