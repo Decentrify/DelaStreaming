@@ -84,6 +84,7 @@ public class LedbatSenderComp extends ComponentDefinition {
     subscribe(handleStart, control);
     subscribe(handleReq, appPort);
     subscribe(handleAck, networkPort);
+    subscribe(handleMultiAck, networkPort);
   }
 
   Handler handleStart = new Handler<Start>() {
@@ -114,6 +115,15 @@ public class LedbatSenderComp extends ComponentDefinition {
     public void handle(LedbatMsg.Ack content, KContentMsg<?, ?, LedbatMsg.Ack> msg) {
       logger.trace("ack:{}", msg);
       sender.ackData(content);
+    }
+  };
+  
+  ClassMatchedHandler handleMultiAck
+    = new ClassMatchedHandler<LedbatMsg.MultiAck, KContentMsg<?, ?, LedbatMsg.MultiAck>>() {
+    @Override
+    public void handle(LedbatMsg.MultiAck content, KContentMsg<?, ?, LedbatMsg.MultiAck> msg) {
+      logger.trace("multi ack:{}", msg);
+      sender.multiAck(content);
     }
   };
 

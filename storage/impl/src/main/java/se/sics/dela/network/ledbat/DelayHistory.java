@@ -50,10 +50,12 @@ public class DelayHistory {
     return this;
   }
 
-  public double offTarget(long now, long oneWayDelay) {
+  public void update(long now, long oneWayDelay) {
     updateBaseDelay(now, oneWayDelay);
     updateCurrentDelay(oneWayDelay);
-    
+  }
+  
+  public double offTarget() {
     long queuingDelay = queuingDelay();
     double offTarget = offTarget(queuingDelay);
     return offTarget;

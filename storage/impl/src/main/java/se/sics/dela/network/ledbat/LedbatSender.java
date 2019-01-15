@@ -25,9 +25,11 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.javatuples.Pair;
 import org.slf4j.Logger;
 import se.sics.dela.network.ledbat.util.Cwnd;
 import se.sics.dela.network.ledbat.util.RTTEstimator;
+import se.sics.dela.network.util.DatumId;
 import se.sics.kompics.config.Config;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.timer.RingTimer;
@@ -45,7 +47,8 @@ public class LedbatSender {
   private RTTEstimator rttEstimator;
   private RTTEstimator senderQ1Estimator;
   private RTTEstimator senderQ2Estimator;
-  private RTTEstimator receiverQEstimator;
+  private RTTEstimator receiverQ1Estimator;
+  private RTTEstimator receiverQ2Estimator;
   RingTimer<WheelContainer> wheelTimer;
   private DelaLedbatConfig ledbatConfig;
   private Logger logger;
@@ -83,7 +86,8 @@ public class LedbatSender {
     rttEstimator = RTTEstimator.instance(ledbatConfig.base);
     senderQ1Estimator = RTTEstimator.instance();
     senderQ2Estimator = RTTEstimator.instance();
-    receiverQEstimator = RTTEstimator.instance();
+    receiverQ1Estimator = RTTEstimator.instance();
+    receiverQ2Estimator = RTTEstimator.instance();
     wheelTimer = new RingTimer(ledbatConfig.timerWindowSize, 3 * ledbatConfig.maxTimeout);
     return this;
   }
@@ -123,7 +127,7 @@ public class LedbatSender {
         //
         appSend.accept(rc.req, rc.req.timeout(maxAppMsgs()));
       }
-      trySend(now);
+      trySend(now, timeouts.size() + 1);
     };
   }
 
@@ -142,8 +146,8 @@ public class LedbatSender {
 
   private Consumer<Boolean> reportTimer() {
     return (_input) -> {
-      logger.info("rto:{} sq1:{} sq2:{} rq:{}", 
-        new Object[]{rto(), senderQ1Estimator.rto(0), senderQ2Estimator.rto(0), receiverQEstimator.rto(0)});
+      logger.info("rto:{} sq1:{} sq2:{} rq:{}",
+        new Object[]{rto(), senderQ1Estimator.rto(0), senderQ2Estimator.rto(0), receiverQ1Estimator.rto(0)});
       cwnd.details(logger);
     };
   }
@@ -152,42 +156,88 @@ public class LedbatSender {
     if (pendingData.size() < ledbatConfig.bufferSize) {
       pendingData.add(req);
     }
-    trySend(System.currentTimeMillis());
+    trySend(System.currentTimeMillis(), 2);
+  }
+
+  public void multiAck(LedbatMsg.MultiAck msg) {
+    long now = System.currentTimeMillis();
+    long bytesAcked = 0;
+    Pair<Long, Long> aux = updateBatchRTTstep1(now, msg.acks);
+    for (LedbatMsg.AckVal ack : msg.acks.acks) {
+      DatumId datumId = new DatumId(msg.dataId, ack.datumUnitId);
+      Optional<WheelContainer> ringContainer = wheelTimer.cancelTimeout(ack.msgId);
+      Pair<Long, Long> rtt = updateBatchedRTTstep2(now, msg.acks, ack, aux.getValue0(), aux.getValue1());
+      if (ringContainer.isPresent()) {
+        appSend.accept(ringContainer.get().req, ringContainer.get().req.ack(maxAppMsgs()));
+        cwnd.ackStep1(logger, now, rtt.getValue0(), rtt.getValue1());
+        cwnd.ackStep2(logger, ack.msgId, ledbatConfig.base.MSS);
+        bytesAcked += ledbatConfig.base.MSS;
+      } else {
+        logger.info("loss");
+      }
+    }
+    cwnd.ackStep3(logger, ledbatConfig.base.GAIN, bytesAcked);
+    trySend(now, msg.acks.acks.size() + 1);
   }
 
   public void ackData(LedbatMsg.Ack datumAckMsg) {
-    Optional<WheelContainer> ringContainer = wheelTimer.cancelTimeout(datumAckMsg.datumId);
+    Optional<WheelContainer> ringContainer = wheelTimer.cancelTimeout(datumAckMsg.getId());
     long now = System.currentTimeMillis();
-    long rtt = updateRTTs(now, datumAckMsg);
-    long dataDelay = datumAckMsg.dataDelay.receive - datumAckMsg.dataDelay.send;
-    if (!ringContainer.isPresent()) {
-      return;
-    } else {
-      Identifier msgId = datumAckMsg.getId();
-      cwnd.ack(logger, msgId, now, rtt, dataDelay, ledbatConfig.base.MSS);
+    Pair<Long, Long> rtt = updateRTTs(now, datumAckMsg);
+    if (ringContainer.isPresent()) {
       //mean 4-5 micros
       appSend.accept(ringContainer.get().req, ringContainer.get().req.ack(maxAppMsgs()));
+      //
+      Identifier msgId = datumAckMsg.getId();
+      cwnd.ackStep1(logger, now, rtt.getValue0(), rtt.getValue1());
+      cwnd.ackStep2(logger, msgId, ledbatConfig.base.MSS);
+      cwnd.ackStep3(logger, ledbatConfig.base.GAIN, ledbatConfig.base.MSS);
       //mean 12.5 micros - 1 msg sent on average
-      trySend(now);
+      trySend(now, 2);
     }
   }
 
-  private long updateRTTs(long now, LedbatMsg.Ack datumAckMsg) {
+  //TODO update with receiverq2
+  private Pair<Long, Long> updateRTTs(long now, LedbatMsg.Ack datumAckMsg) {
     long senderQ1 = datumAckMsg.dataDelay.send - datumAckMsg.ledbatSendTime;
     long senderQ2 = now - datumAckMsg.ackDelay.receive;
     long receiverQ = datumAckMsg.ackDelay.send - datumAckMsg.dataDelay.receive;
     long rtt = now - datumAckMsg.ledbatSendTime;
-    logger.trace("rtt:{} sender q1:{} q2:{} receiver q:{}",
+    long dataDelay = datumAckMsg.dataDelay.receive - datumAckMsg.dataDelay.send;
+    logger.debug("rtt:{} sender q1:{} q2:{} receiver q:{}",
       new Object[]{rtt, senderQ1, senderQ2, receiverQ});
     rttEstimator.update(rtt);
     senderQ1Estimator.update(senderQ1);
     senderQ2Estimator.update(senderQ2);
-    receiverQEstimator.update(receiverQ);
-    return rtt;
+    receiverQ1Estimator.update(receiverQ);
+    return Pair.with(rtt, dataDelay);
   }
 
-  private void trySend(long now) {
-    int batch = 2;
+  private Pair<Long, Long> updateBatchRTTstep1(long now, LedbatMsg.BatchAckVal batch) {
+    long receiverQ2 = batch.rt4 - batch.rt3;
+    long senderQ2 = now - batch.st3;
+    receiverQ2Estimator.update(receiverQ2);
+    senderQ2Estimator.update(senderQ2);
+    return Pair.with(senderQ2, receiverQ2);
+  }
+  
+  private Pair<Long, Long> updateBatchedRTTstep2(long now, LedbatMsg.BatchAckVal batch, LedbatMsg.AckVal ack, 
+    long senderQ2, long receiverQ2) {
+    long senderQ1 = ack.st2 - ack.st1;
+    long receiverQ1 = ack.rt2 - ack.rt1;
+    long batchT = batch.rt3 - ack.rt2;
+    
+    long rtt = now - ack.st1 - batchT;
+    long dataDelay = ack.rt1 - ack.st2;
+    logger.debug("rtt:{} sender q1:{} q2:{} receiver q1:{} q2:{} bt:{} dd:{}",
+      new Object[]{rtt, senderQ1, senderQ2, receiverQ1, receiverQ2, batchT, dataDelay});
+    rttEstimator.update(rtt);
+    senderQ1Estimator.update(senderQ1);
+    receiverQ1Estimator.update(receiverQ1);
+    return Pair.with(rtt, dataDelay);
+  }
+  
+  private void trySend(long now, int batch) {
     while (!pendingData.isEmpty() && cwnd.canSend(logger, now, rto(), ledbatConfig.base.MSS) && batch > 0) {
       LedbatSenderEvent.Request req = pendingData.removeFirst();
       //mean 11 micros
@@ -196,12 +246,11 @@ public class LedbatSender {
       //mean 0.4 micros
       Identifier datumMsgId = datumMsg.getId();
       cwnd.send(logger, datumMsgId, now, rto(), ledbatConfig.base.MSS);
-//      logger.info("set timeout:{}", 3*rttEstimator.rto());
-      wheelTimer.setTimeout(3 * rto(), new WheelContainer(req, datumMsgId));
+      // 2* - because of WheelTimer 0.5*to account for increase(congestion) + 20 (batching of acks on receiver side)
+      long msgRTO = (long) (2.5 * rto()) + 20;
+      wheelTimer.setTimeout(msgRTO, new WheelContainer(req, datumMsgId));
       batch--;
     }
-//    cwnd.details(logger);
-//    rttEstimator.details(logger);
     if (pendingData.isEmpty()) {
       logger.error("empty data");
     }
@@ -219,7 +268,7 @@ public class LedbatSender {
 
     @Override
     public Identifier getId() {
-      return req.datum.getId();
+      return datumMsgId;
     }
   }
 }

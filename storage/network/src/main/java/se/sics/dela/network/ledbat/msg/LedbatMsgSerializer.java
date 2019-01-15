@@ -20,6 +20,8 @@ package se.sics.dela.network.ledbat.msg;
 
 import com.google.common.base.Optional;
 import io.netty.buffer.ByteBuf;
+import java.util.LinkedList;
+import java.util.List;
 import se.sics.dela.network.ledbat.LedbatMsg;
 import se.sics.dela.network.ledbat.util.OneWayDelay;
 import se.sics.dela.network.util.DatumId;
@@ -112,6 +114,63 @@ public class LedbatMsgSerializer {
       long receiveAckTime = System.currentTimeMillis();
       OneWayDelay ackDelay = new OneWayDelay(sendAckTime, receiveAckTime);
       return new LedbatMsg.Ack(msgId, datumId, dataDelay, ackDelay, ledbatSendTime);
+    }
+  }
+
+  public static class MultiAck implements Serializer {
+
+    private final int id;
+    private final Class msgIdType;
+
+    public MultiAck(int id) {
+      this.id = id;
+      this.msgIdType = IdentifierRegistryV2.idType(BasicIdentifiers.Values.MSG);
+    }
+
+    @Override
+    public int identifier() {
+      return id;
+    }
+
+    @Override
+    public void toBinary(Object o, ByteBuf buf) {
+      LedbatMsg.MultiAck obj = (LedbatMsg.MultiAck) o;
+      Serializers.lookupSerializer(msgIdType).toBinary(obj.getId(), buf);
+      Serializers.toBinary(obj.dataId, buf);
+      buf.writeLong(obj.acks.rt3);
+      buf.writeLong(System.currentTimeMillis());
+      buf.writeInt(obj.acks.acks.size());
+      for (LedbatMsg.AckVal ack : obj.acks.acks) {
+        Serializers.toBinary(ack.datumUnitId, buf);
+        Serializers.toBinary(ack.msgId, buf);
+        buf.writeLong(ack.rt1);
+        buf.writeLong(ack.rt2);
+        buf.writeLong(ack.st1);
+        buf.writeLong(ack.st2);
+      }
+    }
+
+    @Override
+    public LedbatMsg.MultiAck fromBinary(ByteBuf buf, Optional<Object> hint) {
+      Identifier msgId = (Identifier) Serializers.lookupSerializer(msgIdType).fromBinary(buf, hint);
+      Identifier dataId = (Identifier) Serializers.fromBinary(buf, hint);
+      List<LedbatMsg.AckVal> acks = new LinkedList<>();
+      LedbatMsg.BatchAckVal batch = new LedbatMsg.BatchAckVal(acks);
+      batch.setRt3(buf.readLong());
+      batch.setRt4(buf.readLong());
+      batch.setSt3(System.currentTimeMillis());
+      int nrAcks = buf.readInt();
+      for (int i = 0; i < nrAcks; i++) {
+        Identifier datumUnitId = (Identifier) Serializers.fromBinary(buf, hint);
+        Identifier ackMsgId = (Identifier) Serializers.fromBinary(buf, hint);
+        LedbatMsg.AckVal ack = new LedbatMsg.AckVal(datumUnitId, ackMsgId);
+        ack.setRt1(buf.readLong());
+        ack.setRt2(buf.readLong());
+        ack.setSt1(buf.readLong());
+        ack.setSt2(buf.readLong());
+        acks.add(ack);
+      }
+      return new LedbatMsg.MultiAck(msgId, dataId, batch);
     }
   }
 }

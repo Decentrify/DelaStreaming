@@ -55,14 +55,28 @@ public class MultiPaneCwnd implements Cwnd {
   }
 
   @Override
-  public void ack(Logger logger, Identifier msgId, long now, long rtt, long oneWayDelay, long bytesNewlyAcked) {
+  public void ackStep1(Logger logger, long now, long rtt, long oneWayDelay) {
     lossCtrl.acked(logger, now, rtt);
-    double offTarget = delayHistory.offTarget(now, oneWayDelay);
+    delayHistory.update(now, oneWayDelay);
+  }
+  
+  @Override
+  public void ackStep2(Logger logger, Identifier msgId, long msgBytes) {
+    reducePaneFlightSize(msgId, msgBytes);
+  }
+  
+  @Override
+  public void ackStep3(Logger logger, double cwndGain, long bytesNewlyAcked) {
+    adjustCwnd(logger, cwndGain, delayHistory.offTarget(), bytesNewlyAcked);
+    totalFlightSize -= bytesNewlyAcked;
+  }
+
+  private void adjustCwnd(Logger logger, double gain, double offTarget, long bytesNewlyAcked) {
     long preCwnd = cwnd;
     if (offTarget < 0) {
       cwnd = (long) (cwnd * config.DTL_BETA);
     } else {
-      cwnd = cwnd + (long) ((config.GAIN * offTarget * bytesNewlyAcked * config.MSS) / cwnd);
+      cwnd = cwnd + (long) ((gain * offTarget * bytesNewlyAcked * config.MSS) / cwnd);
     }
 
     long maxAllowedCwnd;
@@ -79,9 +93,8 @@ public class MultiPaneCwnd implements Cwnd {
     if (preCwnd > cwnd) {
       logger.info("cwnd pre:{} post:{} ot:{} flight:{}", new Object[]{preCwnd, cwnd, offTarget, totalFlightSize});
     }
-    reducePaneFlightSize(msgId, bytesNewlyAcked);
-    totalFlightSize -= bytesNewlyAcked;
   }
+
 
   @Override
   public void loss(Logger logger, Identifier msgId, long now, long rtt, long bytesNotToBeRetransmitted) {

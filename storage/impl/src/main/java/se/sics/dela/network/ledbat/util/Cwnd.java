@@ -31,7 +31,11 @@ public interface Cwnd {
 
   public void connectionIdle(Logger logger);
 
-  public void ack(Logger logger, Identifier msgId, long now, long rtt, long oneWayDelay, long bytesNewlyAcked);
+  public void ackStep1(Logger logger, long now, long rtt, long oneWayDelay);
+
+  public void ackStep2(Logger logger, Identifier msgId, long msgBytes);
+
+  public void ackStep3(Logger logger, double cwndGain, long bytesNewlyAcked);
 
   public void loss(Logger logger, Identifier msgId, long now, long rtt, long bytesNotToBeRetransmitted);
 
@@ -42,7 +46,7 @@ public interface Cwnd {
   public long flightSize();
 
   public void send(Logger logger, Identifier msgId, long now, long rtt, long bytesToSend);
-  
+
   public void details(Logger logger);
 
   public static class Basic implements Cwnd {
@@ -71,20 +75,34 @@ public interface Cwnd {
     }
 
     @Override
-    public void ack(Logger logger, Identifier msgId, long now, long rtt, long oneWayDelay, long bytesNewlyAcked) {
-      double offTarget = delayHistory.offTarget(now, oneWayDelay);
+    public void ackStep1(Logger logger, long now, long rtt, long oneWayDelay) {
+      lossCtrl.acked(logger, now, rtt);
+      delayHistory.update(now, oneWayDelay);
+    }
+
+    @Override
+    public void ackStep2(Logger logger, Identifier msgId, long msgBytes) {
+      //nothing
+    }
+
+    @Override
+    public void ackStep3(Logger logger, double cwndGain, long bytesNewlyAcked) {
+      adjustCwnd(logger, cwndGain, delayHistory.offTarget(), bytesNewlyAcked);
+      flightSize -= bytesNewlyAcked;
+    }
+
+    private void adjustCwnd(Logger logger, double cwndGain, double offTarget, long bytesNewlyAcked) {
       long aux = cwnd;
       if (offTarget < 0) {
         cwnd = (long) (cwnd * config.DTL_BETA);
       } else {
-        cwnd = cwnd + (long) ((config.GAIN * offTarget * bytesNewlyAcked * config.MSS) / cwnd);
+        cwnd = cwnd + (long) ((cwndGain * offTarget * bytesNewlyAcked * config.MSS) / cwnd);
       }
 
       long maxAllowedCwnd = flightSize + (long) (config.ALLOWED_INCREASE * config.MSS);
       cwnd = Math.min(cwnd, maxAllowedCwnd);
       cwnd = Math.max(cwnd, config.MIN_CWND * config.MSS);
       logger.info("cwnd pre:{} post:{} ot:{}", new Object[]{aux, cwnd, offTarget});
-      flightSize -= bytesNewlyAcked;
     }
 
     @Override
