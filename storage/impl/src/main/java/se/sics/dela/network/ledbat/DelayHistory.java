@@ -19,6 +19,7 @@
 package se.sics.dela.network.ledbat;
 
 import java.util.Arrays;
+import org.slf4j.Logger;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -91,5 +92,12 @@ public class DelayHistory {
 
   private long roundToMinute(long timeInMillis) {
     return timeInMillis / 60000;
+  }
+  
+  public void details(Logger logger) {
+    long queuingDelay = queuingDelay();
+    double offTarget = offTarget(queuingDelay);
+    logger.info("qd:{} ot:{}",
+      new Object[]{queuingDelay, offTarget});
   }
 }

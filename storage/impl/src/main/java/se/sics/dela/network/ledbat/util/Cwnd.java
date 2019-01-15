@@ -35,13 +35,13 @@ public interface Cwnd {
 
   public void loss(Logger logger, Identifier msgId, long now, long rtt, long bytesNotToBeRetransmitted);
 
-  public boolean canSend(long now, long rtt, long bytesToSend);
+  public boolean canSend(Logger logger, long now, long rtt, long bytesToSend);
 
   public long size();
 
   public long flightSize();
 
-  public void send(Identifier msgId, long now, long rtt, long bytesToSend);
+  public void send(Logger logger, Identifier msgId, long now, long rtt, long bytesToSend);
   
   public void details(Logger logger);
 
@@ -96,7 +96,7 @@ public interface Cwnd {
     }
 
     @Override
-    public boolean canSend(long now, long rtt, long bytesToSend) {
+    public boolean canSend(Logger logger, long now, long rtt, long bytesToSend) {
       return (flightSize + bytesToSend) <= cwnd;
     }
 
@@ -111,7 +111,7 @@ public interface Cwnd {
     }
 
     @Override
-    public void send(Identifier msgId, long now, long rtt, long bytesToSend) {
+    public void send(Logger logger, Identifier msgId, long now, long rtt, long bytesToSend) {
       flightSize += bytesToSend;
     }
 

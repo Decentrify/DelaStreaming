@@ -89,7 +89,7 @@ public class SenderTaskComp extends ComponentDefinition {
       logger.info("report tid: {}", reportTid);
       startTime = System.nanoTime();
       logger.info("starting transfer sender:{} receiver:{}", selfAdr, receiverAdr);
-      trySend(1);
+      trySend(50);
     }
   };
 

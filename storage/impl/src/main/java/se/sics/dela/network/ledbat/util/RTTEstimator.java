@@ -25,16 +25,25 @@ import se.sics.dela.network.ledbat.LedbatConfig;
  *
  */
 public class RTTEstimator {
-  private final LedbatConfig config;
+  public final int k;
+  public final double alpha;
+  public final double beta;
+  public final int g;
   
   private long rto = -1;
   private long srtt;
   private long rttvar;
   
-  public RTTEstimator(LedbatConfig config) {
-    this.config = config;
+  public RTTEstimator(double alpha, double beta, int k, int g) {
+    this.alpha = alpha;
+    this.beta = beta;
+    this.k = k;
+    this.g = g;
   }
   
+  public RTTEstimator() {
+    this(0.125, 0.25, 4, Integer.MIN_VALUE);
+  }
   
   public void update(long r) {
     if(rto == -1) {
@@ -42,8 +51,7 @@ public class RTTEstimator {
     } else {
       updateNext(r);
     }
-    rto = srtt + Math.max(config.G, config.K*rttvar);
-    rto = Math.min(config.MAX_RTO, Math.max(config.MIN_RTO, rto));
+    rto = srtt + Math.max(g, k*rttvar);
   }
   
   private void updateFirst(long r) {
@@ -52,20 +60,31 @@ public class RTTEstimator {
   }
   
   private void updateNext(long r) {
-    rttvar = (long)((1 - config.BETA) * rttvar + (config.BETA * Math.abs(srtt - r)));
-    srtt = (long)((1 - config.ALPHA) * srtt + config.ALPHA * r);
+    rttvar = (long)((1 - beta) * rttvar + (beta * Math.abs(srtt - r)));
+    srtt = (long)((1 - alpha) * srtt + alpha * r);
   }
   
-  public long rto() {
+  public long rto(long initRTO) {
     if(rto == -1) {
-      return config.INIT_RTO;
+      return initRTO;
     } else {
       return rto;
     }
   }
   
+  public long rto(long initRTO, long minRTO, long maxRTO) {
+    return Math.min(maxRTO, Math.max(minRTO, rto(initRTO)));
+  }
+  
   public void details(Logger logger) {
-    long r = srtt + Math.max(config.G, config.K*rttvar);
-    logger.info("rto:{}, rrtvar:{} r:{}", new Object[]{rto, rttvar, r});
+    logger.info("rto:{}, rrtvar:{}", new Object[]{rto, rttvar});
+  }
+  
+  public static RTTEstimator instance(LedbatConfig config) {
+    return new RTTEstimator(config.ALPHA, config.BETA, config.K, config.G);
+  }
+  
+  public static RTTEstimator instance() {
+    return new RTTEstimator();
   }
 }

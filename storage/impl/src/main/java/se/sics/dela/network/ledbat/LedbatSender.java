@@ -43,12 +43,15 @@ public class LedbatSender {
 
   private Cwnd cwnd;
   private RTTEstimator rttEstimator;
+  private RTTEstimator senderQ1Estimator;
+  private RTTEstimator senderQ2Estimator;
+  private RTTEstimator receiverQEstimator;
   RingTimer<WheelContainer> wheelTimer;
   private DelaLedbatConfig ledbatConfig;
   private Logger logger;
 
   private IdentifierFactory msgIds;
-  
+
   private Consumer<LedbatMsg.Datum> networkSend;
   private BiConsumer<LedbatSenderEvent.Request, LedbatSenderEvent.Indication> appSend;
 
@@ -58,7 +61,6 @@ public class LedbatSender {
 
   SummaryStatistics s1 = new SummaryStatistics();
   SummaryStatistics s2 = new SummaryStatistics();
-  
 
   public LedbatSender() {
   }
@@ -77,8 +79,11 @@ public class LedbatSender {
       throw new RuntimeException(ex);
     }
 //    cwnd = new Cwnd(ledbatConfig.base, LedbatLossCtrl.vanillaLedbat());
-    cwnd = new MultiPaneCwnd(ledbatConfig.base, LedbatLossCtrl.twoLvlPercentageLedbat(0.02, 0.05), logger);
-    rttEstimator = new RTTEstimator(ledbatConfig.base);
+    cwnd = new MultiPaneCwnd(ledbatConfig.base, LedbatLossCtrl.twoLvlPercentageLedbat(0.02, 0.1), logger);
+    rttEstimator = RTTEstimator.instance(ledbatConfig.base);
+    senderQ1Estimator = RTTEstimator.instance();
+    senderQ2Estimator = RTTEstimator.instance();
+    receiverQEstimator = RTTEstimator.instance();
     wheelTimer = new RingTimer(ledbatConfig.timerWindowSize, 3 * ledbatConfig.maxTimeout);
     return this;
   }
@@ -114,7 +119,7 @@ public class LedbatSender {
         WheelContainer rc = (WheelContainer) c;
 //        logger.debug("msg data:{} timed out", rc.req.datum.getId());
         Identifier msgId = rc.datumMsgId;
-        cwnd.loss(logger, msgId, now, rttEstimator.rto(), ledbatConfig.base.MSS);
+        cwnd.loss(logger, msgId, now, rto(), ledbatConfig.base.MSS);
         //
         appSend.accept(rc.req, rc.req.timeout(maxAppMsgs()));
       }
@@ -122,19 +127,23 @@ public class LedbatSender {
     };
   }
 
+  private long rto() {
+    return rttEstimator.rto(ledbatConfig.base.INIT_RTO, ledbatConfig.base.MIN_RTO, ledbatConfig.base.MAX_RTO);
+  }
+
   private int maxAppMsgs() {
     int kompicsEventBatching = 20;
     int ledbatEventBatching = 2;
-    int ledbatMaxIncreasePerAck = ledbatConfig.base.MSS;
+    int ledbatMaxIncreasePerAck = 1;
     int cwndAsMsgs = (int) (cwnd.size() / ledbatConfig.base.MSS);
     int requestReadyEvents = 2 * cwndAsMsgs + kompicsEventBatching * ledbatEventBatching * ledbatMaxIncreasePerAck;
-//    logger.info("cwndasMsgs:{}", cwndAsMsgs);
     return Math.min(ledbatConfig.bufferSize / ledbatConfig.base.MSS, requestReadyEvents);
   }
 
   private Consumer<Boolean> reportTimer() {
     return (_input) -> {
-      rttEstimator.details(logger);
+      logger.info("rto:{} sq1:{} sq2:{} rq:{}", 
+        new Object[]{rto(), senderQ1Estimator.rto(0), senderQ2Estimator.rto(0), receiverQEstimator.rto(0)});
       cwnd.details(logger);
     };
   }
@@ -145,45 +154,54 @@ public class LedbatSender {
     }
     trySend(System.currentTimeMillis());
   }
-  // LedbatMsg.Datum content = new LedbatMsg.Datum(msgIds.randomId(), data, now);
 
   public void ackData(LedbatMsg.Ack datumAckMsg) {
     Optional<WheelContainer> ringContainer = wheelTimer.cancelTimeout(datumAckMsg.datumId);
     long now = System.currentTimeMillis();
-    long senderQueue1 = datumAckMsg.dataDelay.send - datumAckMsg.ledbatSendTime;
-    long senderQueue2 = now - datumAckMsg.ackDelay.receive;
-    long receiverQueue = datumAckMsg.ackDelay.send - datumAckMsg.dataDelay.receive;
-    long rtt = now - datumAckMsg.ledbatSendTime;
-    logger.trace("rtt:{} sender q1:{} q2:{} receiver q:{}", new Object[]{rtt, senderQueue1, senderQueue2, receiverQueue});
+    long rtt = updateRTTs(now, datumAckMsg);
     long dataDelay = datumAckMsg.dataDelay.receive - datumAckMsg.dataDelay.send;
     if (!ringContainer.isPresent()) {
-      logger.debug("data:{} is late rtt:{}", datumAckMsg.datumId, rtt);
-      rttEstimator.update(rtt);
       return;
+    } else {
+      Identifier msgId = datumAckMsg.getId();
+      cwnd.ack(logger, msgId, now, rtt, dataDelay, ledbatConfig.base.MSS);
+      //mean 4-5 micros
+      appSend.accept(ringContainer.get().req, ringContainer.get().req.ack(maxAppMsgs()));
+      //mean 12.5 micros - 1 msg sent on average
+      trySend(now);
     }
-    Identifier msgId = datumAckMsg.getId();
-    cwnd.ack(logger, msgId, now, rtt, dataDelay, ledbatConfig.base.MSS);
+  }
+
+  private long updateRTTs(long now, LedbatMsg.Ack datumAckMsg) {
+    long senderQ1 = datumAckMsg.dataDelay.send - datumAckMsg.ledbatSendTime;
+    long senderQ2 = now - datumAckMsg.ackDelay.receive;
+    long receiverQ = datumAckMsg.ackDelay.send - datumAckMsg.dataDelay.receive;
+    long rtt = now - datumAckMsg.ledbatSendTime;
+    logger.trace("rtt:{} sender q1:{} q2:{} receiver q:{}",
+      new Object[]{rtt, senderQ1, senderQ2, receiverQ});
     rttEstimator.update(rtt);
-    //mean 4-5 micros
-    appSend.accept(ringContainer.get().req, ringContainer.get().req.ack(maxAppMsgs()));
-    //mean 12.5 micros - 1 msg sent on average
-    trySend(now);
+    senderQ1Estimator.update(senderQ1);
+    senderQ2Estimator.update(senderQ2);
+    receiverQEstimator.update(receiverQ);
+    return rtt;
   }
 
   private void trySend(long now) {
     int batch = 2;
-    while (!pendingData.isEmpty() && cwnd.canSend(now, rttEstimator.rto(), ledbatConfig.base.MSS) && batch > 0) {
+    while (!pendingData.isEmpty() && cwnd.canSend(logger, now, rto(), ledbatConfig.base.MSS) && batch > 0) {
       LedbatSenderEvent.Request req = pendingData.removeFirst();
       //mean 11 micros
       LedbatMsg.Datum datumMsg = new LedbatMsg.Datum(msgIds.randomId(), req.datum, now);
       networkSend.accept(datumMsg);
       //mean 0.4 micros
       Identifier datumMsgId = datumMsg.getId();
-      cwnd.send(datumMsgId, now, rttEstimator.rto(), ledbatConfig.base.MSS);
+      cwnd.send(logger, datumMsgId, now, rto(), ledbatConfig.base.MSS);
 //      logger.info("set timeout:{}", 3*rttEstimator.rto());
-      wheelTimer.setTimeout(3 * rttEstimator.rto(), new WheelContainer(req, datumMsgId));
+      wheelTimer.setTimeout(3 * rto(), new WheelContainer(req, datumMsgId));
       batch--;
     }
+//    cwnd.details(logger);
+//    rttEstimator.details(logger);
     if (pendingData.isEmpty()) {
       logger.error("empty data");
     }

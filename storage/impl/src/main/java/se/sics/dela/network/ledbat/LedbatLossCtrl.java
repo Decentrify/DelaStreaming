@@ -46,12 +46,14 @@ public interface LedbatLossCtrl {
     public final double lossLvl2;
     private Window active;
     private Window previous;
+    private Window next;
 
     public Percentage(double lossLvl1, double lossLvl2) {
       this.lossLvl1 = lossLvl1;
       this.lossLvl2 = lossLvl2;
       this.active = new Window(0);
       this.previous = new Window(0);
+      this.next = new Window(0);
     }
 
     @Override
@@ -64,7 +66,7 @@ public interface LedbatLossCtrl {
           new Object[]{active.loss, active.ack, previous.loss, previous.ack});
         //adjust cwnd due to loss once per rtt window - set on both active and next
         active.lossAdjustSignal = true;
-        active.lossAdjustSignal = true;
+        next.lossAdjustSignal = true;
         return true;
       }
       return false;
@@ -84,7 +86,8 @@ public interface LedbatLossCtrl {
     private void checkReset(long now, long rtt) {
       if (now - active.start > rtt) {
         previous = active;
-        active = new Window(now);
+        active = next;
+        next = next.now(now);
       }
     }
   }
@@ -96,7 +99,16 @@ public interface LedbatLossCtrl {
     boolean lossAdjustSignal;
     
     public Window(long start) {
+      this(start, false);
+    }
+    
+    public Window(long start, boolean lossAdjustSignal) {
       this.start = start;
+      this.lossAdjustSignal = lossAdjustSignal;
+    }
+    
+    public Window now(long start) {
+      return new Window(start, lossAdjustSignal);
     }
   }
   public static class SimpleCounter implements LedbatLossCtrl {

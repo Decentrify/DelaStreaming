@@ -19,8 +19,9 @@
 package se.sics.dela.network.ledbat;
 
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
-import java.util.TreeMap;
 import org.slf4j.Logger;
 import se.sics.dela.network.ledbat.util.Cwnd;
 import se.sics.kompics.util.Identifier;
@@ -34,15 +35,18 @@ public class MultiPaneCwnd implements Cwnd {
   private final DelayHistory delayHistory;
   private long cwnd;
   private long totalFlightSize = 0;
-  private final Map<Identifier, Integer> msgToPane = new HashMap<>();
-  private final Map<Integer, Long> panes = new TreeMap<>();
+  private final Map<Identifier, Pane> msgToPane = new HashMap<>();
   private final LedbatLossCtrl lossCtrl;
+  private boolean paneFullSmoother = false;
+  private final LinkedList<Pane> pastPanes = new LinkedList<>();
+  private Pane currentPane;
 
   public MultiPaneCwnd(LedbatConfig config, LedbatLossCtrl lossCtrl, Logger logger) {
     this.config = config;
     this.delayHistory = new DelayHistory(config).resetDelays();
     this.lossCtrl = lossCtrl;
     this.cwnd = config.INIT_CWND * config.MSS;
+    this.currentPane = new Pane(System.currentTimeMillis(), cwnd);
   }
 
   @Override
@@ -61,11 +65,21 @@ public class MultiPaneCwnd implements Cwnd {
       cwnd = cwnd + (long) ((config.GAIN * offTarget * bytesNewlyAcked * config.MSS) / cwnd);
     }
 
-    long maxAllowedCwnd = totalFlightSize + (long) (config.ALLOWED_INCREASE * config.MSS);
+    long maxAllowedCwnd;
+    if (paneFullSmoother) {
+      //if the pane is full we are posponing sending msgs 
+      //in order to smooth a bit the pane sizes 
+      //so that we better utilize the bandwidth over the whole rtt window
+      maxAllowedCwnd = preCwnd + (long) (config.ALLOWED_INCREASE * config.MSS);
+    } else {
+      maxAllowedCwnd = totalFlightSize + (long) (config.ALLOWED_INCREASE * config.MSS);
+    }
     cwnd = Math.min(cwnd, maxAllowedCwnd);
     cwnd = Math.max(cwnd, config.MIN_CWND * config.MSS);
-//    logger.info("cwnd pre:{} post:{} ot:{}", new Object[]{preCwnd, cwnd, offTarget});
-    updatePaneFlightSize(msgId, (-1) * bytesNewlyAcked);
+    if (preCwnd > cwnd) {
+      logger.info("cwnd pre:{} post:{} ot:{} flight:{}", new Object[]{preCwnd, cwnd, offTarget, totalFlightSize});
+    }
+    reducePaneFlightSize(msgId, bytesNewlyAcked);
     totalFlightSize -= bytesNewlyAcked;
   }
 
@@ -73,19 +87,18 @@ public class MultiPaneCwnd implements Cwnd {
   public void loss(Logger logger, Identifier msgId, long now, long rtt, long bytesNotToBeRetransmitted) {
     if (lossCtrl.loss(logger, now, rtt)) {
       cwnd = Math.max(cwnd / 2, config.MIN_CWND * config.MSS);
+      lossDetails(logger);
     }
-    updatePaneFlightSize(msgId, (-1) * bytesNotToBeRetransmitted);
+    reducePaneFlightSize(msgId, bytesNotToBeRetransmitted);
     totalFlightSize -= bytesNotToBeRetransmitted;
   }
 
-  @Override
-  public boolean canSend(long now, long rtt, long bytesToSend) {
-    Integer paneNr = paneNr(now, rtt);
-    long paneFlightSize = panes.get(paneNr);
-    long paneCwnd = cwnd / activePanes(now, rtt);
-    return (totalFlightSize + bytesToSend) <= cwnd && paneFlightSize <= paneCwnd;
+  private void lossDetails(Logger logger) {
+    int cwndMsgs = (int) cwnd / config.MSS;
+    int flightSizeAsMsgs = (int) totalFlightSize / config.MSS;
+    logger.info("loss");
+    details(logger);
   }
-
   @Override
   public long size() {
     return cwnd;
@@ -95,51 +108,102 @@ public class MultiPaneCwnd implements Cwnd {
   public long flightSize() {
     return totalFlightSize;
   }
+  
+  @Override
+  public boolean canSend(Logger logger, long now, long rtt, long bytesToSend) {
+    checkNewPane(now, rtt);
+    boolean paneFull = isPaneFull(logger, now, rtt);
+    if (totalFlightSize < cwnd) {
+      if (paneFull) {
+        paneFullSmoother = true;
+      }
+      return !paneFull;
+    } else {
+      paneFullSmoother = false;
+      return false;
+    }
+  }
 
   @Override
-  public void send(Identifier msgId, long now, long rtt, long bytesToSend) {
-    Integer paneNr = paneNr(now, rtt);
-    updatePaneFlightSize(paneNr, bytesToSend);
-    msgToPane.put(msgId, paneNr);
+  public void send(Logger logger, Identifier msgId, long now, long rtt, long bytesToSend) {
+    currentPane.inc(bytesToSend);
+    msgToPane.put(msgId, currentPane);
     totalFlightSize += bytesToSend;
   }
 
   @Override
   public void details(Logger logger) {
-    long queuingDelay = delayHistory.queuingDelay();
-    double offTarget = delayHistory.offTarget(queuingDelay);
     int cwndMsgs = (int) cwnd / config.MSS;
-    logger.info("cwnd:{} qd:{} offTarget:{}", new Object[]{cwndMsgs, queuingDelay, offTarget});
-  }
-
-  private void updatePaneFlightSize(Identifier msgId, long adjustBytes) {
-    Integer paneNr = msgToPane.remove(msgId);
-    if(paneNr != null) {
-      updatePaneFlightSize(paneNr, adjustBytes);
-    } else {
-      throw new RuntimeException("ups");
-    }
+    int flightSizeAsMsgs = (int) totalFlightSize / config.MSS;
+    delayHistory.details(logger);
+    paneDetails(logger);
+    logger.info("cwnd:{} flightSize:{} nrPanes:{}",
+      new Object[]{cwndMsgs, flightSizeAsMsgs, pastPanes.size() + 1});
   }
   
-  private void updatePaneFlightSize(Integer paneNr, long adjustBytes) {
-    Long paneFlightSize = panes.get(paneNr);
-    if (paneFlightSize != null) {
-      paneFlightSize += adjustBytes;
-      panes.put(paneNr, paneFlightSize);
+  private boolean isPaneFull(Logger logger, long now, long rtt) {
+    int activePanes = activePanes(now, rtt);
+    long paneCwnd = cwnd / activePanes + (cwnd > currentPane.cwndAtStart ? cwnd - currentPane.cwndAtStart : 0);
+    return currentPane.paneFlightSize >= paneCwnd;
+  }
+
+  private void paneDetails(Logger logger) {
+    StringBuilder sb = new StringBuilder();
+    pastPanes.forEach((pane) -> sb.append(pane.paneFlightSize).append("/").append(pane.sent).append(" "));
+    sb.append(currentPane.paneFlightSize).append("/").append(currentPane.sent);
+    logger.info("panes:{}", sb);
+    cleanPastPanes();
+  }
+  
+  private void cleanPastPanes() {
+    Iterator<Pane> it = pastPanes.iterator();
+    while(it.hasNext()) {
+      Pane p = it.next();
+      if(p.paneFlightSize > 0) {
+        break;
+      }
+      it.remove();
+    }
+  }
+
+  private void reducePaneFlightSize(Identifier msgId, long adjustBytes) {
+    Pane pane = msgToPane.remove(msgId);
+    if (pane != null) {
+      pane.red(adjustBytes);
     } else {
       throw new RuntimeException("ups");
     }
   }
 
-  private Integer paneNr(long now, long rtt) {
-    Integer paneNr = (int) ((now % rtt) / config.MIN_RTO);
-    if (!panes.containsKey(paneNr)) {
-      panes.put(paneNr, 0l);
+  private void checkNewPane(long now, long rtt) {
+    if (now - currentPane.startTime >= config.MIN_RTO) {
+      pastPanes.add(currentPane);
+      currentPane = new Pane(now, cwnd);
     }
-    return paneNr;
   }
 
   private int activePanes(long now, long rtt) {
     return (int) (rtt / config.MIN_RTO);
+  }
+
+  static class Pane {
+    long cwndAtStart;
+    long startTime;
+    long paneFlightSize = 0;
+    int sent = 0;
+
+    public Pane(long startTime, long cwnd) {
+      this.startTime = startTime;
+      this.cwndAtStart = cwnd;
+    }
+    
+    void inc(long bytes) {
+      sent++;
+      paneFlightSize += bytes;
+    }
+    
+    void red(long bytes) {
+      paneFlightSize -= bytes;
+    }
   }
 }
