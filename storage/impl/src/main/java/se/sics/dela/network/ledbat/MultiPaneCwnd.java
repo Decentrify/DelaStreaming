@@ -55,8 +55,10 @@ public class MultiPaneCwnd implements Cwnd {
   }
 
   @Override
-  public void ackStep1(Logger logger, long now, long rtt, long oneWayDelay) {
-    lossCtrl.acked(logger, now, rtt);
+  public void ackStep1(Logger logger, long now, long rto, long oneWayDelay, boolean late) {
+    if(!late) {
+      lossCtrl.acked(logger, now, rto);
+    }
     delayHistory.update(now, oneWayDelay);
   }
   
@@ -66,17 +68,23 @@ public class MultiPaneCwnd implements Cwnd {
   }
   
   @Override
-  public void ackStep3(Logger logger, double cwndGain, long bytesNewlyAcked) {
-    adjustCwnd(logger, cwndGain, delayHistory.offTarget(), bytesNewlyAcked);
+  public void ackStep3(Logger logger, double cwndGain, long bytesNewlyAcked, long rto) {
+    int activePanes = activePanes(rto);
+    //pure ledbat
+    //long cwndAdjustP = cwnd;
+    
+    //help for high delay links
+    long cwndAdjustP = cwnd / activePanes;
+    adjustCwnd(logger, cwndGain, delayHistory.offTarget(), bytesNewlyAcked, cwndAdjustP);
     totalFlightSize -= bytesNewlyAcked;
   }
 
-  private void adjustCwnd(Logger logger, double gain, double offTarget, long bytesNewlyAcked) {
+  private void adjustCwnd(Logger logger, double gain, double offTarget, long bytesNewlyAcked, long cwndAdjustP) {
     long preCwnd = cwnd;
     if (offTarget < 0) {
       cwnd = (long) (cwnd * config.DTL_BETA);
     } else {
-      cwnd = cwnd + (long) ((gain * offTarget * bytesNewlyAcked * config.MSS) / cwnd);
+      cwnd = cwnd + (long) ((gain * offTarget * bytesNewlyAcked * config.MSS) / cwndAdjustP);
     }
 
     long maxAllowedCwnd;
@@ -98,7 +106,9 @@ public class MultiPaneCwnd implements Cwnd {
 
   @Override
   public void loss(Logger logger, Identifier msgId, long now, long rtt, long bytesNotToBeRetransmitted) {
+    logger.info("loss");
     if (lossCtrl.loss(logger, now, rtt)) {
+      logger.info("loss adjust");
       cwnd = Math.max(cwnd / 2, config.MIN_CWND * config.MSS);
       lossDetails(logger);
     }
@@ -123,9 +133,9 @@ public class MultiPaneCwnd implements Cwnd {
   }
   
   @Override
-  public boolean canSend(Logger logger, long now, long rtt, long bytesToSend) {
-    checkNewPane(now, rtt);
-    boolean paneFull = isPaneFull(logger, now, rtt);
+  public boolean canSend(Logger logger, long now, long rto, long bytesToSend) {
+    checkNewPane(now, rto);
+    boolean paneFull = isPaneFull(logger, now, rto);
     if (totalFlightSize < cwnd) {
       if (paneFull) {
         paneFullSmoother = true;
@@ -154,8 +164,8 @@ public class MultiPaneCwnd implements Cwnd {
       new Object[]{cwndMsgs, flightSizeAsMsgs, pastPanes.size() + 1});
   }
   
-  private boolean isPaneFull(Logger logger, long now, long rtt) {
-    int activePanes = activePanes(now, rtt);
+  private boolean isPaneFull(Logger logger, long now, long rto) {
+    int activePanes = activePanes(rto);
     long paneCwnd = cwnd / activePanes + (cwnd > currentPane.cwndAtStart ? cwnd - currentPane.cwndAtStart : 0);
     return currentPane.paneFlightSize >= paneCwnd;
   }
@@ -195,8 +205,9 @@ public class MultiPaneCwnd implements Cwnd {
     }
   }
 
-  private int activePanes(long now, long rtt) {
-    return (int) (rtt / config.MIN_RTO);
+  private int activePanes(long rto) {
+    //rto > config.MIN_RTO
+    return (int) (rto / config.MIN_RTO);
   }
 
   static class Pane {

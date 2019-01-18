@@ -146,8 +146,9 @@ public class LedbatSender {
 
   private Consumer<Boolean> reportTimer() {
     return (_input) -> {
-      logger.info("rto:{} sq1:{} sq2:{} rq:{}",
-        new Object[]{rto(), senderQ1Estimator.rto(0), senderQ2Estimator.rto(0), receiverQ1Estimator.rto(0)});
+      logger.info("rto:{} sq1:{} sq2:{} rq1:{} rq2:{}",
+        new Object[]{rto(), senderQ1Estimator.rto(0), senderQ2Estimator.rto(0), 
+          receiverQ1Estimator.rto(0), receiverQ2Estimator.rto(0)});
       cwnd.details(logger);
     };
   }
@@ -162,43 +163,43 @@ public class LedbatSender {
   public void multiAck(LedbatMsg.MultiAck msg) {
     long now = System.currentTimeMillis();
     long bytesAcked = 0;
-    Pair<Long, Long> aux = updateBatchRTTstep1(now, msg.acks);
+    Pair<Long, Long> aux = updateBatchRTOstep1(now, msg.acks);
     for (LedbatMsg.AckVal ack : msg.acks.acks) {
       DatumId datumId = new DatumId(msg.dataId, ack.datumUnitId);
       Optional<WheelContainer> ringContainer = wheelTimer.cancelTimeout(ack.msgId);
-      Pair<Long, Long> rtt = updateBatchedRTTstep2(now, msg.acks, ack, aux.getValue0(), aux.getValue1());
+      long dataDelay = updateBatchedRTOstep2(logger, now, msg.acks, ack, aux);
+      cwnd.ackStep1(logger, now, dataDelay, rto(), !ringContainer.isPresent());
       if (ringContainer.isPresent()) {
         appSend.accept(ringContainer.get().req, ringContainer.get().req.ack(maxAppMsgs()));
-        cwnd.ackStep1(logger, now, rtt.getValue0(), rtt.getValue1());
         cwnd.ackStep2(logger, ack.msgId, ledbatConfig.base.MSS);
         bytesAcked += ledbatConfig.base.MSS;
       } else {
-        logger.info("loss");
+//        logger.info("late");
       }
     }
-    cwnd.ackStep3(logger, ledbatConfig.base.GAIN, bytesAcked);
+    cwnd.ackStep3(logger, ledbatConfig.base.GAIN, bytesAcked, rto());
     trySend(now, msg.acks.acks.size() + 1);
   }
 
   public void ackData(LedbatMsg.Ack datumAckMsg) {
     Optional<WheelContainer> ringContainer = wheelTimer.cancelTimeout(datumAckMsg.getId());
     long now = System.currentTimeMillis();
-    Pair<Long, Long> rtt = updateRTTs(now, datumAckMsg);
+    long dataDelay = updateRTOs(now, datumAckMsg);
+    cwnd.ackStep1(logger, now, dataDelay, rto(), !ringContainer.isPresent());
     if (ringContainer.isPresent()) {
       //mean 4-5 micros
       appSend.accept(ringContainer.get().req, ringContainer.get().req.ack(maxAppMsgs()));
       //
       Identifier msgId = datumAckMsg.getId();
-      cwnd.ackStep1(logger, now, rtt.getValue0(), rtt.getValue1());
       cwnd.ackStep2(logger, msgId, ledbatConfig.base.MSS);
-      cwnd.ackStep3(logger, ledbatConfig.base.GAIN, ledbatConfig.base.MSS);
+      cwnd.ackStep3(logger, ledbatConfig.base.GAIN, ledbatConfig.base.MSS, rto());
       //mean 12.5 micros - 1 msg sent on average
       trySend(now, 2);
     }
   }
 
   //TODO update with receiverq2
-  private Pair<Long, Long> updateRTTs(long now, LedbatMsg.Ack datumAckMsg) {
+  private long updateRTOs(long now, LedbatMsg.Ack datumAckMsg) {
     long senderQ1 = datumAckMsg.dataDelay.send - datumAckMsg.ledbatSendTime;
     long senderQ2 = now - datumAckMsg.ackDelay.receive;
     long receiverQ = datumAckMsg.ackDelay.send - datumAckMsg.dataDelay.receive;
@@ -210,10 +211,10 @@ public class LedbatSender {
     senderQ1Estimator.update(senderQ1);
     senderQ2Estimator.update(senderQ2);
     receiverQ1Estimator.update(receiverQ);
-    return Pair.with(rtt, dataDelay);
+    return dataDelay;
   }
 
-  private Pair<Long, Long> updateBatchRTTstep1(long now, LedbatMsg.BatchAckVal batch) {
+  private Pair<Long, Long> updateBatchRTOstep1(long now, LedbatMsg.BatchAckVal batch) {
     long receiverQ2 = batch.rt4 - batch.rt3;
     long senderQ2 = now - batch.st3;
     receiverQ2Estimator.update(receiverQ2);
@@ -221,8 +222,8 @@ public class LedbatSender {
     return Pair.with(senderQ2, receiverQ2);
   }
   
-  private Pair<Long, Long> updateBatchedRTTstep2(long now, LedbatMsg.BatchAckVal batch, LedbatMsg.AckVal ack, 
-    long senderQ2, long receiverQ2) {
+  private long updateBatchedRTOstep2(Logger logger, long now, LedbatMsg.BatchAckVal batch, LedbatMsg.AckVal ack, 
+    Pair<Long, Long> step1Result) {
     long senderQ1 = ack.st2 - ack.st1;
     long receiverQ1 = ack.rt2 - ack.rt1;
     long batchT = batch.rt3 - ack.rt2;
@@ -230,11 +231,12 @@ public class LedbatSender {
     long rtt = now - ack.st1 - batchT;
     long dataDelay = ack.rt1 - ack.st2;
     logger.debug("rtt:{} sender q1:{} q2:{} receiver q1:{} q2:{} bt:{} dd:{}",
-      new Object[]{rtt, senderQ1, senderQ2, receiverQ1, receiverQ2, batchT, dataDelay});
+      new Object[]{rtt, senderQ1, step1Result.getValue0(), receiverQ1, step1Result.getValue1(), batchT, dataDelay});
     rttEstimator.update(rtt);
     senderQ1Estimator.update(senderQ1);
     receiverQ1Estimator.update(receiverQ1);
-    return Pair.with(rtt, dataDelay);
+    
+    return dataDelay;
   }
   
   private void trySend(long now, int batch) {

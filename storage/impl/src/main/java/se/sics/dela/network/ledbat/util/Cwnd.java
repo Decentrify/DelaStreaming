@@ -31,15 +31,15 @@ public interface Cwnd {
 
   public void connectionIdle(Logger logger);
 
-  public void ackStep1(Logger logger, long now, long rtt, long oneWayDelay);
+  public void ackStep1(Logger logger, long now, long rto, long oneWayDelay, boolean late);
 
   public void ackStep2(Logger logger, Identifier msgId, long msgBytes);
 
-  public void ackStep3(Logger logger, double cwndGain, long bytesNewlyAcked);
+  public void ackStep3(Logger logger, double cwndGain, long bytesNewlyAcked, long rto);
 
   public void loss(Logger logger, Identifier msgId, long now, long rtt, long bytesNotToBeRetransmitted);
 
-  public boolean canSend(Logger logger, long now, long rtt, long bytesToSend);
+  public boolean canSend(Logger logger, long now, long rto, long bytesToSend);
 
   public long size();
 
@@ -75,8 +75,8 @@ public interface Cwnd {
     }
 
     @Override
-    public void ackStep1(Logger logger, long now, long rtt, long oneWayDelay) {
-      lossCtrl.acked(logger, now, rtt);
+    public void ackStep1(Logger logger, long now, long rto, long oneWayDelay, boolean late) {
+      lossCtrl.acked(logger, now, rto);
       delayHistory.update(now, oneWayDelay);
     }
 
@@ -86,7 +86,7 @@ public interface Cwnd {
     }
 
     @Override
-    public void ackStep3(Logger logger, double cwndGain, long bytesNewlyAcked) {
+    public void ackStep3(Logger logger, double cwndGain, long bytesNewlyAcked, long rtt) {
       adjustCwnd(logger, cwndGain, delayHistory.offTarget(), bytesNewlyAcked);
       flightSize -= bytesNewlyAcked;
     }

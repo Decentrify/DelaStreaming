@@ -38,7 +38,7 @@ public interface LedbatLossCtrl {
    * @param rtt
    * @return signal to adjust cwnd due to acks (true - adjust, false - no adjustment)
    */
-  public boolean acked(Logger logger, long now, long rtt);
+  public boolean acked(Logger logger, long now, long rto);
 
   public static class Percentage implements LedbatLossCtrl {
 
@@ -57,24 +57,26 @@ public interface LedbatLossCtrl {
     }
 
     @Override
-    public boolean loss(Logger logger, long now, long rtt) {
-      checkReset(now, rtt);
+    public boolean loss(Logger logger, long now, long rto) {
+      checkReset(now, rto);
       active.loss++;
-      double r = (double) (previous.loss + active.loss) / (active.ack + active.loss + previous.ack + previous.loss);
-      if (r >= lossLvl2 && !active.lossAdjustSignal) {
-        logger.debug("loss adjust at:{}/{} previous:{}/{}", 
-          new Object[]{active.loss, active.ack, previous.loss, previous.ack});
-        //adjust cwnd due to loss once per rtt window - set on both active and next
-        active.lossAdjustSignal = true;
-        next.lossAdjustSignal = true;
-        return true;
+      if (!(active.lossAdjustSignal||previous.lossAdjustSignal)) {
+        double r = (double) (previous.loss + active.loss) / (active.ack + active.loss + previous.ack + previous.loss);
+        if (r >= lossLvl2) {
+          logger.info("loss adjust at:{}/{} previous:{}/{}",
+            new Object[]{active.loss, active.ack, previous.loss, previous.ack});
+          //adjust cwnd due to loss once per rtt window - set on both active and next
+          active.lossAdjustSignal = true;
+          next.lossAdjustSignal = true;
+          return true;
+        }
       }
       return false;
     }
 
     @Override
-    public boolean acked(Logger logger, long now, long rtt) {
-      checkReset(now, rtt);
+    public boolean acked(Logger logger, long now, long rto) {
+      checkReset(now, rto);
       active.ack++;
       double r = (double) (previous.loss + active.loss) / (active.ack + active.loss + previous.ack + previous.loss);
       if (r < lossLvl1) {
@@ -83,34 +85,32 @@ public interface LedbatLossCtrl {
       return false;
     }
 
-    private void checkReset(long now, long rtt) {
-      if (now - active.start > rtt) {
+    private void checkReset(long now, long rto) {
+      if (now - active.start > rto) {
         previous = active;
         active = next;
-        next = next.now(now);
+        next = new Window(now);
       }
     }
   }
 
   static class Window {
+
     long start;
     int ack = 0;
     int loss = 0;
     boolean lossAdjustSignal;
-    
+
     public Window(long start) {
       this(start, false);
     }
-    
+
     public Window(long start, boolean lossAdjustSignal) {
       this.start = start;
       this.lossAdjustSignal = lossAdjustSignal;
     }
-    
-    public Window now(long start) {
-      return new Window(start, lossAdjustSignal);
-    }
   }
+
   public static class SimpleCounter implements LedbatLossCtrl {
 
     public final int lossLvl;
@@ -133,7 +133,7 @@ public interface LedbatLossCtrl {
     }
 
     @Override
-    public boolean acked(Logger logger, long now, long rtt) {
+    public boolean acked(Logger logger, long now, long rto) {
       return true;
     }
   }

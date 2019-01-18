@@ -64,7 +64,7 @@ public class SenderTaskComp extends ComponentDefinition {
   private int timedout = 0;
   private int inFlight = 0;
   private long startTime;
-  private static final int TOTAL_MSGS = 1000000;
+  private static final int TOTAL_MSGS = 15000000;
   private int unitCounter = 0;
   private int timeWindowUnitCounter = 0;
   private IntIdFactory unitIds = new IntIdFactory(Optional.empty());
