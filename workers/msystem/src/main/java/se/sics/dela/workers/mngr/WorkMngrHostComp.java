@@ -101,7 +101,7 @@ public class WorkMngrHostComp extends ComponentDefinition {
       ConnConfig connConfig = new ConnConfig(mngrConfig.updatePeriod);
       mngrCenter = create(WorkMngrCenterComp.class, new WorkMngrCenterComp.Init(selfAdr, 
         mngrConfig.overlayId, mngrConfig.batchId, mngrConfig.baseId, connConfig));
-      nxNetProxy.connect(mngrCenter);
+      nxNetProxy.connectNetwork(mngrCenter);
       connect(timerComp.getPositive(Timer.class), mngrCenter.getNegative(Timer.class), Channel.TWO_WAY);
       
       mngrDriver = create(WorkMngrDriverComp.class, new WorkMngrDriverComp.Init(selfAdr));

@@ -18,15 +18,20 @@
  */
 package se.sics.dela.workers.ctrl.util;
 
+import se.sics.dela.network.ledbat.LedbatMsg;
 import se.sics.dela.network.ledbat.LedbatReceiverEvent;
 import se.sics.dela.network.ledbat.LedbatReceiverPort;
+import se.sics.kompics.ClassMatchedHandler;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.network.Network;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.nutil.nxcomp.NxStackId;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.KContentMsg;
 
 /**
  *
@@ -35,7 +40,7 @@ import se.sics.ktoolbox.util.network.KAddress;
 public class ReceiverTaskComp extends ComponentDefinition {
 
   private final Positive<Timer> timerPort = requires(Timer.class);
-  private final Positive<LedbatReceiverPort> ledbatPort = requires(LedbatReceiverPort.class);
+  private final Positive<Network> ledbatPort = requires(Network.class);
 
   private final KAddress selfAdr;
   public final KAddress senderAdr;
@@ -56,10 +61,11 @@ public class ReceiverTaskComp extends ComponentDefinition {
     }
   };
 
-  Handler handleReceived = new Handler<LedbatReceiverEvent.Received>() {
+  ClassMatchedHandler handleReceived
+    = new ClassMatchedHandler<LedbatMsg.Datum, KContentMsg<?, ?, LedbatMsg.Datum>>() {
     @Override
-    public void handle(LedbatReceiverEvent.Received event) {
-      logger.debug("received:", event.data.getId());
+    public void handle(LedbatMsg.Datum content, KContentMsg<?, ?, LedbatMsg.Datum> msg) {
+      logger.debug("received:", msg.getContent().datum.getId());
     }
   };
 
@@ -68,13 +74,13 @@ public class ReceiverTaskComp extends ComponentDefinition {
     public final KAddress selfAdr;
     public final KAddress senderAdr;
     public final Identifier dataId;
-    public final Identifier rivuletId;
+    public final NxStackId dataStreamId;
 
-    public Init(KAddress selfAdr, KAddress senderAdr, Identifier dataId, Identifier rivuletId) {
+    public Init(KAddress selfAdr, KAddress senderAdr, Identifier dataId, NxStackId dataStreamId) {
       this.selfAdr = selfAdr;
       this.senderAdr = senderAdr;
       this.dataId = dataId;
-      this.rivuletId = rivuletId;
+      this.dataStreamId = dataStreamId;
     }
   }
 }

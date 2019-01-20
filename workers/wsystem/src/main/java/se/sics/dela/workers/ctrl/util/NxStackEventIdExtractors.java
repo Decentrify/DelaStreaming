@@ -24,23 +24,25 @@ import se.sics.ktoolbox.nutil.network.portsv2.EventIdExtractorV2;
 import se.sics.ktoolbox.nutil.nxcomp.NxStackId;
 import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 import se.sics.ktoolbox.util.identifiable.basic.PairIdentifier;
+import se.sics.ktoolbox.nutil.network.ledbat.LedbatStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
 public class NxStackEventIdExtractors {
-
-  public static class TimerProxy implements EventIdExtractorV2<TimerProxyImpl.Timeout> {
-
-    private final Identifier stackId;
-
-    public TimerProxy(Identifier stackId) {
-      this.stackId = stackId;
-    }
+  public static class LedbatStatusE implements EventIdExtractorV2<LedbatStatus.Event> {
 
     @Override
-    public NxStackId getValue(TimerProxyImpl.Timeout timeout) {
-      return new NxStackId(stackId, timeout.timerProxyId());
+    public Identifier getValue(LedbatStatus.Event event) {
+      return event.dataStreamId;
+    }
+  }
+  
+  public static class TimerProxy implements EventIdExtractorV2<TimerProxyImpl.Timeout> {
+
+    @Override
+    public Identifier getValue(TimerProxyImpl.Timeout timeout) {
+      return timeout.timerProxyId();
     }
   }
 

@@ -19,24 +19,19 @@
 package se.sics.dela.workers.ctrl.util;
 
 import se.sics.kompics.util.Identifier;
-import se.sics.ktoolbox.util.identifiable.BasicBuilders;
-import se.sics.ktoolbox.util.identifiable.basic.SimpleByteIdFactory;
+import se.sics.ktoolbox.nutil.network.portsv2.MsgIdExtractorV2;
+import se.sics.ktoolbox.nutil.nxcomp.NxStackId;
+import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.KHeader;
+import se.sics.ktoolbox.nutil.network.ledbat.LedbatMsg;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
  */
-public enum WorkerStackType {
-  NET_CONN((byte) 0),
-  SENDER((byte) 1),
-  RECEIVER((byte) 2);
-
-  private final byte id;
-
-  WorkerStackType(byte id) {
-    this.id = id;
-  }
-
-  public Identifier getId(SimpleByteIdFactory ids) {
-    return ids.id(new BasicBuilders.ByteBuilder(new byte[]{id}));
+public class NxDataStreamIdExtractor implements MsgIdExtractorV2<LedbatMsg.Basic> {
+  @Override
+  public NxStackId getValue(KContentMsg<KAddress, KHeader<KAddress>, LedbatMsg.Basic> msg) {
+    return msg.getContent().dataStreamId;
   }
 }

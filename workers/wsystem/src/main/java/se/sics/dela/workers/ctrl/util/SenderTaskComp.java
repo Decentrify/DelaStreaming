@@ -22,16 +22,17 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 import java.util.function.Consumer;
-import se.sics.dela.network.ledbat.LedbatSenderEvent;
-import se.sics.dela.network.ledbat.LedbatSenderPort;
 import se.sics.dela.network.ledbat.util.LedbatContainer;
 import se.sics.dela.network.util.DatumId;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
 import se.sics.kompics.Positive;
 import se.sics.kompics.Start;
+import se.sics.kompics.network.Network;
+import se.sics.kompics.network.Transport;
 import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
+import se.sics.ktoolbox.nutil.nxcomp.NxStackId;
 import se.sics.ktoolbox.nutil.timer.TimerProxy;
 import se.sics.ktoolbox.nutil.timer.TimerProxyImpl;
 import se.sics.ktoolbox.util.identifiable.BasicBuilders;
@@ -40,6 +41,12 @@ import se.sics.ktoolbox.util.identifiable.IdentifierFactory;
 import se.sics.ktoolbox.util.identifiable.IdentifierRegistryV2;
 import se.sics.ktoolbox.util.identifiable.basic.IntIdFactory;
 import se.sics.ktoolbox.util.network.KAddress;
+import se.sics.ktoolbox.util.network.KContentMsg;
+import se.sics.ktoolbox.util.network.KHeader;
+import se.sics.ktoolbox.util.network.basic.BasicContentMsg;
+import se.sics.ktoolbox.util.network.basic.BasicHeader;
+import se.sics.ktoolbox.nutil.network.ledbat.LedbatMsg;
+import se.sics.ktoolbox.nutil.network.ledbat.LedbatStatus;
 
 /**
  * @author Alex Ormenisan <aaor@kth.se>
@@ -47,12 +54,13 @@ import se.sics.ktoolbox.util.network.KAddress;
 public class SenderTaskComp extends ComponentDefinition {
 
   private final Positive<Timer> timerPort = requires(Timer.class);
-  private final Positive<LedbatSenderPort> ledbatPort = requires(LedbatSenderPort.class);
+  private final Positive<Network> ledbatPort = requires(Network.class);
+  private final Positive<LedbatStatus.Port> ledbatStatus = requires(LedbatStatus.Port.class);
 
   private final KAddress selfAdr;
   private final KAddress receiverAdr;
+  private final NxStackId dataStreamId;
   private final Identifier dataId;
-  private final Identifier rivuletId;
   private final IdentifierFactory eventIds;
 
   private TimerProxy timer;
@@ -68,18 +76,20 @@ public class SenderTaskComp extends ComponentDefinition {
   private int unitCounter = 0;
   private int timeWindowUnitCounter = 0;
   private IntIdFactory unitIds = new IntIdFactory(Optional.empty());
+  private final IdentifierFactory msgIds;
 
   public SenderTaskComp(Init init) {
     this.selfAdr = init.selfAdr;
     this.receiverAdr = init.receiverAdr;
+    this.dataStreamId = init.dataStreamId;
     this.dataId = init.dataId;
-    this.rivuletId = init.rivuletId;
     eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
-    timer = new TimerProxyImpl(dataId).setup(proxy, logger);
+    timer = new TimerProxyImpl(dataStreamId).setup(proxy, logger);
+    this.msgIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.MSG, Optional.of(1234l));
 
     subscribe(handleStart, control);
-    subscribe(handleAcked, ledbatPort);
-    subscribe(handleTimeout, ledbatPort);
+    subscribe(handleAcked, ledbatStatus);
+    subscribe(handleTimeout, ledbatStatus);
   }
 
   Handler handleStart = new Handler<Start>() {
@@ -106,12 +116,12 @@ public class SenderTaskComp extends ComponentDefinition {
     };
   }
 
-  Handler handleAcked = new Handler<LedbatSenderEvent.Acked>() {
+  Handler handleAcked = new Handler<LedbatStatus.Ack>() {
     @Override
-    public void handle(LedbatSenderEvent.Acked event) {
-      logger.debug("received:{}", event.req.datum.getId());
-      acked++;
-      inFlight--;
+    public void handle(LedbatStatus.Ack event) {
+      logger.info("received:{}", event.acked.size());
+      acked += event.acked.size();
+      inFlight -= event.acked.size();
       if (unitCounter == TOTAL_MSGS) {
         logger.info("done");
         long stopTime = System.nanoTime();
@@ -125,12 +135,12 @@ public class SenderTaskComp extends ComponentDefinition {
     }
   };
 
-  Handler handleTimeout = new Handler<LedbatSenderEvent.Timeout>() {
+  Handler handleTimeout = new Handler<LedbatStatus.Timeout>() {
     @Override
-    public void handle(LedbatSenderEvent.Timeout event) {
-      logger.debug("timeout:{}", event.req.datum.getId());
-      inFlight--;
-      timedout++;
+    public void handle(LedbatStatus.Timeout event) {
+      logger.info("timeout:{}", event.timedOut.size());
+      inFlight -= event.timedOut.size();
+      timedout += event.timedOut.size();
       trySend(event.maxInFlight);
     }
   };
@@ -154,9 +164,11 @@ public class SenderTaskComp extends ComponentDefinition {
     Identifier unitId = unitIds.id(new BasicBuilders.IntBuilder(unitCounter));
     DatumId datumId = new DatumId(dataId, unitId);
     LedbatContainer dataContainer = new LedbatContainer(datumId, data);
-    LedbatSenderEvent.Request req = new LedbatSenderEvent.Request(eventIds.randomId(), rivuletId, dataContainer);
-    logger.trace("sending:{}", req.datum.getId());
-    trigger(req, ledbatPort);
+    LedbatMsg.Datum content = new LedbatMsg.Datum(msgIds.randomId(), dataStreamId, dataContainer);
+    KHeader header = new BasicHeader(selfAdr, receiverAdr, Transport.UDP);
+    KContentMsg msg = new BasicContentMsg(header, content);
+    logger.trace("sending:{}", content.getId());
+    trigger(msg, ledbatPort);
   }
 
   public static class Init extends se.sics.kompics.Init<SenderTaskComp> {
@@ -164,13 +176,13 @@ public class SenderTaskComp extends ComponentDefinition {
     public final KAddress selfAdr;
     public final KAddress receiverAdr;
     public final Identifier dataId;
-    public final Identifier rivuletId;
+    public final NxStackId dataStreamId;
 
-    public Init(KAddress selfAdr, KAddress receiverAdr, Identifier dataId, Identifier rivuletId) {
+    public Init(KAddress selfAdr, KAddress receiverAdr, Identifier dataId, NxStackId dataStreamId) {
       this.selfAdr = selfAdr;
       this.receiverAdr = receiverAdr;
       this.dataId = dataId;
-      this.rivuletId = rivuletId;
+      this.dataStreamId = dataStreamId;
     }
   }
 }

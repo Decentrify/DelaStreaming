@@ -21,13 +21,8 @@ package se.sics.dela.workers.ctrl;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import se.sics.dela.network.conn.NetConnComp;
-import se.sics.dela.network.conn.NetConnEvents;
-import se.sics.dela.network.conn.NetConnPort;
-import se.sics.dela.network.util.ChannelId;
 import se.sics.dela.workers.ctrl.util.ReceiverTaskComp;
 import se.sics.dela.workers.ctrl.util.SenderTaskComp;
-import se.sics.dela.workers.ctrl.util.WorkerStackType;
 import se.sics.dela.workers.task.DelaWorkTask;
 import se.sics.kompics.ComponentDefinition;
 import se.sics.kompics.Handler;
@@ -37,6 +32,7 @@ import se.sics.kompics.timer.Timer;
 import se.sics.kompics.util.Identifier;
 import se.sics.ktoolbox.nutil.conn.workers.WorkCtrlCenterEvents;
 import se.sics.ktoolbox.nutil.conn.workers.WorkCtrlCenterPort;
+import se.sics.ktoolbox.nutil.network.ledbat.LedbatMsg;
 import se.sics.ktoolbox.nutil.nxcomp.NxMngrEvents;
 import se.sics.ktoolbox.nutil.nxcomp.NxMngrPort;
 import se.sics.ktoolbox.nutil.nxcomp.NxStackId;
@@ -57,7 +53,6 @@ import se.sics.ktoolbox.util.network.KAddress;
 public class WorkCtrlDriverComp extends ComponentDefinition {
 
   Positive<NxMngrPort> nxStackMngr = requires(NxMngrPort.class);
-  Positive<NetConnPort> netConnMngr = requires(NetConnPort.class);
   Positive<WorkCtrlCenterPort> appPort = requires(WorkCtrlCenterPort.class);
   Positive<Timer> timerPort = requires(Timer.class);
   TimerProxy timer;
@@ -67,7 +62,7 @@ public class WorkCtrlDriverComp extends ComponentDefinition {
   private final IdentifierFactory eventIds;
   private final Identifier receiverStackId;
   private final Identifier senderStackId;
-  private final Identifier netConnStackId;
+//  private final Identifier netConnStackId;
 
   //<taskId, task>
   private final Map<Identifier, Task> tasks = new HashMap<>();
@@ -82,15 +77,13 @@ public class WorkCtrlDriverComp extends ComponentDefinition {
 
     eventIds = IdentifierRegistryV2.instance(BasicIdentifiers.Values.EVENT, Optional.of(1234l));
     SimpleByteIdFactory stackIds = new SimpleByteIdFactory(Optional.empty(), 0);
-    receiverStackId = WorkerStackType.RECEIVER.getId(stackIds);
-    senderStackId = WorkerStackType.SENDER.getId(stackIds);
-    netConnStackId = WorkerStackType.NET_CONN.getId(stackIds);
+    receiverStackId = LedbatMsg.StackType.RECEIVER.getId(stackIds);
+    senderStackId = LedbatMsg.StackType.SENDER.getId(stackIds);
+//    netConnStackId = WorkerStackType.NET_CONN.getId(stackIds);
 
     subscribe(handleStart, control);
     subscribe(handleNewTask, appPort);
     subscribe(handleTaskCtrlStarted, nxStackMngr);
-    subscribe(handleLedbatSenderStarted, netConnMngr);
-    subscribe(handleLedbatReceiverStarted, netConnMngr);
   }
 
   Handler handleStart = new Handler<Start>() {
@@ -130,110 +123,49 @@ public class WorkCtrlDriverComp extends ComponentDefinition {
     }
   };
 
-  Handler handleLedbatSenderStarted = new Handler<NetConnEvents.LedbatSenderCreateAck>() {
-    @Override
-    public void handle(NetConnEvents.LedbatSenderCreateAck ack) {
-      ledbatStarted(ack.getId());
-    }
-  };
-
-  Handler handleLedbatReceiverStarted = new Handler<NetConnEvents.LedbatReceiverCreateAck>() {
-    @Override
-    public void handle(NetConnEvents.LedbatReceiverCreateAck ack) {
-      ledbatStarted(ack.getId());
-    }
-  };
-
-  private void ledbatStarted(Identifier reqId) {
-    logger.info("{} started", reqId);
-    Identifier taskId = pendingLedbatAck.remove(reqId);
-    if (taskId == null) {
-      throw new RuntimeException("no task");
-    }
-    Task task = tasks.get(taskId);
-    task.ledbatStarted();
-  }
-
   interface Task {
 
     public void start();
 
     public void nxCreated(NxMngrEvents.CreateAck ack);
-
-    public void ledbatStarted();
   }
 
   class SenderTask implements Task {
 
     final DelaWorkTask.LSender task;
-    NxMngrEvents.CreateReq netConnCreateReq;
-    boolean netConnCreateAck = false;
     NxMngrEvents.CreateReq senderCtrlCreateReq;
     boolean senderCtrlCreateAck = false;
-    NetConnEvents.LedbatSenderCreate ledbatSenderCreateReq;
-    boolean ledbatSenderCreateAck = false;
-
-    final ChannelId channelId;
+    final NxStackId dataStreamId;
 
     public SenderTask(DelaWorkTask.LSender task) {
       this.task = task;
-      Identifier ctrlId = new NxStackId(senderStackId, task.dataId);
-      Identifier sender = new NxStackId(netConnStackId, selfAdr.getId());
-      Identifier receiver = new NxStackId(netConnStackId, task.receiver.getId());
-      channelId = new ChannelId(ctrlId, sender, receiver);
+      dataStreamId = new NxStackId(senderStackId, task.dataId);
     }
 
-    //
     @Override
     public void start() {
-      createNetConnComp();
+      createSenderCtrlComp();
     }
 
     @Override
     public void nxCreated(NxMngrEvents.CreateAck ack) {
-      if (ack.getId().equals(netConnCreateReq.getId())) {
-        netConnCreateAck = true;
-        createLedbatSender();
-      } else if (ack.getId().equals(senderCtrlCreateReq.getId())) {
+      if (ack.getId().equals(senderCtrlCreateReq.getId())) {
         senderCtrlCreateAck = true;
       }
       checkIfReady();
     }
 
-    @Override
-    public void ledbatStarted() {
-      ledbatSenderCreateAck = true;
-      createSenderCtrlComp();
-    }
-
-    void createNetConnComp() {
-      NetConnComp.Init init = new NetConnComp.Init(selfAdr, task.receiver);
-      NxStackInit initWrapper = new NxStackInit.OneComp<>(init);
-      netConnCreateReq = new NxMngrEvents.CreateReq(eventIds.randomId(), channelId.receiverId(), initWrapper);
-      logger.info("netconn:{} starting", netConnCreateReq.eventId);
-      trigger(netConnCreateReq, nxStackMngr);
-      pendingNxCreateAck.put(netConnCreateReq.getId(), task.taskId);
-    }
-
     void createSenderCtrlComp() {
-      Identifier rivuletId = new PairIdentifier(selfAdr.getId(), task.receiver.getId());
-      SenderTaskComp.Init init = new SenderTaskComp.Init(selfAdr, task.receiver, task.dataId, rivuletId);
+      SenderTaskComp.Init init = new SenderTaskComp.Init(selfAdr, task.receiver, task.dataId, dataStreamId);
       NxStackInit initWrapper = new NxStackInit.OneComp<>(init);
-      senderCtrlCreateReq = new NxMngrEvents.CreateReq(eventIds.randomId(), channelId.dataId(), initWrapper);
+      senderCtrlCreateReq = new NxMngrEvents.CreateReq(eventIds.randomId(), dataStreamId, initWrapper);
       logger.info("sender:{} starting", senderCtrlCreateReq.eventId);
       trigger(senderCtrlCreateReq, nxStackMngr);
       pendingNxCreateAck.put(senderCtrlCreateReq.getId(), task.taskId);
     }
 
-    void createLedbatSender() {
-      ledbatSenderCreateReq = new NetConnEvents.LedbatSenderCreate(eventIds.randomId(), channelId);
-      logger.info("ledbat sender:{} starting", ledbatSenderCreateReq.getId());
-      trigger(ledbatSenderCreateReq, netConnMngr);
-      pendingLedbatAck.put(ledbatSenderCreateReq.getId(), task.taskId);
-    }
-
     private void checkIfReady() {
-      if (netConnCreateAck && ledbatSenderCreateAck && senderCtrlCreateAck) {
+      if (senderCtrlCreateAck) {
         logger.info("ready");
       }
     }
@@ -242,73 +174,40 @@ public class WorkCtrlDriverComp extends ComponentDefinition {
   class ReceiverTask implements Task {
 
     final DelaWorkTask.LReceiver task;
-    NxMngrEvents.CreateReq netConnCreateReq;
-    boolean netConnCreateAck = false;
     NxMngrEvents.CreateReq receiverCtrlCreateReq;
     boolean receiverCtrlCreateAck = false;
-    NetConnEvents.LedbatReceiverCreate ledbatReceiverCreateReq;
-    boolean ledbatReceiverCreateAck = false;
 
-    final ChannelId channelId;
+    final NxStackId dataStreamId;
 
     public ReceiverTask(DelaWorkTask.LReceiver task) {
       this.task = task;
-      Identifier ctrlId = new NxStackId(receiverStackId, task.dataId);
-      Identifier sender = new NxStackId(netConnStackId, task.sender.getId());
-      Identifier receiver = new NxStackId(netConnStackId, selfAdr.getId());
-      channelId = new ChannelId(ctrlId, sender, receiver);
+      dataStreamId = new NxStackId(receiverStackId, task.dataId);
     }
 
     @Override
     public void start() {
-      createNetConnComp();
+      createReceiverCtrlComp();
     }
 
     @Override
     public void nxCreated(NxMngrEvents.CreateAck ack) {
-      if (ack.getId().equals(netConnCreateReq.getId())) {
-        netConnCreateAck = true;
-        createLedbatSender();
-      } else if (ack.getId().equals(receiverCtrlCreateReq.getId())) {
+      if (ack.getId().equals(receiverCtrlCreateReq.getId())) {
         receiverCtrlCreateAck = true;
       }
       checkIfReady();
     }
 
-    @Override
-    public void ledbatStarted() {
-      ledbatReceiverCreateAck = true;
-      createReceiverCtrlComp();
-    }
-
-    void createNetConnComp() {
-      NetConnComp.Init init = new NetConnComp.Init(selfAdr, task.sender);
-      NxStackInit initWrapper = new NxStackInit.OneComp<>(init);
-      netConnCreateReq = new NxMngrEvents.CreateReq(eventIds.randomId(), channelId.senderId(), initWrapper);
-      logger.info("netconn:{} starting", netConnCreateReq.eventId);
-      trigger(netConnCreateReq, nxStackMngr);
-      pendingNxCreateAck.put(netConnCreateReq.getId(), task.taskId);
-    }
-
     void createReceiverCtrlComp() {
-      Identifier rivuletId = new PairIdentifier(task.sender.getId(), selfAdr.getId());
-      ReceiverTaskComp.Init init = new ReceiverTaskComp.Init(selfAdr, task.sender, task.dataId, rivuletId);
+      ReceiverTaskComp.Init init = new ReceiverTaskComp.Init(selfAdr, task.sender, task.dataId, dataStreamId);
       NxStackInit initWrapper = new NxStackInit.OneComp<>(init);
-      receiverCtrlCreateReq = new NxMngrEvents.CreateReq(eventIds.randomId(), channelId.dataId(), initWrapper);
+      receiverCtrlCreateReq = new NxMngrEvents.CreateReq(eventIds.randomId(), dataStreamId, initWrapper);
       logger.info("receiver:{} starting", receiverCtrlCreateReq.eventId);
       trigger(receiverCtrlCreateReq, nxStackMngr);
       pendingNxCreateAck.put(receiverCtrlCreateReq.getId(), task.taskId);
     }
 
-    void createLedbatSender() {
-      ledbatReceiverCreateReq = new NetConnEvents.LedbatReceiverCreate(eventIds.randomId(), channelId);
-      logger.info("ledbat receiver:{} starting", ledbatReceiverCreateReq.getId());
-      trigger(ledbatReceiverCreateReq, netConnMngr);
-      pendingLedbatAck.put(ledbatReceiverCreateReq.getId(), task.taskId);
-    }
-
     private void checkIfReady() {
-      if (netConnCreateAck && ledbatReceiverCreateAck && receiverCtrlCreateAck) {
+      if (receiverCtrlCreateAck) {
         logger.info("ready");
       }
     }
